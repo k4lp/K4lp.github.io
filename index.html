@@ -2,875 +2,376 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sleek Markdown Editor</title>
-    <!-- Prism Theme (place before main styles to allow overrides) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" />
-    <style>
-        :root {
-            /* --- Existing Variables --- */
-            --bg-color: #1a1d24;
-            --panel-bg: #252a33;
-            --text-color: #e0e0e0;
-            --border-color: #3a404d;
-            --accent-color: #00adb5;
-            --accent-hover: #007a7f;
-            --code-bg: #2d323b;
-            --button-text: #ffffff;
-            --success-color: #28a745;
-            --scrollbar-thumb: #4f5868;
-            --scrollbar-track: var(--panel-bg);
-            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            --font-mono: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-            --resizer-width: 5px; /* Width of the draggable resizer */
-            --min-pane-width: 150px; /* Minimum width for each pane */
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Markdown Renderer</title>
+    <!-- Marked.js for Markdown Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- html2pdf.js for PDF Generation (includes jsPDF & html2canvas) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-            /* --- NEW: Customizable Output Variables --- */
-            /* These will be directly manipulated by JS on the outputDiv itself,
-               but defaults are good for initial state */
-            --output-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Default */
-            --output-font-size: 16px; /* Default */
-            --output-padding: 20px; /* Default */
+    <style>
+	@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500;600;700&display=swap');
+
+        /* Basic Reset & Box Sizing */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
-        /* --- GLOBAL STYLES --- */
-        *, *::before, *::after {
-            box-sizing: border-box;
+        html, body {
+            height: 100%;
+            font-family: sans-serif;
+            overflow: hidden; /* Prevent body scroll */
         }
 
         body {
-            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column; /* Stack toolbar and container vertically */
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ccc;
+            flex-shrink: 0; /* Prevent toolbar from shrinking */
+            height: 50px; /* Fixed height for toolbar */
+        }
+
+        .toolbar h1 {
+            font-size: 1.2em;
             margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-size: 16px;
-            line-height: 1.6;
-            overflow: hidden; /* Prevent body scroll */
-            /* Prevent text selection during resize */
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
         }
 
-        /* --- CONTAINER & PANES --- */
-        .container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-        }
-
-        .input-section, .output-section {
-            /* Use flex-basis instead of width for resizability */
-            flex-basis: 50%;
-            height: 100%;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* Prevent content spill */
-             /* Define minimum width */
-            min-width: var(--min-pane-width);
-        }
-
-        .input-section {
-            background-color: var(--panel-bg);
-            /* border-right removed, handled by resizer */
-        }
-
-        .output-section {
-             background-color: var(--bg-color);
-        }
-
-        /* --- RESIZER ELEMENT --- */
-        .resizer {
-            flex-basis: var(--resizer-width);
-            flex-shrink: 0; /* Prevent resizer from shrinking */
-            height: 100%;
-            background-color: var(--border-color);
-            cursor: col-resize;
+        #downloadPdf {
+            padding: 8px 15px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
             transition: background-color 0.2s ease;
         }
-        .resizer:hover,
-        .resizer.is-dragging { /* Style when actively dragging */
-            background-color: var(--accent-color);
+
+        #downloadPdf:hover {
+            background-color: #0056b3;
         }
 
-
-        /* --- INPUT AREA --- */
-        #markdown-input {
-            flex-grow: 1;
-            width: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 15px;
-            font-family: var(--font-mono);
-            font-size: 0.95em;
-            resize: none; /* Disable browser's default textarea resize */
-            margin-bottom: 15px;
-            line-height: 1.5;
-            transition: border-color 0.3s ease;
-            /* Default wrap behavior */
-            white-space: pre-wrap; /* Wrap text but preserve whitespace */
-            word-wrap: break-word; /* Break long words */
-            overflow-y: auto; /* Ensure vertical scrollbar appears */
-        }
-
-        /* Style for non-wrapping state */
-        #markdown-input.no-wrap {
-            white-space: pre; /* Prevent wrapping, preserve whitespace */
-            word-wrap: normal; /* Default word wrap */
-            overflow-x: auto; /* Add horizontal scrollbar when needed */
-        }
-
-
-        #markdown-input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        /* --- BUTTONS --- */
-        .button-container {
-             display: flex;
-             gap: 10px; /* Space between buttons */
-             flex-shrink: 0; /* Prevent container from shrinking */
-        }
-
-        #render-btn, #toggle-wrap-btn {
-            padding: 10px 15px; /* Slightly smaller padding */
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9em; /* Slightly smaller font */
-            font-weight: 600;
-            transition: background-color 0.3s ease, transform 0.1s ease;
-            flex-grow: 1; /* Make buttons share space */
-        }
-
-        #render-btn {
-            background-color: var(--accent-color);
-            color: var(--button-text);
-        }
-        #render-btn:hover {
-            background-color: var(--accent-hover);
-        }
-        #render-btn:active {
-             transform: scale(0.98);
-        }
-
-        #toggle-wrap-btn {
-            background-color: var(--scrollbar-thumb); /* Use a different color */
-            color: var(--button-text);
-        }
-        #toggle-wrap-btn:hover {
-            background-color: #6c7a8f;
-        }
-         #toggle-wrap-btn:active {
-             transform: scale(0.98);
-        }
-
-
-        /* --- NEW: Output Settings Panel --- */
-        .output-settings {
+        .container {
             display: flex;
-            align-items: center;
-            gap: 15px; /* Spacing between controls */
-            padding-bottom: 15px; /* Space below settings */
-            margin-bottom: 15px; /* Space before output div */
-            border-bottom: 1px solid var(--border-color);
-            flex-wrap: wrap; /* Allow wrapping on smaller widths */
-            flex-shrink: 0; /* Prevent shrinking */
-        }
-        .output-settings label {
-            font-size: 0.85em;
-            color: #b0b0b0;
-            margin-right: -5px; /* Pull input closer to label */
-        }
-        .output-settings select,
-        .output-settings input[type="number"] {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 5px 8px;
-            font-size: 0.85em;
-            font-family: var(--font-main);
-        }
-        .output-settings select:focus,
-        .output-settings input[type="number"]:focus {
-             outline: none;
-             border-color: var(--accent-color);
-        }
-        .output-settings input[type="number"] {
-             width: 65px; /* Fixed width for number inputs */
-        }
-        /* Optional: Style for control groups */
-        .control-group {
-             display: flex;
-             align-items: center;
-             gap: 5px;
+            flex-grow: 1; /* Allow container to fill remaining space */
+            height: calc(100vh - 50px); /* Adjust based on toolbar height */
+            border-top: 1px solid #ccc;
         }
 
-
-        /* --- OUTPUT AREA (Modified for CSS Variables) --- */
-        #markdown-output {
-            flex-grow: 1;
-            width: 100%;
-            /* Initial height calculation, might be slightly off if settings wrap */
-            height: calc(100% - 60px); /* Approximate adjustment for settings panel */
-            overflow-y: auto;
-            word-wrap: break-word;
-            /* Allow text selection in output */
-            user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-
-            /* Apply CSS Variables - these are set via JS */
-            font-family: var(--output-font-family);
-            font-size: var(--output-font-size);
-            padding: 0 var(--output-padding) var(--output-padding) var(--output-padding); /* Apply padding var */
-            line-height: 1.6; /* Maintain consistent line height from body */
+        .panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Hide overflow within panels */
+            min-width: 100px; /* Minimum width for panels */
+            position: relative; /* Needed for absolute positioned elements inside? No, needed for flex basis calculations */
         }
 
-        /* --- Output Element Styles --- */
-        #markdown-output h1,
-        #markdown-output h2,
-        #markdown-output h3,
-        #markdown-output h4,
-        #markdown-output h5,
-        #markdown-output h6 {
-            margin-top: 1.5em;
-            margin-bottom: 0.8em;
-            color: #ffffff; /* Brighter headings */
+        .panel h2 {
+            padding: 8px 15px;
+            background-color: #f8f8f8;
+            font-size: 0.9em;
+            border-bottom: 1px solid #eee;
+            flex-shrink: 0; /* Prevent header from shrinking */
+            margin: 0;
             font-weight: 600;
-            line-height: 1.3;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.3em;
-        }
-         #markdown-output h1 { font-size: 2.2em; }
-         #markdown-output h2 { font-size: 1.8em; }
-         #markdown-output h3 { font-size: 1.5em; }
-         #markdown-output h4 { font-size: 1.2em; border-bottom: none;}
-         #markdown-output h5 { font-size: 1em; border-bottom: none;}
-         #markdown-output h6 { font-size: 0.9em; color: #aaa; border-bottom: none;}
-
-        #markdown-output p {
-            margin-bottom: 1em;
+            color: #333;
         }
 
-        #markdown-output a {
-            color: var(--accent-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
+        .input-panel {
+            /* flex: 1 1 50%; Flex basis will be controlled by JS */
+            width: 50%; /* Start at 50% */
         }
 
-        #markdown-output a:hover {
-            color: var(--accent-hover);
-            text-decoration: underline;
+        .output-panel {
+            /* flex: 1 1 50%; Flex basis will be controlled by JS */
+            width: 50%; /* Start at 50% */
+            background-color: #ffffff;
+            border-left: 1px solid #ccc; /* Added border for clarity */
         }
 
-        #markdown-output ul,
-        #markdown-output ol {
-            margin-bottom: 1em;
-            padding-left: 1.5em;
+        #markdownInput {
+            flex-grow: 1; /* Allow textarea to fill panel space */
+            border: none;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none; /* Disable native textarea resize */
+            outline: none;
+            color: #333;
+            background-color: #fdfdfd;
+            height: 100%; /* Fill parent */
+            overflow-y: auto; /* Add scrollbar if needed */
         }
 
-        #markdown-output li {
+        #htmlOutput {
+            flex-grow: 1; /* Allow output div to fill panel space */
+            padding: 15px;
+            overflow-y: auto; /* Add scrollbar if needed */
+            line-height: 1.6;
+            color: #333;
+	    font-family: 'Product Sans';
+            word-wrap: break-word;
+        }
+
+        /* Basic Markdown Styling for Output */
+        #htmlOutput > *:first-child {
+            margin-top: 0;
+        }
+        #htmlOutput h1, #htmlOutput h2, #htmlOutput h3, #htmlOutput h4, #htmlOutput h5, #htmlOutput h6 {
+            margin-top: 1em;
             margin-bottom: 0.5em;
+            font-weight: 600;
         }
-
-        #markdown-output blockquote {
-            margin: 1.5em 0;
-            padding: 0.8em 1.5em;
-            border-left: 4px solid var(--accent-color);
-            background-color: var(--panel-bg);
-            color: #b0b0b0; /* Slightly muted text for quotes */
-            border-radius: 0 4px 4px 0;
+        #htmlOutput h1 { font-size: 2em; border-bottom: 1px solid #eee; padding-bottom: 0.3em;}
+        #htmlOutput h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em;}
+        #htmlOutput h3 { font-size: 1.25em; }
+        #htmlOutput p { margin-bottom: 1em; }
+        #htmlOutput ul, #htmlOutput ol { margin-bottom: 1em; padding-left: 2em; }
+        #htmlOutput blockquote {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            border-left: 4px solid #dfe2e5;
+            color: #6a737d;
+            background-color: #f6f8fa;
         }
-
-        #markdown-output blockquote p:last-child {
-             margin-bottom: 0;
+         #htmlOutput blockquote > :first-child { margin-top: 0; }
+         #htmlOutput blockquote > :last-child { margin-bottom: 0; }
+        #htmlOutput code {
+            font-family: monospace;
+            background-color: rgba(27,31,35,.05);
+            padding: .2em .4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
         }
-
-        #markdown-output hr {
-            border: none;
-            border-top: 1px solid var(--border-color);
-            margin: 2em 0;
+        #htmlOutput pre {
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            font-size: 85%;
+            line-height: 1.45;
+            overflow: auto;
+            padding: 16px;
+            margin-bottom: 1em;
         }
-
-        #markdown-output code:not(pre > code) { /* Inline code */
-            background-color: var(--code-bg);
-            color: #ffcc99; /* Different color for inline code */
-            padding: 0.2em 0.4em;
-            border-radius: 4px;
-            font-family: var(--font-mono);
-            font-size: 0.9em; /* Relative to parent */
+        #htmlOutput pre code {
+            background-color: transparent;
+            padding: 0;
+            margin: 0;
+            font-size: 100%; /* Reset inner code size */
+            border-radius: 0;
         }
+        #htmlOutput table {
+            border-collapse: collapse;
+            margin-bottom: 1em;
+            width: auto;
+            border: 1px solid #dfe2e5;
+        }
+        #htmlOutput th, #htmlOutput td {
+            border: 1px solid #dfe2e5;
+            padding: 6px 13px;
+        }
+        #htmlOutput th { font-weight: 600; background-color: #f6f8fa; }
+        #htmlOutput tr:nth-child(even) { background-color: #f6f8fa; }
+        #htmlOutput img { max-width: 100%; }
 
-        /* Code Blocks Styling with Prism */
-        #markdown-output pre {
+
+        /* Resizer Styles */
+        #resizer {
+            width: 6px; /* Width of the draggable area */
+            background-color: #ccc;
+            cursor: col-resize;
+            flex-shrink: 0; /* Don't let it shrink */
             position: relative;
-            background-color: var(--code-bg); /* Use variable */
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1em 1em 1em 1.5em; /* Adjust padding */
-            margin: 1.5em 0;
-            overflow-x: auto;
-            font-size: 0.9em; /* Relative to parent */
-            line-height: 1.4;
+            z-index: 10;
+            border-left: 1px solid #bbb;
+            border-right: 1px solid #bbb;
+        }
+        #resizer:hover {
+             background-color: #aaa;
         }
 
-        /* Override Prism's default background if needed */
-        #markdown-output pre[class*="language-"] {
-            background-color: var(--code-bg) !important; /* Ensure our bg is used */
-            padding-right: 65px; /* Space for copy button */
+        /* Style for when dragging */
+        body.resizing {
+            cursor: col-resize;
+            user-select: none; /* Prevent text selection during drag */
         }
-
-        #markdown-output pre code {
-            font-family: var(--font-mono);
-            background: none; /* Remove background from inline code style */
-            color: inherit;   /* Inherit color from prism theme */
-            padding: 0;       /* Remove inline code padding */
-            font-size: inherit; /* Inherit font size */
-            display: block; /* Ensure code takes block layout for scroll */
-            white-space: pre; /* Preserve whitespace and prevent wrapping */
-            overflow-x: visible; /* Allow content to overflow pre's padding */
-        }
-
-
-        /* --- COPY BUTTON --- */
-         .copy-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background-color: #4f5868; /* Muted button color */
-            color: var(--text-color);
-            border: none;
-            padding: 6px 12px;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 0.8em;
-            opacity: 0.7; /* Slightly transparent initially */
-            transition: opacity 0.3s ease, background-color 0.3s ease;
-            z-index: 1; /* Ensure it's above code content */
-        }
-         #markdown-output pre:hover .copy-btn { /* Target btn only when pre is hovered */
-            opacity: 1; /* Fully visible on hover of parent pre */
-        }
-         .copy-btn:hover {
-            background-color: #6c7a8f;
-        }
-         .copy-btn:active {
-            background-color: #404753;
-        }
-         .copy-btn.copied {
-             background-color: var(--success-color);
-             color: white;
-             opacity: 1;
-        }
-
-        /* --- SCROLLBARS --- */
-        #markdown-output::-webkit-scrollbar,
-        #markdown-input::-webkit-scrollbar,
-        #markdown-output pre::-webkit-scrollbar { /* Style scrollbar for code blocks too */
-            width: 10px;
-            height: 10px; /* For horizontal scrollbar */
-        }
-
-        #markdown-output::-webkit-scrollbar-track,
-        #markdown-input::-webkit-scrollbar-track,
-        #markdown-output pre::-webkit-scrollbar-track {
-            background: var(--scrollbar-track);
-            border-radius: 5px;
-        }
-
-        #markdown-output::-webkit-scrollbar-thumb,
-        #markdown-input::-webkit-scrollbar-thumb,
-        #markdown-output pre::-webkit-scrollbar-thumb {
-            background-color: var(--scrollbar-thumb);
-            border-radius: 5px;
-            border: 2px solid var(--scrollbar-track); /* Creates padding around thumb */
-        }
-
-        #markdown-output::-webkit-scrollbar-thumb:hover,
-        #markdown-input::-webkit-scrollbar-thumb:hover,
-        #markdown-output pre::-webkit-scrollbar-thumb:hover {
-            background-color: #6c7a8f;
+        body.resizing .panel {
+            pointer-events: none; /* Prevent interaction with panels during resize */
         }
 
     </style>
 </head>
 <body>
+    <div class="toolbar">
+        <h1>Markdown Editor</h1>
+        <button id="downloadPdf">Download PDF</button>
+    </div>
     <div class="container">
-        <div class="input-section">
-            <textarea id="markdown-input" placeholder="Enter your Markdown here...">
-# Welcome to the Sleek Markdown Editor
+        <div class="panel input-panel" id="inputPanel">
+            <h2>Markdown Input</h2>
+            <textarea id="markdownInput" placeholder="Type your Markdown here..."># Welcome to the Markdown Editor!
 
-## Now with Output Customization!
+This is a simple **HTML, CSS, and JavaScript** based Markdown renderer.
 
-Use the controls above the preview pane to change the font, size, and padding of the rendered output. Drag the divider to resize panes.
+- Uses `marked.js` for parsing.
+- Uses `html2pdf.js` for PDF export.
+- Features an adjustable divider.
 
-**Features:**
+## Features
 
-- Real-time preview (on button click or Ctrl/Cmd+Enter)
-- Syntax highlighting (Python, JS, **C#** included!)
-- Code copy buttons
-- Resizable Panes
-- Toggle Text Wrap (Input)
-- **Output Style Controls!**
+1.  Real-time rendering
+2.  Adjustable view panels
+3.  PDF Download of the rendered output
 
-### Long Line Example
-This is a very long line of text that will wrap by default, but if you disable wrapping using the button below, it will extend horizontally and require scrolling within the input text area if it exceeds the pane's width. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-### Code Example (Python)
-\`\`\`python
-import random
-
-class Greeter:
-    """A simple class to greet someone."""
-    def __init__(self, name):
-        self.name = name
-        self.greetings = [
-            "Hello", "Hi", "Hey", "Greetings", "Salutations"
-        ]
-
-    def greet(self):
-        """Prints a random greeting."""
-        greeting = random.choice(self.greetings)
-        # Using an f-string for formatting
-        print(f"{greeting}, {self.name}! Welcome to Markdown.")
-
-# Usage Example
-if __name__ == "__main__":
-    editor_greeter = Greeter("Developer")
-    editor_greeter.greet() # Call the method
-\`\`\`
-
-### Another Example (JavaScript)
 \`\`\`javascript
-// Function to demonstrate smooth scrolling (conceptual)
-function smoothScroll(targetId) {
-  const targetElement = document.getElementById(targetId);
-  if (targetElement) {
-    window.scrollTo({
-      top: targetElement.offsetTop,
-      behavior: 'smooth' // Native browser smooth scrolling
-    });
-    console.log(\`Scrolling smoothly to #${targetId}\`);
-  } else {
-    console.warn(\`Element with ID "${targetId}" not found.\`);
-  }
+// Example code block
+function greet(name) {
+  console.log(\`Hello, \${name}!\`);
 }
-
-// Example call (won't actually scroll in this static context)
-// smoothScroll('markdown-output');
+greet('World');
 \`\`\`
 
-### C# Example (NEW!)
-\`\`\`csharp
-using System;
-using System.Collections.Generic;
-using System.Linq;
+> Blockquote example.
 
-public class ExampleClass
-{
-    public string Name { get; private set; }
-    private List<int> _data;
-
-    public ExampleClass(string name)
-    {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        _data = new List<int>();
-        Console.WriteLine($"Initialized {Name}");
-    }
-
-    // Method using LINQ
-    public void AddAndReport(int value)
-    {
-        _data.Add(value);
-        var evenNumbers = _data.Where(x => x % 2 == 0).ToList();
-        Console.WriteLine($"Added {value}. Current even numbers: {string.Join(", ", evenNumbers)}");
-    }
-
-    public static void RunDemo()
-    {
-        var demo = new ExampleClass("C# Demo");
-        demo.AddAndReport(10);
-        demo.AddAndReport(5);
-        demo.AddAndReport(22);
-    }
-}
-
-// Call the static method
-// ExampleClass.RunDemo();
-\`\`\`
-
-> Play around with the settings! See how the preview changes instantly. Use `Ctrl+Enter` (or `Cmd+Enter`) to render.
+Try editing this text!
             </textarea>
-            <!-- Button Container -->
-            <div class="button-container">
-                <button id="render-btn">Render Markdown</button>
-                <button id="toggle-wrap-btn">Disable Wrap</button> <!-- Initial state is wrapped -->
-            </div>
         </div>
-
-        <!-- Resizer -->
-        <div class="resizer" id="dragMe"></div>
-
-        <div class="output-section">
-            <!-- NEW: Output Settings Panel -->
-            <div class="output-settings">
-                 <div class="control-group">
-                    <label for="font-family-select">Font:</label>
-                    <select id="font-family-select">
-                        <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
-                        <option value="Arial, Helvetica, sans-serif">Arial</option>
-                        <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                        <option value="Georgia, serif">Georgia</option>
-                        <option value="'Courier New', Courier, monospace">Courier New</option>
-                        <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                        <option value="'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace">Fira Code (Mono)</option>
-                    </select>
-                 </div>
-                 <div class="control-group">
-                    <label for="font-size-input">Size (px):</label>
-                    <input type="number" id="font-size-input" value="16" min="8" max="48" step="1">
-                 </div>
-                 <div class="control-group">
-                     <label for="padding-input">Padding (px):</label>
-                     <input type="number" id="padding-input" value="20" min="0" max="100" step="1">
-                 </div>
-            </div>
-
-            <!-- Markdown Output Area -->
-            <div id="markdown-output"></div>
+        <div id="resizer"></div>
+        <div class="panel output-panel" id="outputPanel">
+            <h2>Rendered Output</h2>
+            <div id="htmlOutput"></div>
         </div>
     </div>
 
-    <!-- Dependencies (Marked, Prism Core, Prism Languages) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.0/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-    <!-- *** ADDED C# COMPONENT *** -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
-
     <script>
-        // --- DOM Elements ---
-        const markdownInput = document.getElementById('markdown-input');
-        const outputDiv = document.getElementById('markdown-output');
-        const renderButton = document.getElementById('render-btn');
-        const toggleWrapButton = document.getElementById('toggle-wrap-btn');
-        const resizer = document.getElementById('dragMe');
-        const leftSide = document.querySelector('.input-section');
-        const rightSide = document.querySelector('.output-section');
+        const markdownInput = document.getElementById('markdownInput');
+        const htmlOutput = document.getElementById('htmlOutput');
+        const resizer = document.getElementById('resizer');
+        const inputPanel = document.getElementById('inputPanel');
+        const outputPanel = document.getElementById('outputPanel');
         const container = document.querySelector('.container');
+        const downloadPdfButton = document.getElementById('downloadPdf');
 
-        // --- Output Settings Elements ---
-        const fontFamilySelect = document.getElementById('font-family-select');
-        const fontSizeInput = document.getElementById('font-size-input');
-        const paddingInput = document.getElementById('padding-input');
-
-
-        // --- Text Wrap Toggle ---
-        function toggleWrap() {
-            const isWrapped = !markdownInput.classList.contains('no-wrap');
-            if (isWrapped) {
-                markdownInput.classList.add('no-wrap');
-                toggleWrapButton.textContent = 'Enable Wrap';
-            } else {
-                markdownInput.classList.remove('no-wrap');
-                toggleWrapButton.textContent = 'Disable Wrap';
-            }
+        // --- Markdown Rendering ---
+        function renderMarkdown() {
+            const markdownText = markdownInput.value;
+            // Use marked.parse (new recommended method)
+             try {
+                 htmlOutput.innerHTML = marked.parse(markdownText, { breaks: true, gfm: true }); // Enable GitHub Flavored Markdown and line breaks
+             } catch (e) {
+                 htmlOutput.innerHTML = `<p style="color: red;">Error parsing Markdown: ${e.message}</p>`;
+                 console.error("Markdown Parsing Error:", e);
+             }
         }
-        toggleWrapButton.addEventListener('click', toggleWrap);
 
-        // --- Resizable Panes Logic ---
+        // Initial render
+        renderMarkdown();
+
+        // Render on input change
+        markdownInput.addEventListener('input', renderMarkdown);
+
+        // --- Resizer Logic ---
         let isResizing = false;
-        let startX, initialLeftWidth, containerWidth;
 
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
-            startX = e.clientX;
-            initialLeftWidth = leftSide.offsetWidth;
-            containerWidth = container.offsetWidth; // Get container width at start of drag
-            resizer.classList.add('is-dragging'); // Add visual feedback
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            // Disable text selection globally during resize
-            document.body.style.userSelect = 'none';
-            document.body.style.webkitUserSelect = 'none'; /* Safari */
-        });
+            document.body.classList.add('resizing'); // Add class for global cursor change & disabling selection
 
-        function handleMouseMove(e) {
-            if (!isResizing) return;
+            // Get initial mouse position and panel widths
+            let startX = e.clientX;
+            let startInputWidth = inputPanel.offsetWidth;
+            let startOutputWidth = outputPanel.offsetWidth;
 
-            const currentX = e.clientX;
-            const deltaX = currentX - startX;
-            let newLeftWidth = initialLeftWidth + deltaX;
+            const doDrag = (moveEvent) => {
+                if (!isResizing) return;
 
-            // Constraints - prevent panes from becoming too small
-            const minWidthPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--min-pane-width')) || 100;
-            const resizerWidthPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--resizer-width')) || 5;
+                const currentX = moveEvent.clientX;
+                const diffX = currentX - startX;
 
-            if (newLeftWidth < minWidthPx) {
-                newLeftWidth = minWidthPx;
-            }
-            // Ensure right pane also meets minimum width
-            if (containerWidth - newLeftWidth - resizerWidthPx < minWidthPx) {
-                 newLeftWidth = containerWidth - minWidthPx - resizerWidthPx;
-            }
+                let newInputWidth = startInputWidth + diffX;
+                let newOutputWidth = startOutputWidth - diffX;
 
-            // Apply widths as percentages for responsiveness
-            const newLeftWidthPercent = (newLeftWidth / containerWidth) * 100;
-            // Calculate right width ensuring it accounts for the resizer's percentage width
-            const resizerWidthPercent = (resizerWidthPx / containerWidth) * 100;
-            const newRightWidthPercent = 100 - newLeftWidthPercent - resizerWidthPercent;
-
-            leftSide.style.flexBasis = `${newLeftWidthPercent}%`;
-            rightSide.style.flexBasis = `${newRightWidthPercent}%`;
-
-             // Optional: Prevent pushing elements out of view if flex basis isn't enough
-             leftSide.style.maxWidth = `${newLeftWidthPercent}%`;
-             rightSide.style.maxWidth = `${newRightWidthPercent}%`;
-        }
-
-        function handleMouseUp() {
-            if (isResizing) {
-                isResizing = false;
-                resizer.classList.remove('is-dragging');
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-                // Re-enable text selection
-                document.body.style.userSelect = '';
-                document.body.style.webkitUserSelect = '';
-            }
-        }
-
-        // --- Markdown Rendering Logic ---
-        function addCopyButtons() {
-            const preBlocks = outputDiv.querySelectorAll('pre'); // Target only within output div
-            preBlocks.forEach(preBlock => {
-                // Avoid adding multiple buttons
-                if (preBlock.querySelector('.copy-btn')) {
-                    return;
+                // Prevent panels from becoming too small
+                const minWidth = 100; // Minimum width in pixels
+                if (newInputWidth < minWidth) {
+                    newInputWidth = minWidth;
+                    newOutputWidth = container.offsetWidth - resizer.offsetWidth - minWidth;
+                }
+                if (newOutputWidth < minWidth) {
+                    newOutputWidth = minWidth;
+                    newInputWidth = container.offsetWidth - resizer.offsetWidth - minWidth;
                 }
 
-                const copyBtn = document.createElement('button');
-                copyBtn.textContent = 'Copy';
-                copyBtn.classList.add('copy-btn');
-                copyBtn.setAttribute('aria-label', 'Copy code to clipboard');
-                copyBtn.style.opacity = '0.7'; // Set initial opacity via JS
+                // Set widths as percentages for responsiveness (optional, could use pixels)
+                const totalWidth = container.offsetWidth - resizer.offsetWidth;
+                inputPanel.style.width = `${(newInputWidth / totalWidth) * 100}%`;
+                outputPanel.style.width = `${(newOutputWidth / totalWidth) * 100}%`;
 
-                copyBtn.addEventListener('click', () => {
-                    const codeBlock = preBlock.querySelector('code');
-                    if (!codeBlock) return; // Safety check
+                // Alternatively, set widths in pixels:
+                // inputPanel.style.width = `${newInputWidth}px`;
+                // outputPanel.style.width = `${newOutputWidth}px`;
+                // inputPanel.style.flexBasis = `${newInputWidth}px`; // Use flex-basis if using flex properties initially
+                // outputPanel.style.flexBasis = `${newOutputWidth}px`;
+            };
 
-                    const codeToCopy = codeBlock.textContent || ""; // Ensure textContent is not null
+            const stopDrag = () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.classList.remove('resizing'); // Remove global cursor style
+                    document.removeEventListener('mousemove', doDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                    window.removeEventListener('blur', stopDrag); // Handle losing focus
+                }
+            };
 
-                    navigator.clipboard.writeText(codeToCopy).then(() => {
-                        // Visual feedback
-                        copyBtn.textContent = 'Copied!';
-                        copyBtn.classList.add('copied');
-                        copyBtn.style.opacity = '1';
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+            window.addEventListener('blur', stopDrag); // Stop dragging if window loses focus
 
-                        // Revert back after 2 seconds
-                        setTimeout(() => {
-                            copyBtn.textContent = 'Copy';
-                            copyBtn.classList.remove('copied');
-                            // Check if mouse is still over the pre block before reverting opacity
-                            if (!preBlock.matches(':hover')) {
-                                 copyBtn.style.opacity = '0.7';
-                            }
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('Failed to copy code: ', err);
-                        copyBtn.textContent = 'Error';
-                        copyBtn.style.opacity = '1';
-                        // Revert error message
-                        setTimeout(() => {
-                            copyBtn.textContent = 'Copy';
-                            copyBtn.classList.remove('copied'); // Ensure class is removed
-                             if (!preBlock.matches(':hover')) {
-                                 copyBtn.style.opacity = '0.7';
-                             }
-                        }, 2500);
-                    });
-                });
-
-                // Add hover listeners to the parent pre block to manage button opacity
-                 preBlock.addEventListener('mouseenter', () => {
-                    copyBtn.style.opacity = '1';
-                 });
-                 preBlock.addEventListener('mouseleave', () => {
-                     // Don't fade out if showing 'Copied!' or 'Error' state
-                     if (!copyBtn.classList.contains('copied') && copyBtn.textContent !== 'Error') {
-                        copyBtn.style.opacity = '0.7';
-                     }
-                 });
-
-                // Append the copy button to the pre block
-                // Insert before the code element for potentially better styling/positioning
-                 if(preBlock.firstChild) {
-                     preBlock.insertBefore(copyBtn, preBlock.firstChild);
-                 } else {
-                     preBlock.appendChild(copyBtn);
-                 }
-            });
-        }
-
-        function renderMarkdown() {
-            const markdown = markdownInput.value;
-
-            // Configure marked to use Prism for syntax highlighting
-            marked.setOptions({
-                highlight: function(code, lang) {
-                    // *** THIS IS THE KEY PART FOR HIGHLIGHTING ***
-                    // It checks if the language 'lang' (e.g., 'python', 'javascript', 'csharp')
-                    // exists in the loaded Prism languages.
-                    if (lang && Prism.languages[lang]) {
-                        try {
-                            const highlightedCode = Prism.highlight(code, Prism.languages[lang], lang);
-                            // console.log(`Highlighted ${lang}`); // Debugging line
-                            return highlightedCode;
-                        } catch (err) {
-                             console.error(`Error highlighting language ${lang}:`, err);
-                             // Fallback handled below
-                        }
-                    }
-                    // Fallback: Language not specified, not supported (component not loaded), or highlighting failed
-                    // console.warn(`Language ${lang} not supported or failed highlighting. Using fallback.`); // Debugging line
-                    const escapeHtml = (unsafe) => {
-                        if (typeof unsafe !== 'string') return '';
-                        return unsafe
-                             .replace(/&/g, "&") // Correct escaping for ampersand
-                             .replace(/</g, "<")
-                             .replace(/>/g, ">")
-                             .replace(/"/g, "\"")
-                             .replace(/'/g, "'"); // Correct escaping for single quote
-                    };
-                    // Wrap the escaped code in a pre/code structure for consistency, marked as 'none'
-                    // Important: Do NOT return just escaped code, return it within the structure
-                    // so Prism.highlightAllUnder doesn't try to re-highlight it incorrectly.
-                    // Add the language-none class so Prism ignores it later.
-                    return `<pre class="language-none"><code class="language-none">${escapeHtml(code)}</code></pre>`;
-
-                },
-                pedantic: false,
-                gfm: true, // Enable GitHub Flavored Markdown
-                breaks: false, // Don't treat single newlines as <br>
-                sanitize: false, // IMPORTANT: Keep false unless input is untrusted
-                smartLists: true,
-                smartypants: false,
-                xhtml: false
-             });
-
-            // Convert markdown to HTML
-            let htmlContent = '';
-            try {
-                // IMPORTANT: Marked's highlight function wraps the code in <pre><code class="language-xyz">...</code></pre>
-                // So the output of marked.parse already contains the highlighted blocks.
-                htmlContent = marked.parse(markdown);
-            } catch (err) {
-                console.error("Error parsing Markdown:", err);
-                htmlContent = `<p style="color: #ff6b6b;">Error parsing Markdown. Please check your input.</p><pre>${err.message}</pre>`;
-            }
-
-            // Insert HTML into the output div
-            outputDiv.innerHTML = htmlContent;
-
-            // Add copy buttons AFTER content is rendered and potentially highlighted
-            addCopyButtons();
-
-            // Re-apply Prism highlighting to the entire output block?
-            // Normally, marked's highlight function should handle this.
-            // Running highlightAllUnder *again* might cause issues if the highlight function
-            // failed and returned escaped code without proper pre/code tags, or it might be redundant.
-            // Test carefully. If marked's highlight is working correctly, this might not be needed.
-            // Let's leave it commented out for now unless issues arise.
-            // Prism.highlightAllUnder(outputDiv);
-            // --- UPDATE: The marked highlight function already wraps the output.
-            // Prism.highlightAllUnder() IS useful if you have code blocks generated in other ways,
-            // but here it *might* try to re-process already highlighted blocks.
-            // The crucial part is that the `highlight` callback in `marked.setOptions` correctly
-            // uses `Prism.highlight`. Let's stick with that.
-        }
-
-        // --- Output Style Update Logic ---
-        function updateOutputStyle() {
-            const fontFamily = fontFamilySelect.value;
-            const fontSize = fontSizeInput.value;
-            const padding = paddingInput.value;
-
-            // Update CSS variables directly on the #markdown-output element's style
-            outputDiv.style.setProperty('--output-font-family', fontFamily);
-            outputDiv.style.setProperty('--output-font-size', `${fontSize}px`);
-            outputDiv.style.setProperty('--output-padding', `${padding}px`);
-        }
-
-        // --- Event Listeners ---
-        renderButton.addEventListener('click', renderMarkdown);
-
-        markdownInput.addEventListener('keydown', (event) => {
-            // Render on Ctrl+Enter or Cmd+Enter
-            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                event.preventDefault(); // Prevent default Enter behavior
-                renderMarkdown();
-            }
-            // Allow text selection within the textarea when modifier keys aren't pressed
-            if(!(event.ctrlKey || event.metaKey || event.altKey)) {
-                markdownInput.style.userSelect = 'text';
-                markdownInput.style.webkitUserSelect = 'text'; /* Safari */
-            }
+            e.preventDefault(); // Prevent text selection during drag start
         });
-         markdownInput.addEventListener('blur', () => { // Reset selection ability when focus is lost
-            markdownInput.style.userSelect = '';
-            markdownInput.style.webkitUserSelect = '';
-         });
 
-        // --- Listeners for Output Settings Controls ---
-        fontFamilySelect.addEventListener('change', updateOutputStyle);
-        fontSizeInput.addEventListener('input', updateOutputStyle); // 'input' for real-time feedback
-        paddingInput.addEventListener('input', updateOutputStyle);   // 'input' for real-time feedback
+        // --- PDF Download ---
+        downloadPdfButton.addEventListener('click', () => {
+            const element = document.getElementById('htmlOutput');
+            const filename = 'rendered_markdown.pdf';
 
-        // --- Initial Setup on Load ---
-        window.addEventListener('load', () => {
-             // Set initial control values based on defaults or CSS variables
-             const rootStyle = getComputedStyle(document.documentElement);
-             const initialFontFamily = rootStyle.getPropertyValue('--output-font-family').trim() || fontFamilySelect.options[0].value;
-             const initialFontSize = parseInt(rootStyle.getPropertyValue('--output-font-size'), 10) || 16;
-             const initialPadding = parseInt(rootStyle.getPropertyValue('--output-padding'), 10) || 20;
+            // Options for html2pdf.js
+            const opt = {
+              margin:       [10, 10, 15, 10], // top, left, bottom, right (in mm)
+              filename:     filename,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2, useCORS: true, logging: false }, // Increase scale for better resolution
+              jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+              pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // Try to avoid breaking elements
+            };
 
-             // Set control values
-             const matchingOption = Array.from(fontFamilySelect.options).find(opt => opt.value === initialFontFamily);
-             fontFamilySelect.value = matchingOption ? initialFontFamily : fontFamilySelect.options[0].value;
-             fontSizeInput.value = initialFontSize;
-             paddingInput.value = initialPadding;
+            console.log("Generating PDF...");
+            // html2pdf(element, opt); // Old syntax
 
-             // Apply initial styles via the update function
-             updateOutputStyle();
-
-             // Render initial markdown content
-             renderMarkdown();
-
-             // Set initial state of the wrap button text
-             if (markdownInput.classList.contains('no-wrap')) {
-                 toggleWrapButton.textContent = 'Enable Wrap';
-             } else {
-                 toggleWrapButton.textContent = 'Disable Wrap';
-             }
-
-             // Explicitly enable text selection in input/output areas after setup
-             markdownInput.style.userSelect = 'text';
-             markdownInput.style.webkitUserSelect = 'text';
-             outputDiv.style.userSelect = 'text';
-             outputDiv.style.webkitUserSelect = 'text';
+            // New Promise-based syntax
+            html2pdf().from(element).set(opt).save()
+                .then(() => {
+                    console.log("PDF generated successfully.");
+                })
+                .catch(err => {
+                    console.error("Error generating PDF:", err);
+                    alert("Error generating PDF. Check the console for details.");
+                });
         });
 
     </script>
+
 </body>
 </html>
