@@ -74,6 +74,14 @@
             border-radius: 10px;
             overflow: hidden;
             position: relative;
+            transform-origin: center center;
+            transition: transform 0.3s ease;
+        }
+
+        /* This applies zoom to the actual video stream */
+        #reader video {
+            transform-origin: center center;
+            transition: transform 0.3s ease;
         }
 
         .zoom-controls {
@@ -120,16 +128,6 @@
             padding: 5px 10px;
             border-radius: 15px;
             font-size: 12px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .qr-box-size {
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 11px;
             text-align: center;
             backdrop-filter: blur(10px);
         }
@@ -234,6 +232,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            margin-bottom: 15px;
         }
 
         .zoom-slider {
@@ -386,7 +385,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔍 QR Code Scanner with Zoom</h1>
+            <h1>🔍 QR Code Scanner with Real Zoom</h1>
             <div class="stats">
                 <div class="stat-item">
                     <div class="stat-value" id="totalCount">0</div>
@@ -400,16 +399,16 @@
         </div>
 
         <div class="tips-container">
-            <div class="tip">Use zoom controls to make small QR codes larger and easier to scan</div>
+            <div class="tip">Use zoom controls to magnify the camera view for small QR codes</div>
             <div class="tip">Adjust scan area size for different QR code dimensions</div>
-            <div class="tip">Try different quality settings if having trouble with blurry codes</div>
+            <div class="tip">Lower FPS helps with scanning very small or blurry codes</div>
         </div>
 
         <div class="scanner-container">
             <div id="reader"></div>
             <div class="zoom-controls" id="zoomControls" style="display: none;">
                 <button class="zoom-btn" id="zoomInBtn">+</button>
-                <div class="zoom-level" id="zoomLevel">250px</div>
+                <div class="zoom-level" id="zoomLevel">1.0x</div>
                 <button class="zoom-btn" id="zoomOutBtn">-</button>
             </div>
             <div class="status ready" id="status">
@@ -427,10 +426,15 @@
             </div>
 
             <div class="zoom-control-panel">
-                <h4 style="margin-bottom: 15px; color: #333;">Zoom & Scan Area Controls</h4>
+                <h4 style="margin-bottom: 15px; color: #333;">Zoom & Scan Controls</h4>
+                <div class="zoom-slider-container">
+                    <label style="color: #555; font-weight: 600; min-width: 80px;">Zoom Level:</label>
+                    <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="3" step="0.1" value="1">
+                    <span id="zoomDisplay" style="color: #667eea; font-weight: bold; min-width: 50px;">1.0x</span>
+                </div>
                 <div class="zoom-slider-container">
                     <label style="color: #555; font-weight: 600; min-width: 80px;">Scan Area:</label>
-                    <input type="range" id="qrBoxSlider" class="zoom-slider" min="100" max="450" step="25" value="250">
+                    <input type="range" id="qrBoxSlider" class="zoom-slider" min="100" max="400" step="25" value="250">
                     <span id="qrBoxDisplay" style="color: #667eea; font-weight: bold; min-width: 60px;">250px</span>
                 </div>
             </div>
@@ -440,10 +444,10 @@
                 <div class="control-row">
                     <label style="color: #555; font-weight: 600;">Frame Rate:</label>
                     <select id="fpsSelect" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
-                        <option value="5">5 FPS (Better for small codes)</option>
+                        <option value="5">5 FPS (Best for tiny codes)</option>
+                        <option value="8">8 FPS (Better for small codes)</option>
                         <option value="10" selected>10 FPS (Balanced)</option>
                         <option value="15">15 FPS (Faster)</option>
-                        <option value="20">20 FPS (Fastest)</option>
                     </select>
                 </div>
             </div>
@@ -479,6 +483,7 @@
         let isCooldown = false;
         let html5QrcodeScanner = null;
         let scanDelay = 1500;
+        let currentZoom = 1.0;
         let currentQrBoxSize = 250;
         let currentFps = 10;
 
@@ -496,6 +501,13 @@
                 scanDelay = parseInt(savedDelay);
                 document.getElementById('delaySlider').value = scanDelay / 1000;
                 updateDelayDisplay();
+            }
+
+            const savedZoom = localStorage.getItem('qrScanZoom');
+            if (savedZoom) {
+                currentZoom = parseFloat(savedZoom);
+                document.getElementById('zoomSlider').value = currentZoom;
+                updateZoomDisplay();
             }
 
             const savedQrBoxSize = localStorage.getItem('qrScanBoxSize');
@@ -520,6 +532,7 @@
         // Save settings
         function saveSettings() {
             localStorage.setItem('qrScanDelay', scanDelay);
+            localStorage.setItem('qrScanZoom', currentZoom);
             localStorage.setItem('qrScanBoxSize', currentQrBoxSize);
             localStorage.setItem('qrScanFps', currentFps);
         }
@@ -548,10 +561,23 @@
             }
         }
 
+        // Apply zoom to video element
+        function applyZoom() {
+            const video = document.querySelector('#reader video');
+            if (video) {
+                video.style.transform = `scale(${currentZoom})`;
+            }
+        }
+
+        // Update zoom display
+        function updateZoomDisplay() {
+            document.getElementById('zoomDisplay').textContent = currentZoom.toFixed(1) + 'x';
+            document.getElementById('zoomLevel').textContent = currentZoom.toFixed(1) + 'x';
+        }
+
         // Update QR box display
         function updateQrBoxDisplay() {
             document.getElementById('qrBoxDisplay').textContent = currentQrBoxSize + 'px';
-            document.getElementById('zoomLevel').textContent = currentQrBoxSize + 'px';
         }
 
         // Update delay display
@@ -576,7 +602,7 @@
             const cooldownBar = document.getElementById('cooldownBar');
             
             statusEl.className = 'status cooldown';
-            statusEl.textContent = `Cooldown - please wait ${(scanDelay/1000).toFixed(1)}s...`;
+            statusEl.textContent = `Scanned! Cooldown ${(scanDelay/1000).toFixed(1)}s...`;
             
             if (scanDelay > 0 && html5QrcodeScanner) {
                 html5QrcodeScanner.pause();
@@ -602,7 +628,7 @@
             }, scanDelay);
         }
 
-        // Start scanner with simplified camera constraints
+        // Start scanner
         function startScanner() {
             html5QrcodeScanner = new Html5Qrcode("reader");
             
@@ -612,7 +638,6 @@
                 aspectRatio: 1.0
             };
 
-            // Simple camera constraints that work across all browsers
             const cameraConstraints = { facingMode: "environment" };
 
             html5QrcodeScanner.start(
@@ -625,17 +650,20 @@
                 document.getElementById('stopBtn').style.display = 'block';
                 document.getElementById('zoomControls').style.display = 'flex';
                 document.getElementById('status').className = 'status ready';
-                document.getElementById('status').textContent = 'Ready to scan - Adjust scan area size for small QR codes';
+                document.getElementById('status').textContent = 'Ready to scan - Use zoom for small QR codes';
+                
+                // Apply initial zoom after a short delay to ensure video is loaded
+                setTimeout(() => {
+                    applyZoom();
+                }, 500);
+                
             }).catch(err => {
                 console.error(`Unable to start scanning: ${err}`);
                 
-                // More detailed error handling
                 if (err.name === 'NotAllowedError') {
                     alert('Camera access denied. Please allow camera access and try again.');
                 } else if (err.name === 'NotFoundError') {
                     alert('No camera found. Please connect a camera and try again.');
-                } else if (err.name === 'NotSupportedError') {
-                    alert('Camera not supported on this device/browser.');
                 } else {
                     alert('Unable to access camera: ' + err.message);
                 }
@@ -658,7 +686,7 @@
             }
         }
 
-        // Restart scanner with new settings
+        // Restart scanner with new settings (except zoom)
         function restartScanner() {
             if (isScanning) {
                 stopScanner();
@@ -668,24 +696,24 @@
             }
         }
 
-        // Zoom functions (now just adjusts scan area size)
+        // Zoom functions
         function zoomIn() {
-            if (currentQrBoxSize < 450) {
-                currentQrBoxSize = Math.min(450, currentQrBoxSize + 25);
-                document.getElementById('qrBoxSlider').value = currentQrBoxSize;
-                updateQrBoxDisplay();
+            if (currentZoom < 3) {
+                currentZoom = Math.min(3, currentZoom + 0.2);
+                document.getElementById('zoomSlider').value = currentZoom;
+                updateZoomDisplay();
+                applyZoom();
                 saveSettings();
-                restartScanner();
             }
         }
 
         function zoomOut() {
-            if (currentQrBoxSize > 100) {
-                currentQrBoxSize = Math.max(100, currentQrBoxSize - 25);
-                document.getElementById('qrBoxSlider').value = currentQrBoxSize;
-                updateQrBoxDisplay();
+            if (currentZoom > 1) {
+                currentZoom = Math.max(1, currentZoom - 0.2);
+                document.getElementById('zoomSlider').value = currentZoom;
+                updateZoomDisplay();
+                applyZoom();
                 saveSettings();
-                restartScanner();
             }
         }
 
@@ -727,16 +755,20 @@
         // Reset all settings
         function resetSettings() {
             if (confirm('Reset all settings to default values?')) {
+                currentZoom = 1.0;
                 currentQrBoxSize = 250;
                 currentFps = 10;
                 scanDelay = 1500;
 
+                document.getElementById('zoomSlider').value = currentZoom;
                 document.getElementById('qrBoxSlider').value = currentQrBoxSize;
                 document.getElementById('fpsSelect').value = currentFps;
                 document.getElementById('delaySlider').value = scanDelay / 1000;
 
+                updateZoomDisplay();
                 updateQrBoxDisplay();
                 updateDelayDisplay();
+                applyZoom();
                 saveSettings();
 
                 restartScanner();
@@ -750,11 +782,18 @@
         document.getElementById('clearBtn').addEventListener('click', clearHistory);
         document.getElementById('resetBtn').addEventListener('click', resetSettings);
 
-        // Zoom controls (now scan area controls)
+        // Zoom controls
         document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
         document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
 
         // Sliders and selects
+        document.getElementById('zoomSlider').addEventListener('input', function(e) {
+            currentZoom = parseFloat(e.target.value);
+            updateZoomDisplay();
+            applyZoom();
+            saveSettings();
+        });
+
         document.getElementById('qrBoxSlider').addEventListener('input', function(e) {
             currentQrBoxSize = parseInt(e.target.value);
             updateQrBoxDisplay();
