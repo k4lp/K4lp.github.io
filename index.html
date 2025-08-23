@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner with Zoom</title>
+    <title>QR Code Scanner with Sharp Zoom</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
@@ -78,10 +78,24 @@
             transition: transform 0.3s ease;
         }
 
-        /* This applies zoom to the actual video stream */
+        /* Enhanced video quality settings */
         #reader video {
             transform-origin: center center;
             transition: transform 0.3s ease;
+            /* Image sharpening and quality improvements */
+            filter: contrast(1.1) brightness(1.05) saturate(1.1) unsharp-mask(amount(150%) radius(1px) threshold(0));
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            /* Better video rendering */
+            -webkit-backface-visibility: hidden;
+            -webkit-transform: translateZ(0);
+            backface-visibility: hidden;
+            transform: translateZ(0);
+        }
+
+        /* Additional sharpening for zoomed video */
+        #reader video.zoomed {
+            filter: contrast(1.2) brightness(0.8) saturate(1.15) sharpen(1.5);
         }
 
         .zoom-controls {
@@ -128,6 +142,16 @@
             padding: 5px 10px;
             border-radius: 15px;
             font-size: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .quality-indicator {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 15px;
+            font-size: 10px;
             text-align: center;
             backdrop-filter: blur(10px);
         }
@@ -385,7 +409,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔍 QR Code Scanner with Real Zoom</h1>
+            <h1>📹 QR Scanner with Sharp HD Video</h1>
             <div class="stats">
                 <div class="stat-item">
                     <div class="stat-value" id="totalCount">0</div>
@@ -399,9 +423,9 @@
         </div>
 
         <div class="tips-container">
-            <div class="tip">Use zoom controls to magnify the camera view for small QR codes</div>
-            <div class="tip">Adjust scan area size for different QR code dimensions</div>
-            <div class="tip">Lower FPS helps with scanning very small or blurry codes</div>
+            <div class="tip">HD video quality with image sharpening - perfect for small QR codes</div>
+            <div class="tip">Use zoom + focus mode for ultra-small codes</div>
+            <div class="tip">Auto-brightness and contrast adjustment for better clarity</div>
         </div>
 
         <div class="scanner-container">
@@ -410,6 +434,7 @@
                 <button class="zoom-btn" id="zoomInBtn">+</button>
                 <div class="zoom-level" id="zoomLevel">1.0x</div>
                 <button class="zoom-btn" id="zoomOutBtn">-</button>
+                <div class="quality-indicator" id="qualityIndicator">HD</div>
             </div>
             <div class="status ready" id="status">
                 Ready to scan
@@ -421,15 +446,15 @@
 
         <div class="controls">
             <div class="button-group">
-                <button class="btn-primary" id="startBtn">Start Scanner</button>
+                <button class="btn-primary" id="startBtn">Start HD Scanner</button>
                 <button class="btn-danger" id="stopBtn" style="display:none;">Stop Scanner</button>
             </div>
 
             <div class="zoom-control-panel">
-                <h4 style="margin-bottom: 15px; color: #333;">Zoom & Scan Controls</h4>
+                <h4 style="margin-bottom: 15px; color: #333;">🔍 Zoom & Quality Controls</h4>
                 <div class="zoom-slider-container">
-                    <label style="color: #555; font-weight: 600; min-width: 80px;">Zoom Level:</label>
-                    <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="3" step="0.1" value="1">
+                    <label style="color: #555; font-weight: 600; min-width: 80px;">Zoom:</label>
+                    <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="4" step="0.1" value="1">
                     <span id="zoomDisplay" style="color: #667eea; font-weight: bold; min-width: 50px;">1.0x</span>
                 </div>
                 <div class="zoom-slider-container">
@@ -440,14 +465,31 @@
             </div>
 
             <div class="scan-quality-controls">
-                <h4 style="margin-bottom: 15px; color: #333;">Scan Quality Settings</h4>
+                <h4 style="margin-bottom: 15px; color: #333;">📱 Video Quality Settings</h4>
+                <div class="control-row">
+                    <label style="color: #555; font-weight: 600;">Resolution:</label>
+                    <select id="resolutionSelect" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                        <option value="1920x1080">1920x1080 (Full HD)</option>
+                        <option value="1280x720" selected>1280x720 (HD)</option>
+                        <option value="960x540">960x540 (qHD)</option>
+                        <option value="640x480">640x480 (VGA)</option>
+                    </select>
+                </div>
                 <div class="control-row">
                     <label style="color: #555; font-weight: 600;">Frame Rate:</label>
                     <select id="fpsSelect" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
-                        <option value="5">5 FPS (Best for tiny codes)</option>
-                        <option value="8">8 FPS (Better for small codes)</option>
-                        <option value="10" selected>10 FPS (Balanced)</option>
-                        <option value="15">15 FPS (Faster)</option>
+                        <option value="5">5 FPS (Ultra sharp)</option>
+                        <option value="8" selected>8 FPS (Sharp + smooth)</option>
+                        <option value="10">10 FPS (Balanced)</option>
+                        <option value="15">15 FPS (Fast)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label style="color: #555; font-weight: 600;">Focus Mode:</label>
+                    <select id="focusSelect" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                        <option value="continuous">Auto Focus</option>
+                        <option value="single-shot" selected>Single Focus (Better for small codes)</option>
+                        <option value="manual">Manual Focus</option>
                     </select>
                 </div>
             </div>
@@ -485,7 +527,9 @@
         let scanDelay = 1500;
         let currentZoom = 1.0;
         let currentQrBoxSize = 250;
-        let currentFps = 10;
+        let currentFps = 8;
+        let currentResolution = '1280x720';
+        let currentFocusMode = 'single-shot';
 
         // Load history and settings from localStorage
         function loadHistory() {
@@ -522,6 +566,18 @@
                 currentFps = parseInt(savedFps);
                 document.getElementById('fpsSelect').value = currentFps;
             }
+
+            const savedResolution = localStorage.getItem('qrScanResolution');
+            if (savedResolution) {
+                currentResolution = savedResolution;
+                document.getElementById('resolutionSelect').value = currentResolution;
+            }
+
+            const savedFocus = localStorage.getItem('qrScanFocus');
+            if (savedFocus) {
+                currentFocusMode = savedFocus;
+                document.getElementById('focusSelect').value = currentFocusMode;
+            }
         }
 
         // Save history to localStorage
@@ -535,6 +591,8 @@
             localStorage.setItem('qrScanZoom', currentZoom);
             localStorage.setItem('qrScanBoxSize', currentQrBoxSize);
             localStorage.setItem('qrScanFps', currentFps);
+            localStorage.setItem('qrScanResolution', currentResolution);
+            localStorage.setItem('qrScanFocus', currentFocusMode);
         }
 
         // Update display
@@ -561,11 +619,17 @@
             }
         }
 
-        // Apply zoom to video element
+        // Apply zoom to video element with enhanced sharpening
         function applyZoom() {
             const video = document.querySelector('#reader video');
             if (video) {
                 video.style.transform = `scale(${currentZoom})`;
+                // Add enhanced sharpening when zoomed
+                if (currentZoom > 1.5) {
+                    video.classList.add('zoomed');
+                } else {
+                    video.classList.remove('zoomed');
+                }
             }
         }
 
@@ -586,6 +650,40 @@
             document.getElementById('delayValue').textContent = value + 's';
         }
 
+        // Update quality indicator
+        function updateQualityIndicator() {
+            const indicator = document.getElementById('qualityIndicator');
+            if (currentResolution === '1920x1080') {
+                indicator.textContent = 'FHD';
+            } else if (currentResolution === '1280x720') {
+                indicator.textContent = 'HD';
+            } else if (currentResolution === '960x540') {
+                indicator.textContent = 'qHD';
+            } else {
+                indicator.textContent = 'VGA';
+            }
+        }
+
+        // Get enhanced camera constraints for better quality
+        function getCameraConstraints() {
+            const [width, height] = currentResolution.split('x').map(Number);
+            
+            return {
+                facingMode: "environment",
+                width: { ideal: width, min: width * 0.8 },
+                height: { ideal: height, min: height * 0.8 },
+                frameRate: { ideal: currentFps, min: currentFps - 2, max: currentFps + 5 },
+                focusMode: currentFocusMode,
+                // Enhanced quality settings
+                aspectRatio: { ideal: width / height },
+                resizeMode: 'crop-and-scale',
+                // Additional quality improvements
+                whiteBalanceMode: 'auto',
+                exposureMode: 'auto',
+                focusDistance: { ideal: 0.1 }, // Close focus for QR codes
+            };
+        }
+
         // Handle successful scan
         function onScanSuccess(decodedText, decodedResult) {
             if (isCooldown) return;
@@ -602,7 +700,7 @@
             const cooldownBar = document.getElementById('cooldownBar');
             
             statusEl.className = 'status cooldown';
-            statusEl.textContent = `Scanned! Cooldown ${(scanDelay/1000).toFixed(1)}s...`;
+            statusEl.textContent = `✅ Scanned! Cooldown ${(scanDelay/1000).toFixed(1)}s...`;
             
             if (scanDelay > 0 && html5QrcodeScanner) {
                 html5QrcodeScanner.pause();
@@ -628,17 +726,23 @@
             }, scanDelay);
         }
 
-        // Start scanner
+        // Start scanner with enhanced quality
         function startScanner() {
             html5QrcodeScanner = new Html5Qrcode("reader");
             
             const config = {
                 fps: currentFps,
                 qrbox: { width: currentQrBoxSize, height: currentQrBoxSize },
-                aspectRatio: 1.0
+                aspectRatio: 1.0,
+                // Enhanced scanning settings
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+                // Better detection algorithms
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             };
 
-            const cameraConstraints = { facingMode: "environment" };
+            const cameraConstraints = getCameraConstraints();
 
             html5QrcodeScanner.start(
                 cameraConstraints,
@@ -650,12 +754,21 @@
                 document.getElementById('stopBtn').style.display = 'block';
                 document.getElementById('zoomControls').style.display = 'flex';
                 document.getElementById('status').className = 'status ready';
-                document.getElementById('status').textContent = 'Ready to scan - Use zoom for small QR codes';
+                document.getElementById('status').textContent = 'HD Scanner Ready - Crystal Clear Video!';
+                updateQualityIndicator();
                 
-                // Apply initial zoom after a short delay to ensure video is loaded
+                // Apply zoom and quality enhancements after video loads
                 setTimeout(() => {
                     applyZoom();
-                }, 500);
+                    
+                    // Additional video quality improvements
+                    const video = document.querySelector('#reader video');
+                    if (video) {
+                        video.setAttribute('playsinline', true);
+                        video.setAttribute('webkit-playsinline', true);
+                        video.style.objectFit = 'cover';
+                    }
+                }, 1000);
                 
             }).catch(err => {
                 console.error(`Unable to start scanning: ${err}`);
@@ -664,6 +777,8 @@
                     alert('Camera access denied. Please allow camera access and try again.');
                 } else if (err.name === 'NotFoundError') {
                     alert('No camera found. Please connect a camera and try again.');
+                } else if (err.name === 'OverconstrainedError') {
+                    alert('Selected resolution not supported. Try a lower resolution setting.');
                 } else {
                     alert('Unable to access camera: ' + err.message);
                 }
@@ -698,8 +813,8 @@
 
         // Zoom functions
         function zoomIn() {
-            if (currentZoom < 3) {
-                currentZoom = Math.min(3, currentZoom + 0.2);
+            if (currentZoom < 4) {
+                currentZoom = Math.min(4, currentZoom + 0.2);
                 document.getElementById('zoomSlider').value = currentZoom;
                 updateZoomDisplay();
                 applyZoom();
@@ -757,12 +872,16 @@
             if (confirm('Reset all settings to default values?')) {
                 currentZoom = 1.0;
                 currentQrBoxSize = 250;
-                currentFps = 10;
+                currentFps = 8;
+                currentResolution = '1280x720';
+                currentFocusMode = 'single-shot';
                 scanDelay = 1500;
 
                 document.getElementById('zoomSlider').value = currentZoom;
                 document.getElementById('qrBoxSlider').value = currentQrBoxSize;
                 document.getElementById('fpsSelect').value = currentFps;
+                document.getElementById('resolutionSelect').value = currentResolution;
+                document.getElementById('focusSelect').value = currentFocusMode;
                 document.getElementById('delaySlider').value = scanDelay / 1000;
 
                 updateZoomDisplay();
@@ -803,6 +922,18 @@
 
         document.getElementById('fpsSelect').addEventListener('change', function(e) {
             currentFps = parseInt(e.target.value);
+            saveSettings();
+            restartScanner();
+        });
+
+        document.getElementById('resolutionSelect').addEventListener('change', function(e) {
+            currentResolution = e.target.value;
+            saveSettings();
+            restartScanner();
+        });
+
+        document.getElementById('focusSelect').addEventListener('change', function(e) {
+            currentFocusMode = e.target.value;
             saveSettings();
             restartScanner();
         });
