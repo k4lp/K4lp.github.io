@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner</title>
+    <title>QR Code Scanner with Zoom</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
@@ -66,12 +66,72 @@
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
         }
 
         #reader {
             width: 100%;
             border-radius: 10px;
             overflow: hidden;
+            position: relative;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .zoom-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .zoom-btn:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: scale(1.1);
+        }
+
+        .zoom-btn:disabled {
+            background: rgba(108, 117, 125, 0.5);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .zoom-level {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .qr-box-size {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            text-align: center;
+            backdrop-filter: blur(10px);
         }
 
         .status {
@@ -109,7 +169,7 @@
         .button-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         button {
@@ -151,6 +211,56 @@
         .btn-success:hover {
             background: #38a169;
             transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+            transform: translateY(-2px);
+        }
+
+        .zoom-control-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .zoom-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .zoom-slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .scan-quality-controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
         }
 
         .history-container {
@@ -233,12 +343,50 @@
             width: 0;
             transition: width 1.5s linear;
         }
+
+        .tips-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .tip {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .tip:last-child {
+            margin-bottom: 0;
+        }
+
+        .tip::before {
+            content: "💡";
+            margin-right: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .zoom-controls {
+                top: 20px;
+                right: 20px;
+            }
+            
+            .zoom-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 QR Code Scanner</h1>
+            <h1>🔍 QR Code Scanner with Zoom</h1>
             <div class="stats">
                 <div class="stat-item">
                     <div class="stat-value" id="totalCount">0</div>
@@ -251,8 +399,20 @@
             </div>
         </div>
 
+        <div class="tips-container">
+            <div class="tip">Use zoom controls to make small QR codes larger and easier to scan</div>
+            <div class="tip">Adjust scan area size for different QR code dimensions</div>
+            <div class="tip">Try different quality settings if having trouble with blurry codes</div>
+        </div>
+
         <div class="scanner-container">
             <div id="reader"></div>
+            <div class="zoom-controls" id="zoomControls" style="display: none;">
+                <button class="zoom-btn" id="zoomInBtn">+</button>
+                <div class="zoom-level" id="zoomLevel">1.0x</div>
+                <button class="zoom-btn" id="zoomOutBtn">-</button>
+                <div class="qr-box-size" id="qrBoxSize">250px</div>
+            </div>
             <div class="status ready" id="status">
                 Ready to scan
             </div>
@@ -266,6 +426,42 @@
                 <button class="btn-primary" id="startBtn">Start Scanner</button>
                 <button class="btn-danger" id="stopBtn" style="display:none;">Stop Scanner</button>
             </div>
+
+            <div class="zoom-control-panel">
+                <h4 style="margin-bottom: 15px; color: #333;">Zoom & Scan Area Controls</h4>
+                <div class="zoom-slider-container">
+                    <label style="color: #555; font-weight: 600; min-width: 80px;">Zoom Level:</label>
+                    <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="5" step="0.1" value="1">
+                    <span id="zoomDisplay" style="color: #667eea; font-weight: bold; min-width: 50px;">1.0x</span>
+                </div>
+                <div class="zoom-slider-container" style="margin-top: 15px;">
+                    <label style="color: #555; font-weight: 600; min-width: 80px;">Scan Area:</label>
+                    <input type="range" id="qrBoxSlider" class="zoom-slider" min="100" max="400" step="25" value="250">
+                    <span id="qrBoxDisplay" style="color: #667eea; font-weight: bold; min-width: 50px;">250px</span>
+                </div>
+            </div>
+
+            <div class="scan-quality-controls">
+                <h4 style="margin-bottom: 15px; color: #333;">Scan Quality Settings</h4>
+                <div class="control-row">
+                    <label style="color: #555; font-weight: 600;">Frame Rate:</label>
+                    <select id="fpsSelect" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                        <option value="5">5 FPS (Better for small codes)</option>
+                        <option value="10" selected>10 FPS (Balanced)</option>
+                        <option value="15">15 FPS (Faster)</option>
+                        <option value="20">20 FPS (Fastest)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label style="color: #555; font-weight: 600;">Camera Resolution:</label>
+                    <select id="resolutionSelect" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                        <option value="640x480">640x480 (Standard)</option>
+                        <option value="1280x720" selected>1280x720 (HD)</option>
+                        <option value="1920x1080">1920x1080 (Full HD)</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="delay-control">
                 <label for="delaySlider" style="display: block; margin-bottom: 10px; color: #555; font-weight: 600;">
                     Scan Delay: <span id="delayValue" style="color: #667eea;">1.5s</span>
@@ -273,9 +469,11 @@
                 <input type="range" id="delaySlider" min="0" max="5" step="0.5" value="1.5" 
                        style="width: 100%; height: 6px; border-radius: 3px; background: #e2e8f0; outline: none; cursor: pointer;">
             </div>
+            
             <div class="button-group" style="margin-top: 15px;">
                 <button class="btn-success" id="exportBtn">Export CSV</button>
                 <button class="btn-danger" id="clearBtn">Clear History</button>
+                <button class="btn-secondary" id="resetBtn">Reset Settings</button>
             </div>
         </div>
 
@@ -294,22 +492,52 @@
         let isScanning = false;
         let isCooldown = false;
         let html5QrcodeScanner = null;
-        let scanDelay = 1500; // Default 1.5 seconds
+        let scanDelay = 1500;
+        let currentZoom = 1.0;
+        let currentQrBoxSize = 250;
+        let currentFps = 10;
+        let currentResolution = '1280x720';
 
-        // Load history from localStorage
+        // Load history and settings from localStorage
         function loadHistory() {
             const saved = localStorage.getItem('qrScanHistory');
             if (saved) {
                 scanHistory = JSON.parse(saved);
                 updateDisplay();
             }
-            // Load saved delay preference
+            
+            // Load saved settings
             const savedDelay = localStorage.getItem('qrScanDelay');
             if (savedDelay) {
                 scanDelay = parseInt(savedDelay);
-                const slider = document.getElementById('delaySlider');
-                slider.value = scanDelay / 1000;
+                document.getElementById('delaySlider').value = scanDelay / 1000;
                 updateDelayDisplay();
+            }
+
+            const savedZoom = localStorage.getItem('qrScanZoom');
+            if (savedZoom) {
+                currentZoom = parseFloat(savedZoom);
+                document.getElementById('zoomSlider').value = currentZoom;
+                updateZoomDisplay();
+            }
+
+            const savedQrBoxSize = localStorage.getItem('qrScanBoxSize');
+            if (savedQrBoxSize) {
+                currentQrBoxSize = parseInt(savedQrBoxSize);
+                document.getElementById('qrBoxSlider').value = currentQrBoxSize;
+                updateQrBoxDisplay();
+            }
+
+            const savedFps = localStorage.getItem('qrScanFps');
+            if (savedFps) {
+                currentFps = parseInt(savedFps);
+                document.getElementById('fpsSelect').value = currentFps;
+            }
+
+            const savedResolution = localStorage.getItem('qrScanResolution');
+            if (savedResolution) {
+                currentResolution = savedResolution;
+                document.getElementById('resolutionSelect').value = currentResolution;
             }
         }
 
@@ -318,14 +546,21 @@
             localStorage.setItem('qrScanHistory', JSON.stringify(scanHistory));
         }
 
+        // Save settings
+        function saveSettings() {
+            localStorage.setItem('qrScanDelay', scanDelay);
+            localStorage.setItem('qrScanZoom', currentZoom);
+            localStorage.setItem('qrScanBoxSize', currentQrBoxSize);
+            localStorage.setItem('qrScanFps', currentFps);
+            localStorage.setItem('qrScanResolution', currentResolution);
+        }
+
         // Update display
         function updateDisplay() {
-            // Update counts
             document.getElementById('totalCount').textContent = scanHistory.length;
             const uniqueCodes = new Set(scanHistory.map(item => item.content));
             document.getElementById('uniqueCount').textContent = uniqueCodes.size;
 
-            // Update history list
             const historyList = document.getElementById('historyList');
             if (scanHistory.length === 0) {
                 historyList.innerHTML = '<div class="empty-history">No scans yet. Start scanning QR codes!</div>';
@@ -344,11 +579,41 @@
             }
         }
 
+        // Update zoom display
+        function updateZoomDisplay() {
+            document.getElementById('zoomDisplay').textContent = currentZoom.toFixed(1) + 'x';
+            document.getElementById('zoomLevel').textContent = currentZoom.toFixed(1) + 'x';
+        }
+
+        // Update QR box display
+        function updateQrBoxDisplay() {
+            document.getElementById('qrBoxDisplay').textContent = currentQrBoxSize + 'px';
+            document.getElementById('qrBoxSize').textContent = currentQrBoxSize + 'px';
+        }
+
+        // Update delay display
+        function updateDelayDisplay() {
+            const value = document.getElementById('delaySlider').value;
+            document.getElementById('delayValue').textContent = value + 's';
+        }
+
+        // Get camera constraints with resolution
+        function getCameraConstraints() {
+            const [width, height] = currentResolution.split('x').map(Number);
+            return {
+                facingMode: "environment",
+                advanced: [{
+                    zoom: currentZoom
+                }],
+                width: { ideal: width },
+                height: { ideal: height }
+            };
+        }
+
         // Handle successful scan
         function onScanSuccess(decodedText, decodedResult) {
             if (isCooldown) return;
 
-            // Add to history
             scanHistory.push({
                 content: decodedText,
                 timestamp: new Date().toISOString()
@@ -356,7 +621,6 @@
             saveHistory();
             updateDisplay();
 
-            // Start cooldown
             isCooldown = true;
             const statusEl = document.getElementById('status');
             const cooldownBar = document.getElementById('cooldownBar');
@@ -364,12 +628,10 @@
             statusEl.className = 'status cooldown';
             statusEl.textContent = `Cooldown - please wait ${(scanDelay/1000).toFixed(1)}s...`;
             
-            // Stop scanning temporarily (only if delay > 0)
             if (scanDelay > 0 && html5QrcodeScanner) {
                 html5QrcodeScanner.pause();
             }
             
-            // Animate cooldown bar
             cooldownBar.style.transition = 'none';
             cooldownBar.style.width = '100%';
             
@@ -378,7 +640,6 @@
                 cooldownBar.style.width = '0%';
             }, 50);
 
-            // Resume after cooldown period
             setTimeout(() => {
                 isCooldown = false;
                 if (isScanning && html5QrcodeScanner) {
@@ -391,29 +652,35 @@
             }, scanDelay);
         }
 
-        // Start scanner
+        // Start scanner with enhanced settings
         function startScanner() {
             html5QrcodeScanner = new Html5Qrcode("reader");
             
             const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
+                fps: currentFps,
+                qrbox: { width: currentQrBoxSize, height: currentQrBoxSize },
+                aspectRatio: 1.0,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
             };
 
+            const cameraConstraints = getCameraConstraints();
+
             html5QrcodeScanner.start(
-                { facingMode: "environment" },
+                cameraConstraints,
                 config,
                 onScanSuccess
             ).then(() => {
                 isScanning = true;
                 document.getElementById('startBtn').style.display = 'none';
                 document.getElementById('stopBtn').style.display = 'block';
+                document.getElementById('zoomControls').style.display = 'flex';
                 document.getElementById('status').className = 'status ready';
-                document.getElementById('status').textContent = 'Ready to scan';
+                document.getElementById('status').textContent = 'Ready to scan - Use zoom controls for small QR codes';
             }).catch(err => {
                 console.error(`Unable to start scanning: ${err}`);
-                alert('Unable to access camera. Please ensure you have granted camera permissions.');
+                alert('Unable to access camera. Please ensure you have granted camera permissions and try a lower resolution setting.');
             });
         }
 
@@ -424,11 +691,43 @@
                     isScanning = false;
                     document.getElementById('startBtn').style.display = 'block';
                     document.getElementById('stopBtn').style.display = 'none';
+                    document.getElementById('zoomControls').style.display = 'none';
                     document.getElementById('status').className = 'status';
                     document.getElementById('status').textContent = 'Scanner stopped';
                 }).catch(err => {
                     console.error(`Unable to stop scanning: ${err}`);
                 });
+            }
+        }
+
+        // Restart scanner with new settings
+        function restartScanner() {
+            if (isScanning) {
+                stopScanner();
+                setTimeout(() => {
+                    startScanner();
+                }, 500);
+            }
+        }
+
+        // Zoom functions
+        function zoomIn() {
+            if (currentZoom < 5) {
+                currentZoom = Math.min(5, currentZoom + 0.2);
+                document.getElementById('zoomSlider').value = currentZoom;
+                updateZoomDisplay();
+                saveSettings();
+                restartScanner();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 1) {
+                currentZoom = Math.max(1, currentZoom - 0.2);
+                document.getElementById('zoomSlider').value = currentZoom;
+                updateZoomDisplay();
+                saveSettings();
+                restartScanner();
             }
         }
 
@@ -467,10 +766,28 @@
             }
         }
 
-        // Update delay display
-        function updateDelayDisplay() {
-            const value = document.getElementById('delaySlider').value;
-            document.getElementById('delayValue').textContent = value + 's';
+        // Reset all settings
+        function resetSettings() {
+            if (confirm('Reset all settings to default values?')) {
+                currentZoom = 1.0;
+                currentQrBoxSize = 250;
+                currentFps = 10;
+                currentResolution = '1280x720';
+                scanDelay = 1500;
+
+                document.getElementById('zoomSlider').value = currentZoom;
+                document.getElementById('qrBoxSlider').value = currentQrBoxSize;
+                document.getElementById('fpsSelect').value = currentFps;
+                document.getElementById('resolutionSelect').value = currentResolution;
+                document.getElementById('delaySlider').value = scanDelay / 1000;
+
+                updateZoomDisplay();
+                updateQrBoxDisplay();
+                updateDelayDisplay();
+                saveSettings();
+
+                restartScanner();
+            }
         }
 
         // Event listeners
@@ -478,15 +795,46 @@
         document.getElementById('stopBtn').addEventListener('click', stopScanner);
         document.getElementById('exportBtn').addEventListener('click', exportToCSV);
         document.getElementById('clearBtn').addEventListener('click', clearHistory);
-        
-        // Delay slider listener
-        document.getElementById('delaySlider').addEventListener('input', function(e) {
-            scanDelay = parseFloat(e.target.value) * 1000; // Convert to milliseconds
-            updateDelayDisplay();
-            localStorage.setItem('qrScanDelay', scanDelay);
+        document.getElementById('resetBtn').addEventListener('click', resetSettings);
+
+        // Zoom controls
+        document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+        document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+
+        // Sliders and selects
+        document.getElementById('zoomSlider').addEventListener('input', function(e) {
+            currentZoom = parseFloat(e.target.value);
+            updateZoomDisplay();
+            saveSettings();
+            restartScanner();
         });
 
-        // Load history on page load
+        document.getElementById('qrBoxSlider').addEventListener('input', function(e) {
+            currentQrBoxSize = parseInt(e.target.value);
+            updateQrBoxDisplay();
+            saveSettings();
+            restartScanner();
+        });
+
+        document.getElementById('fpsSelect').addEventListener('change', function(e) {
+            currentFps = parseInt(e.target.value);
+            saveSettings();
+            restartScanner();
+        });
+
+        document.getElementById('resolutionSelect').addEventListener('change', function(e) {
+            currentResolution = e.target.value;
+            saveSettings();
+            restartScanner();
+        });
+
+        document.getElementById('delaySlider').addEventListener('input', function(e) {
+            scanDelay = parseFloat(e.target.value) * 1000;
+            updateDelayDisplay();
+            saveSettings();
+        });
+
+        // Load history and settings on page load
         loadHistory();
     </script>
 </body>
