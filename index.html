@@ -347,22 +347,29 @@
             
             statusEl.className = 'status cooldown';
             statusEl.textContent = 'Cooldown - please wait...';
+            
+            // Stop scanning temporarily
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.pause();
+            }
+            
+            // Animate cooldown bar
+            cooldownBar.style.transition = 'none';
             cooldownBar.style.width = '100%';
-
+            
             setTimeout(() => {
+                cooldownBar.style.transition = 'width 1.5s linear';
                 cooldownBar.style.width = '0%';
-                setTimeout(() => {
-                    isCooldown = false;
-                    if (isScanning) {
-                        statusEl.className = 'status ready';
-                        statusEl.textContent = 'Ready to scan';
-                    }
-                }, 100);
-            }, 10);
+            }, 50);
 
-            // Cooldown period
+            // Resume after cooldown period
             setTimeout(() => {
-                // Ready for next scan
+                isCooldown = false;
+                if (isScanning && html5QrcodeScanner) {
+                    html5QrcodeScanner.resume();
+                    statusEl.className = 'status ready';
+                    statusEl.textContent = 'Ready to scan';
+                }
             }, 1500);
         }
 
