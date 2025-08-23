@@ -3,375 +3,453 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Markdown Renderer</title>
-    <!-- Marked.js for Markdown Parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- html2pdf.js for PDF Generation (includes jsPDF & html2canvas) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+    <title>QR Code Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
-	@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500;600;700&display=swap');
-
-        /* Basic Reset & Box Sizing */
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }
-
-        html, body {
-            height: 100%;
-            font-family: sans-serif;
-            overflow: hidden; /* Prevent body scroll */
+            box-sizing: border-box;
         }
 
         body {
-            display: flex;
-            flex-direction: column; /* Stack toolbar and container vertically */
-        }
-
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background-color: #f0f0f0;
-            border-bottom: 1px solid #ccc;
-            flex-shrink: 0; /* Prevent toolbar from shrinking */
-            height: 50px; /* Fixed height for toolbar */
-        }
-
-        .toolbar h1 {
-            font-size: 1.2em;
-            margin: 0;
-        }
-
-        #downloadPdf {
-            padding: 8px 15px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            transition: background-color 0.2s ease;
-        }
-
-        #downloadPdf:hover {
-            background-color: #0056b3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
-            display: flex;
-            flex-grow: 1; /* Allow container to fill remaining space */
-            height: calc(100vh - 50px); /* Adjust based on toolbar height */
-            border-top: 1px solid #ccc;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        .panel {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* Hide overflow within panels */
-            min-width: 100px; /* Minimum width for panels */
-            position: relative; /* Needed for absolute positioned elements inside? No, needed for flex basis calculations */
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
-        .panel h2 {
-            padding: 8px 15px;
-            background-color: #f8f8f8;
-            font-size: 0.9em;
-            border-bottom: 1px solid #eee;
-            flex-shrink: 0; /* Prevent header from shrinking */
-            margin: 0;
-            font-weight: 600;
+        h1 {
             color: #333;
+            text-align: center;
+            margin-bottom: 15px;
         }
 
-        .input-panel {
-            /* flex: 1 1 50%; Flex basis will be controlled by JS */
-            width: 50%; /* Start at 50% */
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
         }
 
-        .output-panel {
-            /* flex: 1 1 50%; Flex basis will be controlled by JS */
-            width: 50%; /* Start at 50% */
-            background-color: #ffffff;
-            border-left: 1px solid #ccc; /* Added border for clarity */
+        .stat-item {
+            text-align: center;
         }
 
-        #markdownInput {
-            flex-grow: 1; /* Allow textarea to fill panel space */
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .scanner-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.cooldown {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.scanning {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
             border: none;
-            padding: 15px;
-            font-family: monospace;
+            border-radius: 8px;
             font-size: 14px;
-            line-height: 1.5;
-            resize: none; /* Disable native textarea resize */
-            outline: none;
-            color: #333;
-            background-color: #fdfdfd;
-            height: 100%; /* Fill parent */
-            overflow-y: auto; /* Add scrollbar if needed */
-        }
-
-        #htmlOutput {
-            flex-grow: 1; /* Allow output div to fill panel space */
-            padding: 15px;
-            overflow-y: auto; /* Add scrollbar if needed */
-            line-height: 1.6;
-            color: #333;
-	    font-family: 'Product Sans';
-            word-wrap: break-word;
-        }
-
-        /* Basic Markdown Styling for Output */
-        #htmlOutput > *:first-child {
-            margin-top: 0;
-        }
-        #htmlOutput h1, #htmlOutput h2, #htmlOutput h3, #htmlOutput h4, #htmlOutput h5, #htmlOutput h6 {
-            margin-top: 1em;
-            margin-bottom: 0.5em;
             font-weight: 600;
-        }
-        #htmlOutput h1 { font-size: 2em; border-bottom: 1px solid #eee; padding-bottom: 0.3em;}
-        #htmlOutput h2 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em;}
-        #htmlOutput h3 { font-size: 1.25em; }
-        #htmlOutput p { margin-bottom: 1em; }
-        #htmlOutput ul, #htmlOutput ol { margin-bottom: 1em; padding-left: 2em; }
-        #htmlOutput blockquote {
-            margin: 1em 0;
-            padding: 0.5em 1em;
-            border-left: 4px solid #dfe2e5;
-            color: #6a737d;
-            background-color: #f6f8fa;
-        }
-         #htmlOutput blockquote > :first-child { margin-top: 0; }
-         #htmlOutput blockquote > :last-child { margin-bottom: 0; }
-        #htmlOutput code {
-            font-family: monospace;
-            background-color: rgba(27,31,35,.05);
-            padding: .2em .4em;
-            margin: 0;
-            font-size: 85%;
-            border-radius: 3px;
-        }
-        #htmlOutput pre {
-            background-color: #f6f8fa;
-            border-radius: 3px;
-            font-size: 85%;
-            line-height: 1.45;
-            overflow: auto;
-            padding: 16px;
-            margin-bottom: 1em;
-        }
-        #htmlOutput pre code {
-            background-color: transparent;
-            padding: 0;
-            margin: 0;
-            font-size: 100%; /* Reset inner code size */
-            border-radius: 0;
-        }
-        #htmlOutput table {
-            border-collapse: collapse;
-            margin-bottom: 1em;
-            width: auto;
-            border: 1px solid #dfe2e5;
-        }
-        #htmlOutput th, #htmlOutput td {
-            border: 1px solid #dfe2e5;
-            padding: 6px 13px;
-        }
-        #htmlOutput th { font-weight: 600; background-color: #f6f8fa; }
-        #htmlOutput tr:nth-child(even) { background-color: #f6f8fa; }
-        #htmlOutput img { max-width: 100%; }
-
-
-        /* Resizer Styles */
-        #resizer {
-            width: 6px; /* Width of the draggable area */
-            background-color: #ccc;
-            cursor: col-resize;
-            flex-shrink: 0; /* Don't let it shrink */
-            position: relative;
-            z-index: 10;
-            border-left: 1px solid #bbb;
-            border-right: 1px solid #bbb;
-        }
-        #resizer:hover {
-             background-color: #aaa;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
-        /* Style for when dragging */
-        body.resizing {
-            cursor: col-resize;
-            user-select: none; /* Prevent text selection during drag */
-        }
-        body.resizing .panel {
-            pointer-events: none; /* Prevent interaction with panels during resize */
+        .btn-primary {
+            background: #667eea;
+            color: white;
         }
 
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+
+        .history-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .history-item-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .history-item-content {
+            margin-top: 5px;
+            word-break: break-all;
+            color: #555;
+        }
+
+        .history-item-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+
+        .cooldown-bar {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .cooldown-progress {
+            height: 100%;
+            background: #667eea;
+            border-radius: 2px;
+            width: 0;
+            transition: width 1.5s linear;
+        }
     </style>
 </head>
 <body>
-    <div class="toolbar">
-        <h1>Markdown Editor</h1>
-        <button id="downloadPdf">Download PDF</button>
-    </div>
     <div class="container">
-        <div class="panel input-panel" id="inputPanel">
-            <h2>Markdown Input</h2>
-            <textarea id="markdownInput" placeholder="Type your Markdown here..."># Welcome to the Markdown Editor!
-
-This is a simple **HTML, CSS, and JavaScript** based Markdown renderer.
-
-- Uses `marked.js` for parsing.
-- Uses `html2pdf.js` for PDF export.
-- Features an adjustable divider.
-
-## Features
-
-1.  Real-time rendering
-2.  Adjustable view panels
-3.  PDF Download of the rendered output
-
-\`\`\`javascript
-// Example code block
-function greet(name) {
-  console.log(\`Hello, \${name}!\`);
-}
-greet('World');
-\`\`\`
-
-> Blockquote example.
-
-Try editing this text!
-            </textarea>
+        <div class="header">
+            <h1>📱 QR Code Scanner</h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalCount">0</div>
+                    <div class="stat-label">Total Scanned</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="uniqueCount">0</div>
+                    <div class="stat-label">Unique Codes</div>
+                </div>
+            </div>
         </div>
-        <div id="resizer"></div>
-        <div class="panel output-panel" id="outputPanel">
-            <h2>Rendered Output</h2>
-            <div id="htmlOutput"></div>
+
+        <div class="scanner-container">
+            <div id="reader"></div>
+            <div class="status ready" id="status">
+                Ready to scan
+            </div>
+            <div class="cooldown-bar">
+                <div class="cooldown-progress" id="cooldownBar"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="button-group">
+                <button class="btn-primary" id="startBtn">Start Scanner</button>
+                <button class="btn-danger" id="stopBtn" style="display:none;">Stop Scanner</button>
+            </div>
+            <div class="button-group">
+                <button class="btn-success" id="exportBtn">Export CSV</button>
+                <button class="btn-danger" id="clearBtn">Clear History</button>
+            </div>
+        </div>
+
+        <div class="history-container">
+            <div class="history-header">
+                <div class="history-title">Scan History</div>
+            </div>
+            <div id="historyList">
+                <div class="empty-history">No scans yet. Start scanning QR codes!</div>
+            </div>
         </div>
     </div>
 
     <script>
-        const markdownInput = document.getElementById('markdownInput');
-        const htmlOutput = document.getElementById('htmlOutput');
-        const resizer = document.getElementById('resizer');
-        const inputPanel = document.getElementById('inputPanel');
-        const outputPanel = document.getElementById('outputPanel');
-        const container = document.querySelector('.container');
-        const downloadPdfButton = document.getElementById('downloadPdf');
+        let scanHistory = [];
+        let isScanning = false;
+        let isCooldown = false;
+        let html5QrcodeScanner = null;
 
-        // --- Markdown Rendering ---
-        function renderMarkdown() {
-            const markdownText = markdownInput.value;
-            // Use marked.parse (new recommended method)
-             try {
-                 htmlOutput.innerHTML = marked.parse(markdownText, { breaks: true, gfm: true }); // Enable GitHub Flavored Markdown and line breaks
-             } catch (e) {
-                 htmlOutput.innerHTML = `<p style="color: red;">Error parsing Markdown: ${e.message}</p>`;
-                 console.error("Markdown Parsing Error:", e);
-             }
+        // Load history from localStorage
+        function loadHistory() {
+            const saved = localStorage.getItem('qrScanHistory');
+            if (saved) {
+                scanHistory = JSON.parse(saved);
+                updateDisplay();
+            }
         }
 
-        // Initial render
-        renderMarkdown();
+        // Save history to localStorage
+        function saveHistory() {
+            localStorage.setItem('qrScanHistory', JSON.stringify(scanHistory));
+        }
 
-        // Render on input change
-        markdownInput.addEventListener('input', renderMarkdown);
+        // Update display
+        function updateDisplay() {
+            // Update counts
+            document.getElementById('totalCount').textContent = scanHistory.length;
+            const uniqueCodes = new Set(scanHistory.map(item => item.content));
+            document.getElementById('uniqueCount').textContent = uniqueCodes.size;
 
-        // --- Resizer Logic ---
-        let isResizing = false;
+            // Update history list
+            const historyList = document.getElementById('historyList');
+            if (scanHistory.length === 0) {
+                historyList.innerHTML = '<div class="empty-history">No scans yet. Start scanning QR codes!</div>';
+            } else {
+                historyList.innerHTML = scanHistory
+                    .slice()
+                    .reverse()
+                    .map((item, index) => `
+                        <div class="history-item">
+                            <div class="history-item-number">#${scanHistory.length - index}</div>
+                            <div class="history-item-content">${item.content}</div>
+                            <div class="history-item-time">${new Date(item.timestamp).toLocaleString()}</div>
+                        </div>
+                    `)
+                    .join('');
+            }
+        }
 
-        resizer.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            document.body.classList.add('resizing'); // Add class for global cursor change & disabling selection
+        // Handle successful scan
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isCooldown) return;
 
-            // Get initial mouse position and panel widths
-            let startX = e.clientX;
-            let startInputWidth = inputPanel.offsetWidth;
-            let startOutputWidth = outputPanel.offsetWidth;
+            // Add to history
+            scanHistory.push({
+                content: decodedText,
+                timestamp: new Date().toISOString()
+            });
+            saveHistory();
+            updateDisplay();
 
-            const doDrag = (moveEvent) => {
-                if (!isResizing) return;
+            // Start cooldown
+            isCooldown = true;
+            const statusEl = document.getElementById('status');
+            const cooldownBar = document.getElementById('cooldownBar');
+            
+            statusEl.className = 'status cooldown';
+            statusEl.textContent = 'Cooldown - please wait...';
+            cooldownBar.style.width = '100%';
 
-                const currentX = moveEvent.clientX;
-                const diffX = currentX - startX;
+            setTimeout(() => {
+                cooldownBar.style.width = '0%';
+                setTimeout(() => {
+                    isCooldown = false;
+                    if (isScanning) {
+                        statusEl.className = 'status ready';
+                        statusEl.textContent = 'Ready to scan';
+                    }
+                }, 100);
+            }, 10);
 
-                let newInputWidth = startInputWidth + diffX;
-                let newOutputWidth = startOutputWidth - diffX;
+            // Cooldown period
+            setTimeout(() => {
+                // Ready for next scan
+            }, 1500);
+        }
 
-                // Prevent panels from becoming too small
-                const minWidth = 100; // Minimum width in pixels
-                if (newInputWidth < minWidth) {
-                    newInputWidth = minWidth;
-                    newOutputWidth = container.offsetWidth - resizer.offsetWidth - minWidth;
-                }
-                if (newOutputWidth < minWidth) {
-                    newOutputWidth = minWidth;
-                    newInputWidth = container.offsetWidth - resizer.offsetWidth - minWidth;
-                }
-
-                // Set widths as percentages for responsiveness (optional, could use pixels)
-                const totalWidth = container.offsetWidth - resizer.offsetWidth;
-                inputPanel.style.width = `${(newInputWidth / totalWidth) * 100}%`;
-                outputPanel.style.width = `${(newOutputWidth / totalWidth) * 100}%`;
-
-                // Alternatively, set widths in pixels:
-                // inputPanel.style.width = `${newInputWidth}px`;
-                // outputPanel.style.width = `${newOutputWidth}px`;
-                // inputPanel.style.flexBasis = `${newInputWidth}px`; // Use flex-basis if using flex properties initially
-                // outputPanel.style.flexBasis = `${newOutputWidth}px`;
+        // Start scanner
+        function startScanner() {
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
             };
 
-            const stopDrag = () => {
-                if (isResizing) {
-                    isResizing = false;
-                    document.body.classList.remove('resizing'); // Remove global cursor style
-                    document.removeEventListener('mousemove', doDrag);
-                    document.removeEventListener('mouseup', stopDrag);
-                    window.removeEventListener('blur', stopDrag); // Handle losing focus
-                }
-            };
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess
+            ).then(() => {
+                isScanning = true;
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'block';
+                document.getElementById('status').className = 'status ready';
+                document.getElementById('status').textContent = 'Ready to scan';
+            }).catch(err => {
+                console.error(`Unable to start scanning: ${err}`);
+                alert('Unable to access camera. Please ensure you have granted camera permissions.');
+            });
+        }
 
-            document.addEventListener('mousemove', doDrag);
-            document.addEventListener('mouseup', stopDrag);
-            window.addEventListener('blur', stopDrag); // Stop dragging if window loses focus
-
-            e.preventDefault(); // Prevent text selection during drag start
-        });
-
-        // --- PDF Download ---
-        downloadPdfButton.addEventListener('click', () => {
-            const element = document.getElementById('htmlOutput');
-            const filename = 'rendered_markdown.pdf';
-
-            // Options for html2pdf.js
-            const opt = {
-              margin:       [10, 10, 15, 10], // top, left, bottom, right (in mm)
-              filename:     filename,
-              image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2, useCORS: true, logging: false }, // Increase scale for better resolution
-              jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-              pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // Try to avoid breaking elements
-            };
-
-            console.log("Generating PDF...");
-            // html2pdf(element, opt); // Old syntax
-
-            // New Promise-based syntax
-            html2pdf().from(element).set(opt).save()
-                .then(() => {
-                    console.log("PDF generated successfully.");
-                })
-                .catch(err => {
-                    console.error("Error generating PDF:", err);
-                    alert("Error generating PDF. Check the console for details.");
+        // Stop scanner
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    isScanning = false;
+                    document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
+                    document.getElementById('status').className = 'status';
+                    document.getElementById('status').textContent = 'Scanner stopped';
+                }).catch(err => {
+                    console.error(`Unable to stop scanning: ${err}`);
                 });
-        });
+            }
+        }
 
+        // Export to CSV
+        function exportToCSV() {
+            if (scanHistory.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Number,QR Code Content,Timestamp\n';
+            scanHistory.forEach((item, index) => {
+                csv += `${index + 1},"${item.content.replace(/"/g, '""')}","${new Date(item.timestamp).toLocaleString()}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `qr_scan_history_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Clear history
+        function clearHistory() {
+            if (scanHistory.length === 0) {
+                alert('History is already empty');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete all ${scanHistory.length} scan records?`)) {
+                scanHistory = [];
+                saveHistory();
+                updateDisplay();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startScanner);
+        document.getElementById('stopBtn').addEventListener('click', stopScanner);
+        document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+        document.getElementById('clearBtn').addEventListener('click', clearHistory);
+
+        // Load history on page load
+        loadHistory();
     </script>
-
 </body>
 </html>
