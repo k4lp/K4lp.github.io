@@ -1,6 +1,6 @@
 /**
- * QR Code Component Scanner - Range Selector (Enhanced with Click-to-Select)
- * Alica Technologies
+ * QR Code Component Scanner - Range Selector (Swiss Minimalist Design)
+ * Alica Technologies - Version 2.1
  */
 
 window.QRScannerRangeSelector = {
@@ -13,7 +13,7 @@ window.QRScannerRangeSelector = {
     _touchStarted: false,
     _lastTouchCell: null,
     
-    // NEW: Click-to-select state management
+    // Click-to-select state management
     _clickSelectionMode: false,
     _firstClickCell: null,
     _isWaitingForSecondClick: false,
@@ -27,11 +27,11 @@ window.QRScannerRangeSelector = {
         this._bindEvents();
         this._setupTouchSupport();
         this._setupClickSelectionToggle();
-        window.QRScannerUtils.log.debug('Range selector initialized with enhanced touch support and click-to-select');
+        window.QRScannerUtils.log.debug('Range selector initialized with click-to-select functionality');
     },
     
     /**
-     * NEW: Setup click selection mode toggle and UI
+     * Setup click selection mode toggle and UI
      */
     _setupClickSelectionToggle() {
         // Create toggle button container
@@ -40,10 +40,9 @@ window.QRScannerRangeSelector = {
         // Add toggle button
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'click-selection-toggle';
-        toggleBtn.textContent = '📍 Enable Click Selection';
-        toggleBtn.className = 'btn btn-outline-secondary btn-sm me-2';
+        toggleBtn.textContent = 'ENABLE CLICK SELECTION';
+        toggleBtn.className = 'btn btn-outline btn-sm';
         toggleBtn.title = 'Toggle between drag selection and click selection modes';
-        toggleBtn.style.cssText = 'transition: all 0.3s ease; font-size: 12px;';
         
         // Add toggle functionality
         toggleBtn.addEventListener('click', this._toggleClickSelectionMode.bind(this));
@@ -51,27 +50,12 @@ window.QRScannerRangeSelector = {
         // Add visual indicator for click selection mode
         const indicator = document.createElement('div');
         indicator.id = 'click-selection-indicator';
-        indicator.style.cssText = `
-            display: none; 
-            padding: 8px 12px; 
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
-            border: 1px solid #2196f3; 
-            border-radius: 6px; 
-            margin: 8px 0; 
-            font-size: 13px; 
-            color: #1565c0;
-            font-weight: 500;
-            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
-        `;
+        indicator.className = 'alert alert-info';
+        indicator.style.cssText = 'display: none; margin-top: var(--space-3);';
         indicator.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">📍</span>
-                <div>
-                    <div><strong>Click Selection Mode Active</strong></div>
-                    <div style="font-size: 11px; opacity: 0.8;">
-                        1. Click on the first cell → 2. Click on the second cell → Range selected
-                    </div>
-                </div>
+            <div class="alert-title">CLICK SELECTION MODE ACTIVE</div>
+            <div style="font-size: var(--font-size-xs); margin-top: var(--space-2);">
+                Step 1: Click on the first cell → Step 2: Click on the second cell → Range selected
             </div>
         `;
         
@@ -84,14 +68,15 @@ window.QRScannerRangeSelector = {
     },
     
     /**
-     * NEW: Get or create controls container
+     * Get or create controls container
      */
     _getOrCreateControlsContainer() {
         let container = document.getElementById('range-selection-controls');
         if (!container) {
             container = document.createElement('div');
             container.id = 'range-selection-controls';
-            container.style.cssText = 'margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;';
+            container.className = 'panel';
+            container.style.cssText = 'margin-bottom: var(--space-4);';
             
             // Find the best insertion point
             const confirmBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE);
@@ -103,32 +88,31 @@ window.QRScannerRangeSelector = {
     },
     
     /**
-     * NEW: Create mode information panel
+     * Create mode information panel
      */
     _createModeInfoPanel(parent) {
         const infoPanel = document.createElement('div');
         infoPanel.id = 'selection-mode-info';
         infoPanel.style.cssText = `
-            margin-top: 10px;
-            padding: 8px;
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #856404;
+            margin-top: var(--space-4);
+            padding: var(--space-3);
+            background-color: var(--color-gray-50);
+            border: var(--border-width) solid var(--color-gray-200);
+            font-size: var(--font-size-xs);
+            color: var(--color-gray-600);
         `;
         infoPanel.innerHTML = `
-            <div><strong>Selection Modes:</strong></div>
-            <div style="margin-top: 4px;">
-                <div>• <strong>Drag Mode:</strong> Click and drag to select range</div>
-                <div>• <strong>Click Mode:</strong> Click two cells to define range corners</div>
+            <div class="text-xs font-medium uppercase tracking-wider text-black mb-2">SELECTION MODES</div>
+            <div style="margin-top: var(--space-2);">
+                <div>DRAG MODE: Click and drag to select range</div>
+                <div>CLICK MODE: Click two cells to define range corners</div>
             </div>
         `;
         parent.appendChild(infoPanel);
     },
     
     /**
-     * NEW: Toggle click selection mode
+     * Toggle click selection mode
      */
     _toggleClickSelectionMode() {
         this._clickSelectionMode = !this._clickSelectionMode;
@@ -137,9 +121,8 @@ window.QRScannerRangeSelector = {
         
         if (this._clickSelectionMode) {
             // Enable click selection mode
-            toggleBtn.textContent = '🖱️ Disable Click Selection';
-            toggleBtn.className = 'btn btn-primary btn-sm me-2';
-            toggleBtn.style.fontWeight = 'bold';
+            toggleBtn.textContent = 'DISABLE CLICK SELECTION';
+            toggleBtn.className = 'btn btn-secondary btn-sm';
             
             if (indicator) {
                 indicator.style.display = 'block';
@@ -154,9 +137,8 @@ window.QRScannerRangeSelector = {
             
         } else {
             // Disable click selection mode
-            toggleBtn.textContent = '📍 Enable Click Selection';
-            toggleBtn.className = 'btn btn-outline-secondary btn-sm me-2';
-            toggleBtn.style.fontWeight = 'normal';
+            toggleBtn.textContent = 'ENABLE CLICK SELECTION';
+            toggleBtn.className = 'btn btn-outline btn-sm';
             
             if (indicator) {
                 indicator.style.display = 'none';
@@ -171,7 +153,7 @@ window.QRScannerRangeSelector = {
     },
     
     /**
-     * NEW: Show temporary message
+     * Show temporary message
      */
     _showTemporaryMessage(message, type = 'info') {
         const existingMsg = document.getElementById('temp-selection-message');
@@ -181,26 +163,17 @@ window.QRScannerRangeSelector = {
         
         const msgDiv = document.createElement('div');
         msgDiv.id = 'temp-selection-message';
-        
-        const bgColor = type === 'success' ? '#d4edda' : type === 'warning' ? '#fff3cd' : '#d1ecf1';
-        const borderColor = type === 'success' ? '#c3e6cb' : type === 'warning' ? '#ffeaa7' : '#bee5eb';
-        const textColor = type === 'success' ? '#155724' : type === 'warning' ? '#856404' : '#0c5460';
-        
+        msgDiv.className = `toast alert-${type}`;
         msgDiv.style.cssText = `
             position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            padding: 12px 16px;
-            background-color: ${bgColor};
-            border: 1px solid ${borderColor};
-            border-radius: 6px;
-            color: ${textColor};
-            font-size: 14px;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 350px;
-            animation: slideInRight 0.3s ease-out;
+            top: var(--space-6);
+            right: var(--space-6);
+            z-index: var(--z-tooltip);
+            min-width: 300px;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            text-transform: uppercase;
+            letter-spacing: var(--letter-spacing-wider);
         `;
         
         msgDiv.textContent = message;
@@ -209,14 +182,14 @@ window.QRScannerRangeSelector = {
         // Auto remove after 4 seconds
         setTimeout(() => {
             if (msgDiv.parentNode) {
-                msgDiv.style.animation = 'slideOutRight 0.3s ease-in';
-                setTimeout(() => msgDiv.remove(), 300);
+                msgDiv.style.animation = 'fadeOut var(--transition-fast)';
+                setTimeout(() => msgDiv.remove(), 200);
             }
         }, 4000);
     },
     
     /**
-     * NEW: Reset click selection state
+     * Reset click selection state
      */
     _resetClickSelection() {
         this._firstClickCell = null;
@@ -232,7 +205,7 @@ window.QRScannerRangeSelector = {
     },
     
     /**
-     * NEW: Clear first click highlighting
+     * Clear first click highlighting
      */
     _clearFirstClickHighlight() {
         const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
@@ -244,13 +217,14 @@ window.QRScannerRangeSelector = {
             if (!cell.classList.contains('cell-selected')) {
                 cell.style.backgroundColor = '';
                 cell.style.color = '';
-                cell.style.border = '1px solid #dee2e6';
+                cell.style.border = 'var(--border-width) solid var(--color-black)';
+                cell.style.boxShadow = '';
             }
         });
     },
     
     /**
-     * NEW: Update click selection status display
+     * Update click selection status display
      */
     _updateClickSelectionStatus() {
         let statusDiv = document.getElementById('click-selection-status');
@@ -265,19 +239,17 @@ window.QRScannerRangeSelector = {
         if (!statusDiv) {
             statusDiv = document.createElement('div');
             statusDiv.id = 'click-selection-status';
+            statusDiv.className = 'alert';
             statusDiv.style.cssText = `
                 position: sticky;
                 top: 0;
-                z-index: 15;
-                padding: 6px 12px;
-                background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
-                border: 1px solid #ffb74d;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 600;
-                color: #e65100;
+                z-index: var(--z-sticky);
+                margin-bottom: var(--space-3);
+                font-size: var(--font-size-xs);
+                font-weight: var(--font-weight-medium);
+                text-transform: uppercase;
+                letter-spacing: var(--letter-spacing-wider);
                 text-align: center;
-                margin-bottom: 8px;
             `;
             
             const tableContainer = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
@@ -288,21 +260,14 @@ window.QRScannerRangeSelector = {
         
         if (this._isWaitingForSecondClick && this._firstClickCell) {
             statusDiv.innerHTML = `
-                <span style="font-size: 14px;">⏳</span> 
-                First cell selected: <strong>${this._firstClickCell.ref}</strong> 
-                → Click second cell to complete range selection
+                FIRST CELL SELECTED: <strong>${this._firstClickCell.ref}</strong> - CLICK SECOND CELL TO COMPLETE RANGE
             `;
-            statusDiv.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #a5d6a7 100%)';
-            statusDiv.style.borderColor = '#81c784';
-            statusDiv.style.color = '#2e7d32';
+            statusDiv.className = 'alert alert-success';
         } else {
             statusDiv.innerHTML = `
-                <span style="font-size: 14px;">📍</span> 
-                Click Selection Mode: Click on first cell to start
+                CLICK SELECTION MODE - CLICK ON FIRST CELL TO START
             `;
-            statusDiv.style.background = 'linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%)';
-            statusDiv.style.borderColor = '#ffb74d';
-            statusDiv.style.color = '#e65100';
+            statusDiv.className = 'alert alert-info';
         }
     },
 
@@ -396,7 +361,7 @@ window.QRScannerRangeSelector = {
         
         // Validate cell reference format (e.g., A1, Z99, AA100)
         if (value && !this._isValidCellRef(value)) {
-            input.style.borderColor = '#ef4444';
+            input.style.borderColor = 'var(--color-error)';
         } else {
             input.style.borderColor = '';
         }
@@ -497,12 +462,6 @@ window.QRScannerRangeSelector = {
             container.innerHTML = '';
             container.appendChild(table);
 
-            // Add responsive wrapper
-            container.style.overflowX = 'auto';
-            container.style.maxHeight = '70vh';
-            container.style.border = '1px solid #e0e0e0';
-            container.style.borderRadius = '4px';
-
             // Update click selection status if in click mode
             this._updateClickSelectionStatus();
 
@@ -519,7 +478,7 @@ window.QRScannerRangeSelector = {
     _showNoDataMessage() {
         const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
         if (container) {
-            container.innerHTML = `<div style="text-align: center; padding: 40px; color: #666;">No data available. Please select a sheet first.</div>`;
+            container.innerHTML = `<div class="empty">NO DATA AVAILABLE. PLEASE SELECT A SHEET FIRST.</div>`;
         }
     },
 
@@ -529,7 +488,7 @@ window.QRScannerRangeSelector = {
     _showErrorMessage(message) {
         const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
         if (container) {
-            container.innerHTML = `<div style="text-align: center; padding: 40px; color: #d32f2f; background-color: #ffebee; border-radius: 4px;">${message}</div>`;
+            container.innerHTML = `<div class="alert alert-error" style="text-align: center;">${message}</div>`;
         }
     },
 
@@ -553,16 +512,11 @@ window.QRScannerRangeSelector = {
 
         // Create header row with column letters
         const headerRow = document.createElement('tr');
-        headerRow.style.backgroundColor = '#f8f9fa';
-        headerRow.style.position = 'sticky';
-        headerRow.style.top = '0';
-        headerRow.style.zIndex = '10';
 
         // Empty cell for row numbers
         const cornerCell = document.createElement('th');
         cornerCell.textContent = '';
         cornerCell.className = 'cell-header';
-        cornerCell.style.cssText = 'background-color: #e9ecef; border: 1px solid #dee2e6; padding: 8px; text-align: center; font-weight: bold; min-width: 40px;';
         headerRow.appendChild(cornerCell);
 
         // Column letter headers
@@ -570,7 +524,6 @@ window.QRScannerRangeSelector = {
             const th = document.createElement('th');
             th.textContent = window.QRScannerUtils.excel.numToCol(col + 1);
             th.className = 'cell-header';
-            th.style.cssText = 'background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 8px; text-align: center; font-weight: bold; min-width: 80px; max-width: 150px;';
             th.dataset.col = col + 1;
             headerRow.appendChild(th);
         }
@@ -585,7 +538,6 @@ window.QRScannerRangeSelector = {
             const rowNumCell = document.createElement('th');
             rowNumCell.textContent = rowIndex + 1;
             rowNumCell.className = 'cell-header';
-            rowNumCell.style.cssText = 'background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 8px; text-align: center; font-weight: bold;';
             rowNumCell.dataset.row = rowIndex + 1;
             tr.appendChild(rowNumCell);
 
@@ -619,9 +571,6 @@ window.QRScannerRangeSelector = {
                     continue; // Skip this cell
                 }
                 
-                // Styling
-                td.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 0.2s;';
-
                 // Add event listeners
                 this._addCellEventListeners(td);
 
@@ -660,9 +609,9 @@ window.QRScannerRangeSelector = {
                 !cell.classList.contains('first-click') && 
                 !cell.classList.contains('click-pending')) {
                 if (this._clickSelectionMode && this._isWaitingForSecondClick) {
-                    cell.style.backgroundColor = '#e8f5e8'; // Light green hover in click mode
+                    cell.style.backgroundColor = 'var(--color-gray-100)';
                 } else {
-                    cell.style.backgroundColor = '#f0f0f0'; // Standard hover
+                    cell.style.backgroundColor = 'var(--color-gray-50)';
                 }
             }
         });
@@ -833,7 +782,7 @@ window.QRScannerRangeSelector = {
             }
         }
 
-        // NEW: Handle click selection mode
+        // Handle click selection mode
         if (this._clickSelectionMode) {
             this._handleClickSelection(cell, row, col, cellRef);
             return; // Don't proceed with drag selection
@@ -865,7 +814,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * NEW: Handle click selection logic
+     * Handle click selection logic
      * @param {HTMLElement} cell - The clicked cell
      * @param {number} row - Row number
      * @param {number} col - Column number
@@ -945,7 +894,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * NEW: Create selection range from click selection
+     * Create selection range from click selection
      */
     _createClickSelectionRange() {
         if (!this._startCell || !this._endCell) return;
@@ -1173,7 +1122,8 @@ window.QRScannerRangeSelector = {
         if (!infoDiv) {
             infoDiv = document.createElement('div');
             infoDiv.id = 'selectionInfo';
-            infoDiv.style.cssText = 'padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #2196f3; border-radius: 6px; margin-top: 10px; box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);';
+            infoDiv.className = 'panel';
+            infoDiv.style.cssText = 'margin-top: var(--space-4);';
             
             const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
             if (container && container.parentNode) {
@@ -1182,14 +1132,22 @@ window.QRScannerRangeSelector = {
         }
         
         infoDiv.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                <div style="font-weight: 600; color: #1565c0; font-size: 14px;">
-                    📊 Selection: ${range.startRef}:${range.endRef}
+            <div class="kv-list">
+                <div class="kv-item">
+                    <div class="kv-key">SELECTION</div>
+                    <div class="kv-value">${range.startRef}:${range.endRef}</div>
                 </div>
-                <div style="display: flex; gap: 20px; font-size: 13px; color: #1976d2;">
-                    <div><strong>${cellCount}</strong> cells</div>
-                    <div><strong>${range.endRow - range.startRow + 1}</strong> rows</div>
-                    <div><strong>${range.endCol - range.startCol + 1}</strong> columns</div>
+                <div class="kv-item">
+                    <div class="kv-key">CELLS</div>
+                    <div class="kv-value">${cellCount}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-key">ROWS</div>
+                    <div class="kv-value">${range.endRow - range.startRow + 1}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-key">COLUMNS</div>
+                    <div class="kv-value">${range.endCol - range.startCol + 1}</div>
                 </div>
             </div>
         `;
@@ -1222,7 +1180,7 @@ window.QRScannerRangeSelector = {
     _handleClearRange() {
         this._clearSelection();
         this._clearSelectionHighlight();
-        this._resetClickSelection(); // NEW: Also reset click selection state
+        this._resetClickSelection(); // Also reset click selection state
 
         const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
         const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
@@ -1263,7 +1221,7 @@ window.QRScannerRangeSelector = {
         this._touchStarted = false;
         this._lastTouchCell = null;
         
-        // NEW: Also clear click selection state
+        // Also clear click selection state
         this._resetClickSelection();
     },
 
@@ -1287,7 +1245,8 @@ window.QRScannerRangeSelector = {
             if (cell.tagName === 'TD') {
                 cell.style.backgroundColor = '';
                 cell.style.color = '';
-                cell.style.border = '1px solid #dee2e6';
+                cell.style.border = '';
+                cell.style.boxShadow = '';
             }
         });
     },
@@ -1303,28 +1262,25 @@ window.QRScannerRangeSelector = {
         cell.classList.add(className);
         
         if (className === 'cell-selected') {
-            cell.style.backgroundColor = '#bbdefb';
-            cell.style.color = '';
-            cell.style.border = '1px solid #2196f3';
+            cell.style.backgroundColor = 'var(--color-gray-200)';
+            cell.style.border = 'var(--border-width-thick) solid var(--color-black)';
         } else if (className === 'range-start') {
-            cell.style.backgroundColor = '#4caf50';
-            cell.style.color = 'white';
-            cell.style.border = '2px solid #388e3c';
+            cell.style.backgroundColor = 'var(--color-success)';
+            cell.style.color = 'var(--color-white)';
+            cell.style.border = 'var(--border-width-thick) solid var(--color-success)';
         } else if (className === 'range-end') {
-            cell.style.backgroundColor = '#2196f3';
-            cell.style.color = 'white';
-            cell.style.border = '2px solid #1976d2';
+            cell.style.backgroundColor = 'var(--color-info)';
+            cell.style.color = 'var(--color-white)';
+            cell.style.border = 'var(--border-width-thick) solid var(--color-info)';
         } else if (className === 'first-click') {
-            // NEW: Orange highlighting for first click in click selection mode
-            cell.style.backgroundColor = '#ff9800';
-            cell.style.color = 'white';
-            cell.style.border = '2px solid #f57c00';
-            cell.style.boxShadow = '0 0 8px rgba(255, 152, 0, 0.5)';
+            cell.style.backgroundColor = 'var(--color-black)';
+            cell.style.color = 'var(--color-white)';
+            cell.style.border = 'var(--border-width-thick) solid var(--color-black)';
+            cell.style.boxShadow = '0 0 0 2px var(--color-gray-400)';
         } else if (className === 'click-pending') {
-            // NEW: Subtle highlighting for pending second click
-            cell.style.backgroundColor = '#fff3e0';
-            cell.style.color = '#e65100';
-            cell.style.border = '1px dashed #ffb74d';
+            cell.style.backgroundColor = 'var(--color-gray-100)';
+            cell.style.color = 'var(--color-black)';
+            cell.style.border = 'var(--border-width) dashed var(--color-gray-400)';
         }
     },
 
@@ -1338,66 +1294,6 @@ window.QRScannerRangeSelector = {
         }, 300);
     }
 };
-
-// Add required CSS animations for notifications
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-    
-    /* Enhanced cell selection styles */
-    .selectable-table td.first-click {
-        animation: pulse 1.5s ease-in-out infinite alternate;
-    }
-    
-    @keyframes pulse {
-        from {
-            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
-        }
-        to {
-            box-shadow: 0 0 16px rgba(255, 152, 0, 0.8);
-        }
-    }
-    
-    .selectable-table td.cell-selected {
-        transition: all 0.2s ease;
-    }
-    
-    .selectable-table td.click-pending {
-        transition: all 0.3s ease;
-    }
-    
-    /* Touch device enhancements */
-    .touch-device .selectable-table td {
-        min-height: 44px;
-        padding: 12px 8px;
-    }
-    
-    .touch-device #click-selection-toggle {
-        min-height: 44px;
-        padding: 10px 16px;
-    }
-`;
-document.head.appendChild(style);
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
