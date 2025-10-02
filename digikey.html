@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Digi-Key MPN Analyzer - Multi-Credential</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&family=Geist+Mono:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #ffffff;
+            --foreground: #000000;
+            --muted: #6b7280;
+            --muted-foreground: #9ca3af;
+            --border: #e5e7eb;
+            --input: #f9fafb;
+            --card: #ffffff;
+            --card-foreground: #000000;
+            --primary: #000000;
+            --primary-foreground: #ffffff;
+            --secondary: #f3f4f6;
+            --secondary-foreground: #374151;
+            --accent: #f3f4f6;
+            --accent-foreground: #1f2937;
+            --destructive: #ef4444;
+            --destructive-foreground: #ffffff;
+            --ring: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --spacing: 1rem;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background);
+            color: var(--foreground);
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .mono {
+            font-family: 'Geist Mono', 'Consolas', 'Monaco', monospace;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing);
+        }
+
+        .header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: var(--spacing);
+            margin-bottom: calc(var(--spacing) * 2);
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+            color: var(--muted-foreground);
+            margin: 0;
+            font-weight: 400;
+        }
+
+        .grid {
+            display: grid;
+            gap: var(--spacing);
+        }
+
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: var(--spacing);
+        }
+
+        .card-header {
+            margin-bottom: var(--spacing);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .card-description {
+            color: var(--muted-foreground);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: var(--spacing);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--foreground);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--input);
+            color: var(--foreground);
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--ring);
+            box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Geist Mono', monospace;
+            line-height: 1.4;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-secondary {
+            background-color: var(--secondary);
+            color: var(--secondary-foreground);
+        }
+
+        .button-destructive {
+            background-color: var(--destructive);
+            color: var(--destructive-foreground);
+            border-color: var(--destructive);
+        }
+
+        .button-outline {
+            background-color: transparent;
+            color: var(--foreground);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 13px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-connected {
+            background-color: rgb(34 197 94 / 0.1);
+            color: var(--success);
+        }
+
+        .status-connected .status-dot {
+            background-color: var(--success);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .status-error {
+            background-color: rgb(239 68 68 / 0.1);
+            color: var(--destructive);
+        }
+
+        .status-error .status-dot {
+            background-color: var(--destructive);
+        }
+
+        .status-pending {
+            background-color: rgb(245 158 11 / 0.1);
+            color: var(--warning);
+        }
+
+        .status-pending .status-dot {
+            background-color: var(--warning);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .progress {
+            width: 100%;
+            height: 4px;
+            background-color: var(--secondary);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s ease-in-out;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background-color: var(--card);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: var(--accent);
+            font-weight: 500;
+            color: var(--accent-foreground);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-icon {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-success .status-icon { background-color: var(--success); }
+        .status-warning .status-icon { background-color: var(--warning); }
+        .status-error .status-icon { background-color: var(--destructive); }
+
+        .code-block {
+            background-color: var(--accent);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-family: 'Geist Mono', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted-foreground);
+        }
+
+        .hidden { display: none; }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: var(--spacing);
+        }
+
+        .alert-info {
+            background-color: rgb(59 130 246 / 0.1);
+            border: 1px solid rgb(59 130 246 / 0.2);
+            color: rgb(30 58 138);
+        }
+
+        .alert-success {
+            background-color: rgb(34 197 94 / 0.1);
+            border: 1px solid rgb(34 197 94 / 0.2);
+            color: rgb(22 101 52);
+        }
+
+        .credential-item {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--input);
+        }
+
+        .credential-info {
+            flex: 1;
+            font-size: 12px;
+        }
+
+        .credential-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .credential-id {
+            font-family: 'Geist Mono', monospace;
+            color: var(--muted-foreground);
+            font-size: 11px;
+        }
+
+        .credential-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 11px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--muted);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .max-h-96 {
+            max-height: 24rem;
+            overflow-y: auto;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.125rem 0.5rem;
+            background-color: var(--secondary);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--secondary-foreground);
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background-color: rgb(34 197 94 / 0.1);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background-color: rgb(245 158 11 / 0.1);
+            color: var(--warning);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            background-color: var(--accent);
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--foreground);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <h1 class="title">Digi-Key MPN Analyzer - Multi-Credential Edition</h1>
+                    <p class="subtitle">Parallel processing with multiple credentials for maximum performance</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span class="badge" id="credentialCount">0 Credentials</span>
+                    <span class="badge" id="parallelWorkers">0 Workers</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-header">
+                <h3 class="card-title">Credential Management</h3>
+                <p class="card-description">Add multiple API credentials for parallel processing and rate limit avoidance</p>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <div>
+                        <label for="clientId">Client ID</label>
+                        <input type="text" id="clientId" placeholder="Your Client ID" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="clientSecret">Client Secret</label>
+                        <input type="password" id="clientSecret" placeholder="Your Client Secret" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="form-row">
+                    <div>
+                        <label for="credentialLabel">Label (Optional)</label>
+                        <input type="text" id="credentialLabel" placeholder="e.g., Account 1, Production Key" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="environment">Environment</label>
+                        <select id="environment">
+                            <option value="production">Production</option>
+                            <option value="sandbox">Sandbox</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="locale">Locale (Site/Currency)</label>
+                <select id="locale">
+                    <option value="US/USD">US / USD</option>
+                    <option value="CA/CAD">CA / CAD</option>
+                    <option value="GB/GBP">GB / GBP</option>
+                    <option value="DE/EUR">DE / EUR</option>
+                    <option value="JP/JPY">JP / JPY</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button class="button" id="addCredentialBtn">
+                    <span>Add Credential</span>
+                </button>
+                <button class="button button-secondary" id="authenticateAllBtn">
+                    <span id="authAllText">Authenticate All</span>
+                    <div id="authAllSpinner" class="loading-spinner hidden"></div>
+                </button>
+                <button class="button button-destructive" id="clearAllCredsBtn">Clear All Credentials</button>
+            </div>
+
+            <div id="credentialsList" style="margin-top: 1.5rem;">
+                <div class="empty-state" style="padding: 2rem 1rem;" id="emptyCredentials">
+                    <p>No credentials added yet. Add credentials above to enable parallel processing.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-header">
+                <h3 class="card-title">Bulk MPN Processing</h3>
+                <p class="card-description">Enter manufacturer part numbers for parallel analysis</p>
+            </div>
+
+            <div id="parallelInfoAlert" class="alert alert-info">
+                <strong>Parallel Processing Enabled:</strong> With multiple authenticated credentials, requests will be processed in parallel for maximum speed while respecting rate limits.
+            </div>
+
+            <div class="form-group">
+                <label for="mpnInput">Manufacturer Part Numbers (one per line)</label>
+                <textarea id="mpnInput" placeholder="Enter MPNs, one per line:&#10;ECA-1VHG102&#10;STM32F103C8T6&#10;LM358P&#10;NE555DR&#10;..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="parallelismLevel">Parallelism Level (requests per credential)</label>
+                <input type="number" id="parallelismLevel" value="3" min="1" max="10" step="1">
+                <p style="font-size: 11px; color: var(--muted-foreground); margin: 0;">Higher values = faster processing but may hit rate limits. Recommended: 2-5</p>
+            </div>
+
+            <div id="progressSection" class="hidden">
+                <div class="progress">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+                <div id="progressText" style="font-size: 12px; color: var(--muted-foreground); text-align: center; margin-bottom: 0.5rem;"></div>
+                
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statProcessed">0</div>
+                        <div class="stat-label">Processed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statSuccess">0</div>
+                        <div class="stat-label">Success</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statWarning">0</div>
+                        <div class="stat-label">Warnings</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statError">0</div>
+                        <div class="stat-label">Errors</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statRate">0/s</div>
+                        <div class="stat-label">Processing Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statETA">--</div>
+                        <div class="stat-label">ETA</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group" style="margin-top: 1rem;">
+                <button class="button" id="processBtn">
+                    <span id="processBtnText">Process MPNs</span>
+                    <div id="processSpinner" class="loading-spinner hidden"></div>
+                </button>
+                <button class="button button-secondary" id="exportBtn" disabled>Export CSV</button>
+                <button class="button button-outline" id="clearResultsBtn">Clear Results</button>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-header">
+                <h3 class="card-title">Analysis Results</h3>
+                <p class="card-description">Detailed component information and specifications</p>
+            </div>
+
+            <div id="resultsContainer">
+                <div id="emptyState" class="empty-state">
+                    <p>No results yet. Enter MPNs above and click "Process MPNs" to begin analysis.</p>
+                </div>
+
+                <div id="resultsTable" class="table-container hidden">
+                    <div class="max-h-96">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">Status</th>
+                                    <th style="width: 140px;">MPN</th>
+                                    <th style="width: 200px;">Description</th>
+                                    <th style="width: 250px;">Detailed Description</th>
+                                    <th style="width: 150px;">Category</th>
+                                    <th style="width: 150px;">Manufacturer</th>
+                                    <th style="width: 120px;">Package/Case</th>
+                                    <th style="width: 120px;">Mounting Type</th>
+                                    <th style="width: 160px;">Alias Names</th>
+                                    <th style="width: 200px;">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Debug Log</h3>
+                <p class="card-description">API requests and system information</p>
+            </div>
+            <div id="debugLog" class="code-block" style="min-height: 150px;">Multi-Credential MPN Analyzer initialized. Add credentials to begin...</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            PRODUCTION: {
+                BASE_URL: 'https://api.digikey.com',
+                TOKEN_URL: 'https://api.digikey.com/v1/oauth2/token'
+            },
+            SANDBOX: {
+                BASE_URL: 'https://sandbox-api.digikey.com',
+                TOKEN_URL: 'https://sandbox-api.digikey.com/v1/oauth2/token'
+            },
+            STORAGE_KEY: 'digikey_multi_credentials',
+            MIN_REQUEST_DELAY: 100, // Minimum ms between requests per credential
+            TOKEN_REFRESH_THRESHOLD: 300000, // Refresh if token expires in <5 minutes
+        };
+
+        // State management
+        const state = {
+            credentials: [],
+            tokenPool: [],
+            processedResults: [],
+            isProcessing: false,
+            stats: {
+                processed: 0,
+                success: 0,
+                warning: 0,
+                error: 0,
+                startTime: null
+            }
+        };
+
+        // Utility functions
+        const $ = id => document.getElementById(id);
+        
+        const log = msg => {
+            const timestamp = new Date().toLocaleTimeString();
+            const debugLog = $('debugLog');
+            debugLog.textContent += `[${timestamp}] ${msg}\n`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+        };
+
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // Credential Management
+        class CredentialManager {
+            constructor() {
+                this.credentials = [];
+                this.loadCredentials();
+            }
+
+            add(clientId, clientSecret, environment, locale, label) {
+                const credential = {
+                    id: generateId(),
+                    clientId: clientId.trim(),
+                    clientSecret: clientSecret.trim(),
+                    environment: environment || 'production',
+                    locale: locale || 'US/USD',
+                    label: label?.trim() || `Credential ${this.credentials.length + 1}`,
+                    addedAt: Date.now(),
+                    status: 'inactive',
+                    accessToken: null,
+                    tokenExpiry: null,
+                    lastUsed: null,
+                    requestCount: 0
+                };
+
+                this.credentials.push(credential);
+                this.saveCredentials();
+                this.renderCredentials();
+                log(`Added credential: ${credential.label}`);
+                return credential;
+            }
+
+            remove(credentialId) {
+                const index = this.credentials.findIndex(c => c.id === credentialId);
+                if (index !== -1) {
+                    const removed = this.credentials.splice(index, 1)[0];
+                    this.saveCredentials();
+                    this.renderCredentials();
+                    log(`Removed credential: ${removed.label}`);
+                }
+            }
+
+            clearAll() {
+                this.credentials = [];
+                this.saveCredentials();
+                this.renderCredentials();
+                log('All credentials cleared');
+            }
+
+            getActive() {
+                return this.credentials.filter(c => 
+                    c.status === 'active' && 
+                    c.accessToken && 
+                    c.tokenExpiry > Date.now()
+                );
+            }
+
+            getLeastUsed() {
+                const active = this.getActive();
+                if (active.length === 0) return null;
+                
+                return active.reduce((least, current) => 
+                    (current.requestCount < least.requestCount) ? current : least
+                );
+            }
+
+            updateToken(credentialId, accessToken, expiresIn) {
+                const credential = this.credentials.find(c => c.id === credentialId);
+                if (credential) {
+                    credential.accessToken = accessToken;
+                    credential.tokenExpiry = Date.now() + (expiresIn * 1000);
+                    credential.status = 'active';
+                    this.saveCredentials();
+                }
+            }
+
+            markUsed(credentialId) {
+                const credential = this.credentials.find(c => c.id === credentialId);
+                if (credential) {
+                    credential.lastUsed = Date.now();
+                    credential.requestCount++;
+                }
+            }
+
+            saveCredentials() {
+                const toSave = this.credentials.map(c => ({
+                    id: c.id,
+                    clientId: c.clientId,
+                    clientSecret: c.clientSecret,
+                    environment: c.environment,
+                    locale: c.locale,
+                    label: c.label,
+                    addedAt: c.addedAt
+                }));
+                
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(toSave));
+                this.updateUI();
+            }
+
+            loadCredentials() {
+                try {
+                    const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
+                    if (stored) {
+                        const loaded = JSON.parse(stored);
+                        loaded.forEach(c => {
+                            this.credentials.push({
+                                ...c,
+                                status: 'inactive',
+                                accessToken: null,
+                                tokenExpiry: null,
+                                lastUsed: null,
+                                requestCount: 0
+                            });
+                        });
+                        this.renderCredentials();
+                        log(`Loaded ${this.credentials.length} credential(s) from storage`);
+                    }
+                } catch (error) {
+                    log('Error loading credentials: ' + error.message);
+                }
+            }
+
+            renderCredentials() {
+                const container = $('credentialsList');
+                const emptyState = $('emptyCredentials');
+                
+                if (this.credentials.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                
+                container.innerHTML = this.credentials.map(cred => {
+                    const statusClass = cred.status === 'active' ? 'badge-success' : '';
+                    const tokenInfo = cred.accessToken ? 
+                        `Token: ${cred.accessToken.substring(0, 20)}...` : 
+                        'Not authenticated';
+                    
+                    return `
+                        <div class="credential-item">
+                            <div class="credential-info">
+                                <div class="credential-label">${cred.label}</div>
+                                <div class="credential-id">ID: ${cred.clientId.substring(0, 20)}...</div>
+                                <div class="credential-id">${tokenInfo}</div>
+                                <div class="credential-status">
+                                    <span class="badge ${statusClass}">${cred.status}</span>
+                                    <span>Requests: ${cred.requestCount}</span>
+                                    ${cred.tokenExpiry ? `<span>Expires: ${new Date(cred.tokenExpiry).toLocaleTimeString()}</span>` : ''}
+                                </div>
+                            </div>
+                            <button class="button button-destructive" onclick="credentialManager.remove('${cred.id}')">
+                                Remove
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+                this.updateUI();
+            }
+
+            updateUI() {
+                $('credentialCount').textContent = `${this.credentials.length} Credential${this.credentials.length !== 1 ? 's' : ''}`;
+                const activeCount = this.getActive().length;
+                $('parallelWorkers').textContent = `${activeCount} Worker${activeCount !== 1 ? 's' : ''}`;
+                $('parallelWorkers').className = activeCount > 0 ? 'badge badge-success' : 'badge';
+            }
+        }
+
+        const credentialManager = new CredentialManager();
+
+        // Authentication
+        const authenticateSingle = async (credential) => {
+            log(`Authenticating ${credential.label}...`);
+            
+            try {
+                const config = credential.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+                const response = await fetch(config.TOKEN_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        client_id: credential.clientId,
+                        client_secret: credential.clientSecret,
+                        grant_type: 'client_credentials'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+
+                credentialManager.updateToken(credential.id, data.access_token, data.expires_in);
+                credentialManager.renderCredentials();
+                log(`✓ ${credential.label} authenticated successfully`);
+                return true;
+
+            } catch (error) {
+                log(`✗ ${credential.label} authentication failed: ${error.message}`);
+                return false;
+            }
+        };
+
+        const authenticateAll = async () => {
+            if (credentialManager.credentials.length === 0) {
+                alert('No credentials to authenticate. Add credentials first.');
+                return;
+            }
+
+            const btn = $('authenticateAllBtn');
+            const spinner = $('authAllSpinner');
+            const text = $('authAllText');
+            
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            text.textContent = 'Authenticating...';
+
+            log('Starting batch authentication...');
+            let successCount = 0;
+
+            for (const cred of credentialManager.credentials) {
+                const success = await authenticateSingle(cred);
+                if (success) successCount++;
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            btn.disabled = false;
+            spinner.classList.add('hidden');
+            text.textContent = 'Authenticate All';
+
+            log(`Batch authentication complete: ${successCount}/${credentialManager.credentials.length} successful`);
+        };
+
+        // API Helper Functions
+        const getAuthHeaders = (credential) => {
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-DIGIKEY-Client-Id': credential.clientId,
+                'Authorization': `Bearer ${credential.accessToken}`
+            };
+
+            const [site, currency] = credential.locale.split('/');
+            headers['X-DIGIKEY-Locale-Site'] = site;
+            headers['X-DIGIKEY-Locale-Language'] = 'en';
+            headers['X-DIGIKEY-Locale-Currency'] = currency;
+
+            return headers;
+        };
+
+        const searchProductDetails = async (credential, partNumber) => {
+            const config = credential.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+            const url = `${config.BASE_URL}/products/v4/search/${encodeURIComponent(partNumber)}/productdetails`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: getAuthHeaders(credential)
+            });
+
+            if (!response.ok) {
+                throw new Error(`ProductDetails API error: ${response.status}`);
+            }
+
+            credentialManager.markUsed(credential.id);
+            return await response.json();
+        };
+
+        const searchKeyword = async (credential, keyword, recordCount = 10) => {
+            const config = credential.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+            const url = `${config.BASE_URL}/products/v4/search/keyword`;
+
+            const payload = {
+                Keywords: keyword,
+                RecordCount: recordCount,
+                RecordStartPosition: 0,
+                Filters: {},
+                Sort: {
+                    Option: "SortByManu",
+                    Direction: "Ascending",
+                    SortParameterId: 0
+                }
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: getAuthHeaders(credential),
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`KeywordSearch API error: ${response.status}`);
+            }
+
+            credentialManager.markUsed(credential.id);
+            return await response.json();
+        };
+
+        // Data extraction helpers
+        const extractParameterValue = (parameters, parameterNames) => {
+            if (!Array.isArray(parameters)) return '';
+            
+            const param = parameters.find(p => 
+                p.ParameterText && parameterNames.some(name =>
+                    p.ParameterText.toLowerCase().includes(name.toLowerCase())
+                )
+            );
+            
+            return param?.ValueText || '';
+        };
+
+        const extractPackageCase = (parameters) => {
+            return extractParameterValue(parameters, ['Package / Case', 'package', 'case']);
+        };
+
+        const extractMountingType = (parameters) => {
+            return extractParameterValue(parameters, ['Mounting Type', 'mounting']);
+        };
+
+        // MPN Processing
+        const processSingleMPN = async (mpn, credential) => {
+            try {
+                // Strategy 1: Direct product details
+                try {
+                    const productDetails = await searchProductDetails(credential, mpn);
+                    if (productDetails?.Product) {
+                        const product = productDetails.Product;
+                        return {
+                            status: 'success',
+                            mpn: mpn,
+                            description: product.Description?.ProductDescription || '',
+                            detailedDescription: product.Description?.DetailedDescription || '',
+                            category: product.Category?.Name || '',
+                            manufacturer: product.Manufacturer?.Name || '',
+                            packageCase: extractPackageCase(product.Parameters),
+                            mountingType: extractMountingType(product.Parameters),
+                            aliasNames: product.OtherNames?.join(', ') || '',
+                            remarks: `Direct match via ${credential.label}`
+                        };
+                    }
+                } catch (directError) {
+                    // Continue to keyword search
+                }
+
+                // Strategy 2: Keyword search
+                const searchResult = await searchKeyword(credential, mpn, 20);
+                const products = searchResult.Products || [];
+                const exactMatches = searchResult.ExactMatches || [];
+
+                if (exactMatches.length > 0) {
+                    return await processMatchedProduct(mpn, exactMatches[0], credential, 'Exact match');
+                }
+
+                const directMatch = products.find(p => 
+                    p.ManufacturerProductNumber === mpn ||
+                    (p.OtherNames && p.OtherNames.includes(mpn))
+                );
+
+                if (directMatch) {
+                    return await processMatchedProduct(mpn, directMatch, credential, 'Found in results');
+                }
+
+                const aliasMatch = products.find(p => {
+                    const aliases = [
+                        ...(p.OtherNames || []),
+                        p.ManufacturerProductNumber,
+                        p.BaseProductNumber?.Name
+                    ].filter(Boolean);
+
+                    return aliases.some(alias => 
+                        alias.toLowerCase().includes(mpn.toLowerCase()) || 
+                        mpn.toLowerCase().includes(alias.toLowerCase())
+                    );
+                });
+
+                if (aliasMatch) {
+                    return await processMatchedProduct(mpn, aliasMatch, credential, 
+                        `Alias match - Main: ${aliasMatch.ManufacturerProductNumber}`);
+                }
+
+                if (products.length > 0) {
+                    const bestMatch = products[0];
+                    return {
+                        status: 'warning',
+                        mpn: mpn,
+                        description: bestMatch.Description?.ProductDescription || '',
+                        detailedDescription: bestMatch.Description?.DetailedDescription || '',
+                        category: bestMatch.Category?.Name || '',
+                        manufacturer: bestMatch.Manufacturer?.Name || '',
+                        packageCase: extractPackageCase(bestMatch.Parameters),
+                        mountingType: extractMountingType(bestMatch.Parameters),
+                        aliasNames: bestMatch.OtherNames?.join(', ') || '',
+                        remarks: `Partial match via ${credential.label}`
+                    };
+                }
+
+                return {
+                    status: 'error',
+                    mpn: mpn,
+                    description: '',
+                    detailedDescription: '',
+                    category: '',
+                    manufacturer: '',
+                    packageCase: '',
+                    mountingType: '',
+                    aliasNames: '',
+                    remarks: `Not found (searched via ${credential.label})`
+                };
+
+            } catch (error) {
+                return {
+                    status: 'error',
+                    mpn: mpn,
+                    description: '',
+                    detailedDescription: '',
+                    category: '',
+                    manufacturer: '',
+                    packageCase: '',
+                    mountingType: '',
+                    aliasNames: '',
+                    remarks: `Error via ${credential.label}: ${error.message}`
+                };
+            }
+        };
+
+        const processMatchedProduct = async (originalMPN, product, credential, matchType) => {
+            try {
+                const detailResponse = await searchProductDetails(credential,
+                    product.ManufacturerProductNumber || 
+                    product.ProductVariations?.[0]?.DigiKeyProductNumber
+                );
+                
+                if (detailResponse?.Product) {
+                    const detailedProduct = detailResponse.Product;
+                    return {
+                        status: 'success',
+                        mpn: originalMPN,
+                        description: detailedProduct.Description?.ProductDescription || '',
+                        detailedDescription: detailedProduct.Description?.DetailedDescription || '',
+                        category: detailedProduct.Category?.Name || '',
+                        manufacturer: detailedProduct.Manufacturer?.Name || '',
+                        packageCase: extractPackageCase(detailedProduct.Parameters),
+                        mountingType: extractMountingType(detailedProduct.Parameters),
+                        aliasNames: detailedProduct.OtherNames?.join(', ') || '',
+                        remarks: `${matchType} via ${credential.label}`
+                    };
+                }
+            } catch (detailError) {
+                // Use search data
+            }
+
+            return {
+                status: 'success',
+                mpn: originalMPN,
+                description: product.Description?.ProductDescription || '',
+                detailedDescription: product.Description?.DetailedDescription || '',
+                category: product.Category?.Name || '',
+                manufacturer: product.Manufacturer?.Name || '',
+                packageCase: extractPackageCase(product.Parameters),
+                mountingType: extractMountingType(product.Parameters),
+                aliasNames: product.OtherNames?.join(', ') || '',
+                remarks: `${matchType} via ${credential.label}`
+            };
+        };
+
+        // Parallel Processing Engine
+        class ParallelProcessor {
+            constructor(mpns, credentials, concurrencyPerCredential) {
+                this.mpns = mpns;
+                this.credentials = credentials;
+                this.concurrencyPerCredential = concurrencyPerCredential;
+                this.queue = [...mpns];
+                this.results = [];
+                this.processing = new Set();
+                this.credentialQueues = new Map();
+                
+                // Initialize queues for each credential
+                credentials.forEach(cred => {
+                    this.credentialQueues.set(cred.id, {
+                        activeRequests: 0,
+                        lastRequestTime: 0
+                    });
+                });
+            }
+
+            async process(onProgress) {
+                const workers = [];
+                
+                for (const credential of this.credentials) {
+                    for (let i = 0; i < this.concurrencyPerCredential; i++) {
+                        workers.push(this.worker(credential, onProgress));
+                    }
+                }
+
+                await Promise.all(workers);
+                return this.results;
+            }
+
+            async worker(credential, onProgress) {
+                while (true) {
+                    const mpn = this.getNextMPN();
+                    if (!mpn) break;
+
+                    const queue = this.credentialQueues.get(credential.id);
+                    
+                    // Rate limiting per credential
+                    const timeSinceLastRequest = Date.now() - queue.lastRequestTime;
+                    if (timeSinceLastRequest < CONFIG.MIN_REQUEST_DELAY) {
+                        await new Promise(resolve => 
+                            setTimeout(resolve, CONFIG.MIN_REQUEST_DELAY - timeSinceLastRequest)
+                        );
+                    }
+
+                    queue.activeRequests++;
+                    queue.lastRequestTime = Date.now();
+
+                    try {
+                        const result = await processSingleMPN(mpn, credential);
+                        this.results.push(result);
+                        
+                        if (onProgress) {
+                            onProgress(result, this.results.length, this.mpns.length);
+                        }
+                    } catch (error) {
+                        log(`Worker error for ${mpn}: ${error.message}`);
+                    } finally {
+                        queue.activeRequests--;
+                        this.processing.delete(mpn);
+                    }
+                }
+            }
+
+            getNextMPN() {
+                while (this.queue.length > 0) {
+                    const mpn = this.queue.shift();
+                    if (!this.processing.has(mpn)) {
+                        this.processing.add(mpn);
+                        return mpn;
+                    }
+                }
+                return null;
+            }
+        }
+
+        // Bulk Processing
+        const processBulkMPNs = async () => {
+            const activeCredentials = credentialManager.getActive();
+            
+            if (activeCredentials.length === 0) {
+                alert('No active credentials. Please authenticate credentials first.');
+                return;
+            }
+
+            const mpnText = $('mpnInput').value.trim();
+            if (!mpnText) {
+                alert('Please enter at least one MPN');
+                return;
+            }
+
+            const mpns = mpnText.split('\n')
+                .map(mpn => mpn.trim())
+                .filter(mpn => mpn.length > 0);
+
+            if (mpns.length === 0) {
+                alert('No valid MPNs found');
+                return;
+            }
+
+            const parallelism = parseInt($('parallelismLevel').value) || 3;
+
+            // Reset UI and stats
+            state.processedResults = [];
+            state.stats = {
+                processed: 0,
+                success: 0,
+                warning: 0,
+                error: 0,
+                startTime: Date.now()
+            };
+
+            $('resultsBody').innerHTML = '';
+            $('emptyState').classList.add('hidden');
+            $('resultsTable').classList.remove('hidden');
+            $('exportBtn').disabled = true;
+            $('progressSection').classList.remove('hidden');
+
+            state.isProcessing = true;
+            $('processBtn').disabled = true;
+            $('processSpinner').classList.remove('hidden');
+            $('processBtnText').textContent = 'Processing...';
+
+            log(`Starting parallel processing: ${mpns.length} MPNs across ${activeCredentials.length} credential(s)`);
+            log(`Parallelism: ${parallelism} requests per credential`);
+
+            const processor = new ParallelProcessor(mpns, activeCredentials, parallelism);
+
+            const onProgress = (result, processed, total) => {
+                state.processedResults.push(result);
+                addResultToTable(result);
+
+                // Update stats
+                state.stats.processed = processed;
+                if (result.status === 'success') state.stats.success++;
+                if (result.status === 'warning') state.stats.warning++;
+                if (result.status === 'error') state.stats.error++;
+
+                updateProgressUI(processed, total);
+            };
+
+            try {
+                await processor.process(onProgress);
+                log(`✓ Parallel processing completed: ${mpns.length} MPNs processed`);
+            } catch (error) {
+                log(`✗ Processing error: ${error.message}`);
+            } finally {
+                state.isProcessing = false;
+                $('processBtn').disabled = false;
+                $('processSpinner').classList.add('hidden');
+                $('processBtnText').textContent = 'Process MPNs';
+                $('exportBtn').disabled = false;
+
+                setTimeout(() => {
+                    $('progressSection').classList.add('hidden');
+                }, 5000);
+            }
+        };
+
+        // UI Update Functions
+        const updateProgressUI = (current, total) => {
+            const percent = Math.round((current / total) * 100);
+            $('progressBar').style.width = `${percent}%`;
+            $('progressText').textContent = `Processing ${current} of ${total} (${percent}%)`;
+
+            // Update stats
+            $('statProcessed').textContent = current;
+            $('statSuccess').textContent = state.stats.success;
+            $('statWarning').textContent = state.stats.warning;
+            $('statError').textContent = state.stats.error;
+
+            // Calculate rate and ETA
+            const elapsed = (Date.now() - state.stats.startTime) / 1000;
+            const rate = current / elapsed;
+            $('statRate').textContent = rate.toFixed(1) + '/s';
+
+            const remaining = total - current;
+            const etaSeconds = remaining / rate;
+            if (isFinite(etaSeconds) && etaSeconds > 0) {
+                const mins = Math.floor(etaSeconds / 60);
+                const secs = Math.floor(etaSeconds % 60);
+                $('statETA').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+            } else {
+                $('statETA').textContent = '--';
+            }
+        };
+
+        const addResultToTable = (result) => {
+            const tbody = $('resultsBody');
+            const row = document.createElement('tr');
+            
+            const statusClass = result.status === 'success' ? 'status-success' : 
+                               result.status === 'warning' ? 'status-warning' : 'status-error';
+            
+            row.innerHTML = `
+                <td>
+                    <div class="status-cell ${statusClass}">
+                        <div class="status-icon"></div>
+                        <span>${result.status}</span>
+                    </div>
+                </td>
+                <td><code class="mono" style="font-size: 11px;">${result.mpn}</code></td>
+                <td>${result.description}</td>
+                <td>${result.detailedDescription}</td>
+                <td>${result.category}</td>
+                <td>${result.manufacturer}</td>
+                <td>${result.packageCase}</td>
+                <td>${result.mountingType}</td>
+                <td><span class="mono" style="font-size: 11px;">${result.aliasNames}</span></td>
+                <td><span style="font-size: 11px;">${result.remarks}</span></td>
+            `;
+            
+            tbody.appendChild(row);
+        };
+
+        const clearResults = () => {
+            state.processedResults = [];
+            state.stats = {
+                processed: 0,
+                success: 0,
+                warning: 0,
+                error: 0,
+                startTime: null
+            };
+            $('resultsBody').innerHTML = '';
+            $('emptyState').classList.remove('hidden');
+            $('resultsTable').classList.add('hidden');
+            $('exportBtn').disabled = true;
+            $('progressSection').classList.add('hidden');
+            log('Results cleared');
+        };
+
+        const exportToCSV = () => {
+            if (state.processedResults.length === 0) {
+                alert('No results to export');
+                return;
+            }
+
+            const headers = [
+                'Status', 'MPN', 'Description', 'Detailed Description',
+                'Category', 'Manufacturer', 'Package/Case', 'Mounting Type', 'Alias Names', 'Remarks'
+            ];
+
+            const csvContent = [
+                headers.join(','),
+                ...state.processedResults.map(result => [
+                    result.status,
+                    `"${result.mpn.replace(/"/g, '""')}"`,
+                    `"${result.description.replace(/"/g, '""')}"`,
+                    `"${result.detailedDescription.replace(/"/g, '""')}"`,
+                    `"${result.category.replace(/"/g, '""')}"`,
+                    `"${result.manufacturer.replace(/"/g, '""')}"`,
+                    `"${result.packageCase.replace(/"/g, '""')}"`,
+                    `"${result.mountingType.replace(/"/g, '""')}"`,
+                    `"${result.aliasNames.replace(/"/g, '""')}"`,
+                    `"${result.remarks.replace(/"/g, '""')}"`
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `digikey-mpn-analysis-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            log(`Exported ${state.processedResults.length} results to CSV`);
+        };
+
+        // Event Listeners
+        $('addCredentialBtn').addEventListener('click', () => {
+            const clientId = $('clientId').value.trim();
+            const clientSecret = $('clientSecret').value.trim();
+            const environment = $('environment').value;
+            const locale = $('locale').value;
+            const label = $('credentialLabel').value.trim();
+
+            if (!clientId || !clientSecret) {
+                alert('Please enter both Client ID and Client Secret');
+                return;
+            }
+
+            credentialManager.add(clientId, clientSecret, environment, locale, label);
+
+            // Clear input fields
+            $('clientId').value = '';
+            $('clientSecret').value = '';
+            $('credentialLabel').value = '';
+        });
+
+        $('authenticateAllBtn').addEventListener('click', authenticateAll);
+        $('clearAllCredsBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all credentials? This cannot be undone.')) {
+                credentialManager.clearAll();
+            }
+        });
+        $('processBtn').addEventListener('click', processBulkMPNs);
+        $('exportBtn').addEventListener('click', exportToCSV);
+        $('clearResultsBtn').addEventListener('click', clearResults);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Multi-Credential MPN Analyzer initialized');
+            log(`System ready. Add credentials and authenticate to begin.`);
+            credentialManager.updateUI();
+        });
+    </script>
+</body>
+</html>
