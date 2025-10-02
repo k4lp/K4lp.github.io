@@ -221,13 +221,36 @@ window.QRScannerUtils = {
         },
 
         /**
-         * Convert cell reference to position object (alias for parseCellRef)
-         * @param {string} cellRef - Cell reference (e.g., "A1")
-         * @returns {Object|null} - {row, col} or null if invalid
-         */
-        cellRefToPosition: (cellRef) => {
-            return window.QRScannerUtils.excel.parseCellRef(cellRef);
-        },
+ * Convert cell reference to position object
+ * @param {string} cellRef - Cell reference (e.g., "A1")
+ * @returns {Object|null} - {row, col} or null if invalid
+ */
+cellRefToPosition: (cellRef) => {
+    if (!cellRef || typeof cellRef !== 'string') {
+        return null;
+    }
+
+    // Match cell reference pattern (e.g., A1, Z99, AA100)
+    const match = cellRef.match(/^([A-Z]+)([1-9]\d*)$/);
+    if (!match) {
+        return null;
+    }
+
+    const colLetters = match[1];
+    const rowNumber = parseInt(match[2], 10);
+
+    // Convert column letters to number
+    let col = 0;
+    for (let i = 0; i < colLetters.length; i++) {
+        col = col * 26 + (colLetters.charCodeAt(i) - 64);
+    }
+
+    // Return with row first, col second (consistent with rest of codebase)
+    return {
+        row: rowNumber,
+        col: col
+    };
+},
 
         /**
          * Validate cell reference format
