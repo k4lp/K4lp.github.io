@@ -1,72 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="/css/site/styles.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tools Index</title>
+    <title>Tools Index — Alica Technologies</title>
+    <link rel="stylesheet" href="css/site/styles.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Tools</h1>
-            <p class="subtitle">A collection of utilities · <a href="contact.html">Contact</a></p>
+        <header class="header-grid">
+            <div>
+                <h1 class="header-title tracking-tight">Tools Index</h1>
+                <p class="header-subtitle">We build Relationships, more than the Product.</p>
+            </div>
+            <div class="header-meta">
+                <span>Alica Technologies</span>
+            </div>
         </header>
 
         <main>
-            <ul class="tools-list">
-                <li class="tool-item">
-                    <a href="digikey.html">Digikey</a>
-                    <p class="tool-description">Bulk MPN information gathering using API credentials — Your credentials are required.</p>
-                </li>
-                <li class="tool-item">
-                    <a href="qrcode.html">QR Code</a>
-                    <p class="tool-description">Scan QR/Barcodes Continuously — Map to the MPNs or items.</p>
-                </li>
-            </ul>
+            <section class="section">
+                <h2 class="section-title">Component Analysis</h2>
+                <div class="tools-list">
+                    <div class="tool-item">
+                        <a href="digikey.html">Digikey MPN Analyzer</a>
+                        <p class="tool-description">Bulk MPN information gathering using API credentials — Your credentials are required.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">Inventory Management</h2>
+                <div class="tools-list">
+                    <div class="tool-item">
+                        <a href="qrcode.html">QR Code Scanner</a>
+                        <p class="tool-description">Scan QR/Barcodes continuously — Map to MPNs or inventory items.</p>
+                    </div>
+                    <div class="tool-item">
+                        <a href="test.html">Scanner & Excel Matcher</a>
+                        <p class="tool-description">Advanced QR/barcode scanner with Excel inventory matching capabilities.</p>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <footer>
-            <p><a href="https://alicatechnologies.com">Alica Technologies LLP</a> — An electronics manufacturing service provider specializing in PCB assembly, rapid prototyping, and turnkey manufacturing solutions for OEMs.</p>
+            <div class="footer-content">
+                <div>
+                    <h3 class="footer-section-title">Contact</h3>
+                    <a href="contact.html" class="footer-link">Get in Touch</a>
+                </div>
+                <div>
+                    <h3 class="footer-section-title">Organization</h3>
+                    <span class="footer-link">Alica Technologies LLP</span>
+                </div>
+                <div>
+                    <h3 class="footer-section-title">Location</h3>
+                    <span class="footer-link">Ahmedabad, Gujarat, India</span>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span class="text-sm">© 2025 Alica Technologies LLP</span>
+            </div>
         </footer>
     </div>
-
-    <script>
-        // Wait for DOM load before rearranging
-        document.addEventListener('DOMContentLoaded', () => {
-            const container = document.querySelector('.container');
-            if (!container) return;
-
-            // Create a contact link container for sticky right side
-            const contactLink = document.createElement('a');
-            contactLink.href = 'contact.html';
-            contactLink.textContent = 'Contact';
-            contactLink.id = 'contactSticky';
-            contactLink.setAttribute('aria-label', 'Contact Page');
-            // Make it accessible and tab-focusable
-            contactLink.tabIndex = 0;
-
-            // Move original contact link from subtitle to hidden (avoid duplication)
-            const subtitle = container.querySelector('.subtitle a[href="contact.html"]');
-            if (subtitle) {
-                subtitle.style.display = 'none';
-            }
-
-            // Append the sticky contact link to body (without CSS, position must be set by user CSS)
-            document.body.appendChild(contactLink);
-
-            // Move footer out of container and fix it to bottom using JS by DOM positioning only
-            const footer = container.querySelector('footer');
-            if (footer) {
-                // Remove footer from container
-                container.removeChild(footer);
-                // Append to body so footer is outside container
-                document.body.appendChild(footer);
-
-                // Optional: Add aria-label for footer
-                footer.setAttribute('aria-label', 'Site Footer');
-            }
-        });
-    </script>
 </body>
 </html>
