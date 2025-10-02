@@ -7,8 +7,6 @@
     <title>Digi-Key MPN Analyzer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    
 </head>
 <body>
     <nav class="back-nav">
@@ -23,6 +21,7 @@
             <div class="meta">
                 <div>Credentials: <span id="credCount">0</span></div>
                 <div>Workers: <span id="workerCount">0</span></div>
+                <div id="authStatus" style="display: none; color: #ff9800; font-weight: 500;">🔄 Authenticating...</div>
             </div>
         </header>
 
@@ -78,12 +77,14 @@
             <h2>Processing</h2>
             
             <div class="alert">
-                Parallel processing distributes requests across multiple authenticated credentials to maximize throughput while respecting API rate limits.
+                Parallel processing distributes requests across multiple authenticated credentials to maximize throughput while respecting API rate limits. Authentication happens automatically when needed.
             </div>
             
             <div>
                 <label>MPNs (one per line)</label>
-                <textarea id="mpnInput" placeholder="ECA-1VHG102&#10;STM32F103C8T6&#10;LM358P"></textarea>
+                <textarea id="mpnInput" placeholder="ECA-1VHG102
+STM32F103C8T6
+LM358P"></textarea>
             </div>
             
             <div style="margin-top: 16px;">
@@ -124,7 +125,7 @@
 
         <section class="section">
             <h2>Log</h2>
-            <div id="log" class="log">System initialized</div>
+            <div id="log" class="log">System initialized - Auto-authentication enabled</div>
         </section>
     </div>
 
@@ -144,7 +145,10 @@
         },
         STORAGE_KEY: 'dk_creds',
         MIN_DELAY: 100,
-        TOKEN_BUFFER: 300000
+        TOKEN_BUFFER: 300000, // 5 minutes before expiry
+        MAX_RETRIES: 3,
+        RETRY_DELAY: 1000,
+        AUTH_RETRY_DELAY: 2000
     };
 
     // State
@@ -152,17 +156,21 @@
         credentials: [],
         results: [],
         isProcessing: false,
+        isAuthenticating: false,
         stats: { processed: 0, success: 0, warning: 0, error: 0, startTime: 0 }
     };
 
     // Utilities
     const $ = id => document.getElementById(id);
-    const log = msg => {
+    const log = (msg, type = 'info') => {
         const time = new Date().toLocaleTimeString();
-        $('log').textContent += `\n[${time}] ${msg}`;
+        const prefix = type === 'error' ? '✗' : type === 'success' ? '✓' : type === 'warning' ? '⚠' : '•';
+        $('log').textContent += `\n[${time}] ${prefix} ${msg}`;
         $('log').scrollTop = $('log').scrollHeight;
     };
     const uid = () => Math.random().toString(36).substr(2, 9);
+    
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     // Credential Manager
     class CredentialManager {
@@ -172,7 +180,10 @@
         }
 
         add(clientId, clientSecret, env, locale, label) {
-            if (!clientId || !clientSecret) return null;
+            if (!clientId || !clientSecret) {
+                log('Cannot add credential: Missing Client ID or Secret', 'error');
+                return null;
+            }
             
             const cred = {
                 id: uid(),
@@ -184,13 +195,14 @@
                 status: 'inactive',
                 token: null,
                 expiry: null,
-                uses: 0
+                uses: 0,
+                lastError: null
             };
 
             state.credentials.push(cred);
             this.save();
             this.render();
-            log(`Added: ${cred.label}`);
+            log(`Added: ${cred.label}`, 'success');
             return cred;
         }
 
@@ -200,22 +212,34 @@
                 const cred = state.credentials.splice(idx, 1)[0];
                 this.save();
                 this.render();
-                log(`Removed: ${cred.label}`);
+                log(`Removed: ${cred.label}`, 'info');
             }
         }
 
         clear() {
+            if (state.credentials.length === 0) {
+                log('No credentials to clear', 'warning');
+                return;
+            }
             state.credentials = [];
             this.save();
             this.render();
-            log('Credentials cleared');
+            log('All credentials cleared', 'success');
         }
 
         active() {
             return state.credentials.filter(c => 
                 c.status === 'active' && 
                 c.token && 
-                c.expiry > Date.now()
+                c.expiry > (Date.now() + CONFIG.TOKEN_BUFFER)
+            );
+        }
+
+        needsAuth() {
+            return state.credentials.filter(c => 
+                !c.token || 
+                c.status !== 'active' || 
+                c.expiry <= (Date.now() + CONFIG.TOKEN_BUFFER)
             );
         }
 
@@ -223,8 +247,18 @@
             const cred = state.credentials.find(c => c.id === id);
             if (cred) {
                 cred.token = token;
-                cred.expiry = Date.now() + (expiresIn * 1000);
+                cred.expiry = Date.now() + ((expiresIn - 60) * 1000); // 1 min buffer
                 cred.status = 'active';
+                cred.lastError = null;
+                this.render();
+            }
+        }
+
+        setError(id, error) {
+            const cred = state.credentials.find(c => c.id === id);
+            if (cred) {
+                cred.status = 'error';
+                cred.lastError = error;
                 this.render();
             }
         }
@@ -239,16 +273,20 @@
         }
 
         save() {
-            const data = state.credentials.map(c => ({
-                id: c.id,
-                clientId: c.clientId,
-                clientSecret: c.clientSecret,
-                environment: c.environment,
-                locale: c.locale,
-                label: c.label
-            }));
-            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
-            this.updateMeta();
+            try {
+                const data = state.credentials.map(c => ({
+                    id: c.id,
+                    clientId: c.clientId,
+                    clientSecret: c.clientSecret,
+                    environment: c.environment,
+                    locale: c.locale,
+                    label: c.label
+                }));
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+                this.updateMeta();
+            } catch (e) {
+                log(`Failed to save credentials: ${e.message}`, 'error');
+            }
         }
 
         load() {
@@ -261,27 +299,35 @@
                         status: 'inactive',
                         token: null,
                         expiry: null,
-                        uses: 0
+                        uses: 0,
+                        lastError: null
                     }));
+                    log(`Loaded ${state.credentials.length} credential(s) from storage`, 'success');
                 }
             } catch (e) {
-                log('Load error: ' + e.message);
+                log(`Failed to load credentials: ${e.message}`, 'error');
             }
         }
 
         render() {
             const container = $('credList');
             if (!state.credentials.length) {
-                container.innerHTML = '<div class="empty" style="padding: 20px;">No credentials</div>';
+                container.innerHTML = '<div class="empty" style="padding: 20px;">No credentials added yet</div>';
             } else {
                 container.innerHTML = state.credentials.map(c => {
                     const active = c.status === 'active' && c.token && c.expiry > Date.now();
+                    const statusText = c.status === 'error' ? `Error: ${c.lastError}` : 
+                                      active ? 'Active' : 'Inactive';
+                    const statusColor = c.status === 'error' ? '#f44336' : 
+                                       active ? '#4caf50' : '#999';
+                    
                     return `
                         <div class="credential">
                             <div class="credential-info">
-                                <div><span class="status ${active ? 'active' : ''}"></span>${c.label}</div>
-                                <div style="color: #666;">ID: ${c.clientId.substr(0, 20)}...</div>
-                                <div style="color: #666;">Uses: ${c.uses} | ${active ? 'Active' : 'Inactive'}</div>
+                                <div><span class="status ${active ? 'active' : ''}" style="background: ${statusColor};"></span>${c.label}</div>
+                                <div style="color: #666; font-size: 12px;">ID: ${c.clientId.substr(0, 20)}...</div>
+                                <div style="color: #666; font-size: 12px;">Env: ${c.environment} | Locale: ${c.locale}</div>
+                                <div style="color: ${statusColor}; font-size: 11px;">Uses: ${c.uses} | ${statusText}</div>
                             </div>
                             <button class="danger" onclick="cm.remove('${c.id}')">Remove</button>
                         </div>
@@ -300,10 +346,18 @@
     const cm = new CredentialManager();
     window.cm = cm; // Expose for onclick handlers
 
-    // Authentication
-    async function authenticate(cred) {
+    // Authentication with retry logic
+    async function authenticate(cred, retryCount = 0) {
+        const maxRetries = CONFIG.MAX_RETRIES;
+        
         try {
             const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+            
+            log(`Authenticating ${cred.label}...`, 'info');
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+            
             const res = await fetch(cfg.TOKEN_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -311,43 +365,114 @@
                     client_id: cred.clientId,
                     client_secret: cred.clientSecret,
                     grant_type: 'client_credentials'
-                })
+                }),
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                const errorText = await res.text().catch(() => 'Unknown error');
+                throw new Error(`HTTP ${res.status}: ${errorText}`);
+            }
+
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+            
+            if (!data.access_token || !data.expires_in) {
+                throw new Error('Invalid token response: Missing access_token or expires_in');
+            }
 
             cm.setToken(cred.id, data.access_token, data.expires_in);
-            log(`✓ ${cred.label} authenticated`);
+            log(`✓ ${cred.label} authenticated successfully (expires in ${Math.floor(data.expires_in/60)}m)`, 'success');
             return true;
+            
         } catch (e) {
-            log(`✗ ${cred.label} failed: ${e.message}`);
-            return false;
+            const errorMsg = e.name === 'AbortError' ? 'Request timeout' : e.message;
+            
+            if (retryCount < maxRetries) {
+                log(`${cred.label} auth failed (attempt ${retryCount + 1}/${maxRetries + 1}): ${errorMsg}. Retrying...`, 'warning');
+                await sleep(CONFIG.AUTH_RETRY_DELAY * (retryCount + 1));
+                return authenticate(cred, retryCount + 1);
+            } else {
+                cm.setError(cred.id, errorMsg);
+                log(`✗ ${cred.label} auth failed after ${maxRetries + 1} attempts: ${errorMsg}`, 'error');
+                return false;
+            }
         }
     }
 
+    // Auto-authenticate credentials that need auth
+    async function autoAuthenticate(showStatus = true) {
+        const needAuth = cm.needsAuth();
+        
+        if (needAuth.length === 0) {
+            return true;
+        }
+
+        if (state.isAuthenticating) {
+            log('Authentication already in progress...', 'warning');
+            return false;
+        }
+
+        state.isAuthenticating = true;
+        
+        if (showStatus) {
+            $('authStatus').style.display = 'block';
+        }
+
+        log(`Auto-authenticating ${needAuth.length} credential(s)...`, 'info');
+
+        let successCount = 0;
+        for (const cred of needAuth) {
+            if (await authenticate(cred)) {
+                successCount++;
+            }
+            await sleep(500); // Slight delay between auths
+        }
+
+        state.isAuthenticating = false;
+        
+        if (showStatus) {
+            $('authStatus').style.display = 'none';
+        }
+
+        const msg = `Auto-auth complete: ${successCount}/${needAuth.length} successful`;
+        log(msg, successCount > 0 ? 'success' : 'error');
+        
+        return successCount > 0;
+    }
+
+    // Manual authenticate all
     async function authenticateAll() {
         if (!cm.count()) {
-            alert('No credentials to authenticate');
+            alert('No credentials to authenticate. Please add at least one credential.');
             return;
         }
 
         const btn = $('authAll');
         btn.disabled = true;
         btn.textContent = 'Authenticating...';
+        $('authStatus').style.display = 'block';
 
         let success = 0;
         for (const cred of state.credentials) {
             if (await authenticate(cred)) success++;
-            await new Promise(r => setTimeout(r, 500));
+            await sleep(500);
         }
 
-        log(`Auth complete: ${success}/${cm.count()}`);
+        const msg = `Authentication complete: ${success}/${cm.count()} successful`;
+        log(msg, success > 0 ? 'success' : 'error');
+        
         btn.disabled = false;
         btn.textContent = 'Authenticate All';
+        $('authStatus').style.display = 'none';
+
+        if (success === 0) {
+            alert('All authentication attempts failed. Please check your credentials and network connection.');
+        }
     }
 
-    // API Functions
+    // API Functions with error handling
     function getHeaders(cred) {
         const [site, currency] = cred.locale.split('/');
         return {
@@ -360,87 +485,190 @@
         };
     }
 
+    async function apiCallWithRetry(fn, retries = CONFIG.MAX_RETRIES) {
+        for (let i = 0; i <= retries; i++) {
+            try {
+                return await fn();
+            } catch (e) {
+                if (i === retries) throw e;
+                
+                // Don't retry on 404 or 400
+                if (e.message.includes('404') || e.message.includes('400')) throw e;
+                
+                log(`API call failed (attempt ${i + 1}/${retries + 1}): ${e.message}. Retrying...`, 'warning');
+                await sleep(CONFIG.RETRY_DELAY * (i + 1));
+            }
+        }
+    }
+
     async function productDetails(cred, mpn) {
-        const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
-        const url = `${cfg.BASE_URL}/products/v4/search/${encodeURIComponent(mpn)}/productdetails`;
-        const res = await fetch(url, { headers: getHeaders(cred) });
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        cm.markUsed(cred.id);
-        return res.json();
+        return apiCallWithRetry(async () => {
+            const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+            const url = `${cfg.BASE_URL}/products/v4/search/${encodeURIComponent(mpn)}/productdetails`;
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            const res = await fetch(url, { 
+                headers: getHeaders(cred),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!res.ok) {
+                const errorText = await res.text().catch(() => '');
+                throw new Error(`API ${res.status}: ${errorText || res.statusText}`);
+            }
+            
+            cm.markUsed(cred.id);
+            return res.json();
+        });
     }
 
     async function keywordSearch(cred, keyword) {
-        const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
-        const url = `${cfg.BASE_URL}/products/v4/search/keyword`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: getHeaders(cred),
-            body: JSON.stringify({
-                Keywords: keyword,
-                RecordCount: 20,
-                RecordStartPosition: 0,
-                Filters: {},
-                Sort: { Option: "SortByManu", Direction: "Ascending", SortParameterId: 0 }
-            })
+        return apiCallWithRetry(async () => {
+            const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+            const url = `${cfg.BASE_URL}/products/v4/search/keyword`;
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(cred),
+                body: JSON.stringify({
+                    Keywords: keyword,
+                    RecordCount: 20,
+                    RecordStartPosition: 0,
+                    Filters: {},
+                    Sort: { Option: "SortByManu", Direction: "Ascending", SortParameterId: 0 }
+                }),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!res.ok) {
+                const errorText = await res.text().catch(() => '');
+                throw new Error(`API ${res.status}: ${errorText || res.statusText}`);
+            }
+            
+            cm.markUsed(cred.id);
+            return res.json();
         });
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        cm.markUsed(cred.id);
-        return res.json();
     }
 
-    // Data extraction
+    // Data extraction with safe fallbacks
     function extractParam(params, names) {
-        if (!Array.isArray(params)) return '';
-        const p = params.find(p => 
-            p.ParameterText && names.some(n => 
-                p.ParameterText.toLowerCase().includes(n.toLowerCase())
-            )
-        );
-        return p?.ValueText || '';
+        try {
+            if (!Array.isArray(params)) return '';
+            const p = params.find(p => 
+                p && p.ParameterText && names.some(n => 
+                    p.ParameterText.toLowerCase().includes(n.toLowerCase())
+                )
+            );
+            return p?.ValueText || '';
+        } catch (e) {
+            return '';
+        }
     }
 
-    // Process single MPN
-    async function processMPN(mpn, cred) {
+    function extractDatasheet(product) {
         try {
-            // Try direct lookup
+            // Try multiple possible datasheet fields
+            return product.PrimaryDatasheet || 
+                   product.DatasheetUrl || 
+                   product.Datasheets?.[0]?.Url || 
+                   product.DatasheetURL ||
+                   '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // Process single MPN with comprehensive error handling
+    async function processMPN(mpn, cred) {
+        if (!mpn || !mpn.trim()) {
+            return {
+                status: 'error',
+                mpn: mpn || 'EMPTY',
+                description: '',
+                detailed: '',
+                category: '',
+                manufacturer: '',
+                package: '',
+                mounting: '',
+                datasheet: '',
+                aliases: '',
+                remarks: 'Empty MPN'
+            };
+        }
+
+        const cleanMpn = mpn.trim();
+
+        try {
+            // Check if credential needs re-authentication
+            if (!cred.token || cred.expiry <= (Date.now() + CONFIG.TOKEN_BUFFER)) {
+                log(`Token expired for ${cred.label}, attempting re-auth...`, 'warning');
+                const authSuccess = await authenticate(cred);
+                if (!authSuccess) {
+                    throw new Error('Re-authentication failed');
+                }
+            }
+
+            // Try direct lookup first
             try {
-                const data = await productDetails(cred, mpn);
+                const data = await productDetails(cred, cleanMpn);
                 if (data?.Product) {
                     const p = data.Product;
                     return {
                         status: 'success',
-                        mpn,
+                        mpn: cleanMpn,
                         description: p.Description?.ProductDescription || '',
                         detailed: p.Description?.DetailedDescription || '',
                         category: p.Category?.Name || '',
                         manufacturer: p.Manufacturer?.Name || '',
                         package: extractParam(p.Parameters, ['Package', 'Case']),
-                        mounting: extractParam(p.Parameters, ['Mounting']),
-                        aliases: p.OtherNames?.join(', ') || '',
-                        remarks: `Direct via ${cred.label}`
+                        mounting: extractParam(p.Parameters, ['Mounting', 'Mounting Type']),
+                        datasheet: extractDatasheet(p),
+                        aliases: Array.isArray(p.OtherNames) ? p.OtherNames.join(', ') : '',
+                        remarks: `Direct match via ${cred.label}`
                     };
                 }
             } catch (e) {
-                // Continue to keyword search
+                // If direct lookup fails, try keyword search
+                if (!e.message.includes('404')) {
+                    log(`Direct lookup failed for ${cleanMpn}, trying keyword search: ${e.message}`, 'warning');
+                }
             }
 
-            // Keyword search
-            const searchData = await keywordSearch(cred, mpn);
-            const products = searchData.Products || [];
-            const exact = searchData.ExactMatches || [];
+            // Keyword search fallback
+            const searchData = await keywordSearch(cred, cleanMpn);
+            const products = searchData?.Products || [];
+            const exact = searchData?.ExactMatches || [];
 
             let match = null;
             let matchType = '';
 
+            // Priority: Exact match > Direct MPN match > Alias match > First result
             if (exact.length > 0) {
                 match = exact[0];
                 matchType = 'Exact';
             } else {
                 match = products.find(p => 
-                    p.ManufacturerProductNumber === mpn ||
-                    (p.OtherNames && p.OtherNames.includes(mpn))
+                    p.ManufacturerProductNumber?.toUpperCase() === cleanMpn.toUpperCase()
                 );
                 if (match) matchType = 'Direct';
+            }
+
+            if (!match) {
+                match = products.find(p => 
+                    p.OtherNames && p.OtherNames.some(name => 
+                        name.toUpperCase() === cleanMpn.toUpperCase()
+                    )
+                );
+                if (match) matchType = 'Alias';
             }
 
             if (!match && products.length > 0) {
@@ -451,48 +679,54 @@
             if (match) {
                 return {
                     status: matchType === 'Partial' ? 'warning' : 'success',
-                    mpn,
+                    mpn: cleanMpn,
                     description: match.Description?.ProductDescription || '',
                     detailed: match.Description?.DetailedDescription || '',
                     category: match.Category?.Name || '',
                     manufacturer: match.Manufacturer?.Name || '',
                     package: extractParam(match.Parameters, ['Package', 'Case']),
-                    mounting: extractParam(match.Parameters, ['Mounting']),
-                    aliases: match.OtherNames?.join(', ') || '',
-                    remarks: `${matchType} via ${cred.label}`
+                    mounting: extractParam(match.Parameters, ['Mounting', 'Mounting Type']),
+                    datasheet: extractDatasheet(match),
+                    aliases: Array.isArray(match.OtherNames) ? match.OtherNames.join(', ') : '',
+                    remarks: `${matchType} match via ${cred.label}`
                 };
             }
 
             return {
                 status: 'error',
-                mpn,
+                mpn: cleanMpn,
                 description: '',
                 detailed: '',
                 category: '',
                 manufacturer: '',
                 package: '',
                 mounting: '',
+                datasheet: '',
                 aliases: '',
-                remarks: `Not found via ${cred.label}`
+                remarks: `Not found (searched ${products.length} results) via ${cred.label}`
             };
 
         } catch (e) {
+            const errorMsg = e.name === 'AbortError' ? 'Request timeout' : e.message;
+            log(`Error processing ${cleanMpn}: ${errorMsg}`, 'error');
+            
             return {
                 status: 'error',
-                mpn,
+                mpn: cleanMpn,
                 description: '',
                 detailed: '',
                 category: '',
                 manufacturer: '',
                 package: '',
                 mounting: '',
+                datasheet: '',
                 aliases: '',
-                remarks: `Error: ${e.message}`
+                remarks: `Error: ${errorMsg}`
             };
         }
     }
 
-    // Parallel processor
+    // Parallel processor with queue management
     class ParallelProcessor {
         constructor(mpns, creds, concurrency) {
             this.mpns = [...mpns];
@@ -501,15 +735,21 @@
             this.queue = [...mpns];
             this.results = [];
             this.processing = new Set();
+            this.failed = new Set();
         }
 
         async process(onProgress) {
+            if (this.creds.length === 0) {
+                throw new Error('No active credentials available');
+            }
+
             const workers = [];
             for (const cred of this.creds) {
                 for (let i = 0; i < this.concurrency; i++) {
                     workers.push(this.worker(cred, onProgress));
                 }
             }
+            
             await Promise.all(workers);
             return this.results;
         }
@@ -519,14 +759,32 @@
                 const mpn = this.getNext();
                 if (!mpn) break;
 
-                await new Promise(r => setTimeout(r, CONFIG.MIN_DELAY));
+                await sleep(CONFIG.MIN_DELAY);
 
                 try {
                     const result = await processMPN(mpn, cred);
                     this.results.push(result);
                     if (onProgress) onProgress(result);
                 } catch (e) {
-                    log(`Worker error for ${mpn}: ${e.message}`);
+                    log(`Worker error for ${mpn}: ${e.message}`, 'error');
+                    this.failed.add(mpn);
+                    
+                    // Return error result
+                    const errorResult = {
+                        status: 'error',
+                        mpn: mpn,
+                        description: '',
+                        detailed: '',
+                        category: '',
+                        manufacturer: '',
+                        package: '',
+                        mounting: '',
+                        datasheet: '',
+                        aliases: '',
+                        remarks: `Worker error: ${e.message}`
+                    };
+                    this.results.push(errorResult);
+                    if (onProgress) onProgress(errorResult);
                 } finally {
                     this.processing.delete(mpn);
                 }
@@ -536,7 +794,7 @@
         getNext() {
             while (this.queue.length > 0) {
                 const mpn = this.queue.shift();
-                if (!this.processing.has(mpn)) {
+                if (!this.processing.has(mpn) && !this.failed.has(mpn)) {
                     this.processing.add(mpn);
                     return mpn;
                 }
@@ -545,29 +803,48 @@
         }
     }
 
-    // Process bulk
+    // Process bulk with auto-authentication
     async function processBulk() {
-        const active = cm.active();
-        if (!active.length) {
-            alert('No active credentials. Authenticate first.');
-            return;
-        }
-
+        // Validate input
         const text = $('mpnInput').value.trim();
         if (!text) {
-            alert('Enter at least one MPN');
+            alert('Please enter at least one MPN to process.');
             return;
         }
 
-        const mpns = text.split('\n').map(m => m.trim()).filter(m => m);
+        const mpns = text.split('\n')
+            .map(m => m.trim())
+            .filter(m => m && m.length > 0);
+            
         if (!mpns.length) {
-            alert('No valid MPNs');
+            alert('No valid MPNs found. Please enter at least one MPN.');
+            return;
+        }
+
+        // Check credentials
+        if (!cm.count()) {
+            alert('No credentials added. Please add at least one set of API credentials before processing.');
+            return;
+        }
+
+        // Auto-authenticate if needed
+        log('Checking authentication status...', 'info');
+        const authSuccess = await autoAuthenticate(true);
+        
+        const active = cm.active();
+        if (active.length === 0) {
+            alert('No credentials are currently authenticated. Please check your credentials and try again.');
             return;
         }
 
         const concurrency = parseInt($('concurrency').value) || 3;
+        
+        if (concurrency < 1 || concurrency > 10) {
+            alert('Concurrency must be between 1 and 10.');
+            return;
+        }
 
-        // Reset
+        // Reset state
         state.results = [];
         state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: Date.now() };
         $('emptyResults').classList.add('hide');
@@ -582,7 +859,7 @@
         state.isProcessing = true;
 
         try {
-            log(`Processing ${mpns.length} MPNs with ${active.length} credential(s)`);
+            log(`Starting batch process: ${mpns.length} MPN(s) with ${active.length} credential(s), concurrency: ${concurrency}`, 'success');
 
             const processor = new ParallelProcessor(mpns, active, concurrency);
 
@@ -599,10 +876,13 @@
             };
 
             await processor.process(onProgress);
-            log(`✓ Complete: ${mpns.length} processed`);
+            
+            const elapsed = ((Date.now() - state.stats.startTime) / 1000).toFixed(1);
+            log(`✓ Batch complete: ${mpns.length} processed in ${elapsed}s (${state.stats.success} success, ${state.stats.warning} warning, ${state.stats.error} error)`, 'success');
 
         } catch (e) {
-            log(`✗ Error: ${e.message}`);
+            log(`✗ Batch processing error: ${e.message}`, 'error');
+            alert(`Processing failed: ${e.message}`);
         } finally {
             state.isProcessing = false;
             btn.disabled = false;
@@ -623,7 +903,7 @@
 
         const elapsed = (Date.now() - state.stats.startTime) / 1000;
         const rate = current / elapsed;
-        $('statRate').textContent = rate.toFixed(1) + '/s';
+        $('statRate').textContent = isFinite(rate) ? rate.toFixed(1) + '/s' : '0/s';
 
         const remaining = total - current;
         const eta = remaining / rate;
@@ -634,6 +914,12 @@
         } else {
             $('statETA').textContent = '--';
         }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     function addResult(r) {
@@ -652,6 +938,7 @@
                             <th>Manufacturer</th>
                             <th>Package</th>
                             <th>Mounting</th>
+                            <th>Datasheet</th>
                             <th>Aliases</th>
                             <th>Remarks</th>
                         </tr>
@@ -664,21 +951,32 @@
 
         const tbody = $('tbody');
         const row = tbody.insertRow();
+        
+        const datasheetCell = r.datasheet 
+            ? `<a href="${escapeHtml(r.datasheet)}" target="_blank" rel="noopener">View</a>`
+            : '';
+        
         row.innerHTML = `
-            <td>${r.status}</td>
-            <td class="mono">${r.mpn}</td>
-            <td>${r.description}</td>
-            <td>${r.detailed}</td>
-            <td>${r.category}</td>
-            <td>${r.manufacturer}</td>
-            <td>${r.package}</td>
-            <td>${r.mounting}</td>
-            <td class="mono">${r.aliases}</td>
-            <td>${r.remarks}</td>
+            <td><span style="color: ${r.status === 'success' ? '#4caf50' : r.status === 'warning' ? '#ff9800' : '#f44336'}">${escapeHtml(r.status)}</span></td>
+            <td class="mono">${escapeHtml(r.mpn)}</td>
+            <td>${escapeHtml(r.description)}</td>
+            <td>${escapeHtml(r.detailed)}</td>
+            <td>${escapeHtml(r.category)}</td>
+            <td>${escapeHtml(r.manufacturer)}</td>
+            <td>${escapeHtml(r.package)}</td>
+            <td>${escapeHtml(r.mounting)}</td>
+            <td>${datasheetCell}</td>
+            <td class="mono">${escapeHtml(r.aliases)}</td>
+            <td>${escapeHtml(r.remarks)}</td>
         `;
     }
 
     function clearResults() {
+        if (state.results.length === 0) {
+            log('No results to clear', 'warning');
+            return;
+        }
+        
         state.results = [];
         state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: 0 };
         $('resultsTable').innerHTML = '';
@@ -686,39 +984,48 @@
         $('emptyResults').classList.remove('hide');
         $('progress').classList.remove('visible');
         $('export').disabled = true;
-        log('Results cleared');
+        log('Results cleared', 'success');
     }
 
     function exportCSV() {
         if (!state.results.length) {
-            alert('No results to export');
+            alert('No results to export.');
             return;
         }
 
-        const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Aliases', 'Remarks'];
-        const rows = state.results.map(r => [
-            r.status,
-            `"${r.mpn.replace(/"/g, '""')}"`,
-            `"${r.description.replace(/"/g, '""')}"`,
-            `"${r.detailed.replace(/"/g, '""')}"`,
-            `"${r.category.replace(/"/g, '""')}"`,
-            `"${r.manufacturer.replace(/"/g, '""')}"`,
-            `"${r.package.replace(/"/g, '""')}"`,
-            `"${r.mounting.replace(/"/g, '""')}"`,
-            `"${r.aliases.replace(/"/g, '""')}"`,
-            `"${r.remarks.replace(/"/g, '""')}"`
-        ].join(','));
+        try {
+            const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Datasheet', 'Aliases', 'Remarks'];
+            const escape = str => `"${String(str).replace(/"/g, '""')}"`;
+            
+            const rows = state.results.map(r => [
+                escape(r.status),
+                escape(r.mpn),
+                escape(r.description),
+                escape(r.detailed),
+                escape(r.category),
+                escape(r.manufacturer),
+                escape(r.package),
+                escape(r.mounting),
+                escape(r.datasheet),
+                escape(r.aliases),
+                escape(r.remarks)
+            ].join(','));
 
-        const csv = [headers.join(','), ...rows].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `digikey-mpn-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+            const csv = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().split('T')[0];
+            a.href = url;
+            a.download = `digikey-mpn-analysis-${timestamp}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
 
-        log(`Exported ${state.results.length} results`);
+            log(`✓ Exported ${state.results.length} results to CSV`, 'success');
+        } catch (e) {
+            log(`✗ Export failed: ${e.message}`, 'error');
+            alert(`Failed to export CSV: ${e.message}`);
+        }
     }
 
     // Event listeners
@@ -730,25 +1037,44 @@
         const label = $('credLabel').value;
 
         if (!id || !secret) {
-            alert('Enter Client ID and Secret');
+            alert('Please enter both Client ID and Client Secret.');
             return;
         }
 
-        cm.add(id, secret, env, locale, label);
-        $('clientId').value = '';
-        $('clientSecret').value = '';
-        $('credLabel').value = '';
+        const added = cm.add(id, secret, env, locale, label);
+        if (added) {
+            $('clientId').value = '';
+            $('clientSecret').value = '';
+            $('credLabel').value = '';
+        }
     };
 
     $('authAll').onclick = authenticateAll;
+    
     $('clearCreds').onclick = () => {
-        if (confirm('Clear all credentials?')) cm.clear();
+        if (state.credentials.length === 0) {
+            alert('No credentials to clear.');
+            return;
+        }
+        if (confirm('Clear all credentials? This will remove all saved API credentials.')) {
+            cm.clear();
+        }
     };
+    
     $('process').onclick = processBulk;
     $('export').onclick = exportCSV;
     $('clear').onclick = clearResults;
 
-    log('System ready');
+    // Auto-authenticate on page load if credentials exist
+    window.addEventListener('load', async () => {
+        if (cm.count() > 0) {
+            log('Page loaded with saved credentials, checking authentication...', 'info');
+            await autoAuthenticate(false);
+        }
+        log('System ready', 'success');
+    });
+
+    log('System initialized - Ready to process MPNs', 'success');
 })();
     </script>
 </body>
