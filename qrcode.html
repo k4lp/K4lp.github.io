@@ -2,400 +2,507 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#000000">
-    <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=()">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>QR Code Component Scanner — Alica Technologies</title>
-    
-    <!-- Font Loading with Fallbacks -->
-    <link rel="stylesheet" href="css/site/font-fix.css">
-    <link rel="stylesheet" href="css/site/styles.css">
-    
-    <!-- Preconnect to external resources for faster loading -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://unpkg.com">
-    
-    <!-- Favicon and iOS icons -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000' width='100' height='100'/><rect fill='%23fff' x='20' y='20' width='60' height='60'/></svg>">
-    
+
+    <!-- Meta Tags -->
+    <meta name="description" content="Professional QR Code and Barcode Scanner for Component Management">
+    <meta name="author" content="Alica Technologies">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="QR Scanner">
+    <meta name="application-name" content="QR Scanner">
+    <meta name="msapplication-TileColor" content="#000000">
+    <meta name="theme-color" content="#000000">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23000'/><rect x='4' y='4' width='6' height='6' fill='%23fff'/><rect x='4' y='22' width='6' height='6' fill='%23fff'/><rect x='22' y='4' width='6' height='6' fill='%23fff'/></svg>">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/site/styles.css">
+    <link rel="stylesheet" href="/css/site/font-fix.css">
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
-    
-    <!-- iOS PWA meta tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="QR Scanner">
-</head>
-<body class="optimize-text">
-    <div class="container">
-        <nav class="back-nav">
-            <a href="index.html">← Back to Tools</a>
-        </nav>
 
-        <header class="header-grid">
-            <div>
-                <h1 class="header-title tracking-tight">QR Code Component Scanner</h1>
-                <p class="header-subtitle">Professional component counting and BOM matching through advanced scanning</p>
-            </div>
-            <div class="header-meta">
-                <span id="step-indicator">Step 1/5</span>
-                <span id="status-indicator" class="status-ready">Ready</span>
-                <button id="clear-session-btn" class="btn btn-danger btn-sm" title="Clear all data and start over">Clear Session</button>
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/js/qrcode/utils.js" as="script">
+    <link rel="preload" href="/css/site/styles.css" as="style">
+
+    <!-- Service Worker Registration -->
+    <script>
+        // Enhanced Service Worker Registration with Update Detection
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    console.log('[PWA] Registering service worker...');
+                    const registration = await navigator.serviceWorker.register('/sw.js', {
+                        scope: '/'
+                    });
+
+                    registration.addEventListener('updatefound', () => {
+                        console.log('[PWA] Service worker update found');
+                        const newWorker = registration.installing;
+
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('[PWA] New service worker installed');
+                                // Show update notification
+                                if (window.QRUtils) {
+                                    QRUtils.setStatus('App update available - refresh to apply', 'info');
+                                }
+                            }
+                        });
+                    });
+
+                    console.log('[PWA] Service Worker registered successfully:', registration.scope);
+
+                    // Update service worker immediately if needed
+                    registration.update();
+
+                } catch (error) {
+                    console.error('[PWA] Service Worker registration failed:', error);
+                }
+            });
+        } else {
+            console.warn('[PWA] Service Workers not supported');
+        }
+
+        // Performance Monitoring
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`[Performance] Page load: ${loadTime.toFixed(2)}ms`);
+
+            // Check if all fonts are loaded
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => {
+                    console.log('[Fonts] All fonts loaded');
+                });
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <!-- Cache Status Indicator (will be populated by cache manager) -->
+    <!-- Reset button will be added here by cache manager -->
+
+    <!-- Navigation -->
+    <nav class="back-nav">
+        <a href="/">← Back to Tools</a>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-grid">
+                <div>
+                    <h1 class="header-title">QR Code Component Scanner</h1>
+                    <p class="header-subtitle">Professional component scanning and BOM management</p>
+                </div>
+                <div class="header-meta">
+                    <span class="status-ready">Ready</span>
+                    <span>V2.1.0</span>
+                    <!-- Reset button will be inserted here by cache manager -->
+                </div>
             </div>
         </header>
 
-        <!-- HTTPS Warning for non-secure contexts -->
-        <div id="security-warning" class="alert alert-warning hidden">
+        <!-- Security Notice -->
+        <div class="alert alert-warning hidden" id="security-notice">
             <div class="alert-title">Security Notice</div>
             Camera access requires HTTPS or localhost. Some features may not work on HTTP connections.
-            <br><strong>Recommendation:</strong> Use HTTPS for full functionality.
+            <br><br>
+            <strong>Recommendation:</strong> Use HTTPS for full functionality.
         </div>
 
-        <main>
-            <!-- Step 1: Import Excel File -->
-            <section class="section" id="step-1">
-                <h2 class="section-title">Step 1: Import Excel File</h2>
-                <div class="form-group">
-                    <label for="excel-file">Select Excel File</label>
-                    <input type="file" id="excel-file" accept=".xlsx,.xls" />
-                    <p class="form-help">Select an Excel file containing your BOM data</p>
-                </div>
-                <div id="file-info" class="hidden"></div>
-            </section>
+        <!-- Step 1: Import Excel File -->
+        <section class="section" id="step-1">
+            <h2 class="section-title">Step 1: Import Excel File</h2>
+            <p class="section-subtitle">Select an Excel file containing your BOM data</p>
 
-            <!-- Step 2: Select Sheet -->
-            <section class="section hidden" id="step-2">
-                <h2 class="section-title">Step 2: Select Sheet</h2>
+            <div class="form-group">
+                <label for="excel-file">Select Excel File</label>
+                <input type="file" id="excel-file" accept=".xlsx,.xls" />
+                <div class="form-help">Select an Excel file containing your BOM data</div>
+            </div>
+
+            <div id="file-info" class="panel hidden">
+                <h3>File Information</h3>
+                <dl>
+                    <dt>Filename</dt>
+                    <dd id="file-name">-</dd>
+                    <dt>Size</dt>
+                    <dd id="file-size">-</dd>
+                    <dt>Last Modified</dt>
+                    <dd id="file-modified">-</dd>
+                </dl>
+            </div>
+        </section>
+
+        <!-- Step 2: Select Sheet -->
+        <section class="section hidden" id="step-2">
+            <h2 class="section-title">Step 2: Select Sheet</h2>
+            <p class="section-subtitle">Choose the worksheet containing your BOM data</p>
+
+            <div class="form-group">
+                <label for="sheet-select">Available Sheets</label>
+                <select id="sheet-select">
+                    <option value="">Select a sheet...</option>
+                </select>
+            </div>
+
+            <div class="btn-group">
+                <button id="load-sheet" disabled>Load Sheet Data</button>
+            </div>
+        </section>
+
+        <!-- Step 3: Select Data Range -->
+        <section class="section hidden" id="step-3">
+            <h2 class="section-title">Step 3: Select Data Range</h2>
+            <p class="section-subtitle">Visual Range Selection</p>
+            <p class="form-help">Click and drag to select the data range containing your BOM items.</p>
+
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="sheet-select">Available Sheets</label>
-                    <select id="sheet-select">
-                        <option value="">Select a sheet...</option>
+                    <label for="start-row">Start Row</label>
+                    <input type="number" id="start-row" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="end-row">End Row</label>
+                    <input type="number" id="end-row" value="100" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="start-col">Start Column</label>
+                    <input type="text" id="start-col" value="A" maxlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="end-col">End Column</label>
+                    <input type="text" id="end-col" value="H" maxlength="3">
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button id="preview-range">Preview Range</button>
+                <button id="confirm-range" disabled>Confirm Selection</button>
+            </div>
+
+            <div id="data-preview" class="table-container hidden"></div>
+        </section>
+
+        <!-- Step 4: Map Data Columns -->
+        <section class="section hidden" id="step-4">
+            <h2 class="section-title">Step 4: Map Data Columns</h2>
+            <p class="section-subtitle">Column Mapping</p>
+            <p class="form-help">Map your Excel columns to the required fields. The Target Column will be used for scanning and matching.</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="map-serial">Serial No. Column</label>
+                    <select id="map-serial">
+                        <option value="">Select column...</option>
                     </select>
                 </div>
-            </section>
-
-            <!-- Step 3: Select Data Range -->
-            <section class="section hidden" id="step-3">
-                <h2 class="section-title">Step 3: Select Data Range</h2>
-                <div class="alert alert-info">
-                    <div class="alert-title">Visual Range Selection</div>
-                    Click and drag to select the data range containing your BOM items.
+                <div class="form-group">
+                    <label for="map-mpn">MPN Column</label>
+                    <select id="map-mpn">
+                        <option value="">Select column...</option>
+                    </select>
                 </div>
+                <div class="form-group">
+                    <label for="map-designators">Designators Column</label>
+                    <select id="map-designators">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="map-manufacturer">Manufacturer Column</label>
+                    <select id="map-manufacturer">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="map-quantity">Quantity Column</label>
+                    <select id="map-quantity">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="map-target">Target Column (for scanning) *</label>
+                    <select id="map-target" required>
+                        <option value="">Select column...</option>
+                    </select>
+                    <div class="form-help">This column will be matched against scanned values</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button id="validate-mapping" disabled>Validate Mapping</button>
+                <button id="start-scanning" disabled>Start Scanning</button>
+            </div>
+
+            <div id="mapping-preview" class="panel hidden">
+                <h3>Mapping Preview</h3>
+                <div id="mapping-summary"></div>
+            </div>
+        </section>
+
+        <!-- Step 5: QR/Barcode Scanner -->
+        <section class="section hidden" id="step-5">
+            <h2 class="section-title">Step 5: QR/Barcode Scanner</h2>
+
+            <!-- Camera Status -->
+            <div class="alert alert-info" id="camera-status">
+                <div class="alert-title">Camera Status</div>
+                <span id="camera-status-text">Initializing camera system...</span>
+            </div>
+
+            <!-- Scanner Container -->
+            <div class="scanner-container">
+                <div id="qr-reader">
+                    <div class="camera-preview">
+                        <p>Center QR/barcode in frame</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scanner Controls -->
+            <div class="scan-controls">
                 <div class="form-row">
-                    <div>
-                        <label for="start-row">Start Row</label>
-                        <input type="number" id="start-row" min="1" value="1" />
+                    <div class="form-group">
+                        <label for="camera-select">Camera Device</label>
+                        <select id="camera-select">
+                            <option value="">Loading cameras...</option>
+                        </select>
                     </div>
-                    <div>
-                        <label for="end-row">End Row</label>
-                        <input type="number" id="end-row" min="1" value="100" />
-                    </div>
-                    <div>
-                        <label for="start-col">Start Column</label>
-                        <input type="text" id="start-col" value="A" maxlength="3" />
-                    </div>
-                    <div>
-                        <label for="end-col">End Column</label>
-                        <input type="text" id="end-col" value="H" maxlength="3" />
+                    <div class="form-group">
+                        <label for="scan-mode">Scan Mode</label>
+                        <select id="scan-mode">
+                            <option value="continuous">Continuous Scanning</option>
+                            <option value="single">Single Scan Mode</option>
+                        </select>
                     </div>
                 </div>
-                <div id="data-preview" class="table-container"></div>
+
                 <div class="btn-group">
-                    <button id="confirm-range" class="btn" disabled>Confirm Range</button>
-                    <button id="select-all-data" class="btn btn-secondary">Select All Data</button>
-                </div>
-            </section>
-
-            <!-- Step 4: Map Columns -->
-            <section class="section hidden" id="step-4">
-                <h2 class="section-title">Step 4: Map Data Columns</h2>
-                <div class="alert alert-info">
-                    <div class="alert-title">Column Mapping</div>
-                    Map your Excel columns to the required fields. The Target Column will be used for scanning and matching.
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-group">
-                        <label for="map-serial">Serial No. Column</label>
-                        <select id="map-serial">
-                            <option value="">Select column...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="map-mpn">MPN Column</label>
-                        <select id="map-mpn">
-                            <option value="">Select column...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="map-designators">Designators Column</label>
-                        <select id="map-designators">
-                            <option value="">Select column...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="map-manufacturer">Manufacturer Column</label>
-                        <select id="map-manufacturer">
-                            <option value="">Select column...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="map-quantity">Quantity Column</label>
-                        <select id="map-quantity">
-                            <option value="">Select column...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="map-target">Target Column (for scanning) *</label>
-                        <select id="map-target" required>
-                            <option value="">Select column...</option>
-                        </select>
-                        <p class="form-help">This column will be matched against scanned values</p>
-                    </div>
-                </div>
-                <div class="btn-group">
-                    <button id="confirm-mapping" class="btn" disabled>Confirm Mapping</button>
-                    <button id="auto-map" class="btn btn-secondary">Auto Map</button>
-                </div>
-            </section>
-
-            <!-- Step 5: QR Scanner -->
-            <section class="section hidden" id="step-5">
-                <h2 class="section-title">Step 5: QR/Barcode Scanner</h2>
-                
-                <!-- Camera Permission Status -->
-                <div id="camera-status" class="alert alert-info">
-                    <div class="alert-title">Camera Status</div>
-                    <div id="camera-status-text">Initializing camera system...</div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="scanner-section">
-                        <!-- Camera Preview Container -->
-                        <div class="scanner-container">
-                            <div id="qr-reader" class="camera-preview"></div>
-                            <div id="video-preview" class="camera-preview hidden">
-                                <video id="camera-video" autoplay muted playsinline></video>
-                                <canvas id="scan-canvas" style="display: none;"></canvas>
-                            </div>
-                            <div id="scan-overlay" class="scan-overlay hidden">
-                                <div class="scan-region"></div>
-                                <div class="scan-instruction">Center QR/barcode in frame</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Camera Controls -->
-                        <div class="scan-controls">
-                            <div class="btn-group">
-                                <button id="start-camera" class="btn" title="Start Camera (Ctrl+S)">Start Camera</button>
-                                <button id="stop-camera" class="btn btn-secondary" disabled title="Stop Camera (Escape)">Stop Camera</button>
-                                <button id="switch-camera" class="btn btn-secondary" disabled title="Switch Camera">Switch Camera</button>
-                            </div>
-                            <div class="form-group">
-                                <label for="camera-select">Camera Device</label>
-                                <select id="camera-select" disabled>
-                                    <option value="">Loading cameras...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="scan-mode">Scan Mode</label>
-                                <select id="scan-mode">
-                                    <option value="continuous">Continuous Scanning</option>
-                                    <option value="single">Single Scan Mode</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="results-section">
-                        <!-- Scan Information Panel -->
-                        <div id="scan-info" class="panel">
-                            <h3>Current Scan</h3>
-                            <div id="current-match" class="scan-result empty">No matches yet</div>
-                            <div id="serial-display" class="hidden">
-                                <strong>Serial No.:</strong> <span id="serial-value">-</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Statistics Panel -->
-                        <div id="scan-results" class="panel mt-4">
-                            <h3>Statistics</h3>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span class="stat-value" id="scan-count">0</span>
-                                    <span class="stat-label">Total Scans</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-value" id="match-count">0</span>
-                                    <span class="stat-label">Matches</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-value" id="accuracy-rate">0%</span>
-                                    <span class="stat-label">Accuracy</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Quick Actions -->
-                        <div class="panel mt-4">
-                            <h3>Quick Actions</h3>
-                            <div class="btn-group btn-group-vertical">
-                                <button id="manual-entry" class="btn btn-secondary btn-sm" title="Manual Entry (Ctrl+M)">Manual Entry</button>
-                                <button id="skip-item" class="btn btn-secondary btn-sm" disabled title="Skip Current (Space)">Skip Current</button>
-                                <button id="rescan-last" class="btn btn-secondary btn-sm" disabled>Rescan Last</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Scan Records -->
-            <section class="section hidden" id="scan-records-section">
-                <h2 class="section-title">Scan Records</h2>
-                <div class="btn-group mb-4">
-                    <button id="export-excel" class="btn" title="Export Excel (Ctrl+E)">Export to Excel</button>
-                    <button id="export-csv" class="btn btn-secondary">Export CSV</button>
-                    <button id="clear-records" class="btn btn-secondary">Clear Records</button>
-                    <button id="import-records" class="btn btn-secondary">Import Records</button>
-                </div>
-                
-                <!-- Search and Filter -->
-                <div class="form-row mb-4">
-                    <div class="form-group">
-                        <label for="search-records">Search Records</label>
-                        <input type="text" id="search-records" placeholder="Search by value, MPN, manufacturer...">
-                    </div>
-                    <div class="form-group">
-                        <label for="filter-status">Filter by Status</label>
-                        <select id="filter-status">
-                            <option value="all">All Records</option>
-                            <option value="matched">Matches Only</option>
-                            <option value="unmatched">No Matches</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div id="records-table" class="table-container">
-                    <div class="empty">No scan records yet</div>
-                </div>
-            </section>
-        </main>
-
-        <footer>
-            <div class="footer-content">
-                <div>
-                    <h3 class="footer-section-title">Tool</h3>
-                    <span class="footer-link">QR Code Component Scanner</span>
-                </div>
-                <div>
-                    <h3 class="footer-section-title">Organization</h3>
-                    <span class="footer-link">Alica Technologies LLP</span>
-                </div>
-                <div>
-                    <h3 class="footer-section-title">Location</h3>
-                    <span class="footer-link">Ahmedabad, Gujarat, India</span>
+                    <button id="start-camera" class="btn-success">Start Camera</button>
+                    <button id="stop-camera" disabled>Stop Camera</button>
+                    <button id="switch-camera" disabled>Switch Camera</button>
                 </div>
             </div>
-            <div class="footer-bottom">
-                <span class="text-sm">© 2025 Alica Technologies LLP</span>
-                <div class="text-xs">
-                    <span id="app-version">v2.1.0</span> • 
-                    <button class="btn btn-ghost btn-sm" onclick="qrDiagnostics()" title="System Diagnostics">Diagnostics</button>
+
+            <!-- Current Scan -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Current Scan</h3>
+                </div>
+                <div class="card-body">
+                    <div id="current-match" class="scan-result empty">No matches yet</div>
+                    <div id="serial-display" class="hidden">
+                        <strong>Serial No.:</strong> <span id="serial-value">-</span>
+                    </div>
                 </div>
             </div>
-        </footer>
-    </div>
 
-    <!-- Loading State -->
-    <div id="app-loading" class="loading-overlay">
-        <div class="panel">
-            <div class="spinner"></div>
-            <p style="margin-top: 1rem; font-weight: 500;">Loading QR Code Component Scanner...</p>
+            <!-- Statistics -->
+            <div class="stats">
+                <div class="stat-item">
+                    <span id="scan-count" class="stat-value">0</span>
+                    <span class="stat-label">Total Scans</span>
+                </div>
+                <div class="stat-item">
+                    <span id="match-count" class="stat-value">0</span>
+                    <span class="stat-label">Matches</span>
+                </div>
+                <div class="stat-item">
+                    <span id="accuracy-rate" class="stat-value">0%</span>
+                    <span class="stat-label">Accuracy</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Quick Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group">
+                        <button id="manual-entry" disabled>Manual Entry</button>
+                        <button id="skip-item" disabled>Skip Item</button>
+                        <button id="rescan-last" disabled>Rescan Last</button>
+                        <button id="export-excel" disabled>Export Excel</button>
+                        <button id="export-csv" disabled>Export CSV</button>
+                        <button id="clear-records" disabled>Clear All</button>
+                        <button id="import-records" disabled>Import Records</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scan Records Section -->
+        <section class="section hidden" id="scan-records-section">
+            <h2 class="section-title">Scan Records</h2>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="search-records">Search Records</label>
+                    <input type="search" id="search-records" placeholder="Search by value, MPN, manufacturer...">
+                </div>
+                <div class="form-group">
+                    <label for="filter-status">Filter by Status</label>
+                    <select id="filter-status">
+                        <option value="all">All Records</option>
+                        <option value="matched">Matches Only</option>
+                        <option value="unmatched">No Matches</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div id="records-table">No scan records yet</div>
+            </div>
+        </section>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay hidden" id="loading-overlay">
+            <div>
+                <div class="spinner"></div>
+                <p>Loading QR Code Component Scanner...</p>
+            </div>
         </div>
     </div>
 
-    <!-- External Libraries with Integrity Checks -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" 
-            integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" 
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" 
-            crossorigin="anonymous"></script>
-    
-    <!-- Core Application Modules - Load in Specific Order -->
-    <script src="js/qrcode/utils.js"></script>
-    <script src="js/qrcode/camera-manager.js"></script>
-    <script src="js/qrcode/excel-processor.js"></script>
-    <script src="js/qrcode/range-selector.js"></script>
-    <script src="js/qrcode/column-mapper.js"></script>
-    <script src="js/qrcode/scanner.js"></script>
-    <script src="js/qrcode/app.js"></script>
+    <!-- Application Scripts -->
+    <script src="/js/qrcode/utils.js"></script>
+    <script src="/js/qrcode/camera-manager.js"></script>
+    <script src="/js/qrcode/excel-processor.js"></script>
+    <script src="/js/qrcode/range-selector.js"></script>
+    <script src="/js/qrcode/column-mapper.js"></script>
+    <script src="/js/qrcode/scanner.js"></script>
+    <script src="/js/qrcode/app.js"></script>
 
-    <!-- Application Initialization -->
+    <!-- Cache Management (NEW) -->
     <script>
-        // Hide loading overlay once everything is loaded
-        window.addEventListener('load', () => {
-            const loadingOverlay = document.getElementById('app-loading');
-            if (loadingOverlay) {
-                setTimeout(() => {
-                    loadingOverlay.style.opacity = '0';
-                    setTimeout(() => {
-                        loadingOverlay.remove();
-                    }, 300);
-                }, 1000);
+        // Inline cache management for immediate availability
+        class CacheManager {
+            constructor() {
+                this.isOnline = navigator.onLine;
+                this.setupEventListeners();
+                this.checkServiceWorkerSupport();
             }
-        });
-        
-        // Error handler for script loading failures
-        window.addEventListener('error', (event) => {
-            if (event.filename && event.filename.includes('.js')) {
-                console.error('Script loading error:', event.filename, event.message);
-                
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'alert alert-error';
-                errorDiv.innerHTML = `
-                    <div class="alert-title">Script Loading Error</div>
-                    Failed to load: ${event.filename.split('/').pop()}
-                    <br><small>Check console for details. Try refreshing the page.</small>
-                `;
-                
-                const main = document.querySelector('main');
-                if (main) {
-                    main.insertBefore(errorDiv, main.firstChild);
+
+            setupEventListeners() {
+                // Online/offline detection
+                window.addEventListener('online', () => {
+                    this.isOnline = true;
+                    this.updateStatus();
+                });
+
+                window.addEventListener('offline', () => {
+                    this.isOnline = false;
+                    this.updateStatus();
+                });
+            }
+
+            checkServiceWorkerSupport() {
+                return 'serviceWorker' in navigator;
+            }
+
+            updateStatus() {
+                const statusElement = document.getElementById('cache-status');
+                if (statusElement) {
+                    statusElement.textContent = this.isOnline ? 'ONLINE' : 'OFFLINE';
+                    statusElement.className = `cache-status ${this.isOnline ? 'online' : 'offline'}`;
                 }
             }
+
+            async performCacheReset() {
+                if (!this.isOnline) {
+                    alert('Cache reset requires internet connection');
+                    return false;
+                }
+
+                const confirmed = confirm(
+                    'Reset Cache & Refresh?\n\n' +
+                    'This will:\n' +
+                    '• Clear all cached files\n' +
+                    '• Download fresh content from server\n' +
+                    '• Reload the application\n\n' +
+                    'Continue?'
+                );
+
+                if (!confirmed) return false;
+
+                try {
+                    if (navigator.serviceWorker.controller) {
+                        // Send message to service worker
+                        const messageChannel = new MessageChannel();
+
+                        messageChannel.port1.onmessage = (event) => {
+                            if (event.data.success) {
+                                alert('Cache cleared! Reloading with fresh content...');
+                                setTimeout(() => window.location.reload(true), 1000);
+                            }
+                        };
+
+                        navigator.serviceWorker.controller.postMessage(
+                            { type: 'CLEAR_CACHE' },
+                            [messageChannel.port2]
+                        );
+                    } else {
+                        // Fallback: hard reload
+                        window.location.reload(true);
+                    }
+
+                    return true;
+
+                } catch (error) {
+                    console.error('Cache reset failed:', error);
+                    alert('Cache reset failed: ' + error.message);
+                    return false;
+                }
+            }
+
+            addCacheControlUI() {
+                // Create cache status indicator
+                const statusElement = document.createElement('div');
+                statusElement.id = 'cache-status';
+                statusElement.className = `cache-status ${this.isOnline ? 'online' : 'offline'}`;
+                statusElement.textContent = this.isOnline ? 'ONLINE' : 'OFFLINE';
+                document.body.appendChild(statusElement);
+
+                // Create reset button
+                const resetButton = document.createElement('button');
+                resetButton.id = 'cache-reset-btn';
+                resetButton.className = 'btn btn-reset btn-sm';
+                resetButton.textContent = 'Reset Cache';
+                resetButton.title = 'Clear cache and reload with fresh content (requires internet)';
+                resetButton.onclick = () => this.performCacheReset();
+
+                // Add to header meta section
+                const headerMeta = document.querySelector('.header-meta');
+                if (headerMeta) {
+                    headerMeta.appendChild(resetButton);
+                }
+
+                this.updateStatus();
+            }
+        }
+
+        // Initialize cache manager when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            window.cacheManager = new CacheManager();
+            window.cacheManager.addCacheControlUI();
         });
-        
-        // Service Worker Registration
-        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('[PWA] Service Worker registered successfully:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('[PWA] Service Worker registration failed:', error);
-                    });
-            });
-        }
-        
-        // Font loading optimization
-        if ('fonts' in document) {
-            document.fonts.ready.then(() => {
-                console.log('[Fonts] All fonts loaded');
-                document.body.classList.add('font-loaded');
-            });
-        }
-        
-        // Performance monitoring
-        if ('performance' in window) {
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    const perfData = performance.getEntriesByType('navigation')[0];
-                    console.log(`[Performance] Page load: ${(perfData.loadEventEnd - perfData.fetchStart).toFixed(2)}ms`);
-                }, 0);
-            });
-        }
     </script>
 </body>
 </html>
