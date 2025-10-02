@@ -6,16 +6,29 @@
     <meta name="theme-color" content="#000000">
     <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=()">
     <title>QR Code Component Scanner — Alica Technologies</title>
+    
+    <!-- Font Loading with Fallbacks -->
+    <link rel="stylesheet" href="css/site/font-fix.css">
     <link rel="stylesheet" href="css/site/styles.css">
     
     <!-- Preconnect to external resources for faster loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://unpkg.com">
     
     <!-- Favicon and iOS icons -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000' width='100' height='100'/><rect fill='%23fff' x='20' y='20' width='60' height='60'/></svg>">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS PWA meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="QR Scanner">
 </head>
-<body>
+<body class="optimize-text">
     <div class="container">
         <nav class="back-nav">
             <a href="index.html">← Back to Tools</a>
@@ -32,6 +45,13 @@
                 <button id="clear-session-btn" class="btn btn-danger btn-sm" title="Clear all data and start over">Clear Session</button>
             </div>
         </header>
+
+        <!-- HTTPS Warning for non-secure contexts -->
+        <div id="security-warning" class="alert alert-warning hidden">
+            <div class="alert-title">Security Notice</div>
+            Camera access requires HTTPS or localhost. Some features may not work on HTTP connections.
+            <br><strong>Recommendation:</strong> Use HTTPS for full functionality.
+        </div>
 
         <main>
             <!-- Step 1: Import Excel File -->
@@ -147,7 +167,7 @@
                 <!-- Camera Permission Status -->
                 <div id="camera-status" class="alert alert-info">
                     <div class="alert-title">Camera Status</div>
-                    <div id="camera-status-text">Checking camera availability...</div>
+                    <div id="camera-status-text">Initializing camera system...</div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-6">
@@ -161,15 +181,16 @@
                             </div>
                             <div id="scan-overlay" class="scan-overlay hidden">
                                 <div class="scan-region"></div>
+                                <div class="scan-instruction">Center QR/barcode in frame</div>
                             </div>
                         </div>
                         
                         <!-- Camera Controls -->
                         <div class="scan-controls">
                             <div class="btn-group">
-                                <button id="start-camera" class="btn">Start Camera</button>
-                                <button id="stop-camera" class="btn btn-secondary" disabled>Stop Camera</button>
-                                <button id="switch-camera" class="btn btn-secondary" disabled>Switch Camera</button>
+                                <button id="start-camera" class="btn" title="Start Camera (Ctrl+S)">Start Camera</button>
+                                <button id="stop-camera" class="btn btn-secondary" disabled title="Stop Camera (Escape)">Stop Camera</button>
+                                <button id="switch-camera" class="btn btn-secondary" disabled title="Switch Camera">Switch Camera</button>
                             </div>
                             <div class="form-group">
                                 <label for="camera-select">Camera Device</label>
@@ -220,8 +241,8 @@
                         <div class="panel mt-4">
                             <h3>Quick Actions</h3>
                             <div class="btn-group btn-group-vertical">
-                                <button id="manual-entry" class="btn btn-secondary btn-sm">Manual Entry</button>
-                                <button id="skip-item" class="btn btn-secondary btn-sm" disabled>Skip Current</button>
+                                <button id="manual-entry" class="btn btn-secondary btn-sm" title="Manual Entry (Ctrl+M)">Manual Entry</button>
+                                <button id="skip-item" class="btn btn-secondary btn-sm" disabled title="Skip Current (Space)">Skip Current</button>
                                 <button id="rescan-last" class="btn btn-secondary btn-sm" disabled>Rescan Last</button>
                             </div>
                         </div>
@@ -233,7 +254,7 @@
             <section class="section hidden" id="scan-records-section">
                 <h2 class="section-title">Scan Records</h2>
                 <div class="btn-group mb-4">
-                    <button id="export-excel" class="btn">Export to Excel</button>
+                    <button id="export-excel" class="btn" title="Export Excel (Ctrl+E)">Export to Excel</button>
                     <button id="export-csv" class="btn btn-secondary">Export CSV</button>
                     <button id="clear-records" class="btn btn-secondary">Clear Records</button>
                     <button id="import-records" class="btn btn-secondary">Import Records</button>
@@ -278,19 +299,30 @@
             </div>
             <div class="footer-bottom">
                 <span class="text-sm">© 2025 Alica Technologies LLP</span>
+                <div class="text-xs">
+                    <span id="app-version">v2.1.0</span> • 
+                    <button class="btn btn-ghost btn-sm" onclick="qrDiagnostics()" title="System Diagnostics">Diagnostics</button>
+                </div>
             </div>
         </footer>
     </div>
 
-    <!-- External Libraries -->
+    <!-- Loading State -->
+    <div id="app-loading" class="loading-overlay">
+        <div class="panel">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; font-weight: 500;">Loading QR Code Component Scanner...</p>
+        </div>
+    </div>
+
+    <!-- External Libraries with Integrity Checks -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" 
             integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" 
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" 
-            integrity="sha384-nIxo7Arw+6lIQInb2JnGqF2Ddh3Xs9YnR8X9+0j8b3k+Zc7zS+4k8f9dC5hJHs2" 
             crossorigin="anonymous"></script>
     
-    <!-- Core Application Modules -->
+    <!-- Core Application Modules - Load in Specific Order -->
     <script src="js/qrcode/utils.js"></script>
     <script src="js/qrcode/camera-manager.js"></script>
     <script src="js/qrcode/excel-processor.js"></script>
@@ -299,13 +331,69 @@
     <script src="js/qrcode/scanner.js"></script>
     <script src="js/qrcode/app.js"></script>
 
-    <!-- Service Worker Registration for PWA capabilities -->
+    <!-- Application Initialization -->
     <script>
-        if ('serviceWorker' in navigator) {
+        // Hide loading overlay once everything is loaded
+        window.addEventListener('load', () => {
+            const loadingOverlay = document.getElementById('app-loading');
+            if (loadingOverlay) {
+                setTimeout(() => {
+                    loadingOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingOverlay.remove();
+                    }, 300);
+                }, 1000);
+            }
+        });
+        
+        // Error handler for script loading failures
+        window.addEventListener('error', (event) => {
+            if (event.filename && event.filename.includes('.js')) {
+                console.error('Script loading error:', event.filename, event.message);
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-error';
+                errorDiv.innerHTML = `
+                    <div class="alert-title">Script Loading Error</div>
+                    Failed to load: ${event.filename.split('/').pop()}
+                    <br><small>Check console for details. Try refreshing the page.</small>
+                `;
+                
+                const main = document.querySelector('main');
+                if (main) {
+                    main.insertBefore(errorDiv, main.firstChild);
+                }
+            }
+        });
+        
+        // Service Worker Registration
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(error => console.log('SW registration failed'));
+                    .then(registration => {
+                        console.log('[PWA] Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('[PWA] Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // Font loading optimization
+        if ('fonts' in document) {
+            document.fonts.ready.then(() => {
+                console.log('[Fonts] All fonts loaded');
+                document.body.classList.add('font-loaded');
+            });
+        }
+        
+        // Performance monitoring
+        if ('performance' in window) {
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const perfData = performance.getEntriesByType('navigation')[0];
+                    console.log(`[Performance] Page load: ${(perfData.loadEventEnd - perfData.fetchStart).toFixed(2)}ms`);
+                }, 0);
             });
         }
     </script>
