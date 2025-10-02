@@ -3,525 +3,310 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Digi-Key MPN Analyzer - Multi-Credential</title>
+    <title>Digi-Key MPN Analyzer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&family=Geist+Mono:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --background: #ffffff;
-            --foreground: #000000;
-            --muted: #6b7280;
-            --muted-foreground: #9ca3af;
-            --border: #e5e7eb;
-            --input: #f9fafb;
-            --card: #ffffff;
-            --card-foreground: #000000;
-            --primary: #000000;
-            --primary-foreground: #ffffff;
-            --secondary: #f3f4f6;
-            --secondary-foreground: #374151;
-            --accent: #f3f4f6;
-            --accent-foreground: #1f2937;
-            --destructive: #ef4444;
-            --destructive-foreground: #ffffff;
-            --ring: #3b82f6;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --spacing: 1rem;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-            line-height: 1.5;
-            margin: 0;
-            padding: 0;
-            background-color: var(--background);
-            color: var(--foreground);
+            font-family: 'Geist', sans-serif;
             font-size: 14px;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
             font-weight: 400;
         }
-
-        .mono {
-            font-family: 'Geist Mono', 'Consolas', 'Monaco', monospace;
-        }
-
+        
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: var(--spacing);
+            padding: 40px 20px;
         }
-
-        .header {
-            border-bottom: 1px solid var(--border);
-            padding-bottom: var(--spacing);
-            margin-bottom: calc(var(--spacing) * 2);
-        }
-
-        .title {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0 0 0.5rem 0;
-            letter-spacing: -0.025em;
-        }
-
-        .subtitle {
-            color: var(--muted-foreground);
-            margin: 0;
-            font-weight: 400;
-        }
-
-        .grid {
+        
+        header {
+            border-bottom: 1px solid #000;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
             display: grid;
-            gap: var(--spacing);
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
         }
-
-        .grid-cols-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
         }
-
-        @media (max-width: 768px) {
-            .grid-cols-2 {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background-color: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: var(--spacing);
-        }
-
-        .card-header {
-            margin-bottom: var(--spacing);
-        }
-
-        .card-title {
+        
+        h2 {
             font-size: 16px;
             font-weight: 500;
-            margin: 0 0 0.25rem 0;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
-
-        .card-description {
-            color: var(--muted-foreground);
-            font-size: 13px;
-            margin: 0;
+        
+        .meta {
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            font-family: 'Geist Mono', monospace;
         }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-bottom: var(--spacing);
+        
+        .section {
+            border: 1px solid #000;
+            padding: 24px;
+            margin-bottom: 24px;
         }
-
-        .form-row {
+        
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
+            gap: 16px;
         }
-
-        @media (max-width: 480px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
+        
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
         }
-
+        
         label {
-            font-size: 13px;
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
             font-weight: 500;
-            color: var(--foreground);
         }
-
+        
         input, select, textarea {
             width: 100%;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background-color: var(--input);
-            color: var(--foreground);
+            border: 1px solid #000;
+            padding: 8px 12px;
+            font-family: inherit;
             font-size: 14px;
-            font-family: inherit;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            background: #fff;
         }
-
+        
         input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--ring);
-            box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+            outline: 2px solid #000;
+            outline-offset: -2px;
         }
-
+        
         textarea {
-            min-height: 120px;
-            resize: vertical;
             font-family: 'Geist Mono', monospace;
-            line-height: 1.4;
+            resize: vertical;
+            min-height: 120px;
         }
-
-        .button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background-color: var(--primary);
-            color: var(--primary-foreground);
-            font-size: 13px;
-            font-weight: 500;
+        
+        button {
+            border: 1px solid #000;
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
             font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             cursor: pointer;
-            transition: all 0.15s ease-in-out;
-            text-decoration: none;
+            font-weight: 500;
         }
-
-        .button:hover {
-            opacity: 0.9;
+        
+        button:hover { background: #333; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        button.secondary {
+            background: #fff;
+            color: #000;
         }
-
-        .button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        
+        button.secondary:hover { background: #f5f5f5; }
+        
+        button.danger {
+            background: #fff;
+            color: #d00;
+            border-color: #d00;
         }
-
-        .button-secondary {
-            background-color: var(--secondary);
-            color: var(--secondary-foreground);
-        }
-
-        .button-destructive {
-            background-color: var(--destructive);
-            color: var(--destructive-foreground);
-            border-color: var(--destructive);
-        }
-
-        .button-outline {
-            background-color: transparent;
-            color: var(--foreground);
-        }
-
-        .button-group {
+        
+        button.danger:hover { background: #d00; color: #fff; }
+        
+        .btn-group {
             display: flex;
-            gap: 0.5rem;
+            gap: 8px;
             flex-wrap: wrap;
         }
-
-        .status-indicator {
-            display: inline-flex;
+        
+        .credential-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .credential {
+            border: 1px solid #000;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 13px;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Geist Mono', monospace;
         }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .status-connected {
-            background-color: rgb(34 197 94 / 0.1);
-            color: var(--success);
-        }
-
-        .status-connected .status-dot {
-            background-color: var(--success);
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        .status-error {
-            background-color: rgb(239 68 68 / 0.1);
-            color: var(--destructive);
-        }
-
-        .status-error .status-dot {
-            background-color: var(--destructive);
-        }
-
-        .status-pending {
-            background-color: rgb(245 158 11 / 0.1);
-            color: var(--warning);
-        }
-
-        .status-pending .status-dot {
-            background-color: var(--warning);
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .progress {
-            width: 100%;
-            height: 4px;
-            background-color: var(--secondary);
-            border-radius: 2px;
-            overflow: hidden;
-            margin: 0.5rem 0;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background-color: var(--primary);
-            border-radius: 2px;
-            width: 0%;
-            transition: width 0.3s ease-in-out;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background-color: var(--card);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        th, td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-            vertical-align: top;
-        }
-
-        th {
-            background-color: var(--accent);
-            font-weight: 500;
-            color: var(--accent-foreground);
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .status-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .status-icon {
+        
+        .credential-info { display: grid; gap: 4px; }
+        
+        .status {
+            display: inline-block;
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            flex-shrink: 0;
+            background: #ccc;
+            margin-right: 6px;
         }
-
-        .status-success .status-icon { background-color: var(--success); }
-        .status-warning .status-icon { background-color: var(--warning); }
-        .status-error .status-icon { background-color: var(--destructive); }
-
-        .code-block {
-            background-color: var(--accent);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem;
+        
+        .status.active { background: #000; }
+        
+        .progress-container {
+            margin: 16px 0;
+            padding: 16px;
+            border: 1px solid #000;
+            display: none;
+        }
+        
+        .progress-container.visible { display: block; }
+        
+        .progress-bar-bg {
+            height: 2px;
+            background: #e0e0e0;
+            margin: 8px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #000;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
             font-family: 'Geist Mono', monospace;
+            font-size: 11px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            display: block;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 12px;
-            white-space: pre-wrap;
+            margin-top: 16px;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 10px;
+            background: #f5f5f5;
+        }
+        
+        .table-container {
             overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #000;
+        }
+        
+        .log {
+            font-family: 'Geist Mono', monospace;
+            font-size: 11px;
+            background: #f5f5f5;
+            padding: 16px;
             max-height: 200px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
-
-        .empty-state {
+        
+        .empty {
             text-align: center;
-            padding: 3rem 1rem;
-            color: var(--muted-foreground);
-        }
-
-        .hidden { display: none; }
-
-        .alert {
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            font-size: 13px;
-            margin-bottom: var(--spacing);
-        }
-
-        .alert-info {
-            background-color: rgb(59 130 246 / 0.1);
-            border: 1px solid rgb(59 130 246 / 0.2);
-            color: rgb(30 58 138);
-        }
-
-        .alert-success {
-            background-color: rgb(34 197 94 / 0.1);
-            border: 1px solid rgb(34 197 94 / 0.2);
-            color: rgb(22 101 52);
-        }
-
-        .credential-item {
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--input);
-        }
-
-        .credential-info {
-            flex: 1;
+            padding: 40px;
+            color: #999;
             font-size: 12px;
         }
-
-        .credential-label {
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-        }
-
-        .credential-id {
-            font-family: 'Geist Mono', monospace;
-            color: var(--muted-foreground);
-            font-size: 11px;
-        }
-
-        .credential-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 11px;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid var(--muted);
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .max-h-96 {
-            max-height: 24rem;
-            overflow-y: auto;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.125rem 0.5rem;
-            background-color: var(--secondary);
-            border-radius: 4px;
-            font-size: 11px;
-            color: var(--secondary-foreground);
-            font-weight: 500;
-        }
-
-        .badge-success {
-            background-color: rgb(34 197 94 / 0.1);
-            color: var(--success);
-        }
-
-        .badge-warning {
-            background-color: rgb(245 158 11 / 0.1);
-            color: var(--warning);
-        }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .stat-item {
-            background-color: var(--accent);
-            padding: 0.75rem;
-            border-radius: 6px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--foreground);
-        }
-
-        .stat-label {
-            font-size: 11px;
-            color: var(--muted-foreground);
-            margin-top: 0.25rem;
+        
+        .mono { font-family: 'Geist Mono', monospace; }
+        
+        .hide { display: none; }
+        
+        .alert {
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #000;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div>
-                    <h1 class="title">Digi-Key MPN Analyzer - Multi-Credential Edition</h1>
-                    <p class="subtitle">Parallel processing with multiple credentials for maximum performance</p>
-                </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <span class="badge" id="credentialCount">0 Credentials</span>
-                    <span class="badge" id="parallelWorkers">0 Workers</span>
-                </div>
+        <header>
+            <div>
+                <h1>Digi-Key MPN Analyzer</h1>
+                <p style="margin-top: 4px; color: #666; font-size: 13px;">Parallel processing with multiple API credentials</p>
+            </div>
+            <div class="meta">
+                <div>Credentials: <span id="credCount">0</span></div>
+                <div>Workers: <span id="workerCount">0</span></div>
             </div>
         </header>
 
-        <div class="card" style="margin-bottom: 2rem;">
-            <div class="card-header">
-                <h3 class="card-title">Credential Management</h3>
-                <p class="card-description">Add multiple API credentials for parallel processing and rate limit avoidance</p>
-            </div>
-
-            <div class="form-group">
-                <div class="form-row">
-                    <div>
-                        <label for="clientId">Client ID</label>
-                        <input type="text" id="clientId" placeholder="Your Client ID" autocomplete="off">
-                    </div>
-                    <div>
-                        <label for="clientSecret">Client Secret</label>
-                        <input type="password" id="clientSecret" placeholder="Your Client Secret" autocomplete="off">
-                    </div>
+        <section class="section">
+            <h2>Credentials</h2>
+            
+            <div class="grid grid-2">
+                <div>
+                    <label>Client ID</label>
+                    <input type="text" id="clientId" autocomplete="off">
+                </div>
+                <div>
+                    <label>Client Secret</label>
+                    <input type="password" id="clientSecret" autocomplete="off">
                 </div>
             </div>
-
-            <div class="form-group">
-                <div class="form-row">
-                    <div>
-                        <label for="credentialLabel">Label (Optional)</label>
-                        <input type="text" id="credentialLabel" placeholder="e.g., Account 1, Production Key" autocomplete="off">
-                    </div>
-                    <div>
-                        <label for="environment">Environment</label>
-                        <select id="environment">
-                            <option value="production">Production</option>
-                            <option value="sandbox">Sandbox</option>
-                        </select>
-                    </div>
+            
+            <div class="grid grid-2" style="margin-top: 16px;">
+                <div>
+                    <label>Label</label>
+                    <input type="text" id="credLabel" placeholder="Optional">
+                </div>
+                <div>
+                    <label>Environment</label>
+                    <select id="environment">
+                        <option value="production">Production</option>
+                        <option value="sandbox">Sandbox</option>
+                    </select>
                 </div>
             </div>
-
-            <div class="form-group">
-                <label for="locale">Locale (Site/Currency)</label>
+            
+            <div style="margin-top: 16px;">
+                <label>Locale</label>
                 <select id="locale">
                     <option value="US/USD">US / USD</option>
                     <option value="CA/CAD">CA / CAD</option>
@@ -530,954 +315,692 @@
                     <option value="JP/JPY">JP / JPY</option>
                 </select>
             </div>
-
-            <div class="button-group">
-                <button class="button" id="addCredentialBtn">
-                    <span>Add Credential</span>
-                </button>
-                <button class="button button-secondary" id="authenticateAllBtn">
-                    <span id="authAllText">Authenticate All</span>
-                    <div id="authAllSpinner" class="loading-spinner hidden"></div>
-                </button>
-                <button class="button button-destructive" id="clearAllCredsBtn">Clear All Credentials</button>
+            
+            <div class="btn-group" style="margin-top: 16px;">
+                <button id="addCred">Add</button>
+                <button class="secondary" id="authAll">Authenticate All</button>
+                <button class="danger" id="clearCreds">Clear All</button>
             </div>
+            
+            <div id="credList" class="credential-list"></div>
+        </section>
 
-            <div id="credentialsList" style="margin-top: 1.5rem;">
-                <div class="empty-state" style="padding: 2rem 1rem;" id="emptyCredentials">
-                    <p>No credentials added yet. Add credentials above to enable parallel processing.</p>
-                </div>
+        <section class="section">
+            <h2>Processing</h2>
+            
+            <div class="alert">
+                Parallel processing distributes requests across multiple authenticated credentials to maximize throughput while respecting API rate limits.
             </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 2rem;">
-            <div class="card-header">
-                <h3 class="card-title">Bulk MPN Processing</h3>
-                <p class="card-description">Enter manufacturer part numbers for parallel analysis</p>
+            
+            <div>
+                <label>MPNs (one per line)</label>
+                <textarea id="mpnInput" placeholder="ECA-1VHG102&#10;STM32F103C8T6&#10;LM358P"></textarea>
             </div>
-
-            <div id="parallelInfoAlert" class="alert alert-info">
-                <strong>Parallel Processing Enabled:</strong> With multiple authenticated credentials, requests will be processed in parallel for maximum speed while respecting rate limits.
+            
+            <div style="margin-top: 16px;">
+                <label>Concurrency per Credential</label>
+                <input type="number" id="concurrency" value="3" min="1" max="10">
+                <p style="font-size: 11px; color: #666; margin-top: 4px;">Recommended: 2-5</p>
             </div>
-
-            <div class="form-group">
-                <label for="mpnInput">Manufacturer Part Numbers (one per line)</label>
-                <textarea id="mpnInput" placeholder="Enter MPNs, one per line:&#10;ECA-1VHG102&#10;STM32F103C8T6&#10;LM358P&#10;NE555DR&#10;..."></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="parallelismLevel">Parallelism Level (requests per credential)</label>
-                <input type="number" id="parallelismLevel" value="3" min="1" max="10" step="1">
-                <p style="font-size: 11px; color: var(--muted-foreground); margin: 0;">Higher values = faster processing but may hit rate limits. Recommended: 2-5</p>
-            </div>
-
-            <div id="progressSection" class="hidden">
-                <div class="progress">
+            
+            <div id="progress" class="progress-container">
+                <div id="progressText" class="mono" style="font-size: 11px; margin-bottom: 8px;"></div>
+                <div class="progress-bar-bg">
                     <div id="progressBar" class="progress-bar"></div>
                 </div>
-                <div id="progressText" style="font-size: 12px; color: var(--muted-foreground); text-align: center; margin-bottom: 0.5rem;"></div>
-                
-                <div class="stat-grid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="statProcessed">0</div>
-                        <div class="stat-label">Processed</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statSuccess">0</div>
-                        <div class="stat-label">Success</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statWarning">0</div>
-                        <div class="stat-label">Warnings</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statError">0</div>
-                        <div class="stat-label">Errors</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statRate">0/s</div>
-                        <div class="stat-label">Processing Rate</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statETA">--</div>
-                        <div class="stat-label">ETA</div>
-                    </div>
+                <div class="stats">
+                    <div><span class="stat-value" id="statProcessed">0</span> Processed</div>
+                    <div><span class="stat-value" id="statSuccess">0</span> Success</div>
+                    <div><span class="stat-value" id="statWarning">0</span> Warning</div>
+                    <div><span class="stat-value" id="statError">0</span> Error</div>
+                    <div><span class="stat-value" id="statRate">0/s</span> Rate</div>
+                    <div><span class="stat-value" id="statETA">--</span> ETA</div>
                 </div>
             </div>
-
-            <div class="button-group" style="margin-top: 1rem;">
-                <button class="button" id="processBtn">
-                    <span id="processBtnText">Process MPNs</span>
-                    <div id="processSpinner" class="loading-spinner hidden"></div>
-                </button>
-                <button class="button button-secondary" id="exportBtn" disabled>Export CSV</button>
-                <button class="button button-outline" id="clearResultsBtn">Clear Results</button>
+            
+            <div class="btn-group" style="margin-top: 16px;">
+                <button id="process">Process</button>
+                <button class="secondary" id="export" disabled>Export CSV</button>
+                <button class="secondary" id="clear">Clear Results</button>
             </div>
-        </div>
+        </section>
 
-        <div class="card" style="margin-bottom: 2rem;">
-            <div class="card-header">
-                <h3 class="card-title">Analysis Results</h3>
-                <p class="card-description">Detailed component information and specifications</p>
+        <section class="section">
+            <h2>Results</h2>
+            <div id="resultsArea">
+                <div id="emptyResults" class="empty">No results yet</div>
+                <div id="resultsTable" class="table-container hide"></div>
             </div>
+        </section>
 
-            <div id="resultsContainer">
-                <div id="emptyState" class="empty-state">
-                    <p>No results yet. Enter MPNs above and click "Process MPNs" to begin analysis.</p>
-                </div>
-
-                <div id="resultsTable" class="table-container hidden">
-                    <div class="max-h-96">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 80px;">Status</th>
-                                    <th style="width: 140px;">MPN</th>
-                                    <th style="width: 200px;">Description</th>
-                                    <th style="width: 250px;">Detailed Description</th>
-                                    <th style="width: 150px;">Category</th>
-                                    <th style="width: 150px;">Manufacturer</th>
-                                    <th style="width: 120px;">Package/Case</th>
-                                    <th style="width: 120px;">Mounting Type</th>
-                                    <th style="width: 160px;">Alias Names</th>
-                                    <th style="width: 200px;">Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultsBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Debug Log</h3>
-                <p class="card-description">API requests and system information</p>
-            </div>
-            <div id="debugLog" class="code-block" style="min-height: 150px;">Multi-Credential MPN Analyzer initialized. Add credentials to begin...</div>
-        </div>
+        <section class="section">
+            <h2>Log</h2>
+            <div id="log" class="log">System initialized</div>
+        </section>
     </div>
 
     <script>
-        // Configuration
-        const CONFIG = {
-            PRODUCTION: {
-                BASE_URL: 'https://api.digikey.com',
-                TOKEN_URL: 'https://api.digikey.com/v1/oauth2/token'
-            },
-            SANDBOX: {
-                BASE_URL: 'https://sandbox-api.digikey.com',
-                TOKEN_URL: 'https://sandbox-api.digikey.com/v1/oauth2/token'
-            },
-            STORAGE_KEY: 'digikey_multi_credentials',
-            MIN_REQUEST_DELAY: 100, // Minimum ms between requests per credential
-            TOKEN_REFRESH_THRESHOLD: 300000, // Refresh if token expires in <5 minutes
-        };
+(function() {
+    'use strict';
 
-        // State management
-        const state = {
-            credentials: [],
-            tokenPool: [],
-            processedResults: [],
-            isProcessing: false,
-            stats: {
-                processed: 0,
-                success: 0,
-                warning: 0,
-                error: 0,
-                startTime: null
+    // Configuration
+    const CONFIG = {
+        PRODUCTION: {
+            BASE_URL: 'https://api.digikey.com',
+            TOKEN_URL: 'https://api.digikey.com/v1/oauth2/token'
+        },
+        SANDBOX: {
+            BASE_URL: 'https://sandbox-api.digikey.com',
+            TOKEN_URL: 'https://sandbox-api.digikey.com/v1/oauth2/token'
+        },
+        STORAGE_KEY: 'dk_creds',
+        MIN_DELAY: 100,
+        TOKEN_BUFFER: 300000
+    };
+
+    // State
+    const state = {
+        credentials: [],
+        results: [],
+        isProcessing: false,
+        stats: { processed: 0, success: 0, warning: 0, error: 0, startTime: 0 }
+    };
+
+    // Utilities
+    const $ = id => document.getElementById(id);
+    const log = msg => {
+        const time = new Date().toLocaleTimeString();
+        $('log').textContent += `\n[${time}] ${msg}`;
+        $('log').scrollTop = $('log').scrollHeight;
+    };
+    const uid = () => Math.random().toString(36).substr(2, 9);
+
+    // Credential Manager
+    class CredentialManager {
+        constructor() {
+            this.load();
+            this.render();
+        }
+
+        add(clientId, clientSecret, env, locale, label) {
+            if (!clientId || !clientSecret) return null;
+            
+            const cred = {
+                id: uid(),
+                clientId: clientId.trim(),
+                clientSecret: clientSecret.trim(),
+                environment: env,
+                locale: locale,
+                label: label || `Credential ${this.count() + 1}`,
+                status: 'inactive',
+                token: null,
+                expiry: null,
+                uses: 0
+            };
+
+            state.credentials.push(cred);
+            this.save();
+            this.render();
+            log(`Added: ${cred.label}`);
+            return cred;
+        }
+
+        remove(id) {
+            const idx = state.credentials.findIndex(c => c.id === id);
+            if (idx > -1) {
+                const cred = state.credentials.splice(idx, 1)[0];
+                this.save();
+                this.render();
+                log(`Removed: ${cred.label}`);
             }
-        };
+        }
 
-        // Utility functions
-        const $ = id => document.getElementById(id);
-        
-        const log = msg => {
-            const timestamp = new Date().toLocaleTimeString();
-            const debugLog = $('debugLog');
-            debugLog.textContent += `[${timestamp}] ${msg}\n`;
-            debugLog.scrollTop = debugLog.scrollHeight;
-        };
+        clear() {
+            state.credentials = [];
+            this.save();
+            this.render();
+            log('Credentials cleared');
+        }
 
-        const generateId = () => Math.random().toString(36).substr(2, 9);
+        active() {
+            return state.credentials.filter(c => 
+                c.status === 'active' && 
+                c.token && 
+                c.expiry > Date.now()
+            );
+        }
 
-        // Credential Management
-        class CredentialManager {
-            constructor() {
-                this.credentials = [];
-                this.loadCredentials();
+        setToken(id, token, expiresIn) {
+            const cred = state.credentials.find(c => c.id === id);
+            if (cred) {
+                cred.token = token;
+                cred.expiry = Date.now() + (expiresIn * 1000);
+                cred.status = 'active';
+                this.render();
             }
+        }
 
-            add(clientId, clientSecret, environment, locale, label) {
-                const credential = {
-                    id: generateId(),
-                    clientId: clientId.trim(),
-                    clientSecret: clientSecret.trim(),
-                    environment: environment || 'production',
-                    locale: locale || 'US/USD',
-                    label: label?.trim() || `Credential ${this.credentials.length + 1}`,
-                    addedAt: Date.now(),
-                    status: 'inactive',
-                    accessToken: null,
-                    tokenExpiry: null,
-                    lastUsed: null,
-                    requestCount: 0
-                };
+        markUsed(id) {
+            const cred = state.credentials.find(c => c.id === id);
+            if (cred) cred.uses++;
+        }
 
-                this.credentials.push(credential);
-                this.saveCredentials();
-                this.renderCredentials();
-                log(`Added credential: ${credential.label}`);
-                return credential;
-            }
+        count() {
+            return state.credentials.length;
+        }
 
-            remove(credentialId) {
-                const index = this.credentials.findIndex(c => c.id === credentialId);
-                if (index !== -1) {
-                    const removed = this.credentials.splice(index, 1)[0];
-                    this.saveCredentials();
-                    this.renderCredentials();
-                    log(`Removed credential: ${removed.label}`);
+        save() {
+            const data = state.credentials.map(c => ({
+                id: c.id,
+                clientId: c.clientId,
+                clientSecret: c.clientSecret,
+                environment: c.environment,
+                locale: c.locale,
+                label: c.label
+            }));
+            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+            this.updateMeta();
+        }
+
+        load() {
+            try {
+                const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    state.credentials = data.map(c => ({
+                        ...c,
+                        status: 'inactive',
+                        token: null,
+                        expiry: null,
+                        uses: 0
+                    }));
                 }
+            } catch (e) {
+                log('Load error: ' + e.message);
             }
+        }
 
-            clearAll() {
-                this.credentials = [];
-                this.saveCredentials();
-                this.renderCredentials();
-                log('All credentials cleared');
-            }
-
-            getActive() {
-                return this.credentials.filter(c => 
-                    c.status === 'active' && 
-                    c.accessToken && 
-                    c.tokenExpiry > Date.now()
-                );
-            }
-
-            getLeastUsed() {
-                const active = this.getActive();
-                if (active.length === 0) return null;
-                
-                return active.reduce((least, current) => 
-                    (current.requestCount < least.requestCount) ? current : least
-                );
-            }
-
-            updateToken(credentialId, accessToken, expiresIn) {
-                const credential = this.credentials.find(c => c.id === credentialId);
-                if (credential) {
-                    credential.accessToken = accessToken;
-                    credential.tokenExpiry = Date.now() + (expiresIn * 1000);
-                    credential.status = 'active';
-                    this.saveCredentials();
-                }
-            }
-
-            markUsed(credentialId) {
-                const credential = this.credentials.find(c => c.id === credentialId);
-                if (credential) {
-                    credential.lastUsed = Date.now();
-                    credential.requestCount++;
-                }
-            }
-
-            saveCredentials() {
-                const toSave = this.credentials.map(c => ({
-                    id: c.id,
-                    clientId: c.clientId,
-                    clientSecret: c.clientSecret,
-                    environment: c.environment,
-                    locale: c.locale,
-                    label: c.label,
-                    addedAt: c.addedAt
-                }));
-                
-                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(toSave));
-                this.updateUI();
-            }
-
-            loadCredentials() {
-                try {
-                    const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
-                    if (stored) {
-                        const loaded = JSON.parse(stored);
-                        loaded.forEach(c => {
-                            this.credentials.push({
-                                ...c,
-                                status: 'inactive',
-                                accessToken: null,
-                                tokenExpiry: null,
-                                lastUsed: null,
-                                requestCount: 0
-                            });
-                        });
-                        this.renderCredentials();
-                        log(`Loaded ${this.credentials.length} credential(s) from storage`);
-                    }
-                } catch (error) {
-                    log('Error loading credentials: ' + error.message);
-                }
-            }
-
-            renderCredentials() {
-                const container = $('credentialsList');
-                const emptyState = $('emptyCredentials');
-                
-                if (this.credentials.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    return;
-                }
-
-                emptyState.classList.add('hidden');
-                
-                container.innerHTML = this.credentials.map(cred => {
-                    const statusClass = cred.status === 'active' ? 'badge-success' : '';
-                    const tokenInfo = cred.accessToken ? 
-                        `Token: ${cred.accessToken.substring(0, 20)}...` : 
-                        'Not authenticated';
-                    
+        render() {
+            const container = $('credList');
+            if (!state.credentials.length) {
+                container.innerHTML = '<div class="empty" style="padding: 20px;">No credentials</div>';
+            } else {
+                container.innerHTML = state.credentials.map(c => {
+                    const active = c.status === 'active' && c.token && c.expiry > Date.now();
                     return `
-                        <div class="credential-item">
+                        <div class="credential">
                             <div class="credential-info">
-                                <div class="credential-label">${cred.label}</div>
-                                <div class="credential-id">ID: ${cred.clientId.substring(0, 20)}...</div>
-                                <div class="credential-id">${tokenInfo}</div>
-                                <div class="credential-status">
-                                    <span class="badge ${statusClass}">${cred.status}</span>
-                                    <span>Requests: ${cred.requestCount}</span>
-                                    ${cred.tokenExpiry ? `<span>Expires: ${new Date(cred.tokenExpiry).toLocaleTimeString()}</span>` : ''}
-                                </div>
+                                <div><span class="status ${active ? 'active' : ''}"></span>${c.label}</div>
+                                <div style="color: #666;">ID: ${c.clientId.substr(0, 20)}...</div>
+                                <div style="color: #666;">Uses: ${c.uses} | ${active ? 'Active' : 'Inactive'}</div>
                             </div>
-                            <button class="button button-destructive" onclick="credentialManager.remove('${cred.id}')">
-                                Remove
-                            </button>
+                            <button class="danger" onclick="cm.remove('${c.id}')">Remove</button>
                         </div>
                     `;
                 }).join('');
-
-                this.updateUI();
             }
-
-            updateUI() {
-                $('credentialCount').textContent = `${this.credentials.length} Credential${this.credentials.length !== 1 ? 's' : ''}`;
-                const activeCount = this.getActive().length;
-                $('parallelWorkers').textContent = `${activeCount} Worker${activeCount !== 1 ? 's' : ''}`;
-                $('parallelWorkers').className = activeCount > 0 ? 'badge badge-success' : 'badge';
-            }
+            this.updateMeta();
         }
 
-        const credentialManager = new CredentialManager();
+        updateMeta() {
+            $('credCount').textContent = this.count();
+            $('workerCount').textContent = this.active().length;
+        }
+    }
 
-        // Authentication
-        const authenticateSingle = async (credential) => {
-            log(`Authenticating ${credential.label}...`);
-            
-            try {
-                const config = credential.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
-                const response = await fetch(config.TOKEN_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: new URLSearchParams({
-                        client_id: credential.clientId,
-                        client_secret: credential.clientSecret,
-                        grant_type: 'client_credentials'
-                    })
-                });
+    const cm = new CredentialManager();
+    window.cm = cm; // Expose for onclick handlers
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP ${response.status}`);
-                }
-
-                credentialManager.updateToken(credential.id, data.access_token, data.expires_in);
-                credentialManager.renderCredentials();
-                log(`✓ ${credential.label} authenticated successfully`);
-                return true;
-
-            } catch (error) {
-                log(`✗ ${credential.label} authentication failed: ${error.message}`);
-                return false;
-            }
-        };
-
-        const authenticateAll = async () => {
-            if (credentialManager.credentials.length === 0) {
-                alert('No credentials to authenticate. Add credentials first.');
-                return;
-            }
-
-            const btn = $('authenticateAllBtn');
-            const spinner = $('authAllSpinner');
-            const text = $('authAllText');
-            
-            btn.disabled = true;
-            spinner.classList.remove('hidden');
-            text.textContent = 'Authenticating...';
-
-            log('Starting batch authentication...');
-            let successCount = 0;
-
-            for (const cred of credentialManager.credentials) {
-                const success = await authenticateSingle(cred);
-                if (success) successCount++;
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-
-            btn.disabled = false;
-            spinner.classList.add('hidden');
-            text.textContent = 'Authenticate All';
-
-            log(`Batch authentication complete: ${successCount}/${credentialManager.credentials.length} successful`);
-        };
-
-        // API Helper Functions
-        const getAuthHeaders = (credential) => {
-            const headers = {
-                'Content-Type': 'application/json',
-                'X-DIGIKEY-Client-Id': credential.clientId,
-                'Authorization': `Bearer ${credential.accessToken}`
-            };
-
-            const [site, currency] = credential.locale.split('/');
-            headers['X-DIGIKEY-Locale-Site'] = site;
-            headers['X-DIGIKEY-Locale-Language'] = 'en';
-            headers['X-DIGIKEY-Locale-Currency'] = currency;
-
-            return headers;
-        };
-
-        const searchProductDetails = async (credential, partNumber) => {
-            const config = credential.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
-            const url = `${config.BASE_URL}/products/v4/search/${encodeURIComponent(partNumber)}/productdetails`;
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: getAuthHeaders(credential)
+    // Authentication
+    async function authenticate(cred) {
+        try {
+            const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+            const res = await fetch(cfg.TOKEN_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    client_id: cred.clientId,
+                    client_secret: cred.clientSecret,
+                    grant_type: 'client_credentials'
+                })
             });
 
-            if (!response.ok) {
-                throw new Error(`ProductDetails API error: ${response.status}`);
-            }
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
 
-            credentialManager.markUsed(credential.id);
-            return await response.json();
+            cm.setToken(cred.id, data.access_token, data.expires_in);
+            log(`✓ ${cred.label} authenticated`);
+            return true;
+        } catch (e) {
+            log(`✗ ${cred.label} failed: ${e.message}`);
+            return false;
+        }
+    }
+
+    async function authenticateAll() {
+        if (!cm.count()) {
+            alert('No credentials to authenticate');
+            return;
+        }
+
+        const btn = $('authAll');
+        btn.disabled = true;
+        btn.textContent = 'Authenticating...';
+
+        let success = 0;
+        for (const cred of state.credentials) {
+            if (await authenticate(cred)) success++;
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        log(`Auth complete: ${success}/${cm.count()}`);
+        btn.disabled = false;
+        btn.textContent = 'Authenticate All';
+    }
+
+    // API Functions
+    function getHeaders(cred) {
+        const [site, currency] = cred.locale.split('/');
+        return {
+            'Content-Type': 'application/json',
+            'X-DIGIKEY-Client-Id': cred.clientId,
+            'Authorization': `Bearer ${cred.token}`,
+            'X-DIGIKEY-Locale-Site': site,
+            'X-DIGIKEY-Locale-Language': 'en',
+            'X-DIGIKEY-Locale-Currency': currency
         };
+    }
 
-        const searchKeyword = async (credential, keyword, recordCount = 10) => {
-            const config = credential.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
-            const url = `${config.BASE_URL}/products/v4/search/keyword`;
+    async function productDetails(cred, mpn) {
+        const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+        const url = `${cfg.BASE_URL}/products/v4/search/${encodeURIComponent(mpn)}/productdetails`;
+        const res = await fetch(url, { headers: getHeaders(cred) });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        cm.markUsed(cred.id);
+        return res.json();
+    }
 
-            const payload = {
+    async function keywordSearch(cred, keyword) {
+        const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
+        const url = `${cfg.BASE_URL}/products/v4/search/keyword`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(cred),
+            body: JSON.stringify({
                 Keywords: keyword,
-                RecordCount: recordCount,
+                RecordCount: 20,
                 RecordStartPosition: 0,
                 Filters: {},
-                Sort: {
-                    Option: "SortByManu",
-                    Direction: "Ascending",
-                    SortParameterId: 0
+                Sort: { Option: "SortByManu", Direction: "Ascending", SortParameterId: 0 }
+            })
+        });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        cm.markUsed(cred.id);
+        return res.json();
+    }
+
+    // Data extraction
+    function extractParam(params, names) {
+        if (!Array.isArray(params)) return '';
+        const p = params.find(p => 
+            p.ParameterText && names.some(n => 
+                p.ParameterText.toLowerCase().includes(n.toLowerCase())
+            )
+        );
+        return p?.ValueText || '';
+    }
+
+    // Process single MPN
+    async function processMPN(mpn, cred) {
+        try {
+            // Try direct lookup
+            try {
+                const data = await productDetails(cred, mpn);
+                if (data?.Product) {
+                    const p = data.Product;
+                    return {
+                        status: 'success',
+                        mpn,
+                        description: p.Description?.ProductDescription || '',
+                        detailed: p.Description?.DetailedDescription || '',
+                        category: p.Category?.Name || '',
+                        manufacturer: p.Manufacturer?.Name || '',
+                        package: extractParam(p.Parameters, ['Package', 'Case']),
+                        mounting: extractParam(p.Parameters, ['Mounting']),
+                        aliases: p.OtherNames?.join(', ') || '',
+                        remarks: `Direct via ${cred.label}`
+                    };
                 }
-            };
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: getAuthHeaders(credential),
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                throw new Error(`KeywordSearch API error: ${response.status}`);
+            } catch (e) {
+                // Continue to keyword search
             }
 
-            credentialManager.markUsed(credential.id);
-            return await response.json();
-        };
+            // Keyword search
+            const searchData = await keywordSearch(cred, mpn);
+            const products = searchData.Products || [];
+            const exact = searchData.ExactMatches || [];
 
-        // Data extraction helpers
-        const extractParameterValue = (parameters, parameterNames) => {
-            if (!Array.isArray(parameters)) return '';
-            
-            const param = parameters.find(p => 
-                p.ParameterText && parameterNames.some(name =>
-                    p.ParameterText.toLowerCase().includes(name.toLowerCase())
-                )
-            );
-            
-            return param?.ValueText || '';
-        };
+            let match = null;
+            let matchType = '';
 
-        const extractPackageCase = (parameters) => {
-            return extractParameterValue(parameters, ['Package / Case', 'package', 'case']);
-        };
-
-        const extractMountingType = (parameters) => {
-            return extractParameterValue(parameters, ['Mounting Type', 'mounting']);
-        };
-
-        // MPN Processing
-        const processSingleMPN = async (mpn, credential) => {
-            try {
-                // Strategy 1: Direct product details
-                try {
-                    const productDetails = await searchProductDetails(credential, mpn);
-                    if (productDetails?.Product) {
-                        const product = productDetails.Product;
-                        return {
-                            status: 'success',
-                            mpn: mpn,
-                            description: product.Description?.ProductDescription || '',
-                            detailedDescription: product.Description?.DetailedDescription || '',
-                            category: product.Category?.Name || '',
-                            manufacturer: product.Manufacturer?.Name || '',
-                            packageCase: extractPackageCase(product.Parameters),
-                            mountingType: extractMountingType(product.Parameters),
-                            aliasNames: product.OtherNames?.join(', ') || '',
-                            remarks: `Direct match via ${credential.label}`
-                        };
-                    }
-                } catch (directError) {
-                    // Continue to keyword search
-                }
-
-                // Strategy 2: Keyword search
-                const searchResult = await searchKeyword(credential, mpn, 20);
-                const products = searchResult.Products || [];
-                const exactMatches = searchResult.ExactMatches || [];
-
-                if (exactMatches.length > 0) {
-                    return await processMatchedProduct(mpn, exactMatches[0], credential, 'Exact match');
-                }
-
-                const directMatch = products.find(p => 
+            if (exact.length > 0) {
+                match = exact[0];
+                matchType = 'Exact';
+            } else {
+                match = products.find(p => 
                     p.ManufacturerProductNumber === mpn ||
                     (p.OtherNames && p.OtherNames.includes(mpn))
                 );
-
-                if (directMatch) {
-                    return await processMatchedProduct(mpn, directMatch, credential, 'Found in results');
-                }
-
-                const aliasMatch = products.find(p => {
-                    const aliases = [
-                        ...(p.OtherNames || []),
-                        p.ManufacturerProductNumber,
-                        p.BaseProductNumber?.Name
-                    ].filter(Boolean);
-
-                    return aliases.some(alias => 
-                        alias.toLowerCase().includes(mpn.toLowerCase()) || 
-                        mpn.toLowerCase().includes(alias.toLowerCase())
-                    );
-                });
-
-                if (aliasMatch) {
-                    return await processMatchedProduct(mpn, aliasMatch, credential, 
-                        `Alias match - Main: ${aliasMatch.ManufacturerProductNumber}`);
-                }
-
-                if (products.length > 0) {
-                    const bestMatch = products[0];
-                    return {
-                        status: 'warning',
-                        mpn: mpn,
-                        description: bestMatch.Description?.ProductDescription || '',
-                        detailedDescription: bestMatch.Description?.DetailedDescription || '',
-                        category: bestMatch.Category?.Name || '',
-                        manufacturer: bestMatch.Manufacturer?.Name || '',
-                        packageCase: extractPackageCase(bestMatch.Parameters),
-                        mountingType: extractMountingType(bestMatch.Parameters),
-                        aliasNames: bestMatch.OtherNames?.join(', ') || '',
-                        remarks: `Partial match via ${credential.label}`
-                    };
-                }
-
-                return {
-                    status: 'error',
-                    mpn: mpn,
-                    description: '',
-                    detailedDescription: '',
-                    category: '',
-                    manufacturer: '',
-                    packageCase: '',
-                    mountingType: '',
-                    aliasNames: '',
-                    remarks: `Not found (searched via ${credential.label})`
-                };
-
-            } catch (error) {
-                return {
-                    status: 'error',
-                    mpn: mpn,
-                    description: '',
-                    detailedDescription: '',
-                    category: '',
-                    manufacturer: '',
-                    packageCase: '',
-                    mountingType: '',
-                    aliasNames: '',
-                    remarks: `Error via ${credential.label}: ${error.message}`
-                };
+                if (match) matchType = 'Direct';
             }
-        };
 
-        const processMatchedProduct = async (originalMPN, product, credential, matchType) => {
-            try {
-                const detailResponse = await searchProductDetails(credential,
-                    product.ManufacturerProductNumber || 
-                    product.ProductVariations?.[0]?.DigiKeyProductNumber
-                );
-                
-                if (detailResponse?.Product) {
-                    const detailedProduct = detailResponse.Product;
-                    return {
-                        status: 'success',
-                        mpn: originalMPN,
-                        description: detailedProduct.Description?.ProductDescription || '',
-                        detailedDescription: detailedProduct.Description?.DetailedDescription || '',
-                        category: detailedProduct.Category?.Name || '',
-                        manufacturer: detailedProduct.Manufacturer?.Name || '',
-                        packageCase: extractPackageCase(detailedProduct.Parameters),
-                        mountingType: extractMountingType(detailedProduct.Parameters),
-                        aliasNames: detailedProduct.OtherNames?.join(', ') || '',
-                        remarks: `${matchType} via ${credential.label}`
-                    };
-                }
-            } catch (detailError) {
-                // Use search data
+            if (!match && products.length > 0) {
+                match = products[0];
+                matchType = 'Partial';
+            }
+
+            if (match) {
+                return {
+                    status: matchType === 'Partial' ? 'warning' : 'success',
+                    mpn,
+                    description: match.Description?.ProductDescription || '',
+                    detailed: match.Description?.DetailedDescription || '',
+                    category: match.Category?.Name || '',
+                    manufacturer: match.Manufacturer?.Name || '',
+                    package: extractParam(match.Parameters, ['Package', 'Case']),
+                    mounting: extractParam(match.Parameters, ['Mounting']),
+                    aliases: match.OtherNames?.join(', ') || '',
+                    remarks: `${matchType} via ${cred.label}`
+                };
             }
 
             return {
-                status: 'success',
-                mpn: originalMPN,
-                description: product.Description?.ProductDescription || '',
-                detailedDescription: product.Description?.DetailedDescription || '',
-                category: product.Category?.Name || '',
-                manufacturer: product.Manufacturer?.Name || '',
-                packageCase: extractPackageCase(product.Parameters),
-                mountingType: extractMountingType(product.Parameters),
-                aliasNames: product.OtherNames?.join(', ') || '',
-                remarks: `${matchType} via ${credential.label}`
+                status: 'error',
+                mpn,
+                description: '',
+                detailed: '',
+                category: '',
+                manufacturer: '',
+                package: '',
+                mounting: '',
+                aliases: '',
+                remarks: `Not found via ${cred.label}`
             };
-        };
 
-        // Parallel Processing Engine
-        class ParallelProcessor {
-            constructor(mpns, credentials, concurrencyPerCredential) {
-                this.mpns = mpns;
-                this.credentials = credentials;
-                this.concurrencyPerCredential = concurrencyPerCredential;
-                this.queue = [...mpns];
-                this.results = [];
-                this.processing = new Set();
-                this.credentialQueues = new Map();
-                
-                // Initialize queues for each credential
-                credentials.forEach(cred => {
-                    this.credentialQueues.set(cred.id, {
-                        activeRequests: 0,
-                        lastRequestTime: 0
-                    });
-                });
-            }
+        } catch (e) {
+            return {
+                status: 'error',
+                mpn,
+                description: '',
+                detailed: '',
+                category: '',
+                manufacturer: '',
+                package: '',
+                mounting: '',
+                aliases: '',
+                remarks: `Error: ${e.message}`
+            };
+        }
+    }
 
-            async process(onProgress) {
-                const workers = [];
-                
-                for (const credential of this.credentials) {
-                    for (let i = 0; i < this.concurrencyPerCredential; i++) {
-                        workers.push(this.worker(credential, onProgress));
-                    }
-                }
+    // Parallel processor
+    class ParallelProcessor {
+        constructor(mpns, creds, concurrency) {
+            this.mpns = [...mpns];
+            this.creds = creds;
+            this.concurrency = concurrency;
+            this.queue = [...mpns];
+            this.results = [];
+            this.processing = new Set();
+        }
 
-                await Promise.all(workers);
-                return this.results;
-            }
-
-            async worker(credential, onProgress) {
-                while (true) {
-                    const mpn = this.getNextMPN();
-                    if (!mpn) break;
-
-                    const queue = this.credentialQueues.get(credential.id);
-                    
-                    // Rate limiting per credential
-                    const timeSinceLastRequest = Date.now() - queue.lastRequestTime;
-                    if (timeSinceLastRequest < CONFIG.MIN_REQUEST_DELAY) {
-                        await new Promise(resolve => 
-                            setTimeout(resolve, CONFIG.MIN_REQUEST_DELAY - timeSinceLastRequest)
-                        );
-                    }
-
-                    queue.activeRequests++;
-                    queue.lastRequestTime = Date.now();
-
-                    try {
-                        const result = await processSingleMPN(mpn, credential);
-                        this.results.push(result);
-                        
-                        if (onProgress) {
-                            onProgress(result, this.results.length, this.mpns.length);
-                        }
-                    } catch (error) {
-                        log(`Worker error for ${mpn}: ${error.message}`);
-                    } finally {
-                        queue.activeRequests--;
-                        this.processing.delete(mpn);
-                    }
+        async process(onProgress) {
+            const workers = [];
+            for (const cred of this.creds) {
+                for (let i = 0; i < this.concurrency; i++) {
+                    workers.push(this.worker(cred, onProgress));
                 }
             }
+            await Promise.all(workers);
+            return this.results;
+        }
 
-            getNextMPN() {
-                while (this.queue.length > 0) {
-                    const mpn = this.queue.shift();
-                    if (!this.processing.has(mpn)) {
-                        this.processing.add(mpn);
-                        return mpn;
-                    }
+        async worker(cred, onProgress) {
+            while (true) {
+                const mpn = this.getNext();
+                if (!mpn) break;
+
+                await new Promise(r => setTimeout(r, CONFIG.MIN_DELAY));
+
+                try {
+                    const result = await processMPN(mpn, cred);
+                    this.results.push(result);
+                    if (onProgress) onProgress(result);
+                } catch (e) {
+                    log(`Worker error for ${mpn}: ${e.message}`);
+                } finally {
+                    this.processing.delete(mpn);
                 }
-                return null;
             }
         }
 
-        // Bulk Processing
-        const processBulkMPNs = async () => {
-            const activeCredentials = credentialManager.getActive();
-            
-            if (activeCredentials.length === 0) {
-                alert('No active credentials. Please authenticate credentials first.');
-                return;
+        getNext() {
+            while (this.queue.length > 0) {
+                const mpn = this.queue.shift();
+                if (!this.processing.has(mpn)) {
+                    this.processing.add(mpn);
+                    return mpn;
+                }
             }
+            return null;
+        }
+    }
 
-            const mpnText = $('mpnInput').value.trim();
-            if (!mpnText) {
-                alert('Please enter at least one MPN');
-                return;
-            }
+    // Process bulk
+    async function processBulk() {
+        const active = cm.active();
+        if (!active.length) {
+            alert('No active credentials. Authenticate first.');
+            return;
+        }
 
-            const mpns = mpnText.split('\n')
-                .map(mpn => mpn.trim())
-                .filter(mpn => mpn.length > 0);
+        const text = $('mpnInput').value.trim();
+        if (!text) {
+            alert('Enter at least one MPN');
+            return;
+        }
 
-            if (mpns.length === 0) {
-                alert('No valid MPNs found');
-                return;
-            }
+        const mpns = text.split('\n').map(m => m.trim()).filter(m => m);
+        if (!mpns.length) {
+            alert('No valid MPNs');
+            return;
+        }
 
-            const parallelism = parseInt($('parallelismLevel').value) || 3;
+        const concurrency = parseInt($('concurrency').value) || 3;
 
-            // Reset UI and stats
-            state.processedResults = [];
-            state.stats = {
-                processed: 0,
-                success: 0,
-                warning: 0,
-                error: 0,
-                startTime: Date.now()
-            };
+        // Reset
+        state.results = [];
+        state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: Date.now() };
+        $('emptyResults').classList.add('hide');
+        $('resultsTable').innerHTML = '';
+        $('resultsTable').classList.add('hide');
+        $('progress').classList.add('visible');
+        $('export').disabled = true;
 
-            $('resultsBody').innerHTML = '';
-            $('emptyState').classList.add('hidden');
-            $('resultsTable').classList.remove('hidden');
-            $('exportBtn').disabled = true;
-            $('progressSection').classList.remove('hidden');
+        const btn = $('process');
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+        state.isProcessing = true;
 
-            state.isProcessing = true;
-            $('processBtn').disabled = true;
-            $('processSpinner').classList.remove('hidden');
-            $('processBtnText').textContent = 'Processing...';
+        try {
+            log(`Processing ${mpns.length} MPNs with ${active.length} credential(s)`);
 
-            log(`Starting parallel processing: ${mpns.length} MPNs across ${activeCredentials.length} credential(s)`);
-            log(`Parallelism: ${parallelism} requests per credential`);
+            const processor = new ParallelProcessor(mpns, active, concurrency);
 
-            const processor = new ParallelProcessor(mpns, activeCredentials, parallelism);
-
-            const onProgress = (result, processed, total) => {
-                state.processedResults.push(result);
-                addResultToTable(result);
-
-                // Update stats
-                state.stats.processed = processed;
+            const onProgress = (result) => {
+                state.results.push(result);
+                addResult(result);
+                
+                state.stats.processed++;
                 if (result.status === 'success') state.stats.success++;
-                if (result.status === 'warning') state.stats.warning++;
-                if (result.status === 'error') state.stats.error++;
+                else if (result.status === 'warning') state.stats.warning++;
+                else state.stats.error++;
 
-                updateProgressUI(processed, total);
+                updateProgress(state.stats.processed, mpns.length);
             };
 
-            try {
-                await processor.process(onProgress);
-                log(`✓ Parallel processing completed: ${mpns.length} MPNs processed`);
-            } catch (error) {
-                log(`✗ Processing error: ${error.message}`);
-            } finally {
-                state.isProcessing = false;
-                $('processBtn').disabled = false;
-                $('processSpinner').classList.add('hidden');
-                $('processBtnText').textContent = 'Process MPNs';
-                $('exportBtn').disabled = false;
+            await processor.process(onProgress);
+            log(`✓ Complete: ${mpns.length} processed`);
 
-                setTimeout(() => {
-                    $('progressSection').classList.add('hidden');
-                }, 5000);
-            }
-        };
+        } catch (e) {
+            log(`✗ Error: ${e.message}`);
+        } finally {
+            state.isProcessing = false;
+            btn.disabled = false;
+            btn.textContent = 'Process';
+            $('export').disabled = false;
+        }
+    }
 
-        // UI Update Functions
-        const updateProgressUI = (current, total) => {
-            const percent = Math.round((current / total) * 100);
-            $('progressBar').style.width = `${percent}%`;
-            $('progressText').textContent = `Processing ${current} of ${total} (${percent}%)`;
+    function updateProgress(current, total) {
+        const pct = Math.round((current / total) * 100);
+        $('progressBar').style.width = pct + '%';
+        $('progressText').textContent = `${current} / ${total} (${pct}%)`;
 
-            // Update stats
-            $('statProcessed').textContent = current;
-            $('statSuccess').textContent = state.stats.success;
-            $('statWarning').textContent = state.stats.warning;
-            $('statError').textContent = state.stats.error;
+        $('statProcessed').textContent = current;
+        $('statSuccess').textContent = state.stats.success;
+        $('statWarning').textContent = state.stats.warning;
+        $('statError').textContent = state.stats.error;
 
-            // Calculate rate and ETA
-            const elapsed = (Date.now() - state.stats.startTime) / 1000;
-            const rate = current / elapsed;
-            $('statRate').textContent = rate.toFixed(1) + '/s';
+        const elapsed = (Date.now() - state.stats.startTime) / 1000;
+        const rate = current / elapsed;
+        $('statRate').textContent = rate.toFixed(1) + '/s';
 
-            const remaining = total - current;
-            const etaSeconds = remaining / rate;
-            if (isFinite(etaSeconds) && etaSeconds > 0) {
-                const mins = Math.floor(etaSeconds / 60);
-                const secs = Math.floor(etaSeconds % 60);
-                $('statETA').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-            } else {
-                $('statETA').textContent = '--';
-            }
-        };
+        const remaining = total - current;
+        const eta = remaining / rate;
+        if (isFinite(eta) && eta > 0) {
+            const m = Math.floor(eta / 60);
+            const s = Math.floor(eta % 60);
+            $('statETA').textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
+        } else {
+            $('statETA').textContent = '--';
+        }
+    }
 
-        const addResultToTable = (result) => {
-            const tbody = $('resultsBody');
-            const row = document.createElement('tr');
-            
-            const statusClass = result.status === 'success' ? 'status-success' : 
-                               result.status === 'warning' ? 'status-warning' : 'status-error';
-            
-            row.innerHTML = `
-                <td>
-                    <div class="status-cell ${statusClass}">
-                        <div class="status-icon"></div>
-                        <span>${result.status}</span>
-                    </div>
-                </td>
-                <td><code class="mono" style="font-size: 11px;">${result.mpn}</code></td>
-                <td>${result.description}</td>
-                <td>${result.detailedDescription}</td>
-                <td>${result.category}</td>
-                <td>${result.manufacturer}</td>
-                <td>${result.packageCase}</td>
-                <td>${result.mountingType}</td>
-                <td><span class="mono" style="font-size: 11px;">${result.aliasNames}</span></td>
-                <td><span style="font-size: 11px;">${result.remarks}</span></td>
+    function addResult(r) {
+        let table = $('resultsTable');
+        
+        if (!table.querySelector('table')) {
+            table.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>MPN</th>
+                            <th>Description</th>
+                            <th>Detailed</th>
+                            <th>Category</th>
+                            <th>Manufacturer</th>
+                            <th>Package</th>
+                            <th>Mounting</th>
+                            <th>Aliases</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
             `;
-            
-            tbody.appendChild(row);
-        };
+            table.classList.remove('hide');
+        }
 
-        const clearResults = () => {
-            state.processedResults = [];
-            state.stats = {
-                processed: 0,
-                success: 0,
-                warning: 0,
-                error: 0,
-                startTime: null
-            };
-            $('resultsBody').innerHTML = '';
-            $('emptyState').classList.remove('hidden');
-            $('resultsTable').classList.add('hidden');
-            $('exportBtn').disabled = true;
-            $('progressSection').classList.add('hidden');
-            log('Results cleared');
-        };
+        const tbody = $('tbody');
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${r.status}</td>
+            <td class="mono">${r.mpn}</td>
+            <td>${r.description}</td>
+            <td>${r.detailed}</td>
+            <td>${r.category}</td>
+            <td>${r.manufacturer}</td>
+            <td>${r.package}</td>
+            <td>${r.mounting}</td>
+            <td class="mono">${r.aliases}</td>
+            <td>${r.remarks}</td>
+        `;
+    }
 
-        const exportToCSV = () => {
-            if (state.processedResults.length === 0) {
-                alert('No results to export');
-                return;
-            }
+    function clearResults() {
+        state.results = [];
+        state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: 0 };
+        $('resultsTable').innerHTML = '';
+        $('resultsTable').classList.add('hide');
+        $('emptyResults').classList.remove('hide');
+        $('progress').classList.remove('visible');
+        $('export').disabled = true;
+        log('Results cleared');
+    }
 
-            const headers = [
-                'Status', 'MPN', 'Description', 'Detailed Description',
-                'Category', 'Manufacturer', 'Package/Case', 'Mounting Type', 'Alias Names', 'Remarks'
-            ];
+    function exportCSV() {
+        if (!state.results.length) {
+            alert('No results to export');
+            return;
+        }
 
-            const csvContent = [
-                headers.join(','),
-                ...state.processedResults.map(result => [
-                    result.status,
-                    `"${result.mpn.replace(/"/g, '""')}"`,
-                    `"${result.description.replace(/"/g, '""')}"`,
-                    `"${result.detailedDescription.replace(/"/g, '""')}"`,
-                    `"${result.category.replace(/"/g, '""')}"`,
-                    `"${result.manufacturer.replace(/"/g, '""')}"`,
-                    `"${result.packageCase.replace(/"/g, '""')}"`,
-                    `"${result.mountingType.replace(/"/g, '""')}"`,
-                    `"${result.aliasNames.replace(/"/g, '""')}"`,
-                    `"${result.remarks.replace(/"/g, '""')}"`
-                ].join(','))
-            ].join('\n');
+        const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Aliases', 'Remarks'];
+        const rows = state.results.map(r => [
+            r.status,
+            `"${r.mpn.replace(/"/g, '""')}"`,
+            `"${r.description.replace(/"/g, '""')}"`,
+            `"${r.detailed.replace(/"/g, '""')}"`,
+            `"${r.category.replace(/"/g, '""')}"`,
+            `"${r.manufacturer.replace(/"/g, '""')}"`,
+            `"${r.package.replace(/"/g, '""')}"`,
+            `"${r.mounting.replace(/"/g, '""')}"`,
+            `"${r.aliases.replace(/"/g, '""')}"`,
+            `"${r.remarks.replace(/"/g, '""')}"`
+        ].join(','));
 
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `digikey-mpn-analysis-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+        const csv = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `digikey-mpn-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
 
-            log(`Exported ${state.processedResults.length} results to CSV`);
-        };
+        log(`Exported ${state.results.length} results`);
+    }
 
-        // Event Listeners
-        $('addCredentialBtn').addEventListener('click', () => {
-            const clientId = $('clientId').value.trim();
-            const clientSecret = $('clientSecret').value.trim();
-            const environment = $('environment').value;
-            const locale = $('locale').value;
-            const label = $('credentialLabel').value.trim();
+    // Event listeners
+    $('addCred').onclick = () => {
+        const id = $('clientId').value;
+        const secret = $('clientSecret').value;
+        const env = $('environment').value;
+        const locale = $('locale').value;
+        const label = $('credLabel').value;
 
-            if (!clientId || !clientSecret) {
-                alert('Please enter both Client ID and Client Secret');
-                return;
-            }
+        if (!id || !secret) {
+            alert('Enter Client ID and Secret');
+            return;
+        }
 
-            credentialManager.add(clientId, clientSecret, environment, locale, label);
+        cm.add(id, secret, env, locale, label);
+        $('clientId').value = '';
+        $('clientSecret').value = '';
+        $('credLabel').value = '';
+    };
 
-            // Clear input fields
-            $('clientId').value = '';
-            $('clientSecret').value = '';
-            $('credentialLabel').value = '';
-        });
+    $('authAll').onclick = authenticateAll;
+    $('clearCreds').onclick = () => {
+        if (confirm('Clear all credentials?')) cm.clear();
+    };
+    $('process').onclick = processBulk;
+    $('export').onclick = exportCSV;
+    $('clear').onclick = clearResults;
 
-        $('authenticateAllBtn').addEventListener('click', authenticateAll);
-        $('clearAllCredsBtn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to clear all credentials? This cannot be undone.')) {
-                credentialManager.clearAll();
-            }
-        });
-        $('processBtn').addEventListener('click', processBulkMPNs);
-        $('exportBtn').addEventListener('click', exportToCSV);
-        $('clearResultsBtn').addEventListener('click', clearResults);
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            log('Multi-Credential MPN Analyzer initialized');
-            log(`System ready. Add credentials and authenticate to begin.`);
-            credentialManager.updateUI();
-        });
+    log('System ready');
+})();
     </script>
 </body>
 </html>
