@@ -36,6 +36,77 @@ class QRScannerApp {
         // Application lifecycle
         this.initialize();
     }
+
+    
+// Enhanced dependency checking for app.js - FIXED VERSION
+
+checkDependencies() {
+    QRUtils.log.info('Starting dependency checks...');
+
+    const checks = {
+        'Secure Context': window.isSecureContext,
+        'Local Storage': typeof Storage !== 'undefined',
+        'Media Devices': !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+        'File API': !!(window.File && window.FileReader),
+        'Canvas Support': !!document.createElement('canvas').getContext,
+        'Web Workers': typeof Worker !== 'undefined',
+        'Service Worker': 'serviceWorker' in navigator,
+        'Html5Qrcode': typeof Html5Qrcode !== 'undefined',
+        'XLSX': typeof XLSX !== 'undefined'
+    };
+
+    const failedChecks = Object.entries(checks)
+        .filter(([name, supported]) => !supported)
+        .map(([name]) => name);
+
+    const passedChecks = Object.entries(checks)
+        .filter(([name, supported]) => supported)
+        .map(([name]) => name);
+
+    QRUtils.log.info('✅ Passed checks:', passedChecks);
+
+    if (failedChecks.length > 0) {
+        QRUtils.log.warn('⚠️ Failed checks:', failedChecks);
+
+        // Show warnings but don't block initialization for non-critical failures
+        const criticalFailures = failedChecks.filter(check => 
+            ['File API', 'Canvas Support', 'Html5Qrcode'].includes(check)
+        );
+
+        if (criticalFailures.length > 0) {
+            const error = new Error(`Critical dependencies missing: ${criticalFailures.join(', ')}`);
+            QRUtils.handleError(error, 'Dependency Check');
+            return false;
+        }
+
+        // Show security warning if not in secure context
+        if (failedChecks.includes('Secure Context')) {
+            this.showSecurityWarning();
+        }
+
+        // Show info about missing optional features
+        const optionalFailures = failedChecks.filter(check => 
+            !criticalFailures.includes(check)
+        );
+
+        if (optionalFailures.length > 0) {
+            QRUtils.setStatus(`Optional features unavailable: ${optionalFailures.join(', ')}`, 'warning');
+        }
+    }
+
+    // Check QR scanner module separately (may not be ready yet)
+    setTimeout(() => {
+        if (!window.qrScanner) {
+            QRUtils.log.warn('QR Scanner module not yet initialized - this is normal during startup');
+        } else {
+            QRUtils.log.success('QR Scanner module found');
+        }
+    }, 1000);
+
+    QRUtils.log.success('✅ Dependency check completed');
+    return true;
+}
+
     
     async initialize() {
         const startTime = performance.now();
