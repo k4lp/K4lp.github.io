@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Code Scanner & Excel Mapper</title>
+    <!-- Geist font (Geist & Geist Mono) -->
+    <link href="https://api.fontshare.com/v2/css?f[]=geist@500,400,700,600,300,1&f[]=geist-mono@400,500,700" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Provided CSS from the prompt -->
+    <style>
+        /* [Your included CSS from the prompt here] */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        .back-nav { position: sticky; top: 0; background: #000; color: #fff; padding: 16px 20px; z-index: 100; border-bottom: 1px solid #000;}
+        .back-nav a { color: #fff; text-decoration: none; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500;}
+        .back-nav a:hover { opacity: 0.7;}
+        body { font-family: 'Geist', sans-serif; font-size: 14px; line-height: 1.6; color: #000; background: #fff; font-weight: 400;}
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px;}
+        header { border-bottom: 1px solid #000; padding-bottom: 20px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;}
+        h1 { font-size: 24px; font-weight: 500; letter-spacing: -0.02em;}
+        h2 { font-size: 16px; font-weight: 500; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em;}
+        .meta { font-size: 12px; color: #666; text-align: right; font-family: 'Geist Mono', monospace;}
+        .section { border: 1px solid #000; padding: 24px; margin-bottom: 24px;}
+        .grid { display: grid; gap: 16px;}
+        .grid-2 { grid-template-columns: 1fr 1fr;}
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; font-weight: 500;}
+        input, select, textarea { width: 100%; border: 1px solid #000; padding: 8px 12px; font-family: inherit; font-size: 14px; background: #fff;}
+        input:focus, select:focus, textarea:focus { outline: 2px solid #000; outline-offset: -2px;}
+        textarea { font-family: 'Geist Mono', monospace; resize: vertical; min-height: 120px;}
+        button { border: 1px solid #000; background: #000; color: #fff; padding: 8px 16px; font-family: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; font-weight: 500;}
+        button:hover { background: #333; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button.secondary { background: #fff; color: #000; }
+        button.secondary:hover { background: #f5f5f5; }
+        button.danger { background: #fff; color: #d00; border-color: #d00; }
+        button.danger:hover { background: #d00; color: #fff; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .credential-list { display: grid; gap: 8px; margin-top: 16px; }
+        .credential { border: 1px solid #000; padding: 12px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; font-size: 12px; font-family: 'Geist Mono', monospace; }
+        .credential-info { display: grid; gap: 4px; }
+        .status { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ccc; margin-right: 6px; }
+        .status.active { background: #000; }
+        .progress-container { margin: 16px 0; padding: 16px; border: 1px solid #000; display: none; }
+        .progress-container.visible { display: block; }
+        .progress-bar-bg { height: 2px; background: #e0e0e0; margin: 8px 0; }
+        .progress-bar { height: 100%; background: #000; width: 0%; transition: width 0.3s; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 16px; margin-top: 16px; font-family: 'Geist Mono', monospace; font-size: 11px; }
+        .stat-value { font-size: 20px; font-weight: 600; display: block; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px;}
+        th, td { border: 1px solid #000; padding: 8px; text-align: left;}
+        th { font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; background: #f5f5f5;}
+        .table-container { overflow-x: auto; max-height: 500px; overflow-y: auto; border: 1px solid #000;}
+        .log { font-family: 'Geist Mono', monospace; font-size: 11px; background: #f5f5f5; padding: 16px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;}
+        .empty { text-align: center; padding: 40px; color: #999; font-size: 12px; }
+        .mono { font-family: 'Geist Mono', monospace; }
+        .hide { display: none; }
+        .alert { padding: 12px; margin-bottom: 16px; border: 1px solid #000; font-size: 12px; }
+        /* Highlight selection */
+        .selected-cell { background: #000; color: #fff !important; }
+        .selected-col { background: #eee; }
+        .selected-row { background: #eee; }
+    </style>
+    <!-- QR scanner dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <!-- SheetJS (excel) dependencies -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <nav class="back-nav">
+        <a href="index.html">← Back to Tools</a>
+    </nav>
+    <div class="container">
+        <header>
+            <div>
+                <h1>QR Code Scanner & Excel Mapper</h1>
+                <div class="meta">Minimal, Monochrome, Swiss Design &amp; Geist Fonts</div>
+            </div>
+        </header>
+        <section class="section" id="scanner-section">
+            <h2>QR Code Scanner</h2>
+            <div class="grid grid-2">
+                <div>
+                    <label for="video">Camera Feed</label>
+                    <video id="video" autoplay playsinline muted style="width:100%;border:1px solid #000;aspect-ratio:16/9;"></video>
+                    <canvas id="canvas" class="hide"></canvas>
+                </div>
+                <div>
+                    <label for="scan-area">Scan Area:</label>
+                    <input type="range" id="scan-area" min="40" max="100" value="80">
+                    <span id="scan-area-val" class="mono"></span>
+                    <div style="margin-top:16px;">
+                        <button id="start-scan">Start Scanner</button>
+                        <button id="stop-scan" class="secondary" disabled>Stop Scanner</button>
+                    </div>
+                    <div id="scanner-log" class="log"></div>
+                </div>
+            </div>
+        </section>
+        <section class="section">
+            <h2>Excel Sheet Import</h2>
+            <input type="file" id="excel-file" accept=".xlsx,.xls">
+            <div id="sheet-select-popup" class="alert hide">
+                <label>Select Sheet:
+                <select id="sheet-select"></select>
+                </label>
+            </div>
+            <div id="excel-table-container" class="table-container hide"></div>
+        </section>
+        <section class="section" id="column-mapping-section" style="display:none;">
+            <h2>Column Mapping</h2>
+            <div id="column-mapping-container"></div>
+        </section>
+        <section class="section" id="scan-table-section" style="display:none;">
+            <h2>Live Scan Table</h2>
+            <div id="scan-table-container" class="table-container"></div>
+        </section>
+    </div>
+    <script>
+        // Utilities & Local Storage
+        function saveToStorage(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+        function getFromStorage(key, def=undefined) { let v=localStorage.getItem(key); return v ? JSON.parse(v) : def; }
+
+        // Camera & QR Scanner
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scanArea = document.getElementById('scan-area');
+        const scanAreaVal = document.getElementById('scan-area-val');
+        const startScanBtn = document.getElementById('start-scan');
+        const stopScanBtn = document.getElementById('stop-scan');
+        const scannerLog = document.getElementById('scanner-log');
+        let scanning = false;
+        let stream = null;
+        let lastScannedValue = null;
+
+        scanArea.addEventListener('input', () => { scanAreaVal.textContent = scanArea.value + '%'; });
+        scanAreaVal.textContent = scanArea.value + '%';
+
+        function logScanner(msg) {
+            scannerLog.textContent = ((scannerLog.textContent ? scannerLog.textContent + '\n' : '') + msg).slice(-2500);
+        }
+
+        function stopCamera() {
+            scanning = false;
+            stopScanBtn.disabled = true;
+            startScanBtn.disabled = false;
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+        }
+
+        async function startCamera() {
+            stopCamera();
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: {ideal:1280}, height: {ideal:720} },
+                    audio: false
+                });
+                video.srcObject = stream;
+                scanning = true;
+                stopScanBtn.disabled = false;
+                startScanBtn.disabled = true;
+                scanLoop();
+            } catch(e) {
+                logScanner("Camera error: " + e.message);
+            }
+        }
+
+        function scanLoop() {
+            if (!scanning) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                let w = video.videoWidth, h = video.videoHeight;
+                let scale = scanArea.value/100;
+                let sw = w*scale, sh = h*scale, sx=(w-sw)/2, sy=(h-sh)/2;
+                canvas.width = sw; canvas.height = sh;
+                ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+                let data = ctx.getImageData(0,0,sw,sh);
+                let code = jsQR(data.data, sw, sh, { inversionAttempts: "attemptBoth" });
+                if (code && code.data) {
+                    if (isSureEnough(code)) {
+                        if (lastScannedValue !== code.data) {
+                            lastScannedValue = code.data;
+                            logScanner(`Scanned: ${code.data}`);
+                            handleScanResult(code.data);
+                        }
+                    } else {
+                        logScanner('Potential QR detected, increase clarity.');
+                    }
+                }
+            }
+            setTimeout(scanLoop, 350); // Not too fast, clarity > speed
+        }
+        function isSureEnough(code) {
+            // Sure detection based on quality
+            return code.location && code.location.topLeftCorner && code.location.bottomRightCorner;
+        }
+
+        startScanBtn.onclick = startCamera;
+        stopScanBtn.onclick = stopCamera;
+
+        // ===== EXCEL IMPORT LOGIC =====
+        const excelFileInput = document.getElementById('excel-file');
+        const sheetSelectPopup = document.getElementById('sheet-select-popup');
+        const sheetSelect = document.getElementById('sheet-select');
+        const excelTableContainer = document.getElementById('excel-table-container');
+        let excelData = null;
+        let sheetNames = [];
+        let rawSheets = {};
+        let selectedSheet = null;
+        let selectedRows = new Set();
+        let selectedCols = new Set();
+
+        excelFileInput.addEventListener('change', (e) => {
+            let file = e.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(evt){
+                let data = new Uint8Array(evt.target.result);
+                let workbook = XLSX.read(data, {type:'array'});
+                sheetNames = workbook.SheetNames;
+                rawSheets = workbook.Sheets;
+                sheetSelect.innerHTML = '';
+                sheetNames.forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s; opt.textContent = s;
+                    sheetSelect.appendChild(opt);
+                });
+                sheetSelectPopup.classList.remove('hide');
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        sheetSelect.addEventListener('change', (e) => {
+            selectedSheet = e.target.value;
+            displayExcelTable();
+        });
+
+        sheetSelectPopup.addEventListener('click', (e) => {
+            if (e.target.tagName === 'SELECT') return;
+            sheetSelectPopup.classList.add('hide');
+        });
+
+        function displayExcelTable() {
+            if (!selectedSheet) return;
+            let ws = rawSheets[selectedSheet];
+            excelData = XLSX.utils.sheet_to_json(ws, {defval:'',header:1});
+            selectedRows = new Set(); selectedCols = new Set();
+            renderExcelSelectionTable();
+        }
+
+        function renderExcelSelectionTable() {
+            if (!excelData || !excelData.length) {
+                excelTableContainer.innerHTML = '<div class="empty">No data.</div>';
+                excelTableContainer.classList.remove('hide');
+                return;
+            }
+            let html = '<table><thead><tr>';
+            let headers = excelData[0];
+            headers.forEach((h, ci) => {
+                html += `<th class="${selectedCols.has(ci)?'selected-col':''}" onclick="toggleCol(${ci})">${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            for (let ri=1; ri<excelData.length; ri++) {
+                html += `<tr class="${selectedRows.has(ri)?'selected-row':''}">`;
+                for (let ci=0; ci<headers.length; ci++) {
+                    let selCls = (selectedRows.has(ri)&&selectedCols.has(ci))?'selected-cell':'';
+                    html += `<td class="${selCls}" onclick="toggleCell(${ri},${ci})">${excelData[ri][ci]||''}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            excelTableContainer.innerHTML = html;
+            excelTableContainer.classList.remove('hide');
+            window.toggleCell = toggleCell;
+            window.toggleCol = toggleCol;
+        }
+        function toggleCell(ri, ci) {
+            selectedRows.has(ri) ? selectedRows.delete(ri) : selectedRows.add(ri);
+            selectedCols.has(ci) ? selectedCols.delete(ci) : selectedCols.add(ci);
+            renderExcelSelectionTable();
+            maybeShowMapping();
+            saveToStorage('selectedRows', Array.from(selectedRows));
+            saveToStorage('selectedCols', Array.from(selectedCols));
+        }
+        function toggleCol(ci) {
+            selectedCols.has(ci) ? selectedCols.delete(ci) : selectedCols.add(ci);
+            renderExcelSelectionTable();
+            maybeShowMapping();
+            saveToStorage('selectedCols', Array.from(selectedCols));
+        }
+
+        // COLUMN MAPPING LOGIC
+        const columnMappingSection = document.getElementById('column-mapping-section');
+        const columnMappingContainer = document.getElementById('column-mapping-container');
+        let userMappings = {};
+        function maybeShowMapping() {
+            if (selectedRows.size && selectedCols.size) {
+                columnMappingSection.style.display = '';
+                let headers = excelData[0];
+                let list = Array.from(selectedCols);
+                let formHtml = '<label><b>Map columns:</b></label>';
+                [ ['MPN', 'mpn'], ['Manufacturer','manufacturer'], ['Designators','designators'], ['Quantity','quantity'] ].forEach(([lbl,key])=>{
+                    formHtml += `<label>${lbl}<select data-key="${key}">`;
+                    list.forEach(ci=>{
+                        formHtml += `<option value="${ci}" ${userMappings[key]==ci?'selected':''}>${headers[ci]}</option>`;
+                    });
+                    formHtml += '</select></label>';
+                });
+                columnMappingContainer.innerHTML = formHtml;
+                Array.from(columnMappingContainer.querySelectorAll('select')).forEach(sel=>{
+                    sel.onchange = function(){ userMappings[sel.dataset.key]=parseInt(sel.value); saveToStorage('userMappings',userMappings); renderScanTable(); };
+                });
+                renderScanTable();
+            } else {
+                columnMappingSection.style.display = 'none';
+                scanTableSection.style.display = 'none';
+            }
+        }
+        // LIVE SCAN TABLE LOGIC
+        const scanTableSection = document.getElementById('scan-table-section');
+        const scanTableContainer = document.getElementById('scan-table-container');
+        let scanRecords = getFromStorage('scanRecords', []);
+        function renderScanTable() {
+            // Only if mapping
+            if (!userMappings.mpn || !excelData) { scanTableSection.style.display='none'; return; }
+            scanTableSection.style.display='';
+            let mappedRows = Array.from(selectedRows);
+            let headers = ['Series', 'MPN', 'Manufacturer', 'Designators', 'Quantity', 'Last Scan Time', 'Scanned Value'];
+            let html = '<table><thead><tr>';
+            headers.forEach(h=> html+=`<th>${h}</th>`);
+            html += '</tr></thead><tbody>';
+            let mpnCol = userMappings.mpn, manuCol=userMappings.manufacturer, desCol=userMappings.designators, qtyCol=userMappings.quantity;
+            mappedRows.forEach((ri, idx)=>{
+                let r = excelData[ri];
+                let scan = scanRecords.find(x=>x.rowIdx==ri);
+                html += `<tr>
+                    <td>${idx+1}</td>
+                    <td>${r[mpnCol]}</td>
+                    <td>${r[manuCol]}</td>
+                    <td>${r[desCol]}</td>
+                    <td>${r[qtyCol]}</td>
+                    <td>${scan?scan.time:''}</td>
+                    <td>${scan?scan.value:''}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            scanTableContainer.innerHTML = html;
+        }
+
+        function handleScanResult(qrValue) {
+            // Try to find best match using selected rows and mpnCol
+            if (!userMappings.mpn || !excelData) return;
+            let mappedRows = Array.from(selectedRows);
+            let bestRowIdx = null;
+            for (let ri of mappedRows) {
+                if (excelData[ri][userMappings.mpn] == qrValue) {
+                    bestRowIdx = ri; break; // Exact match
+                }
+            }
+            if (bestRowIdx!==null) {
+                let now = new Date().toLocaleString();
+                let idx = scanRecords.findIndex(x=>x.rowIdx==bestRowIdx);
+                if (idx>-1) scanRecords[idx]={rowIdx:bestRowIdx, value:qrValue, time:now};
+                else scanRecords.push({rowIdx:bestRowIdx, value:qrValue, time:now});
+                saveToStorage('scanRecords', scanRecords);
+                renderScanTable();
+                logScanner("Matched: " + qrValue + " @ row "+(Array.from(selectedRows).indexOf(bestRowIdx)+1));
+            } else {
+                logScanner("Scanned but not matched: " + qrValue);
+            }
+        }
+
+        // Restore any previous session selections/mappings
+        window.onload = ()=>{
+            selectedRows = new Set(getFromStorage('selectedRows',[]));
+            selectedCols = new Set(getFromStorage('selectedCols',[]));
+            userMappings = getFromStorage('userMappings',{});
+            scanRecords = getFromStorage('scanRecords',[]);
+            renderScanTable();
+        };
+    </script>
+</body>
+</html>
