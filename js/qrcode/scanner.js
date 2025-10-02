@@ -1,13 +1,20 @@
 /**
- * QR/Barcode Scanner Module
- * Handles camera access, scanning, and component matching
+ * Enhanced QR/Barcode Scanner Module
+ * Professional-grade scanning with robust error handling and mobile optimization
+ * 
+ * Features:
+ * - Multi-format QR/barcode detection
+ * - Mobile and desktop compatibility
+ * - Fallback scanning methods
+ * - Real-time feedback and analytics
+ * - Comprehensive error recovery
+ * - Performance optimization
  */
 
 class QRScanner {
     constructor() {
         this.html5QrCode = null;
-        this.cameras = [];
-        this.currentCamera = null;
+        this.cameraManager = null;
         this.isScanning = false;
         this.columnMapping = null;
         this.rangeData = null;
@@ -15,253 +22,261 @@ class QRScanner {
         this.scanCount = 0;
         this.matchCount = 0;
         this.lastScanTime = 0;
+        this.scanMode = 'continuous';
+        this.debounceTime = 1500; // Prevent duplicate scans
+        this.retryCount = 0;
+        this.maxRetries = 3;
+        
+        // Enhanced configuration for better scanning accuracy
+        this.scannerConfig = {
+            fps: 30,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                const minEdgePercentage = 0.7;
+                const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                return {
+                    width: qrboxSize,
+                    height: qrboxSize
+                };
+            },
+            aspectRatio: 1.0,
+            disableFlip: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
+            rememberLastUsedCamera: true,
+            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+            showTorchButtonIfSupported: true,
+            showZoomSliderIfSupported: false,
+            defaultZoomValueIfSupported: 2
+        };
         
         this.initializeEventListeners();
         this.loadFromStorage();
-        // Initialize camera after a short delay to ensure DOM is ready
-        setTimeout(() => this.initializeCamera(), 500);
+        
+        // Initialize with delay to ensure DOM is ready
+        setTimeout(() => this.initializeScanner(), 1000);
     }
     
-    async initializeCamera() {
+    async initializeScanner() {
         try {
-            // Check if camera is available
-            const hasCamera = await QRUtils.hasCamera();
-            if (!hasCamera) {
-                QRUtils.setStatus('No camera detected', 'warning');
-                return;
+            QRUtils.log.info('Initializing QR Scanner...');
+            
+            // Initialize camera manager first
+            this.cameraManager = new CameraManager();
+            
+            // Wait for camera manager to initialize
+            await this.waitForCameraManager();
+            
+            // Initialize HTML5 QR Code scanner
+            await this.initializeHtml5QrCode();
+            
+            // Set up status callbacks
+            this.setupStatusCallbacks();
+            
+            QRUtils.log.success('QR Scanner initialized successfully');
+            
+        } catch (error) {
+            this.handleScannerError(error, 'Scanner Initialization');
+        }
+    }
+    
+    async waitForCameraManager(timeout = 10000) {
+        const startTime = Date.now();
+        while (!this.cameraManager?.isInitialized && (Date.now() - startTime) < timeout) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!this.cameraManager?.isInitialized) {
+            throw new Error('Camera manager failed to initialize within timeout');
+        }
+    }
+    
+    async initializeHtml5QrCode() {
+        try {
+            const readerElement = QRUtils.$('qr-reader');
+            if (!readerElement) {
+                throw new Error('QR reader element not found');
             }
             
-            // Initialize Html5QrCode with proper element ID
+            // Clear any existing content
+            readerElement.innerHTML = '';
+            
             this.html5QrCode = new Html5Qrcode('qr-reader');
+            QRUtils.log.info('Html5Qrcode instance created');
             
-            // Get available cameras
-            await this.loadCameras();
-            
-            QRUtils.log.info('Scanner initialized successfully');
         } catch (error) {
-            QRUtils.handleError(error, 'Scanner Initialization');
+            QRUtils.log.error('Failed to initialize Html5Qrcode:', error);
+            throw error;
+        }
+    }
+    
+    setupStatusCallbacks() {
+        if (this.cameraManager) {
+            this.cameraManager.onStatusChange((message, type) => {
+                this.updateCameraStatus(message, type);
+            });
+            
+            this.cameraManager.onError((error, context) => {
+                this.handleScannerError(error, `Camera Manager - ${context}`);
+            });
         }
     }
     
     initializeEventListeners() {
         // Camera control buttons
-        const startBtn = QRUtils.$('start-camera');
-        const stopBtn = QRUtils.$('stop-camera');
-        const cameraSelect = QRUtils.$('camera-select');
+        this.bindEvent('start-camera', 'click', this.startScanning.bind(this));
+        this.bindEvent('stop-camera', 'click', this.stopScanning.bind(this));
+        this.bindEvent('switch-camera', 'click', this.switchCamera.bind(this));
         
-        if (startBtn) {
-            startBtn.addEventListener('click', this.startScanning.bind(this));
-        }
+        // Scan mode selection
+        this.bindEvent('scan-mode', 'change', this.handleScanModeChange.bind(this));
         
-        if (stopBtn) {
-            stopBtn.addEventListener('click', this.stopScanning.bind(this));
-        }
+        // Export and management buttons
+        this.bindEvent('export-excel', 'click', this.exportToExcel.bind(this));
+        this.bindEvent('export-csv', 'click', this.exportToCSV.bind(this));
+        this.bindEvent('clear-records', 'click', this.clearRecords.bind(this));
+        this.bindEvent('import-records', 'click', this.importRecords.bind(this));
         
-        if (cameraSelect) {
-            cameraSelect.addEventListener('change', this.handleCameraChange.bind(this));
-        }
+        // Quick actions
+        this.bindEvent('manual-entry', 'click', this.showManualEntry.bind(this));
+        this.bindEvent('skip-item', 'click', this.skipCurrentItem.bind(this));
+        this.bindEvent('rescan-last', 'click', this.rescanLastItem.bind(this));
         
-        // Export and clear buttons
-        const exportBtn = QRUtils.$('export-excel');
-        const clearBtn = QRUtils.$('clear-records');
+        // Search and filter
+        this.bindEvent('search-records', 'input', 
+            QRUtils.debounce(this.searchRecords.bind(this), 300));
+        this.bindEvent('filter-status', 'change', this.filterRecords.bind(this));
         
-        if (exportBtn) {
-            exportBtn.addEventListener('click', this.exportToExcel.bind(this));
-        }
-        
-        if (clearBtn) {
-            clearBtn.addEventListener('click', this.clearRecords.bind(this));
-        }
+        // Keyboard shortcuts
+        document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
     }
     
-    async loadCameras() {
-        try {
-            const devices = await Html5Qrcode.getCameras();
-            this.cameras = devices;
-            
-            const cameraSelect = QRUtils.$('camera-select');
-            if (cameraSelect && devices.length > 0) {
-                cameraSelect.innerHTML = '';
-                
-                devices.forEach((camera, index) => {
-                    const option = document.createElement('option');
-                    option.value = camera.id;
-                    option.textContent = camera.label || `Camera ${index + 1}`;
-                    cameraSelect.appendChild(option);
-                });
-                
-                // Prefer back camera on mobile devices
-                const backCamera = devices.find(camera => 
-                    camera.label.toLowerCase().includes('back') ||
-                    camera.label.toLowerCase().includes('rear') ||
-                    camera.label.toLowerCase().includes('environment')
-                );
-                
-                if (backCamera) {
-                    cameraSelect.value = backCamera.id;
-                    this.currentCamera = backCamera.id;
-                } else {
-                    this.currentCamera = devices[0].id;
-                }
-                
-                QRUtils.log.info(`Found ${devices.length} camera(s)`);
-            } else if (cameraSelect) {
-                cameraSelect.innerHTML = '<option value="">No cameras found</option>';
-            }
-        } catch (error) {
-            QRUtils.handleError(error, 'Camera Loading');
-        }
-    }
-    
-    handleCameraChange(event) {
-        this.currentCamera = event.target.value;
-        
-        // Restart scanning if currently active
-        if (this.isScanning) {
-            this.stopScanning().then(() => {
-                setTimeout(() => this.startScanning(), 1000);
-            });
+    bindEvent(elementId, event, handler) {
+        const element = QRUtils.$(elementId);
+        if (element) {
+            element.addEventListener(event, handler);
         }
     }
     
     async startScanning() {
-        if (!this.html5QrCode || !this.currentCamera) {
-            QRUtils.handleError(new Error('Camera not available'), 'Start Scanning');
-            return;
-        }
-        
         if (this.isScanning) {
-            QRUtils.setStatus('Scanner already running', 'warning');
+            QRUtils.setStatus('Scanner already active', 'warning');
             return;
         }
         
         try {
             QRUtils.setStatus('Starting camera...', 'loading');
             
-            // Enhanced configuration for better accuracy and performance
-            const config = {
-                fps: 30, // Higher FPS for better responsiveness
-                qrbox: { width: 250, height: 250 }, // Optimal scanning box size
-                aspectRatio: 1.0, // Square aspect ratio
-                disableFlip: false, // Allow image flipping
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true // Use native barcode detection if available
-                },
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [
-                    Html5QrcodeScanType.SCAN_TYPE_CAMERA
-                ],
-                // Advanced scanning settings for better accuracy
-                videoConstraints: {
-                    facingMode: this.isMobileDevice() ? 'environment' : 'user',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    focusMode: 'continuous',
-                    advanced: [{
-                        focusMode: 'continuous'
-                    }, {
-                        exposureMode: 'continuous'
-                    }]
-                }
-            };
+            // Ensure we have camera access
+            if (!this.cameraManager?.isInitialized) {
+                throw new Error('Camera manager not initialized');
+            }
             
-            // Start scanning with enhanced error handling
+            if (!this.cameraManager.hasPermission) {
+                await this.cameraManager.requestPermission();
+            }
+            
+            // Get camera stream
+            const currentCamera = this.cameraManager.currentCamera;
+            if (!currentCamera) {
+                throw new Error('No camera available');
+            }
+            
+            QRUtils.log.info('Starting scanning with camera:', currentCamera.label);
+            
+            // Configure scanner based on device type
+            const config = this.getOptimizedConfig();
+            
+            // Start Html5QrCode scanner
             await this.html5QrCode.start(
-                this.currentCamera,
+                currentCamera.id,
                 config,
                 this.onScanSuccess.bind(this),
                 this.onScanFailure.bind(this)
             );
             
             this.isScanning = true;
+            this.retryCount = 0;
             
             // Update UI
-            const startBtn = QRUtils.$('start-camera');
-            const stopBtn = QRUtils.$('stop-camera');
-            
-            if (startBtn) startBtn.disabled = true;
-            if (stopBtn) stopBtn.disabled = false;
+            this.updateScannerUI(true);
+            this.showScanRecordsSection();
             
             QRUtils.setStatus('Scanner active - Point camera at QR/barcode', 'success');
-            QRUtils.log.success('Camera started successfully');
-            
-            // Add visual feedback for scanning area
-            this.addScanningOverlay();
+            QRUtils.log.success('Scanning started successfully');
             
         } catch (error) {
-            QRUtils.handleError(error, 'Start Scanning');
-            this.isScanning = false;
-            
-            // Reset UI on error
-            const startBtn = QRUtils.$('start-camera');
-            const stopBtn = QRUtils.$('stop-camera');
-            
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            this.handleScannerError(error, 'Start Scanning');
+            this.updateScannerUI(false);
         }
     }
     
     async stopScanning() {
-        if (!this.html5QrCode || !this.isScanning) return;
+        if (!this.isScanning || !this.html5QrCode) {
+            return;
+        }
         
         try {
             await this.html5QrCode.stop();
             this.isScanning = false;
             
             // Update UI
-            const startBtn = QRUtils.$('start-camera');
-            const stopBtn = QRUtils.$('stop-camera');
-            
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            this.updateScannerUI(false);
             
             QRUtils.setStatus('Scanner stopped', 'info');
-            QRUtils.log.info('Camera stopped');
-            
-            // Remove scanning overlay
-            this.removeScanningOverlay();
+            QRUtils.log.info('Scanning stopped');
             
         } catch (error) {
-            QRUtils.handleError(error, 'Stop Scanning');
+            QRUtils.log.error('Error stopping scanner:', error);
+            this.isScanning = false;
+            this.updateScannerUI(false);
         }
     }
     
-    addScanningOverlay() {
-        const readerElement = QRUtils.$('qr-reader');
-        if (!readerElement) return;
+    async switchCamera() {
+        if (!this.cameraManager || this.cameraManager.cameras.length <= 1) {
+            QRUtils.setStatus('No additional cameras available', 'warning');
+            return;
+        }
         
-        // Add scanning indicator
-        const overlay = document.createElement('div');
-        overlay.id = 'scanning-overlay';
-        overlay.style.cssText = `
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px 12px;
-            font-size: 12px;
-            font-family: var(--font-mono);
-            border-radius: 4px;
-            z-index: 1000;
-        `;
-        overlay.textContent = 'Scanning...';
-        
-        readerElement.style.position = 'relative';
-        readerElement.appendChild(overlay);
+        try {
+            const wasScanning = this.isScanning;
+            
+            // Stop current scanning
+            if (wasScanning) {
+                await this.stopScanning();
+            }
+            
+            // Switch camera
+            await this.cameraManager.switchCamera();
+            
+            // Restart scanning if it was active
+            if (wasScanning) {
+                setTimeout(() => this.startScanning(), 1000);
+            }
+            
+        } catch (error) {
+            this.handleScannerError(error, 'Camera Switch');
+        }
     }
     
-    removeScanningOverlay() {
-        const overlay = QRUtils.$('scanning-overlay');
-        if (overlay) {
-            overlay.remove();
-        }
+    getOptimizedConfig() {
+        const isMobile = this.cameraManager?.isMobileDevice() || false;
+        
+        return {
+            ...this.scannerConfig,
+            fps: isMobile ? 20 : 30, // Lower FPS on mobile for better performance
+            qrbox: isMobile ? 
+                { width: 200, height: 200 } : 
+                this.scannerConfig.qrbox
+        };
     }
     
     onScanSuccess(decodedText, decodedResult) {
-        // Prevent duplicate rapid scans with longer debounce for accuracy
+        // Prevent rapid duplicate scans
         const now = Date.now();
-        if (this.lastScanTime && (now - this.lastScanTime) < 2000) {
+        if (this.lastScanTime && (now - this.lastScanTime) < this.debounceTime) {
             return;
         }
         this.lastScanTime = now;
@@ -270,10 +285,15 @@ class QRScanner {
         
         // Process the scanned value
         this.processScanResult(decodedText, decodedResult);
+        
+        // Stop scanning if in single mode
+        if (this.scanMode === 'single') {
+            setTimeout(() => this.stopScanning(), 1000);
+        }
     }
     
     onScanFailure(error) {
-        // Filter out common non-error messages
+        // Filter out common non-critical errors
         const ignoredErrors = [
             'No QR code found',
             'QR code parse error',
@@ -288,31 +308,80 @@ class QRScanner {
         
         if (!shouldIgnore) {
             QRUtils.log.warn('Scan failure:', error);
+            
+            // Handle critical errors with retry logic
+            if (this.shouldRetryOnError(error)) {
+                this.handleScanRetry(error);
+            }
         }
+    }
+    
+    shouldRetryOnError(error) {
+        const criticalErrors = [
+            'NotReadableError',
+            'OverconstrainedError',
+            'NotFoundError'
+        ];
+        
+        return criticalErrors.some(critical => 
+            error.toString().includes(critical)
+        ) && this.retryCount < this.maxRetries;
+    }
+    
+    async handleScanRetry(error) {
+        this.retryCount++;
+        QRUtils.log.warn(`Retrying scan (${this.retryCount}/${this.maxRetries}) due to:`, error);
+        
+        await this.stopScanning();
+        
+        setTimeout(async () => {
+            try {
+                await this.startScanning();
+            } catch (retryError) {
+                if (this.retryCount >= this.maxRetries) {
+                    this.handleScannerError(retryError, 'Scan Retry Failed');
+                }
+            }
+        }, 2000);
     }
     
     processScanResult(scannedValue, decodedResult) {
         if (!this.columnMapping || !window.columnMapper) {
-            QRUtils.handleError(new Error('Column mapping not configured'), 'Scan Processing');
+            QRUtils.handleError(
+                new Error('Column mapping not configured'), 
+                'Scan Processing'
+            );
             return;
         }
         
         this.scanCount++;
         
+        // Clean and validate scanned value
+        const cleanValue = QRUtils.cleanText(scannedValue);
+        if (!cleanValue) {
+            QRUtils.log.warn('Empty scan value detected');
+            return;
+        }
+        
         // Find matching row in BOM data
-        const matchedRow = window.columnMapper.findRowByTarget(scannedValue);
+        const matchedRow = window.columnMapper.findRowByTarget(cleanValue);
         
         const scanRecord = {
             id: QRUtils.generateId(),
             timestamp: new Date(),
-            scannedValue: QRUtils.cleanText(scannedValue),
+            scannedValue: cleanValue,
+            originalValue: scannedValue,
             scanIndex: this.scanCount,
             matched: !!matchedRow,
             matchedRow: matchedRow || null,
             decodedResult: {
-                format: decodedResult?.decodedText ? 'QR' : 'Barcode',
-                rawValue: decodedResult?.decodedText || scannedValue
-            }
+                format: this.detectFormat(decodedResult),
+                rawValue: decodedResult?.decodedText || scannedValue,
+                resultPoints: decodedResult?.result?.resultPoints || []
+            },
+            scanMode: this.scanMode,
+            camera: this.cameraManager?.currentCamera?.label || 'Unknown',
+            processingTime: Date.now() - this.lastScanTime
         };
         
         // Add to results
@@ -320,69 +389,45 @@ class QRScanner {
         
         if (matchedRow) {
             this.matchCount++;
-            
-            // Display current match info
             this.displayCurrentMatch(matchedRow, scanRecord);
-            
             QRUtils.setStatus(`✓ Match found! (${this.matchCount}/${this.scanCount})`, 'success');
-            QRUtils.log.success('Match found:', matchedRow);
-            
-            // Provide haptic feedback on mobile
             this.provideFeedback('success');
         } else {
-            this.displayNoMatch(scannedValue);
+            this.displayNoMatch(cleanValue, scanRecord);
             QRUtils.setStatus(`✗ No match found (${this.matchCount}/${this.scanCount})`, 'warning');
-            QRUtils.log.warn('No match for:', scannedValue);
-            
-            // Provide haptic feedback on mobile
             this.provideFeedback('error');
         }
         
-        // Update UI stats
+        // Update UI components
         this.updateScanStats();
-        
-        // Update records table
         this.updateRecordsTable();
+        this.enableQuickActions();
         
         // Save to storage
         this.saveToStorage();
         
-        // Visual feedback with better timing
+        // Show visual feedback
         this.showScanFeedback(scanRecord.matched);
     }
     
-    provideFeedback(type) {
-        // Haptic feedback on supported devices
-        if (navigator.vibrate) {
-            if (type === 'success') {
-                navigator.vibrate([100, 50, 100]); // Success pattern
-            } else {
-                navigator.vibrate(200); // Error pattern
-            }
+    detectFormat(decodedResult) {
+        if (!decodedResult || !decodedResult.result) {
+            return 'UNKNOWN';
         }
         
-        // Audio feedback (optional)
-        if (window.AudioContext || window.webkitAudioContext) {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.setValueAtTime(
-                    type === 'success' ? 800 : 400, 
-                    audioContext.currentTime
-                );
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + 0.1);
-            } catch (e) {
-                // Audio feedback not available
-            }
+        const result = decodedResult.result;
+        
+        // Check if it's a QR code or other format
+        if (result.format) {
+            return result.format.toString();
         }
+        
+        // Fallback detection based on result structure
+        if (result.text && result.text.includes('http')) {
+            return 'QR_CODE';
+        }
+        
+        return 'BARCODE';
     }
     
     displayCurrentMatch(matchedRow, scanRecord) {
@@ -411,9 +456,14 @@ class QRScanner {
                             <div class="kv-key">Quantity</div>
                             <div class="kv-value">${QRUtils.escapeHtml(matchedRow.quantity || '-')}</div>
                         </div>
+                        <div class="kv-item">
+                            <div class="kv-key">Format</div>
+                            <div class="kv-value text-sm">${scanRecord.decodedResult.format}</div>
+                        </div>
                     </div>
                 </div>
             `;
+            matchElement.className = 'scan-result success';
         }
         
         // Show serial number if available
@@ -423,7 +473,7 @@ class QRScanner {
         }
     }
     
-    displayNoMatch(scannedValue) {
+    displayNoMatch(scannedValue, scanRecord) {
         const matchElement = QRUtils.$('current-match');
         const serialElement = QRUtils.$('serial-display');
         
@@ -440,9 +490,18 @@ class QRScanner {
                             <div class="kv-key">Status</div>
                             <div class="kv-value text-error">Not found in BOM data</div>
                         </div>
+                        <div class="kv-item">
+                            <div class="kv-key">Format</div>
+                            <div class="kv-value text-sm">${scanRecord.decodedResult.format}</div>
+                        </div>
+                        <div class="kv-item">
+                            <div class="kv-key">Suggestion</div>
+                            <div class="kv-value text-sm">Check MPN format or try manual entry</div>
+                        </div>
                     </div>
                 </div>
             `;
+            matchElement.className = 'scan-result error';
         }
         
         if (serialElement) {
@@ -450,33 +509,235 @@ class QRScanner {
         }
     }
     
+    provideFeedback(type) {
+        // Haptic feedback on mobile devices
+        if (navigator.vibrate) {
+            if (type === 'success') {
+                navigator.vibrate([100, 50, 100]); // Success pattern
+            } else {
+                navigator.vibrate(200); // Error pattern
+            }
+        }
+        
+        // Audio feedback (optional and subtle)
+        this.playAudioFeedback(type);
+    }
+    
+    playAudioFeedback(type) {
+        if (window.AudioContext || window.webkitAudioContext) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(
+                    type === 'success' ? 800 : 400, 
+                    audioContext.currentTime
+                );
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime); // Very quiet
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (error) {
+                // Audio feedback not available, ignore
+            }
+        }
+    }
+    
     showScanFeedback(matched) {
-        // Add visual feedback to scanner area
         const readerElement = QRUtils.$('qr-reader');
         if (readerElement) {
-            const className = matched ? 'scan-success' : 'scan-error';
-            const overlay = QRUtils.$('scanning-overlay');
+            // Add temporary visual feedback
+            const feedbackClass = matched ? 'scan-success' : 'scan-error';
+            readerElement.classList.add(feedbackClass);
             
-            if (overlay) {
-                overlay.style.background = matched ? 'rgba(76, 175, 80, 0.9)' : 'rgba(244, 67, 54, 0.9)';
-                overlay.textContent = matched ? '✓ Match Found!' : '✗ No Match';
-                
-                setTimeout(() => {
-                    overlay.style.background = 'rgba(0, 0, 0, 0.8)';
-                    overlay.textContent = 'Scanning...';
-                }, 1500);
-            }
+            setTimeout(() => {
+                readerElement.classList.remove(feedbackClass);
+            }, 1000);
         }
     }
     
     updateScanStats() {
         const scanCountElement = QRUtils.$('scan-count');
         const matchCountElement = QRUtils.$('match-count');
+        const accuracyElement = QRUtils.$('accuracy-rate');
         
         if (scanCountElement) scanCountElement.textContent = this.scanCount;
         if (matchCountElement) matchCountElement.textContent = this.matchCount;
+        
+        if (accuracyElement) {
+            const accuracy = this.scanCount > 0 ? 
+                Math.round((this.matchCount / this.scanCount) * 100) : 0;
+            accuracyElement.textContent = `${accuracy}%`;
+        }
     }
     
+    updateScannerUI(isScanning) {
+        const startBtn = QRUtils.$('start-camera');
+        const stopBtn = QRUtils.$('stop-camera');
+        const switchBtn = QRUtils.$('switch-camera');
+        const cameraSelect = QRUtils.$('camera-select');
+        
+        if (startBtn) startBtn.disabled = isScanning;
+        if (stopBtn) stopBtn.disabled = !isScanning;
+        if (switchBtn) switchBtn.disabled = !isScanning;
+        if (cameraSelect) cameraSelect.disabled = isScanning;
+    }
+    
+    enableQuickActions() {
+        const skipBtn = QRUtils.$('skip-item');
+        const rescanBtn = QRUtils.$('rescan-last');
+        
+        if (skipBtn) skipBtn.disabled = false;
+        if (rescanBtn) rescanBtn.disabled = this.scanResults.length === 0;
+    }
+    
+    showScanRecordsSection() {
+        const recordsSection = QRUtils.$('scan-records-section');
+        if (recordsSection) {
+            QRUtils.show(recordsSection);
+        }
+    }
+    
+    updateCameraStatus(message, type) {
+        const statusElement = QRUtils.$('camera-status-text');
+        const statusContainer = QRUtils.$('camera-status');
+        
+        if (statusElement) {
+            statusElement.textContent = message;
+        }
+        
+        if (statusContainer) {
+            statusContainer.className = `alert alert-${type}`;
+        }
+    }
+    
+    handleScanModeChange(event) {
+        this.scanMode = event.target.value;
+        QRUtils.log.info('Scan mode changed to:', this.scanMode);
+        
+        // Update debounce time based on mode
+        this.debounceTime = this.scanMode === 'single' ? 500 : 1500;
+    }
+    
+    // Export and management methods
+    async exportToExcel() {
+        if (this.scanResults.length === 0) {
+            QRUtils.setStatus('No scan records to export', 'warning');
+            return;
+        }
+        
+        try {
+            const exportData = this.prepareExportData();
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            // Auto-size columns
+            const colWidths = this.calculateColumnWidths(exportData);
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Scan Results');
+            
+            const filename = QRUtils.generateFilename('qr_scan_results');
+            XLSX.writeFile(wb, filename);
+            
+            QRUtils.showSuccess(`Exported ${this.scanResults.length} records to ${filename}`);
+            
+        } catch (error) {
+            QRUtils.handleError(error, 'Excel Export');
+        }
+    }
+    
+    async exportToCSV() {
+        if (this.scanResults.length === 0) {
+            QRUtils.setStatus('No scan records to export', 'warning');
+            return;
+        }
+        
+        try {
+            const exportData = this.prepareExportData();
+            const csv = this.convertToCSV(exportData);
+            
+            const filename = QRUtils.generateFilename('qr_scan_results', 'csv');
+            this.downloadCSV(csv, filename);
+            
+            QRUtils.showSuccess(`Exported ${this.scanResults.length} records to ${filename}`);
+            
+        } catch (error) {
+            QRUtils.handleError(error, 'CSV Export');
+        }
+    }
+    
+    prepareExportData() {
+        return this.scanResults.map(record => ({
+            'Scan Index': record.scanIndex,
+            'Timestamp': QRUtils.formatTimestamp(record.timestamp),
+            'Scanned Value': record.scannedValue,
+            'Original Value': record.originalValue,
+            'Status': record.matched ? 'Match' : 'No Match',
+            'Format': record.decodedResult.format,
+            'Serial No.': record.matchedRow?.serial || '',
+            'MPN': record.matchedRow?.mpn || '',
+            'Designators': record.matchedRow?.designators || '',
+            'Manufacturer': record.matchedRow?.manufacturer || '',
+            'Quantity': record.matchedRow?.quantity || '',
+            'Row Number': record.matchedRow?._actualRowNumber || '',
+            'Camera': record.camera,
+            'Scan Mode': record.scanMode,
+            'Processing Time (ms)': record.processingTime
+        }));
+    }
+    
+    calculateColumnWidths(data) {
+        if (data.length === 0) return [];
+        
+        return Object.keys(data[0]).map(key => {
+            const maxLength = Math.max(
+                key.length,
+                ...data.map(row => String(row[key] || '').length)
+            );
+            return { wch: Math.min(maxLength + 2, 30) };
+        });
+    }
+    
+    convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        const csvContent = [
+            headers.join(','),
+            ...data.map(row => 
+                headers.map(header => {
+                    const value = row[header] || '';
+                    return `"${String(value).replace(/"/g, '""')}"`;
+                }).join(',')
+            )
+        ].join('\n');
+        
+        return csvContent;
+    }
+    
+    downloadCSV(csv, filename) {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        if (navigator.msSaveBlob) {
+            navigator.msSaveBlob(blob, filename);
+        } else {
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+    
+    // Additional methods for comprehensive functionality
     updateRecordsTable() {
         const tableContainer = QRUtils.$('records-table');
         if (!tableContainer) return;
@@ -486,9 +747,40 @@ class QRScanner {
             return;
         }
         
-        // Create table with recent scans first
-        const recentResults = [...this.scanResults].reverse().slice(0, 100); // Limit to last 100 scans
+        const filteredResults = this.getFilteredResults();
+        const recentResults = [...filteredResults].reverse().slice(0, 100);
         
+        let tableHTML = this.generateTableHTML(recentResults);
+        tableContainer.innerHTML = tableHTML;
+    }
+    
+    getFilteredResults() {
+        let results = this.scanResults;
+        
+        // Apply search filter
+        const searchTerm = QRUtils.$('search-records')?.value?.toLowerCase();
+        if (searchTerm) {
+            results = results.filter(record => 
+                record.scannedValue.toLowerCase().includes(searchTerm) ||
+                record.matchedRow?.mpn?.toLowerCase().includes(searchTerm) ||
+                record.matchedRow?.manufacturer?.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        // Apply status filter
+        const statusFilter = QRUtils.$('filter-status')?.value;
+        if (statusFilter && statusFilter !== 'all') {
+            results = results.filter(record => {
+                if (statusFilter === 'matched') return record.matched;
+                if (statusFilter === 'unmatched') return !record.matched;
+                return true;
+            });
+        }
+        
+        return results;
+    }
+    
+    generateTableHTML(results) {
         let tableHTML = `
             <table class="table-compact table-striped">
                 <thead>
@@ -497,94 +789,130 @@ class QRScanner {
                         <th>Time</th>
                         <th>Scanned Value</th>
                         <th>Status</th>
-                        <th>Serial No.</th>
+                        <th>Format</th>
                         <th>MPN</th>
                         <th>Manufacturer</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
         
-        recentResults.forEach(record => {
+        results.forEach(record => {
             const timeStr = record.timestamp.toLocaleTimeString();
             const statusClass = record.matched ? 'text-success' : 'text-error';
             const statusText = record.matched ? '✓ Match' : '✗ No Match';
+            const rowClass = record.matched ? '' : 'row-warning';
             
-            const serial = record.matchedRow?.serial || '-';
             const mpn = record.matchedRow?.mpn || '-';
             const manufacturer = record.matchedRow?.manufacturer || '-';
             
             tableHTML += `
-                <tr class="${record.matched ? '' : 'row-warning'}">
+                <tr class="${rowClass}" data-record-id="${record.id}">
                     <td class="mono">${record.scanIndex}</td>
                     <td class="mono text-xs">${timeStr}</td>
-                    <td class="mono">${QRUtils.escapeHtml(QRUtils.truncate(record.scannedValue, 20))}</td>
+                    <td class="mono" title="${QRUtils.escapeHtml(record.scannedValue)}">
+                        ${QRUtils.escapeHtml(QRUtils.truncate(record.scannedValue, 15))}
+                    </td>
                     <td class="${statusClass}">${statusText}</td>
-                    <td class="mono">${QRUtils.escapeHtml(QRUtils.truncate(serial, 15))}</td>
-                    <td class="mono">${QRUtils.escapeHtml(QRUtils.truncate(mpn, 15))}</td>
-                    <td>${QRUtils.escapeHtml(QRUtils.truncate(manufacturer, 15))}</td>
+                    <td class="text-xs">${record.decodedResult.format}</td>
+                    <td class="mono" title="${QRUtils.escapeHtml(mpn)}">
+                        ${QRUtils.escapeHtml(QRUtils.truncate(mpn, 12))}
+                    </td>
+                    <td title="${QRUtils.escapeHtml(manufacturer)}">
+                        ${QRUtils.escapeHtml(QRUtils.truncate(manufacturer, 12))}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" 
+                                onclick="qrScanner.viewRecord('${record.id}')" 
+                                title="View Details">👁</button>
+                        <button class="btn btn-sm btn-danger" 
+                                onclick="qrScanner.deleteRecord('${record.id}')" 
+                                title="Delete">🗑</button>
+                    </td>
                 </tr>
             `;
         });
         
         tableHTML += '</tbody></table>';
-        tableContainer.innerHTML = tableHTML;
+        return tableHTML;
     }
     
-    updateColumnMapping(columnMapping, rangeData) {
-        this.columnMapping = columnMapping;
-        this.rangeData = rangeData;
-        
-        QRUtils.log.info('Scanner updated with column mapping');
-    }
-    
-    async exportToExcel() {
-        if (this.scanResults.length === 0) {
-            QRUtils.setStatus('No scan records to export', 'warning');
-            return;
-        }
-        
-        try {
-            // Prepare export data
-            const exportData = this.scanResults.map(record => ({
-                'Scan Index': record.scanIndex,
-                'Timestamp': QRUtils.formatTimestamp(record.timestamp),
-                'Scanned Value': record.scannedValue,
-                'Status': record.matched ? 'Match' : 'No Match',
-                'Serial No.': record.matchedRow?.serial || '',
-                'MPN': record.matchedRow?.mpn || '',
-                'Designators': record.matchedRow?.designators || '',
-                'Manufacturer': record.matchedRow?.manufacturer || '',
-                'Quantity': record.matchedRow?.quantity || '',
-                'Row Number': record.matchedRow?._actualRowNumber || ''
-            }));
-            
-            // Create workbook
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            
-            // Auto-size columns
-            const colWidths = [];
-            Object.keys(exportData[0]).forEach(key => {
-                const maxLength = Math.max(
-                    key.length,
-                    ...exportData.map(row => String(row[key] || '').length)
-                );
-                colWidths.push({ wch: Math.min(maxLength + 2, 30) });
+    // Quick action methods
+    showManualEntry() {
+        const value = prompt('Enter value manually:');
+        if (value && value.trim()) {
+            this.processScanResult(value.trim(), { 
+                result: { format: 'MANUAL' }
             });
-            ws['!cols'] = colWidths;
-            
-            XLSX.utils.book_append_sheet(wb, ws, 'Scan Results');
-            
-            // Generate filename and save
-            const filename = QRUtils.generateFilename('qr_scan_results');
-            XLSX.writeFile(wb, filename);
-            
-            QRUtils.showSuccess(`Exported ${this.scanResults.length} records to ${filename}`);
-            
-        } catch (error) {
-            QRUtils.handleError(error, 'Excel Export');
         }
+    }
+    
+    skipCurrentItem() {
+        // Add a skip entry
+        const skipRecord = {
+            id: QRUtils.generateId(),
+            timestamp: new Date(),
+            scannedValue: '[SKIPPED]',
+            originalValue: '[SKIPPED]',
+            scanIndex: ++this.scanCount,
+            matched: false,
+            matchedRow: null,
+            decodedResult: { format: 'SKIP' },
+            scanMode: this.scanMode,
+            camera: this.cameraManager?.currentCamera?.label || 'Unknown',
+            processingTime: 0
+        };
+        
+        this.scanResults.push(skipRecord);
+        this.updateScanStats();
+        this.updateRecordsTable();
+        this.saveToStorage();
+        
+        QRUtils.setStatus('Item skipped', 'info');
+    }
+    
+    rescanLastItem() {
+        if (this.scanResults.length === 0) return;
+        
+        const lastRecord = this.scanResults[this.scanResults.length - 1];
+        if (lastRecord.scannedValue !== '[SKIPPED]') {
+            this.processScanResult(lastRecord.originalValue, lastRecord.decodedResult);
+        }
+    }
+    
+    // Search and filter methods
+    searchRecords() {
+        this.updateRecordsTable();
+    }
+    
+    filterRecords() {
+        this.updateRecordsTable();
+    }
+    
+    // Record management methods
+    viewRecord(recordId) {
+        const record = this.scanResults.find(r => r.id === recordId);
+        if (record) {
+            const details = JSON.stringify(record, null, 2);
+            alert(`Record Details:\n\n${details}`);
+        }
+    }
+    
+    deleteRecord(recordId) {
+        if (confirm('Delete this scan record?')) {
+            this.scanResults = this.scanResults.filter(r => r.id !== recordId);
+            this.recalculateStats();
+            this.updateScanStats();
+            this.updateRecordsTable();
+            this.saveToStorage();
+            QRUtils.setStatus('Record deleted', 'info');
+        }
+    }
+    
+    recalculateStats() {
+        this.scanCount = this.scanResults.length;
+        this.matchCount = this.scanResults.filter(r => r.matched).length;
     }
     
     clearRecords() {
@@ -605,28 +933,74 @@ class QRScanner {
             const matchElement = QRUtils.$('current-match');
             if (matchElement) {
                 matchElement.innerHTML = '<div class="empty">No matches yet</div>';
+                matchElement.className = 'scan-result empty';
             }
             
             QRUtils.hide('serial-display');
             
-            // Save to storage
-            this.saveToStorage();
+            // Disable quick actions
+            const skipBtn = QRUtils.$('skip-item');
+            const rescanBtn = QRUtils.$('rescan-last');
+            if (skipBtn) skipBtn.disabled = true;
+            if (rescanBtn) rescanBtn.disabled = true;
             
+            this.saveToStorage();
             QRUtils.showSuccess('All scan records cleared');
         }
     }
     
-    // Helper method to detect mobile devices
-    isMobileDevice() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Keyboard shortcuts
+    handleKeyboardShortcuts(event) {
+        if (event.ctrlKey || event.metaKey) {
+            switch (event.key) {
+                case 's':
+                    event.preventDefault();
+                    if (this.isScanning) {
+                        this.stopScanning();
+                    } else {
+                        this.startScanning();
+                    }
+                    break;
+                case 'e':
+                    event.preventDefault();
+                    this.exportToExcel();
+                    break;
+                case 'm':
+                    event.preventDefault();
+                    this.showManualEntry();
+                    break;
+            }
+        } else {
+            switch (event.key) {
+                case 'Escape':
+                    if (this.isScanning) {
+                        this.stopScanning();
+                    }
+                    break;
+                case ' ':
+                    if (event.target.tagName !== 'INPUT') {
+                        event.preventDefault();
+                        this.skipCurrentItem();
+                    }
+                    break;
+            }
+        }
+    }
+    
+    // Column mapping integration
+    updateColumnMapping(columnMapping, rangeData) {
+        this.columnMapping = columnMapping;
+        this.rangeData = rangeData;
+        QRUtils.log.info('Scanner updated with column mapping');
     }
     
     // Storage methods
     saveToStorage() {
         const data = {
-            scanResults: this.scanResults.slice(-50), // Keep last 50 results only
+            scanResults: this.scanResults.slice(-100), // Keep last 100 results
             scanCount: this.scanCount,
             matchCount: this.matchCount,
+            scanMode: this.scanMode,
             timestamp: Date.now()
         };
         
@@ -639,12 +1013,16 @@ class QRScanner {
         
         // Check if data is recent (within 24 hours)
         const isRecent = data.timestamp && (Date.now() - data.timestamp) < 24 * 60 * 60 * 1000;
-        if (!isRecent) return false;
+        if (!isRecent) {
+            QRUtils.storage.remove('scan_results');
+            return false;
+        }
         
         try {
             this.scanResults = data.scanResults || [];
             this.scanCount = data.scanCount || 0;
             this.matchCount = data.matchCount || 0;
+            this.scanMode = data.scanMode || 'continuous';
             
             // Convert timestamp strings back to Date objects
             this.scanResults.forEach(record => {
@@ -654,54 +1032,81 @@ class QRScanner {
             });
             
             // Update UI
-            this.updateScanStats();
-            this.updateRecordsTable();
+            setTimeout(() => {
+                this.updateScanStats();
+                this.updateRecordsTable();
+                this.showScanRecordsSection();
+            }, 500);
             
             QRUtils.log.info('Restored scan results from storage');
             return true;
+            
         } catch (error) {
             QRUtils.log.warn('Failed to load scan results from storage:', error);
             QRUtils.storage.remove('scan_results');
+            return false;
         }
-        
-        return false;
     }
     
-    reset() {
-        // Stop scanning if active
+    // Error handling
+    handleScannerError(error, context = 'Scanner') {
+        QRUtils.handleError(error, context);
+        
+        // Update camera status if it's a camera-related error
+        if (context.includes('Camera') || context.includes('Scan')) {
+            this.updateCameraStatus(`Error: ${error.message}`, 'error');
+        }
+        
+        // Stop scanning on critical errors
         if (this.isScanning) {
             this.stopScanning();
         }
+    }
+    
+    // Cleanup and reset
+    reset() {
+        this.stopScanning();
         
-        // Clear data
+        if (this.cameraManager) {
+            this.cameraManager.cleanup();
+        }
+        
         this.scanResults = [];
         this.scanCount = 0;
         this.matchCount = 0;
         this.columnMapping = null;
         this.rangeData = null;
         this.lastScanTime = 0;
+        this.retryCount = 0;
         
         // Reset UI
         this.updateScanStats();
         this.updateRecordsTable();
+        this.updateScannerUI(false);
         
         const matchElement = QRUtils.$('current-match');
         if (matchElement) {
             matchElement.innerHTML = '<div class="empty">No matches yet</div>';
+            matchElement.className = 'scan-result empty';
         }
         
         QRUtils.hide('serial-display');
         
-        // Reset camera selection to first available
-        if (this.cameras.length > 0) {
-            const cameraSelect = QRUtils.$('camera-select');
-            if (cameraSelect) {
-                cameraSelect.selectedIndex = 0;
-                this.currentCamera = this.cameras[0].id;
-            }
-        }
-        
-        QRUtils.log.info('Scanner reset');
+        QRUtils.log.info('Scanner reset complete');
+    }
+    
+    // Get scanner status
+    getStatus() {
+        return {
+            isScanning: this.isScanning,
+            scanCount: this.scanCount,
+            matchCount: this.matchCount,
+            scanMode: this.scanMode,
+            hasColumnMapping: !!this.columnMapping,
+            cameraStatus: this.cameraManager?.getStatus() || null,
+            lastScanTime: this.lastScanTime,
+            accuracy: this.scanCount > 0 ? (this.matchCount / this.scanCount) * 100 : 0
+        };
     }
 }
 
