@@ -1,5 +1,5 @@
 /**
- * QR Code Component Scanner - Range Selector (Enhanced)
+ * QR Code Component Scanner - Range Selector (Enhanced & Robust)
  * Alica Technologies
  */
 
@@ -68,10 +68,44 @@ window.QRScannerRangeSelector = {
     },
 
     /**
+     * Validate cell element has required properties
+     * @param {HTMLElement} cell - Cell element to validate
+     * @returns {boolean} - True if valid
+     */
+    _isValidCell(cell) {
+        if (!cell) {
+            return false;
+        }
+
+        if (cell.tagName !== 'TD') {
+            return false;
+        }
+
+        if (!cell.dataset) {
+            return false;
+        }
+
+        if (!cell.dataset.row || !cell.dataset.col) {
+            return false;
+        }
+
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+
+        if (isNaN(row) || isNaN(col)) {
+            return false;
+        }
+
+        return true;
+    },
+
+    /**
      * Handle manual cell input
      */
     _handleManualCellInput(event) {
         const input = event.target;
+        if (!input) return;
+
         const value = input.value.trim().toUpperCase();
         
         // Validate cell reference format (e.g., A1, Z99, AA100)
@@ -96,6 +130,8 @@ window.QRScannerRangeSelector = {
         const startCellInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
         const endCellInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
         
+        if (!startCellInput || !endCellInput) return;
+
         const startRef = startCellInput.value.trim().toUpperCase();
         const endRef = endCellInput.value.trim().toUpperCase();
 
@@ -135,7 +171,10 @@ window.QRScannerRangeSelector = {
 
         this._clearSelectionHighlight();
 
-        const table = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE).querySelector('table');
+        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+        if (!container) return;
+
+        const table = container.querySelector('table');
         if (!table) return;
 
         const cells = table.querySelectorAll('td[data-row][data-col]');
@@ -143,7 +182,7 @@ window.QRScannerRangeSelector = {
             const row = parseInt(cell.dataset.row);
             const col = parseInt(cell.dataset.col);
 
-            if (row >= minRow && row <= maxRow && col >= minCol && col <= maxCol) {
+            if (!isNaN(row) && !isNaN(col) && row >= minRow && row <= maxRow && col >= minCol && col <= maxCol) {
                 this._highlightCell(cell, 'cell-selected');
             }
         });
@@ -234,12 +273,7 @@ window.QRScannerRangeSelector = {
         const cornerCell = document.createElement('th');
         cornerCell.textContent = '';
         cornerCell.className = 'cell-header';
-        cornerCell.style.backgroundColor = '#e9ecef';
-        cornerCell.style.border = '1px solid #dee2e6';
-        cornerCell.style.padding = '8px';
-        cornerCell.style.textAlign = 'center';
-        cornerCell.style.fontWeight = 'bold';
-        cornerCell.style.minWidth = '40px';
+        cornerCell.style.cssText = 'background-color: #e9ecef; border: 1px solid #dee2e6; padding: 8px; text-align: center; font-weight: bold; min-width: 40px;';
         headerRow.appendChild(cornerCell);
 
         // Column letter headers
@@ -247,13 +281,7 @@ window.QRScannerRangeSelector = {
             const th = document.createElement('th');
             th.textContent = window.QRScannerUtils.excel.numToCol(col + 1);
             th.className = 'cell-header';
-            th.style.backgroundColor = '#f8f9fa';
-            th.style.border = '1px solid #dee2e6';
-            th.style.padding = '8px';
-            th.style.textAlign = 'center';
-            th.style.fontWeight = 'bold';
-            th.style.minWidth = '80px';
-            th.style.maxWidth = '150px';
+            th.style.cssText = 'background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 8px; text-align: center; font-weight: bold; min-width: 80px; max-width: 150px;';
             th.dataset.col = col + 1;
             headerRow.appendChild(th);
         }
@@ -268,11 +296,7 @@ window.QRScannerRangeSelector = {
             const rowNumCell = document.createElement('th');
             rowNumCell.textContent = rowIndex + 1;
             rowNumCell.className = 'cell-header';
-            rowNumCell.style.backgroundColor = '#f8f9fa';
-            rowNumCell.style.border = '1px solid #dee2e6';
-            rowNumCell.style.padding = '8px';
-            rowNumCell.style.textAlign = 'center';
-            rowNumCell.style.fontWeight = 'bold';
+            rowNumCell.style.cssText = 'background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 8px; text-align: center; font-weight: bold;';
             rowNumCell.dataset.row = rowIndex + 1;
             tr.appendChild(rowNumCell);
 
@@ -283,20 +307,15 @@ window.QRScannerRangeSelector = {
                 const displayValue = window.QRScannerUtils.string.truncate(cellValue, 30);
                 
                 td.textContent = displayValue;
-                td.title = cellValue; // Full value on hover
-                td.dataset.row = rowIndex + 1;
-                td.dataset.col = colIndex + 1;
+                td.title = cellValue;
+                
+                // CRITICAL: Set all data attributes
+                td.dataset.row = String(rowIndex + 1);
+                td.dataset.col = String(colIndex + 1);
                 td.dataset.cellRef = window.QRScannerUtils.excel.getCellRef(rowIndex + 1, colIndex + 1);
                 
                 // Styling
-                td.style.border = '1px solid #dee2e6';
-                td.style.padding = '8px';
-                td.style.maxWidth = '150px';
-                td.style.overflow = 'hidden';
-                td.style.textOverflow = 'ellipsis';
-                td.style.whiteSpace = 'nowrap';
-                td.style.cursor = 'pointer';
-                td.style.transition = 'background-color 0.2s';
+                td.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 0.2s;';
 
                 // Add event listeners
                 this._addCellEventListeners(td);
@@ -318,6 +337,8 @@ window.QRScannerRangeSelector = {
      * @param {HTMLElement} cell - Table cell element
      */
     _addCellEventListeners(cell) {
+        if (!cell || cell.tagName !== 'TD') return;
+
         // Mouse events
         cell.addEventListener('mouseenter', this._handleCellEnter.bind(this));
         cell.addEventListener('mousedown', this._handleCellMouseDown.bind(this));
@@ -328,7 +349,7 @@ window.QRScannerRangeSelector = {
         cell.addEventListener('touchmove', this._handleCellTouchMove.bind(this), { passive: false });
         cell.addEventListener('touchend', this._handleCellTouchEnd.bind(this), { passive: false });
 
-        // Hover effects
+        // Hover effects (mouse only)
         cell.addEventListener('mouseenter', () => {
             if (!cell.classList.contains('cell-selected')) {
                 cell.style.backgroundColor = '#f0f0f0';
@@ -347,6 +368,8 @@ window.QRScannerRangeSelector = {
      * @param {HTMLElement} table - Table element
      */
     _addTableEventListeners(table) {
+        if (!table) return;
+
         // Prevent text selection
         table.addEventListener('selectstart', (e) => e.preventDefault());
         table.addEventListener('dragstart', (e) => e.preventDefault());
@@ -359,26 +382,38 @@ window.QRScannerRangeSelector = {
         table.addEventListener('touchstart', this._handleTouchStart.bind(this), { passive: false });
     },
 
-    // Touch Event Handlers
+    // Touch Event Handlers (Robust)
     _handleCellTouchStart(event) {
+        if (!event) return;
         event.preventDefault();
+        
+        const cell = event.currentTarget;
+        
+        // Robust validation
+        if (!this._isValidCell(cell)) {
+            window.QRScannerUtils.log.warn('Touch start: Invalid cell');
+            return;
+        }
+        
         this._touchStarted = true;
         this._isDragging = false;
         
-        const cell = event.currentTarget;
+        // Safe to proceed
         this._handleCellMouseDown({ currentTarget: cell, button: 0 });
     },
 
     _handleCellTouchMove(event) {
-        if (!this._touchStarted) return;
+        if (!event || !this._touchStarted) return;
         
         event.preventDefault();
         this._isDragging = true;
         
         const touch = event.touches[0];
+        if (!touch) return;
+
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
         
-        if (element && element.dataset && element.dataset.cellRef) {
+        if (this._isValidCell(element)) {
             if (this._lastTouchCell !== element) {
                 this._lastTouchCell = element;
                 this._handleCellEnter({ currentTarget: element });
@@ -387,16 +422,14 @@ window.QRScannerRangeSelector = {
     },
 
     _handleCellTouchEnd(event) {
-        if (!this._touchStarted) return;
+        if (!event || !this._touchStarted) return;
         
         event.preventDefault();
+        
         const cell = this._lastTouchCell || event.currentTarget;
         
-        if (!this._isDragging) {
-            // Single tap - select single cell
-            this._handleCellMouseUp({ currentTarget: cell });
-        } else {
-            // Drag end
+        // Validate cell before proceeding
+        if (this._isValidCell(cell)) {
             this._handleCellMouseUp({ currentTarget: cell });
         }
         
@@ -406,14 +439,16 @@ window.QRScannerRangeSelector = {
     },
 
     _handleTouchStart(event) {
-        if (event.target.tagName === 'TD') {
+        if (!event || !event.target) return;
+        
+        if (event.target.tagName === 'TD' && this._isValidCell(event.target)) {
             this._isSelecting = true;
         }
     },
 
-    // Mouse Event Handlers (Enhanced)
+    // Mouse Event Handlers (Robust)
     _handleMouseDown(event) {
-        if (event.button !== 0) return; // Only left click
+        if (!event || event.button !== 0) return;
 
         event.preventDefault();
         this._isSelecting = true;
@@ -437,71 +472,82 @@ window.QRScannerRangeSelector = {
         }
     },
 
-_handleCellMouseDown(event) {
-    if (event.button !== 0) return;
-
-    const cell = event.currentTarget;
-    
-    // Check if cell has required dataset properties
-    if (!cell.dataset || !cell.dataset.row || !cell.dataset.col) {
-        window.QRScannerUtils.log.warn('Cell missing dataset properties');
-        return;
-    }
-
-    const row = parseInt(cell.dataset.row);
-    const col = parseInt(cell.dataset.col);
-    const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
-
-    this._startCell = {
-        row: row,
-        col: col,
-        ref: cellRef
-    };
-
-    this._clearSelection();
-    this._clearSelectionHighlight();
-    this._highlightCell(cell, 'range-start');
-
-    window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, this._startCell.ref);
-    
-    // Enable dragging
-    this._isDragging = true;
-},
-
-_handleCellMouseUp(event) {
-    const cell = event.currentTarget;
-    
-    // Check if cell has required dataset properties
-    if (!cell.dataset || !cell.dataset.row || !cell.dataset.col) {
-        window.QRScannerUtils.log.warn('Cell missing dataset properties');
-        return;
-    }
-
-    const row = parseInt(cell.dataset.row);
-    const col = parseInt(cell.dataset.col);
-    const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
-
-    this._endCell = {
-        row: row,
-        col: col,
-        ref: cellRef
-    };
-
-    window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, this._endCell.ref);
-    
-    if (this._startCell) {
-        this._finalizeSelection();
-    }
-},
-
-    _handleCellEnter(event) {
-        if (!this._isSelecting || !this._startCell) return;
+    _handleCellMouseDown(event) {
+        if (!event || event.button !== 0) return;
 
         const cell = event.currentTarget;
+        
+        // Robust validation
+        if (!this._isValidCell(cell)) {
+            window.QRScannerUtils.log.warn('Mouse down: Invalid cell');
+            return;
+        }
+
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+        const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
+
+        this._startCell = {
+            row: row,
+            col: col,
+            ref: cellRef
+        };
+
+        this._clearSelection();
+        this._clearSelectionHighlight();
+        this._highlightCell(cell, 'range-start');
+
+        const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
+        if (startInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, this._startCell.ref);
+        }
+        
+        this._isDragging = true;
+    },
+
+    _handleCellMouseUp(event) {
+        if (!event) return;
+
+        const cell = event.currentTarget;
+        
+        // Robust validation
+        if (!this._isValidCell(cell)) {
+            window.QRScannerUtils.log.warn('Mouse up: Invalid cell');
+            return;
+        }
+
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+        const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
+
+        this._endCell = {
+            row: row,
+            col: col,
+            ref: cellRef
+        };
+
+        const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
+        if (endInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, this._endCell.ref);
+        }
+        
+        if (this._startCell) {
+            this._finalizeSelection();
+        }
+    },
+
+    _handleCellEnter(event) {
+        if (!event || !this._isSelecting || !this._startCell) return;
+
+        const cell = event.currentTarget;
+        
+        if (!this._isValidCell(cell)) return;
+
         const endRow = parseInt(cell.dataset.row);
         const endCol = parseInt(cell.dataset.col);
 
-        // Update selection display
+        if (isNaN(endRow) || isNaN(endCol)) return;
+
         this._updateSelectionDisplay(endRow, endCol);
     },
 
@@ -518,27 +564,32 @@ _handleCellMouseUp(event) {
         const minCol = Math.min(this._startCell.col, endCol);
         const maxCol = Math.max(this._startCell.col, endCol);
 
-        // Clear previous selection
         this._clearSelectionHighlight();
 
-        // Highlight selected range
-        const table = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE).querySelector('table');
+        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+        if (!container) return;
+
+        const table = container.querySelector('table');
         if (!table) return;
         
         const cells = table.querySelectorAll('td[data-row][data-col]');
 
         cells.forEach(cell => {
+            if (!this._isValidCell(cell)) return;
+
             const row = parseInt(cell.dataset.row);
             const col = parseInt(cell.dataset.col);
 
-            if (row >= minRow && row <= maxRow && col >= minCol && col <= maxCol) {
+            if (!isNaN(row) && !isNaN(col) && row >= minRow && row <= maxRow && col >= minCol && col <= maxCol) {
                 this._highlightCell(cell, 'cell-selected');
             }
         });
 
-        // Update end cell reference
         const endRef = window.QRScannerUtils.excel.getCellRef(endRow, endCol);
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, endRef);
+        const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
+        if (endInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, endRef);
+        }
     },
 
     /**
@@ -547,7 +598,6 @@ _handleCellMouseUp(event) {
     _finalizeSelection() {
         if (!this._startCell || !this._endCell) return;
 
-        // Calculate final range
         const minRow = Math.min(this._startCell.row, this._endCell.row);
         const maxRow = Math.max(this._startCell.row, this._endCell.row);
         const minCol = Math.min(this._startCell.col, this._endCell.col);
@@ -562,20 +612,26 @@ _handleCellMouseUp(event) {
             endRef: window.QRScannerUtils.excel.getCellRef(maxRow, maxCol)
         };
 
-        // Update display
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, range.startRef);
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, range.endRef);
+        const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
+        const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
 
-        // Store range
+        if (startInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, range.startRef);
+        }
+        if (endInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, range.endRef);
+        }
+
         window.QRScannerExcelHandler.setSelectedRange(range);
 
-        // Enable confirm button
-        window.QRScannerUtils.dom.setEnabled(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE, true);
+        const confirmBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE);
+        if (confirmBtn) {
+            window.QRScannerUtils.dom.setEnabled(confirmBtn, true);
+        }
 
         const cellCount = (maxRow - minRow + 1) * (maxCol - minCol + 1);
         window.QRScannerUtils.log.debug(`Range selected: ${range.startRef}:${range.endRef} (${cellCount} cells)`);
         
-        // Show selection info
         this._showSelectionInfo(range, cellCount);
     },
 
@@ -583,19 +639,16 @@ _handleCellMouseUp(event) {
      * Show selection information
      */
     _showSelectionInfo(range, cellCount) {
-        // Create or update selection info display
         let infoDiv = document.getElementById('selectionInfo');
         if (!infoDiv) {
             infoDiv = document.createElement('div');
             infoDiv.id = 'selectionInfo';
-            infoDiv.style.padding = '10px';
-            infoDiv.style.backgroundColor = '#e3f2fd';
-            infoDiv.style.border = '1px solid #2196f3';
-            infoDiv.style.borderRadius = '4px';
-            infoDiv.style.marginTop = '10px';
+            infoDiv.style.cssText = 'padding: 10px; background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; margin-top: 10px;';
             
             const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
-            container.parentNode.insertBefore(infoDiv, container.nextSibling);
+            if (container && container.parentNode) {
+                container.parentNode.insertBefore(infoDiv, container.nextSibling);
+            }
         }
         
         infoDiv.innerHTML = `
@@ -616,19 +669,14 @@ _handleCellMouseUp(event) {
             return;
         }
 
-        // Get range data for column mapping
         const rangeData = window.QRScannerExcelHandler.getRangeData(range);
         if (!rangeData || rangeData.length === 0) {
             alert(window.QRScannerConfig.MESSAGES.EMPTY_RANGE);
             return;
         }
 
-        // Initialize column mapping
         window.QRScannerDataManager.initializeColumnMapping(rangeData);
-
-        // Show column mapping step
         window.QRScannerUtils.dom.show(window.QRScannerConfig.ELEMENTS.STEP_4);
-
         window.QRScannerUtils.log.info('Range confirmed, proceeding to column mapping');
     },
 
@@ -639,26 +687,28 @@ _handleCellMouseUp(event) {
         this._clearSelection();
         this._clearSelectionHighlight();
 
-        // Clear input fields
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, '');
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, '');
-
-        // Reset input styles
         const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
         const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
-        if (startInput) startInput.style.borderColor = '';
-        if (endInput) endInput.style.borderColor = '';
 
-        // Disable confirm button
-        window.QRScannerUtils.dom.setEnabled(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE, false);
+        if (startInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, '');
+            startInput.style.borderColor = '';
+        }
+        if (endInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, '');
+            endInput.style.borderColor = '';
+        }
 
-        // Clear stored range
+        const confirmBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE);
+        if (confirmBtn) {
+            window.QRScannerUtils.dom.setEnabled(confirmBtn, false);
+        }
+
         window.QRScannerExcelHandler.setSelectedRange(null);
         
-        // Remove selection info
         const infoDiv = document.getElementById('selectionInfo');
-        if (infoDiv) {
-            infoDiv.remove();
+        if (infoDiv && infoDiv.parentNode) {
+            infoDiv.parentNode.removeChild(infoDiv);
         }
 
         window.QRScannerUtils.log.debug('Range selection cleared');
@@ -673,17 +723,23 @@ _handleCellMouseUp(event) {
         this._selectedCells.clear();
         this._isSelecting = false;
         this._isDragging = false;
+        this._touchStarted = false;
+        this._lastTouchCell = null;
     },
 
     /**
      * Clear selection highlighting
      */
     _clearSelectionHighlight() {
-        const table = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE).querySelector('table');
+        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+        if (!container) return;
+
+        const table = container.querySelector('table');
         if (!table) return;
 
         const cells = table.querySelectorAll('td, th');
         cells.forEach(cell => {
+            if (!cell) return;
             cell.classList.remove('cell-selected', 'range-start', 'range-end');
             if (cell.tagName === 'TD') {
                 cell.style.backgroundColor = '';
@@ -697,9 +753,10 @@ _handleCellMouseUp(event) {
      * @param {string} className - CSS class to add
      */
     _highlightCell(cell, className) {
+        if (!cell) return;
+
         cell.classList.add(className);
         
-        // Apply visual styling
         if (className === 'cell-selected') {
             cell.style.backgroundColor = '#bbdefb';
         } else if (className === 'range-start') {
@@ -712,10 +769,9 @@ _handleCellMouseUp(event) {
     },
 
     /**
-     * Public method to trigger table creation (called from excel handler)
+     * Public method to trigger table creation
      */
     showRangeSelector() {
-        // Delay to ensure DOM is ready
         setTimeout(() => {
             this.createSelectableTable();
         }, 100);
