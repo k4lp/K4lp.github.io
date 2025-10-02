@@ -533,6 +533,9 @@
         let lastScanTime = 0;
         let scanDebounce = 1000;
 
+        document.querySelector('.secondary').addEventListener('click', function() {
+            document.getElementById('excelInput').click();
+        });
         // Load saved data from localStorage
         function loadFromStorage() {
             const saved = localStorage.getItem('qrScannerData');
