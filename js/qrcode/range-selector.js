@@ -437,40 +437,62 @@ window.QRScannerRangeSelector = {
         }
     },
 
-    _handleCellMouseDown(event) {
-        if (event.button !== 0) return;
+_handleCellMouseDown(event) {
+    if (event.button !== 0) return;
 
-        const cell = event.currentTarget;
-        this._startCell = {
-            row: parseInt(cell.dataset.row),
-            col: parseInt(cell.dataset.col),
-            ref: cell.dataset.cellRef
-        };
+    const cell = event.currentTarget;
+    
+    // Check if cell has required dataset properties
+    if (!cell.dataset || !cell.dataset.row || !cell.dataset.col) {
+        window.QRScannerUtils.log.warn('Cell missing dataset properties');
+        return;
+    }
 
-        this._clearSelection();
-        this._clearSelectionHighlight();
-        this._highlightCell(cell, 'range-start');
+    const row = parseInt(cell.dataset.row);
+    const col = parseInt(cell.dataset.col);
+    const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
 
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, this._startCell.ref);
-        
-        // Enable dragging
-        this._isDragging = true;
-    },
+    this._startCell = {
+        row: row,
+        col: col,
+        ref: cellRef
+    };
 
-    _handleCellMouseUp(event) {
-        const cell = event.currentTarget;
-        this._endCell = {
-            row: parseInt(cell.dataset.row),
-            col: parseInt(cell.dataset.col),
-            ref: cell.dataset.cellRef
-        };
+    this._clearSelection();
+    this._clearSelectionHighlight();
+    this._highlightCell(cell, 'range-start');
 
-        window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, this._endCell.ref);
-        
-        if (this._startCell) {
-            this._finalizeSelection();
-        }
-    },
+    window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, this._startCell.ref);
+    
+    // Enable dragging
+    this._isDragging = true;
+},
+
+_handleCellMouseUp(event) {
+    const cell = event.currentTarget;
+    
+    // Check if cell has required dataset properties
+    if (!cell.dataset || !cell.dataset.row || !cell.dataset.col) {
+        window.QRScannerUtils.log.warn('Cell missing dataset properties');
+        return;
+    }
+
+    const row = parseInt(cell.dataset.row);
+    const col = parseInt(cell.dataset.col);
+    const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
+
+    this._endCell = {
+        row: row,
+        col: col,
+        ref: cellRef
+    };
+
+    window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, this._endCell.ref);
+    
+    if (this._startCell) {
+        this._finalizeSelection();
+    }
+},
 
     _handleCellEnter(event) {
         if (!this._isSelecting || !this._startCell) return;
