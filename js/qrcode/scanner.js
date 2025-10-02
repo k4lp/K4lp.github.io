@@ -14,10 +14,12 @@ class QRScanner {
         this.scanResults = [];
         this.scanCount = 0;
         this.matchCount = 0;
+        this.lastScanTime = 0;
         
         this.initializeEventListeners();
         this.loadFromStorage();
-        this.initializeCamera();
+        // Initialize camera after a short delay to ensure DOM is ready
+        setTimeout(() => this.initializeCamera(), 500);
     }
     
     async initializeCamera() {
@@ -29,8 +31,8 @@ class QRScanner {
                 return;
             }
             
-            // Initialize Html5QrCode
-            this.html5QrCode = new Html5Qrcode('video-preview');
+            // Initialize Html5QrCode with proper element ID
+            this.html5QrCode = new Html5Qrcode('qr-reader');
             
             // Get available cameras
             await this.loadCameras();
@@ -103,7 +105,7 @@ class QRScanner {
                 }
                 
                 QRUtils.log.info(`Found ${devices.length} camera(s)`);
-            } else {
+            } else if (cameraSelect) {
                 cameraSelect.innerHTML = '<option value="">No cameras found</option>';
             }
         } catch (error) {
@@ -117,7 +119,7 @@ class QRScanner {
         // Restart scanning if currently active
         if (this.isScanning) {
             this.stopScanning().then(() => {
-                setTimeout(() => this.startScanning(), 500);
+                setTimeout(() => this.startScanning(), 1000);
             });
         }
     }
@@ -136,18 +138,34 @@ class QRScanner {
         try {
             QRUtils.setStatus('Starting camera...', 'loading');
             
-            // Configure scanner
+            // Enhanced configuration for better accuracy and performance
             const config = {
-                fps: 10, // Frames per second
-                qrbox: { width: 300, height: 300 }, // Scanning area
-                aspectRatio: 1.0,
-                disableFlip: false,
+                fps: 30, // Higher FPS for better responsiveness
+                qrbox: { width: 250, height: 250 }, // Optimal scanning box size
+                aspectRatio: 1.0, // Square aspect ratio
+                disableFlip: false, // Allow image flipping
                 experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
+                    useBarCodeDetectorIfSupported: true // Use native barcode detection if available
+                },
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [
+                    Html5QrcodeScanType.SCAN_TYPE_CAMERA
+                ],
+                // Advanced scanning settings for better accuracy
+                videoConstraints: {
+                    facingMode: this.isMobileDevice() ? 'environment' : 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    focusMode: 'continuous',
+                    advanced: [{
+                        focusMode: 'continuous'
+                    }, {
+                        exposureMode: 'continuous'
+                    }]
                 }
             };
             
-            // Start scanning
+            // Start scanning with enhanced error handling
             await this.html5QrCode.start(
                 this.currentCamera,
                 config,
@@ -164,12 +182,22 @@ class QRScanner {
             if (startBtn) startBtn.disabled = true;
             if (stopBtn) stopBtn.disabled = false;
             
-            QRUtils.setStatus('Scanner active', 'success');
+            QRUtils.setStatus('Scanner active - Point camera at QR/barcode', 'success');
             QRUtils.log.success('Camera started successfully');
+            
+            // Add visual feedback for scanning area
+            this.addScanningOverlay();
             
         } catch (error) {
             QRUtils.handleError(error, 'Start Scanning');
             this.isScanning = false;
+            
+            // Reset UI on error
+            const startBtn = QRUtils.$('start-camera');
+            const stopBtn = QRUtils.$('stop-camera');
+            
+            if (startBtn) startBtn.disabled = false;
+            if (stopBtn) stopBtn.disabled = true;
         }
     }
     
@@ -190,15 +218,50 @@ class QRScanner {
             QRUtils.setStatus('Scanner stopped', 'info');
             QRUtils.log.info('Camera stopped');
             
+            // Remove scanning overlay
+            this.removeScanningOverlay();
+            
         } catch (error) {
             QRUtils.handleError(error, 'Stop Scanning');
         }
     }
     
+    addScanningOverlay() {
+        const readerElement = QRUtils.$('qr-reader');
+        if (!readerElement) return;
+        
+        // Add scanning indicator
+        const overlay = document.createElement('div');
+        overlay.id = 'scanning-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-family: var(--font-mono);
+            border-radius: 4px;
+            z-index: 1000;
+        `;
+        overlay.textContent = 'Scanning...';
+        
+        readerElement.style.position = 'relative';
+        readerElement.appendChild(overlay);
+    }
+    
+    removeScanningOverlay() {
+        const overlay = QRUtils.$('scanning-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+    
     onScanSuccess(decodedText, decodedResult) {
-        // Prevent duplicate rapid scans
+        // Prevent duplicate rapid scans with longer debounce for accuracy
         const now = Date.now();
-        if (this.lastScanTime && (now - this.lastScanTime) < 1000) {
+        if (this.lastScanTime && (now - this.lastScanTime) < 2000) {
             return;
         }
         this.lastScanTime = now;
@@ -210,9 +273,20 @@ class QRScanner {
     }
     
     onScanFailure(error) {
-        // Ignore scan failures (normal when no code is in view)
-        // Only log significant errors
-        if (!error.includes('No QR code found')) {
+        // Filter out common non-error messages
+        const ignoredErrors = [
+            'No QR code found',
+            'QR code parse error',
+            'IndexSizeError',
+            'source width is 0',
+            'NotFoundException'
+        ];
+        
+        const shouldIgnore = ignoredErrors.some(ignored => 
+            error.toString().includes(ignored)
+        );
+        
+        if (!shouldIgnore) {
             QRUtils.log.warn('Scan failure:', error);
         }
     }
@@ -236,7 +310,7 @@ class QRScanner {
             matched: !!matchedRow,
             matchedRow: matchedRow || null,
             decodedResult: {
-                format: decodedResult?.decodedText ? 'QR' : 'Unknown',
+                format: decodedResult?.decodedText ? 'QR' : 'Barcode',
                 rawValue: decodedResult?.decodedText || scannedValue
             }
         };
@@ -250,12 +324,18 @@ class QRScanner {
             // Display current match info
             this.displayCurrentMatch(matchedRow, scanRecord);
             
-            QRUtils.setStatus(`Match found! (${this.matchCount}/${this.scanCount})`, 'success');
+            QRUtils.setStatus(`✓ Match found! (${this.matchCount}/${this.scanCount})`, 'success');
             QRUtils.log.success('Match found:', matchedRow);
+            
+            // Provide haptic feedback on mobile
+            this.provideFeedback('success');
         } else {
             this.displayNoMatch(scannedValue);
-            QRUtils.setStatus(`No match found (${this.matchCount}/${this.scanCount})`, 'warning');
+            QRUtils.setStatus(`✗ No match found (${this.matchCount}/${this.scanCount})`, 'warning');
             QRUtils.log.warn('No match for:', scannedValue);
+            
+            // Provide haptic feedback on mobile
+            this.provideFeedback('error');
         }
         
         // Update UI stats
@@ -267,8 +347,42 @@ class QRScanner {
         // Save to storage
         this.saveToStorage();
         
-        // Visual feedback (brief camera pause)
+        // Visual feedback with better timing
         this.showScanFeedback(scanRecord.matched);
+    }
+    
+    provideFeedback(type) {
+        // Haptic feedback on supported devices
+        if (navigator.vibrate) {
+            if (type === 'success') {
+                navigator.vibrate([100, 50, 100]); // Success pattern
+            } else {
+                navigator.vibrate(200); // Error pattern
+            }
+        }
+        
+        // Audio feedback (optional)
+        if (window.AudioContext || window.webkitAudioContext) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(
+                    type === 'success' ? 800 : 400, 
+                    audioContext.currentTime
+                );
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (e) {
+                // Audio feedback not available
+            }
+        }
     }
     
     displayCurrentMatch(matchedRow, scanRecord) {
@@ -279,7 +393,7 @@ class QRScanner {
         if (matchElement) {
             matchElement.innerHTML = `
                 <div class="scan-match success">
-                    <h4>Match Found</h4>
+                    <h4>✓ Match Found</h4>
                     <div class="kv-list">
                         <div class="kv-item">
                             <div class="kv-key">Scanned</div>
@@ -316,7 +430,7 @@ class QRScanner {
         if (matchElement) {
             matchElement.innerHTML = `
                 <div class="scan-match error">
-                    <h4>No Match Found</h4>
+                    <h4>✗ No Match Found</h4>
                     <div class="kv-list">
                         <div class="kv-item">
                             <div class="kv-key">Scanned</div>
@@ -338,11 +452,20 @@ class QRScanner {
     
     showScanFeedback(matched) {
         // Add visual feedback to scanner area
-        const videoElement = QRUtils.$('video-preview');
-        if (videoElement) {
+        const readerElement = QRUtils.$('qr-reader');
+        if (readerElement) {
             const className = matched ? 'scan-success' : 'scan-error';
-            videoElement.classList.add(className);
-            setTimeout(() => videoElement.classList.remove(className), 500);
+            const overlay = QRUtils.$('scanning-overlay');
+            
+            if (overlay) {
+                overlay.style.background = matched ? 'rgba(76, 175, 80, 0.9)' : 'rgba(244, 67, 54, 0.9)';
+                overlay.textContent = matched ? '✓ Match Found!' : '✗ No Match';
+                
+                setTimeout(() => {
+                    overlay.style.background = 'rgba(0, 0, 0, 0.8)';
+                    overlay.textContent = 'Scanning...';
+                }, 1500);
+            }
         }
     }
     
@@ -493,6 +616,11 @@ class QRScanner {
         }
     }
     
+    // Helper method to detect mobile devices
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
     // Storage methods
     saveToStorage() {
         const data = {
@@ -551,6 +679,7 @@ class QRScanner {
         this.matchCount = 0;
         this.columnMapping = null;
         this.rangeData = null;
+        this.lastScanTime = 0;
         
         // Reset UI
         this.updateScanStats();
@@ -562,6 +691,15 @@ class QRScanner {
         }
         
         QRUtils.hide('serial-display');
+        
+        // Reset camera selection to first available
+        if (this.cameras.length > 0) {
+            const cameraSelect = QRUtils.$('camera-select');
+            if (cameraSelect) {
+                cameraSelect.selectedIndex = 0;
+                this.currentCamera = this.cameras[0].id;
+            }
+        }
         
         QRUtils.log.info('Scanner reset');
     }
