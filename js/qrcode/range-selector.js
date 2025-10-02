@@ -1,5 +1,5 @@
 /**
- * QR Code Component Scanner - Range Selector (Enhanced & Robust)
+ * QR Code Component Scanner - Range Selector (Enhanced with Click-to-Select)
  * Alica Technologies
  */
 
@@ -12,14 +12,298 @@ window.QRScannerRangeSelector = {
     _isDragging: false,
     _touchStarted: false,
     _lastTouchCell: null,
-
+    
+    // NEW: Click-to-select state management
+    _clickSelectionMode: false,
+    _firstClickCell: null,
+    _isWaitingForSecondClick: false,
+    _clickTimeout: null,
+    _clickSelectionTimeoutDuration: 15000, // 15 seconds timeout
+    
     /**
      * Initialize range selector
      */
     init() {
         this._bindEvents();
         this._setupTouchSupport();
-        window.QRScannerUtils.log.debug('Range selector initialized with enhanced touch support');
+        this._setupClickSelectionToggle();
+        window.QRScannerUtils.log.debug('Range selector initialized with enhanced touch support and click-to-select');
+    },
+    
+    /**
+     * NEW: Setup click selection mode toggle and UI
+     */
+    _setupClickSelectionToggle() {
+        // Create toggle button container
+        const controlsContainer = this._getOrCreateControlsContainer();
+        
+        // Add toggle button
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'click-selection-toggle';
+        toggleBtn.textContent = '📍 Enable Click Selection';
+        toggleBtn.className = 'btn btn-outline-secondary btn-sm me-2';
+        toggleBtn.title = 'Toggle between drag selection and click selection modes';
+        toggleBtn.style.cssText = 'transition: all 0.3s ease; font-size: 12px;';
+        
+        // Add toggle functionality
+        toggleBtn.addEventListener('click', this._toggleClickSelectionMode.bind(this));
+        
+        // Add visual indicator for click selection mode
+        const indicator = document.createElement('div');
+        indicator.id = 'click-selection-indicator';
+        indicator.style.cssText = `
+            display: none; 
+            padding: 8px 12px; 
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); 
+            border: 1px solid #2196f3; 
+            border-radius: 6px; 
+            margin: 8px 0; 
+            font-size: 13px; 
+            color: #1565c0;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
+        `;
+        indicator.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">📍</span>
+                <div>
+                    <div><strong>Click Selection Mode Active</strong></div>
+                    <div style="font-size: 11px; opacity: 0.8;">
+                        1. Click on the first cell → 2. Click on the second cell → Range selected
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add to controls container
+        controlsContainer.appendChild(toggleBtn);
+        controlsContainer.appendChild(indicator);
+        
+        // Add mode information panel
+        this._createModeInfoPanel(controlsContainer);
+    },
+    
+    /**
+     * NEW: Get or create controls container
+     */
+    _getOrCreateControlsContainer() {
+        let container = document.getElementById('range-selection-controls');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'range-selection-controls';
+            container.style.cssText = 'margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;';
+            
+            // Find the best insertion point
+            const confirmBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE);
+            if (confirmBtn && confirmBtn.parentNode) {
+                confirmBtn.parentNode.insertBefore(container, confirmBtn.parentNode.firstChild);
+            }
+        }
+        return container;
+    },
+    
+    /**
+     * NEW: Create mode information panel
+     */
+    _createModeInfoPanel(parent) {
+        const infoPanel = document.createElement('div');
+        infoPanel.id = 'selection-mode-info';
+        infoPanel.style.cssText = `
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #856404;
+        `;
+        infoPanel.innerHTML = `
+            <div><strong>Selection Modes:</strong></div>
+            <div style="margin-top: 4px;">
+                <div>• <strong>Drag Mode:</strong> Click and drag to select range</div>
+                <div>• <strong>Click Mode:</strong> Click two cells to define range corners</div>
+            </div>
+        `;
+        parent.appendChild(infoPanel);
+    },
+    
+    /**
+     * NEW: Toggle click selection mode
+     */
+    _toggleClickSelectionMode() {
+        this._clickSelectionMode = !this._clickSelectionMode;
+        const toggleBtn = document.getElementById('click-selection-toggle');
+        const indicator = document.getElementById('click-selection-indicator');
+        
+        if (this._clickSelectionMode) {
+            // Enable click selection mode
+            toggleBtn.textContent = '🖱️ Disable Click Selection';
+            toggleBtn.className = 'btn btn-primary btn-sm me-2';
+            toggleBtn.style.fontWeight = 'bold';
+            
+            if (indicator) {
+                indicator.style.display = 'block';
+            }
+            
+            // Reset any active selection state
+            this._resetClickSelection();
+            this._clearSelectionHighlight();
+            
+            window.QRScannerUtils.log.debug('Click selection mode enabled');
+            this._showTemporaryMessage('Click selection mode enabled. Click two cells to select range.', 'success');
+            
+        } else {
+            // Disable click selection mode
+            toggleBtn.textContent = '📍 Enable Click Selection';
+            toggleBtn.className = 'btn btn-outline-secondary btn-sm me-2';
+            toggleBtn.style.fontWeight = 'normal';
+            
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+            
+            // Reset click selection state
+            this._resetClickSelection();
+            
+            window.QRScannerUtils.log.debug('Click selection mode disabled');
+            this._showTemporaryMessage('Drag selection mode enabled. Click and drag to select range.', 'info');
+        }
+    },
+    
+    /**
+     * NEW: Show temporary message
+     */
+    _showTemporaryMessage(message, type = 'info') {
+        const existingMsg = document.getElementById('temp-selection-message');
+        if (existingMsg) {
+            existingMsg.remove();
+        }
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.id = 'temp-selection-message';
+        
+        const bgColor = type === 'success' ? '#d4edda' : type === 'warning' ? '#fff3cd' : '#d1ecf1';
+        const borderColor = type === 'success' ? '#c3e6cb' : type === 'warning' ? '#ffeaa7' : '#bee5eb';
+        const textColor = type === 'success' ? '#155724' : type === 'warning' ? '#856404' : '#0c5460';
+        
+        msgDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            padding: 12px 16px;
+            background-color: ${bgColor};
+            border: 1px solid ${borderColor};
+            border-radius: 6px;
+            color: ${textColor};
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 350px;
+            animation: slideInRight 0.3s ease-out;
+        `;
+        
+        msgDiv.textContent = message;
+        document.body.appendChild(msgDiv);
+        
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            if (msgDiv.parentNode) {
+                msgDiv.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => msgDiv.remove(), 300);
+            }
+        }, 4000);
+    },
+    
+    /**
+     * NEW: Reset click selection state
+     */
+    _resetClickSelection() {
+        this._firstClickCell = null;
+        this._isWaitingForSecondClick = false;
+        
+        if (this._clickTimeout) {
+            clearTimeout(this._clickTimeout);
+            this._clickTimeout = null;
+        }
+        
+        this._clearFirstClickHighlight();
+        this._updateClickSelectionStatus();
+    },
+    
+    /**
+     * NEW: Clear first click highlighting
+     */
+    _clearFirstClickHighlight() {
+        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+        if (!container) return;
+        
+        const cells = container.querySelectorAll('td.first-click, td.click-pending');
+        cells.forEach(cell => {
+            cell.classList.remove('first-click', 'click-pending');
+            if (!cell.classList.contains('cell-selected')) {
+                cell.style.backgroundColor = '';
+                cell.style.color = '';
+                cell.style.border = '1px solid #dee2e6';
+            }
+        });
+    },
+    
+    /**
+     * NEW: Update click selection status display
+     */
+    _updateClickSelectionStatus() {
+        let statusDiv = document.getElementById('click-selection-status');
+        
+        if (!this._clickSelectionMode) {
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+            return;
+        }
+        
+        if (!statusDiv) {
+            statusDiv = document.createElement('div');
+            statusDiv.id = 'click-selection-status';
+            statusDiv.style.cssText = `
+                position: sticky;
+                top: 0;
+                z-index: 15;
+                padding: 6px 12px;
+                background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
+                border: 1px solid #ffb74d;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #e65100;
+                text-align: center;
+                margin-bottom: 8px;
+            `;
+            
+            const tableContainer = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+            if (tableContainer && tableContainer.parentNode) {
+                tableContainer.parentNode.insertBefore(statusDiv, tableContainer);
+            }
+        }
+        
+        if (this._isWaitingForSecondClick && this._firstClickCell) {
+            statusDiv.innerHTML = `
+                <span style="font-size: 14px;">⏳</span> 
+                First cell selected: <strong>${this._firstClickCell.ref}</strong> 
+                → Click second cell to complete range selection
+            `;
+            statusDiv.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #a5d6a7 100%)';
+            statusDiv.style.borderColor = '#81c784';
+            statusDiv.style.color = '#2e7d32';
+        } else {
+            statusDiv.innerHTML = `
+                <span style="font-size: 14px;">📍</span> 
+                Click Selection Mode: Click on first cell to start
+            `;
+            statusDiv.style.background = 'linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%)';
+            statusDiv.style.borderColor = '#ffb74d';
+            statusDiv.style.color = '#e65100';
+        }
     },
 
     /**
@@ -219,6 +503,9 @@ window.QRScannerRangeSelector = {
             container.style.border = '1px solid #e0e0e0';
             container.style.borderRadius = '4px';
 
+            // Update click selection status if in click mode
+            this._updateClickSelectionStatus();
+
             window.QRScannerUtils.log.debug('Selectable table created successfully');
         } catch (error) {
             window.QRScannerUtils.log.error('Error creating selectable table:', error);
@@ -232,7 +519,7 @@ window.QRScannerRangeSelector = {
     _showNoDataMessage() {
         const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
         if (container) {
-            container.innerHTML = `<div class="alert">No data available. Please select a sheet first.</div>`;
+            container.innerHTML = `<div style="text-align: center; padding: 40px; color: #666;">No data available. Please select a sheet first.</div>`;
         }
     },
 
@@ -242,7 +529,7 @@ window.QRScannerRangeSelector = {
     _showErrorMessage(message) {
         const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
         if (container) {
-            container.innerHTML = `<div class="alert" style="color: #ef4444;">${message}</div>`;
+            container.innerHTML = `<div style="text-align: center; padding: 40px; color: #d32f2f; background-color: #ffebee; border-radius: 4px;">${message}</div>`;
         }
     },
 
@@ -367,15 +654,23 @@ window.QRScannerRangeSelector = {
         cell.addEventListener('touchmove', this._handleCellTouchMove.bind(this), { passive: false });
         cell.addEventListener('touchend', this._handleCellTouchEnd.bind(this), { passive: false });
 
-        // Hover effects (mouse only)
+        // Hover effects (mouse only) - enhanced for click selection mode
         cell.addEventListener('mouseenter', () => {
-            if (!cell.classList.contains('cell-selected')) {
-                cell.style.backgroundColor = '#f0f0f0';
+            if (!cell.classList.contains('cell-selected') && 
+                !cell.classList.contains('first-click') && 
+                !cell.classList.contains('click-pending')) {
+                if (this._clickSelectionMode && this._isWaitingForSecondClick) {
+                    cell.style.backgroundColor = '#e8f5e8'; // Light green hover in click mode
+                } else {
+                    cell.style.backgroundColor = '#f0f0f0'; // Standard hover
+                }
             }
         });
         
         cell.addEventListener('mouseleave', () => {
-            if (!cell.classList.contains('cell-selected')) {
+            if (!cell.classList.contains('cell-selected') && 
+                !cell.classList.contains('first-click') && 
+                !cell.classList.contains('click-pending')) {
                 cell.style.backgroundColor = '';
             }
         });
@@ -469,11 +764,15 @@ window.QRScannerRangeSelector = {
         if (!event || event.button !== 0) return;
 
         event.preventDefault();
-        this._isSelecting = true;
-        this._isDragging = false;
+        
+        // Don't start drag selection if in click selection mode
+        if (!this._clickSelectionMode) {
+            this._isSelecting = true;
+            this._isDragging = false;
 
-        // Add global mouse up listener
-        document.addEventListener('mouseup', this._handleGlobalMouseUp.bind(this), { once: true });
+            // Add global mouse up listener
+            document.addEventListener('mouseup', this._handleGlobalMouseUp.bind(this), { once: true });
+        }
     },
 
     _handleGlobalMouseUp(event) {
@@ -490,7 +789,9 @@ window.QRScannerRangeSelector = {
         }
     },
 
-    // FIXED: Corrected order of operations to prevent null reference
+    /**
+     * ENHANCED: Handle cell mouse down with click selection support
+     */
     _handleCellMouseDown(event) {
         if (!event || event.button !== 0) return;
 
@@ -532,8 +833,14 @@ window.QRScannerRangeSelector = {
             }
         }
 
-        // CRITICAL FIX: Clear selection FIRST, then set new startCell
-        this._clearSelectionHighlight(); // Only clear visual highlighting
+        // NEW: Handle click selection mode
+        if (this._clickSelectionMode) {
+            this._handleClickSelection(cell, row, col, cellRef);
+            return; // Don't proceed with drag selection
+        }
+
+        // Existing drag selection logic
+        this._clearSelectionHighlight();
         
         // Set new startCell AFTER clearing highlights but BEFORE accessing .ref
         this._startCell = {
@@ -557,10 +864,152 @@ window.QRScannerRangeSelector = {
         this._isDragging = true;
     },
 
+    /**
+     * NEW: Handle click selection logic
+     * @param {HTMLElement} cell - The clicked cell
+     * @param {number} row - Row number
+     * @param {number} col - Column number
+     * @param {string} cellRef - Cell reference (e.g., A1)
+     */
+    _handleClickSelection(cell, row, col, cellRef) {
+        if (!this._isWaitingForSecondClick) {
+            // First click
+            this._firstClickCell = {
+                row: row,
+                col: col,
+                ref: cellRef,
+                element: cell
+            };
+            
+            this._isWaitingForSecondClick = true;
+            
+            // Clear previous selection and highlight first cell
+            this._clearSelectionHighlight();
+            this._highlightCell(cell, 'first-click');
+            
+            // Update start cell input
+            const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
+            if (startInput) {
+                window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, cellRef);
+            }
+            
+            // Clear end cell input
+            const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
+            if (endInput) {
+                window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, '');
+            }
+            
+            // Set timeout to reset if second click doesn't happen
+            this._clickTimeout = setTimeout(() => {
+                this._resetClickSelection();
+                this._showTemporaryMessage('Click selection timed out. Please try again.', 'warning');
+                window.QRScannerUtils.log.debug('Click selection timeout - reset');
+            }, this._clickSelectionTimeoutDuration);
+            
+            // Update status display
+            this._updateClickSelectionStatus();
+            
+            window.QRScannerUtils.log.debug('First cell selected for click selection:', cellRef);
+            
+        } else {
+            // Second click
+            clearTimeout(this._clickTimeout);
+            this._clickTimeout = null;
+            
+            // Check if clicking the same cell (deselect)
+            if (this._firstClickCell && 
+                this._firstClickCell.row === row && 
+                this._firstClickCell.col === col) {
+                this._resetClickSelection();
+                this._showTemporaryMessage('Selection cancelled. Click a different cell to create a range.', 'info');
+                return;
+            }
+            
+            // Set range from first click to second click
+            this._startCell = this._firstClickCell;
+            this._endCell = {
+                row: row,
+                col: col,
+                ref: cellRef
+            };
+            
+            // Create selection range
+            this._createClickSelectionRange();
+            
+            // Reset click selection state
+            this._resetClickSelection();
+            
+            this._showTemporaryMessage(`Range selected: ${this._startCell.ref}:${this._endCell.ref}`, 'success');
+            window.QRScannerUtils.log.debug('Click selection completed:', this._startCell.ref, 'to', this._endCell.ref);
+        }
+    },
+
+    /**
+     * NEW: Create selection range from click selection
+     */
+    _createClickSelectionRange() {
+        if (!this._startCell || !this._endCell) return;
+        
+        const minRow = Math.min(this._startCell.row, this._endCell.row);
+        const maxRow = Math.max(this._startCell.row, this._endCell.row);
+        const minCol = Math.min(this._startCell.col, this._endCell.col);
+        const maxCol = Math.max(this._startCell.col, this._endCell.col);
+        
+        // Clear all highlights first
+        this._clearSelectionHighlight();
+        
+        // Highlight the selected range
+        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+        if (!container) return;
+        
+        const table = container.querySelector('table');
+        if (!table) return;
+        
+        const cells = table.querySelectorAll('td[data-row][data-col]');
+        cells.forEach(cell => {
+            if (!this._isValidCell(cell)) return;
+            
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            
+            if (!isNaN(row) && !isNaN(col) && 
+                row >= minRow && row <= maxRow && 
+                col >= minCol && col <= maxCol) {
+                this._highlightCell(cell, 'cell-selected');
+            }
+        });
+        
+        // Update inputs and finalize selection
+        const startRef = window.QRScannerUtils.excel.getCellRef(minRow, minCol);
+        const endRef = window.QRScannerUtils.excel.getCellRef(maxRow, maxCol);
+        
+        const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
+        const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
+        
+        if (startInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, startRef);
+        }
+        if (endInput) {
+            window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, endRef);
+        }
+        
+        // Update internal range state
+        this._startCell = { row: minRow, col: minCol, ref: startRef };
+        this._endCell = { row: maxRow, col: maxCol, ref: endRef };
+        
+        // Finalize the selection
+        this._finalizeSelection();
+    },
+
     _handleCellMouseUp(event) {
         if (!event) return;
 
         const cell = event.currentTarget;
+        
+        // In click selection mode, mouse up is handled differently
+        if (this._clickSelectionMode) {
+            return;
+        }
         
         // Robust validation
         if (!this._isValidCell(cell)) {
@@ -616,6 +1065,9 @@ window.QRScannerRangeSelector = {
 
     _handleCellEnter(event) {
         if (!event || !this._isSelecting || !this._startCell) return;
+        
+        // Skip if in click selection mode
+        if (this._clickSelectionMode) return;
 
         const cell = event.currentTarget;
         
@@ -721,7 +1173,7 @@ window.QRScannerRangeSelector = {
         if (!infoDiv) {
             infoDiv = document.createElement('div');
             infoDiv.id = 'selectionInfo';
-            infoDiv.style.cssText = 'padding: 10px; background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; margin-top: 10px;';
+            infoDiv.style.cssText = 'padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 1px solid #2196f3; border-radius: 6px; margin-top: 10px; box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);';
             
             const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
             if (container && container.parentNode) {
@@ -730,10 +1182,16 @@ window.QRScannerRangeSelector = {
         }
         
         infoDiv.innerHTML = `
-            <strong>Selection:</strong> ${range.startRef}:${range.endRef} 
-            <span style="margin-left: 20px;"><strong>Cells:</strong> ${cellCount}</span>
-            <span style="margin-left: 20px;"><strong>Rows:</strong> ${range.endRow - range.startRow + 1}</span>
-            <span style="margin-left: 20px;"><strong>Columns:</strong> ${range.endCol - range.startCol + 1}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div style="font-weight: 600; color: #1565c0; font-size: 14px;">
+                    📊 Selection: ${range.startRef}:${range.endRef}
+                </div>
+                <div style="display: flex; gap: 20px; font-size: 13px; color: #1976d2;">
+                    <div><strong>${cellCount}</strong> cells</div>
+                    <div><strong>${range.endRow - range.startRow + 1}</strong> rows</div>
+                    <div><strong>${range.endCol - range.startCol + 1}</strong> columns</div>
+                </div>
+            </div>
         `;
     },
 
@@ -759,11 +1217,12 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Handle clear range button
+     * ENHANCED: Handle clear range button
      */
     _handleClearRange() {
         this._clearSelection();
         this._clearSelectionHighlight();
+        this._resetClickSelection(); // NEW: Also reset click selection state
 
         const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
         const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
@@ -793,7 +1252,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Clear selection state (MODIFIED to not interfere with active selection)
+     * ENHANCED: Clear selection state
      */
     _clearSelection() {
         this._startCell = null;
@@ -803,10 +1262,13 @@ window.QRScannerRangeSelector = {
         this._isDragging = false;
         this._touchStarted = false;
         this._lastTouchCell = null;
+        
+        // NEW: Also clear click selection state
+        this._resetClickSelection();
     },
 
     /**
-     * Clear selection highlighting
+     * ENHANCED: Clear selection highlighting including click selection classes
      */
     _clearSelectionHighlight() {
         const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
@@ -818,15 +1280,20 @@ window.QRScannerRangeSelector = {
         const cells = table.querySelectorAll('td, th');
         cells.forEach(cell => {
             if (!cell) return;
-            cell.classList.remove('cell-selected', 'range-start', 'range-end');
+            
+            // Remove all selection classes including new ones
+            cell.classList.remove('cell-selected', 'range-start', 'range-end', 'first-click', 'click-pending');
+            
             if (cell.tagName === 'TD') {
                 cell.style.backgroundColor = '';
+                cell.style.color = '';
+                cell.style.border = '1px solid #dee2e6';
             }
         });
     },
 
     /**
-     * Highlight cell with specific class
+     * ENHANCED: Highlight cell with specific class including new click selection classes
      * @param {HTMLElement} cell - Cell element
      * @param {string} className - CSS class to add
      */
@@ -837,12 +1304,27 @@ window.QRScannerRangeSelector = {
         
         if (className === 'cell-selected') {
             cell.style.backgroundColor = '#bbdefb';
+            cell.style.color = '';
+            cell.style.border = '1px solid #2196f3';
         } else if (className === 'range-start') {
             cell.style.backgroundColor = '#4caf50';
             cell.style.color = 'white';
+            cell.style.border = '2px solid #388e3c';
         } else if (className === 'range-end') {
             cell.style.backgroundColor = '#2196f3';
             cell.style.color = 'white';
+            cell.style.border = '2px solid #1976d2';
+        } else if (className === 'first-click') {
+            // NEW: Orange highlighting for first click in click selection mode
+            cell.style.backgroundColor = '#ff9800';
+            cell.style.color = 'white';
+            cell.style.border = '2px solid #f57c00';
+            cell.style.boxShadow = '0 0 8px rgba(255, 152, 0, 0.5)';
+        } else if (className === 'click-pending') {
+            // NEW: Subtle highlighting for pending second click
+            cell.style.backgroundColor = '#fff3e0';
+            cell.style.color = '#e65100';
+            cell.style.border = '1px dashed #ffb74d';
         }
     },
 
@@ -856,6 +1338,66 @@ window.QRScannerRangeSelector = {
         }, 300);
     }
 };
+
+// Add required CSS animations for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    /* Enhanced cell selection styles */
+    .selectable-table td.first-click {
+        animation: pulse 1.5s ease-in-out infinite alternate;
+    }
+    
+    @keyframes pulse {
+        from {
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+        to {
+            box-shadow: 0 0 16px rgba(255, 152, 0, 0.8);
+        }
+    }
+    
+    .selectable-table td.cell-selected {
+        transition: all 0.2s ease;
+    }
+    
+    .selectable-table td.click-pending {
+        transition: all 0.3s ease;
+    }
+    
+    /* Touch device enhancements */
+    .touch-device .selectable-table td {
+        min-height: 44px;
+        padding: 12px 8px;
+    }
+    
+    .touch-device #click-selection-toggle {
+        min-height: 44px;
+        padding: 10px 16px;
+    }
+`;
+document.head.appendChild(style);
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
