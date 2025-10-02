@@ -1,435 +1,763 @@
 /**
- * Main Application Controller
- * Orchestrates the QR Code Component Scanner workflow
+ * QR Code Component Scanner - Main Application
+ * Professional-grade application orchestration and workflow management
+ * 
+ * Handles:
+ * - Application initialization and lifecycle
+ * - Step-by-step workflow coordination
+ * - Module integration and communication
+ * - Error boundary and recovery
+ * - Performance monitoring
+ * - User experience optimization
  */
 
-class QRCodeApp {
+class QRScannerApp {
     constructor() {
         this.currentStep = 1;
-        this.isInitialized = false;
+        this.totalSteps = 5;
+        this.modules = {
+            excelProcessor: null,
+            rangeSelector: null,
+            columnMapper: null,
+            qrScanner: null
+        };
+        this.appState = {
+            initialized: false,
+            hasData: false,
+            hasMapping: false,
+            isScanning: false
+        };
+        this.performanceMetrics = {
+            initTime: null,
+            loadTime: null,
+            scanStartTime: null
+        };
         
-        this.initializeApp();
+        // Application lifecycle
+        this.initialize();
     }
     
-    async initializeApp() {
+    async initialize() {
+        const startTime = performance.now();
+        
         try {
-            QRUtils.log.info('Initializing QR Code Component Scanner...');
+            QRUtils.log.info('🔍 QR Code Component Scanner');
+            QRUtils.log.info('Initializing application...');
             
-            // Wait for DOM to be ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => this.setup());
-            } else {
-                this.setup();
-            }
+            // Initialize utilities and check environment
+            this.checkEnvironment();
+            
+            // Load previous session if available
+            this.loadSession();
+            
+            // Initialize UI components
+            this.initializeUI();
+            
+            // Set up global event handlers
+            this.setupGlobalEventHandlers();
+            
+            // Initialize modules
+            await this.initializeModules();
+            
+            // Set initial state
+            this.appState.initialized = true;
+            this.performanceMetrics.initTime = performance.now() - startTime;
+            
+            QRUtils.setStatus('Application ready', 'success');
+            QRUtils.log.success(`✓ Application initialized in ${this.performanceMetrics.initTime.toFixed(2)}ms`);
+            
+            // Show startup message
+            this.showStartupMessage();
             
         } catch (error) {
             QRUtils.handleError(error, 'Application Initialization');
+            this.handleCriticalError(error);
         }
     }
     
-    async setup() {
-        // Check for required dependencies
-        if (!this.checkDependencies()) {
-            return;
-        }
-        
-        // Initialize event listeners
-        this.setupGlobalEventListeners();
-        
-        // Load previous session if available
-        await this.loadPreviousSession();
-        
-        // Set initial state
-        this.updateStepVisibility();
-        
-        this.isInitialized = true;
-        QRUtils.setStatus('Application ready', 'success');
-        QRUtils.log.success('QR Code Component Scanner initialized successfully');
-    }
-    
-    checkDependencies() {
-        const required = {
-            'XLSX': 'SheetJS library for Excel processing',
-            'Html5Qrcode': 'HTML5 QR Code library for scanning',
-            'QRUtils': 'Utility functions',
-            'excelProcessor': 'Excel processing module',
-            'rangeSelector': 'Range selection module',
-            'columnMapper': 'Column mapping module',
-            'qrScanner': 'QR scanner module'
+    checkEnvironment() {
+        const checks = {
+            'Secure Context': window.isSecureContext,
+            'Local Storage': typeof Storage !== 'undefined',
+            'Media Devices': !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+            'File API': !!(window.File && window.FileReader),
+            'Canvas Support': !!document.createElement('canvas').getContext,
+            'Web Workers': typeof Worker !== 'undefined'
         };
         
-        const missing = [];
+        const failedChecks = Object.entries(checks)
+            .filter(([name, supported]) => !supported)
+            .map(([name]) => name);
         
-        Object.entries(required).forEach(([dependency, description]) => {
-            if (typeof window[dependency] === 'undefined') {
-                missing.push(`${dependency} (${description})`);
+        if (failedChecks.length > 0) {
+            QRUtils.log.warn('Environment checks failed:', failedChecks);
+            
+            // Show warnings but don't block initialization
+            if (failedChecks.includes('Secure Context')) {
+                this.showSecurityWarning();
             }
-        });
-        
-        if (missing.length > 0) {
-            const errorMsg = `Missing dependencies: ${missing.join(', ')}`;
-            QRUtils.handleError(new Error(errorMsg), 'Dependency Check');
-            return false;
         }
         
-        return true;
+        QRUtils.log.info('Environment checks completed');
     }
     
-    setupGlobalEventListeners() {
-        // Clear session button
-        const clearSessionBtn = QRUtils.$('clear-session-btn');
-        if (clearSessionBtn) {
-            clearSessionBtn.addEventListener('click', this.clearSession.bind(this));
+    showSecurityWarning() {
+        const warning = document.createElement('div');
+        warning.className = 'alert alert-warning';
+        warning.innerHTML = `
+            <div class="alert-title">Security Warning</div>
+            Camera access requires HTTPS. Some features may not work on HTTP.
+            <br><strong>Recommendation:</strong> Use HTTPS or localhost for full functionality.
+        `;
+        
+        const firstSection = document.querySelector('.section');
+        if (firstSection) {
+            firstSection.parentNode.insertBefore(warning, firstSection);
         }
+    }
+    
+    initializeUI() {
+        // Set initial step indicator
+        this.updateStepIndicator();
         
-        // Keyboard shortcuts
-        document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
+        // Set up step navigation
+        this.setupStepNavigation();
         
-        // Window events
-        window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
-        window.addEventListener('resize', QRUtils.debounce(this.handleResize.bind(this), 250));
+        // Initialize tooltips and help text
+        this.initializeTooltips();
         
-        // Storage events (for multi-tab synchronization)
-        window.addEventListener('storage', this.handleStorageChange.bind(this));
+        // Set up responsive behavior
+        this.setupResponsiveBehavior();
         
-        // Error handling
+        QRUtils.log.info('UI components initialized');
+    }
+    
+    setupStepNavigation() {
+        // Add step progress indicator
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'progress-container hidden';
+        progressContainer.id = 'step-progress';
+        progressContainer.innerHTML = `
+            <div class="progress-text">Step Progress</div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        `;
+        
+        const header = document.querySelector('header');
+        if (header) {
+            header.appendChild(progressContainer);
+        }
+    }
+    
+    updateStepIndicator() {
+        QRUtils.setStep(this.currentStep, this.totalSteps);
+        
+        // Update progress bar
+        const progressBar = QRUtils.$('progress-bar');
+        if (progressBar) {
+            const progress = (this.currentStep / this.totalSteps) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+    }
+    
+    initializeTooltips() {
+        // Add keyboard shortcut tooltips
+        const buttons = document.querySelectorAll('button[id]');
+        buttons.forEach(button => {
+            const shortcuts = {
+                'start-camera': 'Ctrl+S',
+                'stop-camera': 'Escape',
+                'export-excel': 'Ctrl+E',
+                'manual-entry': 'Ctrl+M'
+            };
+            
+            const shortcut = shortcuts[button.id];
+            if (shortcut) {
+                const originalTitle = button.title || button.textContent;
+                button.title = `${originalTitle} (${shortcut})`;
+            }
+        });
+    }
+    
+    setupResponsiveBehavior() {
+        // Handle orientation changes on mobile
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.handleOrientationChange();
+            }, 500);
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', 
+            QRUtils.debounce(this.handleWindowResize.bind(this), 250)
+        );
+    }
+    
+    handleOrientationChange() {
+        QRUtils.log.info('Orientation changed');
+        
+        // Restart scanner if active to adjust to new orientation
+        if (this.appState.isScanning && this.modules.qrScanner) {
+            setTimeout(async () => {
+                await this.modules.qrScanner.stopScanning();
+                setTimeout(() => {
+                    this.modules.qrScanner.startScanning();
+                }, 1000);
+            }, 500);
+        }
+    }
+    
+    handleWindowResize() {
+        // Adjust scanner dimensions if needed
+        const scannerContainer = QRUtils.$('scanner-container');
+        if (scannerContainer) {
+            // Trigger any necessary UI adjustments
+            scannerContainer.style.height = 'auto';
+        }
+    }
+    
+    setupGlobalEventHandlers() {
+        // Global error handler
         window.addEventListener('error', this.handleGlobalError.bind(this));
         window.addEventListener('unhandledrejection', this.handleUnhandledRejection.bind(this));
         
-        // Add reset functionality
-        this.addResetFunctionality();
-    }
-    
-    async clearSession() {
-        if (!confirm('Clear the current session? This will remove all loaded data and scan results.')) {
-            return;
+        // Visibility change handler
+        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+        
+        // Page unload handler
+        window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+        
+        // Clear session button
+        const clearBtn = QRUtils.$('clear-session-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', this.clearSession.bind(this));
         }
         
-        try {
-            QRUtils.setStatus('Clearing session...', 'loading');
-            
-            // Stop scanner if active
-            if (window.qrScanner?.isScanning) {
-                await window.qrScanner.stopScanning();
-            }
-            
-            // Reset all modules but keep them initialized
-            if (window.excelProcessor) window.excelProcessor.reset();
-            if (window.rangeSelector) window.rangeSelector.reset();
-            if (window.columnMapper) window.columnMapper.reset();
-            if (window.qrScanner) window.qrScanner.reset();
-            
-            // Clear storage
-            QRUtils.storage.clear();
-            
-            // Reset app state
-            this.currentStep = 1;
-            QRUtils.setStep(1);
-            
-            // Hide all steps except first
-            for (let i = 2; i <= 5; i++) {
-                QRUtils.hide(`step-${i}`);
-            }
-            QRUtils.hide('scan-records-section');
-            
-            // Clear any error messages
-            document.querySelectorAll('.alert-error, .alert-warning').forEach(el => el.remove());
-            
-            QRUtils.setStatus('Session cleared successfully', 'success');
-            QRUtils.showSuccess('Session cleared - ready to start fresh');
-            QRUtils.log.success('Session cleared successfully');
-            
-        } catch (error) {
-            QRUtils.handleError(error, 'Clear Session');
-        }
-    }
-    
-    handleKeyboardShortcuts(event) {
-        // Ctrl/Cmd + R: Reset application
-        if ((event.ctrlKey || event.metaKey) && event.key === 'r' && event.shiftKey) {
-            event.preventDefault();
-            this.resetApplication();
-            return;
-        }
-        
-        // Ctrl/Cmd + Delete: Clear session
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Delete') {
-            event.preventDefault();
-            this.clearSession();
-            return;
-        }
-        
-        // ESC: Stop scanning if active
-        if (event.key === 'Escape' && window.qrScanner?.isScanning) {
-            event.preventDefault();
-            window.qrScanner.stopScanning();
-            return;
-        }
-        
-        // Space: Start/stop scanning (when on scanner step)
-        if (event.code === 'Space' && this.currentStep === 5) {
-            event.preventDefault();
-            const startBtn = QRUtils.$('start-camera');
-            const stopBtn = QRUtils.$('stop-camera');
-            
-            if (window.qrScanner?.isScanning) {
-                if (stopBtn && !stopBtn.disabled) stopBtn.click();
-            } else {
-                if (startBtn && !startBtn.disabled) startBtn.click();
-            }
-            return;
-        }
-    }
-    
-    handleBeforeUnload(event) {
-        // Save current state before closing
-        this.saveCurrentState();
-        
-        // Warn if scanning is active
-        if (window.qrScanner?.isScanning) {
-            event.preventDefault();
-            event.returnValue = 'Scanner is active. Are you sure you want to leave?';
-            return event.returnValue;
-        }
-    }
-    
-    handleResize() {
-        // Handle responsive adjustments if needed
-        if (window.qrScanner?.isScanning) {
-            QRUtils.log.info('Window resized while scanning');
-        }
-    }
-    
-    handleStorageChange(event) {
-        // Handle changes from other tabs/windows
-        if (event.key && event.key.startsWith('qr_scanner_')) {
-            QRUtils.log.info('Storage changed from another tab:', event.key);
-        }
+        QRUtils.log.info('Global event handlers set up');
     }
     
     handleGlobalError(event) {
         QRUtils.log.error('Global error:', event.error);
-        QRUtils.setStatus('An error occurred', 'error');
+        
+        // Don't interfere with module-specific error handling
+        if (event.error?.context !== 'module-handled') {
+            QRUtils.setStatus('Application error occurred', 'error');
+        }
     }
     
     handleUnhandledRejection(event) {
         QRUtils.log.error('Unhandled promise rejection:', event.reason);
-        QRUtils.setStatus('An error occurred', 'error');
+        QRUtils.setStatus('Promise rejection error', 'error');
+        event.preventDefault(); // Prevent console error
     }
     
-    addResetFunctionality() {
-        // Add hidden reset button (accessible via keyboard shortcut)
-        const resetBtn = document.createElement('button');
-        resetBtn.id = 'hidden-reset-btn';
-        resetBtn.style.display = 'none';
-        resetBtn.onclick = () => this.resetApplication();
-        document.body.appendChild(resetBtn);
-        
-        // Add to footer for mobile users
-        const footer = document.querySelector('footer');
-        if (footer) {
-            const resetContainer = document.createElement('div');
-            resetContainer.innerHTML = `
-                <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--color-gray-200);">
-                    <button class="btn btn-ghost btn-sm" onclick="window.qrApp.resetApplication()">
-                        Reset Application
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="window.qrApp.clearSession()" style="margin-left: 10px;">
-                        Clear Session
-                    </button>
-                    <p class="text-xs" style="margin-top: 8px; color: var(--color-gray-500);">
-                        Use Ctrl+Shift+R to reset • Ctrl+Del to clear session
-                    </p>
-                </div>
-            `;
-            footer.appendChild(resetContainer);
+    handleVisibilityChange() {
+        if (document.hidden) {
+            // Page is hidden, pause scanning if active
+            if (this.appState.isScanning && this.modules.qrScanner) {
+                QRUtils.log.info('Page hidden, pausing scanner');
+                this.modules.qrScanner.stopScanning();
+            }
+        } else {
+            // Page is visible, resume if appropriate
+            QRUtils.log.info('Page visible again');
         }
     }
     
-    async loadPreviousSession() {
+    handleBeforeUnload(event) {
+        // Save current state
+        this.saveSession();
+        
+        // Clean up scanner resources
+        if (this.modules.qrScanner) {
+            this.modules.qrScanner.reset();
+        }
+    }
+    
+    async initializeModules() {
+        QRUtils.log.info('Initializing application modules...');
+        
+        // Initialize modules in sequence
         try {
-            QRUtils.log.info('Checking for previous session...');
+            // Excel processor is initialized on-demand
+            // Range selector is initialized on-demand
+            // Column mapper is initialized on-demand
             
-            // Check if modules have restored data
-            const hasExcelData = window.excelProcessor?.fileInfo !== null;
-            const hasRangeData = window.rangeSelector?.selectedRange !== null;
-            const hasColumnMapping = window.columnMapper?.columnMapping !== null;
-            const hasScanResults = window.qrScanner?.scanResults?.length > 0;
+            // QR Scanner is initialized immediately but camera access is deferred
+            // It's already initialized globally, just reference it
+            this.modules.qrScanner = window.qrScanner;
             
-            if (hasExcelData) {
-                this.currentStep = Math.max(this.currentStep, 2);
-                QRUtils.show('step-2');
-            }
+            // Set up module communication
+            this.setupModuleCommunication();
             
-            if (hasRangeData) {
-                this.currentStep = Math.max(this.currentStep, 3);
-                QRUtils.show('step-3');
-            }
-            
-            if (hasColumnMapping) {
-                this.currentStep = Math.max(this.currentStep, 5);
-                QRUtils.show('step-4');
-                QRUtils.show('step-5');
-                QRUtils.show('scan-records-section');
-            }
-            
-            if (hasScanResults) {
-                QRUtils.log.info('Previous scan results restored');
-            }
-            
-            QRUtils.setStep(this.currentStep);
-            
-            if (this.currentStep > 1) {
-                QRUtils.showSuccess('Previous session restored');
-            }
+            QRUtils.log.success('All modules initialized');
             
         } catch (error) {
-            QRUtils.log.warn('Failed to load previous session:', error);
+            QRUtils.handleError(error, 'Module Initialization');
+            throw error;
         }
     }
     
-    saveCurrentState() {
-        const state = {
-            currentStep: this.currentStep,
-            timestamp: Date.now(),
-            modules: {
-                hasExcelData: !!window.excelProcessor?.fileInfo,
-                hasRangeData: !!window.rangeSelector?.selectedRange,
-                hasColumnMapping: !!window.columnMapper?.columnMapping,
-                hasScanResults: window.qrScanner?.scanResults?.length > 0
+    setupModuleCommunication() {
+        // Set up inter-module communication channels
+        
+        // Listen for Excel processor events
+        document.addEventListener('excel-processed', (event) => {
+            this.handleExcelProcessed(event.detail);
+        });
+        
+        // Listen for range selection events
+        document.addEventListener('range-selected', (event) => {
+            this.handleRangeSelected(event.detail);
+        });
+        
+        // Listen for column mapping events
+        document.addEventListener('columns-mapped', (event) => {
+            this.handleColumnsMapped(event.detail);
+        });
+        
+        QRUtils.log.info('Module communication established');
+    }
+    
+    handleExcelProcessed(data) {
+        this.appState.hasData = true;
+        this.advanceToStep(2);
+        QRUtils.log.success('Excel processing completed, advancing to step 2');
+    }
+    
+    handleRangeSelected(data) {
+        this.advanceToStep(4); // Skip to column mapping
+        QRUtils.log.success('Range selected, advancing to column mapping');
+    }
+    
+    handleColumnsMapped(data) {
+        this.appState.hasMapping = true;
+        
+        // Pass mapping to scanner
+        if (this.modules.qrScanner) {
+            this.modules.qrScanner.updateColumnMapping(data.columnMapping, data.rangeData);
+        }
+        
+        this.advanceToStep(5);
+        QRUtils.log.success('Column mapping completed, ready to scan');
+    }
+    
+    advanceToStep(stepNumber) {
+        if (stepNumber < 1 || stepNumber > this.totalSteps) {
+            QRUtils.log.warn('Invalid step number:', stepNumber);
+            return;
+        }
+        
+        // Hide current step
+        const currentStepElement = QRUtils.$(`step-${this.currentStep}`);
+        if (currentStepElement) {
+            QRUtils.hide(currentStepElement);
+        }
+        
+        // Show new step
+        const newStepElement = QRUtils.$(`step-${stepNumber}`);
+        if (newStepElement) {
+            QRUtils.show(newStepElement);
+            newStepElement.classList.add('animate-slide-up');
+        }
+        
+        // Update state
+        this.currentStep = stepNumber;
+        this.updateStepIndicator();
+        
+        // Show progress bar from step 2 onwards
+        if (stepNumber >= 2) {
+            const progressContainer = QRUtils.$('step-progress');
+            if (progressContainer) {
+                QRUtils.show(progressContainer);
             }
+        }
+        
+        QRUtils.log.info(`Advanced to step ${stepNumber}`);
+    }
+    
+    goToStep(stepNumber) {
+        if (stepNumber === this.currentStep) return;
+        
+        // Validate that previous steps are completed
+        if (!this.canAccessStep(stepNumber)) {
+            QRUtils.setStatus('Complete previous steps first', 'warning');
+            return;
+        }
+        
+        this.advanceToStep(stepNumber);
+    }
+    
+    canAccessStep(stepNumber) {
+        switch (stepNumber) {
+            case 1:
+                return true; // Always accessible
+            case 2:
+                return this.appState.hasData;
+            case 3:
+                return this.appState.hasData;
+            case 4:
+                return this.appState.hasData;
+            case 5:
+                return this.appState.hasMapping;
+            default:
+                return false;
+        }
+    }
+    
+    clearSession() {
+        const confirmed = confirm(
+            'This will clear all data and reset the application. Continue?'
+        );
+        
+        if (!confirmed) return;
+        
+        try {
+            QRUtils.log.info('Clearing session...');
+            
+            // Stop any active processes
+            if (this.modules.qrScanner?.isScanning) {
+                this.modules.qrScanner.stopScanning();
+            }
+            
+            // Reset all modules
+            Object.values(this.modules).forEach(module => {
+                if (module && typeof module.reset === 'function') {
+                    module.reset();
+                }
+            });
+            
+            // Clear storage
+            QRUtils.storage.clear();
+            
+            // Reset application state
+            this.appState = {
+                initialized: true,
+                hasData: false,
+                hasMapping: false,
+                isScanning: false
+            };
+            
+            // Reset to step 1
+            this.goToFirstStep();
+            
+            // Clear UI
+            this.clearAllStepsContent();
+            
+            QRUtils.showSuccess('Session cleared successfully');
+            QRUtils.log.success('Session cleared');
+            
+        } catch (error) {
+            QRUtils.handleError(error, 'Session Clear');
+        }
+    }
+    
+    goToFirstStep() {
+        // Hide all steps
+        for (let i = 1; i <= this.totalSteps; i++) {
+            const stepElement = QRUtils.$(`step-${i}`);
+            if (stepElement) {
+                QRUtils.hide(stepElement);
+            }
+        }
+        
+        // Show first step
+        this.currentStep = 1;
+        const firstStep = QRUtils.$('step-1');
+        if (firstStep) {
+            QRUtils.show(firstStep);
+        }
+        
+        // Hide progress bar
+        const progressContainer = QRUtils.$('step-progress');
+        if (progressContainer) {
+            QRUtils.hide(progressContainer);
+        }
+        
+        // Hide scan records section
+        const recordsSection = QRUtils.$('scan-records-section');
+        if (recordsSection) {
+            QRUtils.hide(recordsSection);
+        }
+        
+        this.updateStepIndicator();
+    }
+    
+    clearAllStepsContent() {
+        // Clear file input
+        const fileInput = QRUtils.$('excel-file');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Clear sheet selector
+        const sheetSelect = QRUtils.$('sheet-select');
+        if (sheetSelect) {
+            sheetSelect.innerHTML = '<option value="">Select a sheet...</option>';
+        }
+        
+        // Clear range inputs
+        ['start-row', 'end-row', 'start-col', 'end-col'].forEach(id => {
+            const input = QRUtils.$(id);
+            if (input) {
+                input.value = input.id.includes('row') ? '1' : 
+                             input.id === 'start-col' ? 'A' : 'H';
+            }
+        });
+        
+        // Clear data preview
+        const dataPreview = QRUtils.$('data-preview');
+        if (dataPreview) {
+            dataPreview.innerHTML = '';
+        }
+        
+        // Clear column mappers
+        ['map-serial', 'map-mpn', 'map-designators', 'map-manufacturer', 'map-quantity', 'map-target']
+            .forEach(id => {
+                const select = QRUtils.$(id);
+                if (select) {
+                    select.innerHTML = '<option value="">Select column...</option>';
+                }
+            });
+    }
+    
+    showStartupMessage() {
+        const messages = [
+            'Type qrDiagnostics() to see system status',
+            'Press Ctrl+Shift+R to reset • Ctrl+Del to clear session',
+            'Use Escape to stop scanning • Space to skip items'
+        ];
+        
+        messages.forEach((message, index) => {
+            setTimeout(() => {
+                QRUtils.log.info(message);
+            }, index * 100);
+        });
+    }
+    
+    // Session management
+    saveSession() {
+        const sessionData = {
+            currentStep: this.currentStep,
+            appState: this.appState,
+            timestamp: Date.now()
         };
         
-        QRUtils.storage.set('app_state', state);
+        QRUtils.storage.set('app_session', sessionData);
+        QRUtils.log.info('Session saved');
     }
     
-    updateStepVisibility() {
-        // Hide all steps initially
-        for (let i = 1; i <= 5; i++) {
-            const step = QRUtils.$(`step-${i}`);
-            if (step && i > this.currentStep) {
-                QRUtils.hide(step);
-            }
+    loadSession() {
+        const sessionData = QRUtils.storage.get('app_session');
+        if (!sessionData) {
+            QRUtils.log.info('No previous session found');
+            return;
         }
         
-        // Show scan records section only if we're at step 5
-        const scanRecords = QRUtils.$('scan-records-section');
-        if (scanRecords && this.currentStep < 5) {
-            QRUtils.hide(scanRecords);
-        }
-    }
-    
-    async resetApplication() {
-        if (!confirm('Reset the entire application? This will clear all data and restart completely.')) {
+        // Check if session is recent (within 2 hours)
+        const isRecent = sessionData.timestamp && 
+            (Date.now() - sessionData.timestamp) < 2 * 60 * 60 * 1000;
+        
+        if (!isRecent) {
+            QRUtils.log.info('Previous session expired, starting fresh');
+            QRUtils.storage.remove('app_session');
             return;
         }
         
         try {
-            QRUtils.setStatus('Resetting application...', 'loading');
+            this.currentStep = sessionData.currentStep || 1;
+            this.appState = { ...this.appState, ...sessionData.appState };
             
-            // Stop scanner if active
-            if (window.qrScanner?.isScanning) {
-                await window.qrScanner.stopScanning();
-            }
+            QRUtils.log.info('Previous session restored');
             
-            // Reset all modules
-            if (window.excelProcessor) window.excelProcessor.reset();
-            if (window.rangeSelector) window.rangeSelector.reset();
-            if (window.columnMapper) window.columnMapper.reset();
-            if (window.qrScanner) window.qrScanner.reset();
-            
-            // Clear all storage
-            QRUtils.storage.clear();
-            
-            // Reset app state
-            this.currentStep = 1;
-            QRUtils.setStep(1);
-            
-            // Hide all steps except first
-            for (let i = 2; i <= 5; i++) {
-                QRUtils.hide(`step-${i}`);
-            }
-            QRUtils.hide('scan-records-section');
-            
-            // Clear any error messages
-            document.querySelectorAll('.alert-error, .alert-warning').forEach(el => el.remove());
-            
-            // Reload page to ensure clean state
+            // Show appropriate step after initialization
             setTimeout(() => {
-                window.location.reload();
+                if (this.currentStep > 1) {
+                    this.advanceToStep(this.currentStep);
+                }
             }, 1000);
             
-            QRUtils.setStatus('Application reset - reloading...', 'success');
-            QRUtils.log.success('Application reset completed');
-            
         } catch (error) {
-            QRUtils.handleError(error, 'Reset Application');
+            QRUtils.log.warn('Failed to restore session:', error);
+            QRUtils.storage.remove('app_session');
         }
     }
     
-    // Public API methods
-    getCurrentStep() {
-        return this.currentStep;
+    // Error handling
+    handleCriticalError(error) {
+        QRUtils.log.error('Critical application error:', error);
+        
+        const errorOverlay = document.createElement('div');
+        errorOverlay.className = 'loading-overlay';
+        errorOverlay.innerHTML = `
+            <div class="panel" style="max-width: 400px; margin: 2rem;">
+                <h3 style="color: var(--color-error); margin-bottom: 1rem;">Critical Error</h3>
+                <p style="margin-bottom: 1.5rem;">${QRUtils.escapeHtml(error.message)}</p>
+                <div class="btn-group">
+                    <button onclick="location.reload()" class="btn">Reload Application</button>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            class="btn btn-secondary">Dismiss</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(errorOverlay);
     }
     
-    isReady() {
-        return this.isInitialized;
+    // Performance monitoring
+    measurePerformance(name, fn) {
+        const start = performance.now();
+        
+        try {
+            const result = fn();
+            
+            if (result && typeof result.then === 'function') {
+                return result.finally(() => {
+                    const duration = performance.now() - start;
+                    this.recordPerformanceMetric(name, duration);
+                });
+            } else {
+                const duration = performance.now() - start;
+                this.recordPerformanceMetric(name, duration);
+                return result;
+            }
+            
+        } catch (error) {
+            const duration = performance.now() - start;
+            this.recordPerformanceMetric(name, duration, error);
+            throw error;
+        }
     }
     
-    // Diagnostic information
-    getDiagnostics() {
-        return {
-            currentStep: this.currentStep,
-            isInitialized: this.isInitialized,
-            dependencies: {
-                XLSX: typeof XLSX !== 'undefined',
-                Html5Qrcode: typeof Html5Qrcode !== 'undefined',
-                modules: {
-                    excelProcessor: !!window.excelProcessor,
-                    rangeSelector: !!window.rangeSelector,
-                    columnMapper: !!window.columnMapper,
-                    qrScanner: !!window.qrScanner
-                }
+    recordPerformanceMetric(name, duration, error = null) {
+        this.performanceMetrics[name] = duration;
+        
+        if (error) {
+            QRUtils.log.error(`Performance [${name}]: ${duration.toFixed(2)}ms (ERROR)`, error);
+        } else {
+            QRUtils.log.info(`Performance [${name}]: ${duration.toFixed(2)}ms`);
+        }
+    }
+    
+    // Public methods for debugging and diagnostics
+    getStatus() {
+        const status = {
+            app: {
+                currentStep: this.currentStep,
+                state: this.appState,
+                performance: this.performanceMetrics
             },
-            data: {
-                hasExcelData: !!window.excelProcessor?.fileInfo,
-                hasRangeData: !!window.rangeSelector?.selectedRange,
-                hasColumnMapping: !!window.columnMapper?.columnMapping,
-                scanResultsCount: window.qrScanner?.scanResults?.length || 0
-            },
-            storage: {
-                excel_data: !!QRUtils.storage.get('excel_data'),
-                selected_range: !!QRUtils.storage.get('selected_range'),
-                column_mapping: !!QRUtils.storage.get('column_mapping'),
-                scan_results: !!QRUtils.storage.get('scan_results')
+            scanner: this.modules.qrScanner?.getStatus() || null,
+            camera: this.modules.qrScanner?.cameraManager?.getStatus() || null,
+            environment: {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                hardwareConcurrency: navigator.hardwareConcurrency,
+                deviceMemory: navigator.deviceMemory || 'unknown'
             }
         };
+        
+        return status;
     }
     
-    // Export diagnostics for debugging
-    exportDiagnostics() {
-        const diagnostics = this.getDiagnostics();
-        const blob = new Blob([JSON.stringify(diagnostics, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `qr-scanner-diagnostics-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+    // Global functions for console debugging
+    installGlobalFunctions() {
+        window.qrDiagnostics = () => {
+            const status = this.getStatus();
+            console.table(status.app.state);
+            console.table(status.scanner);
+            console.table(status.camera);
+            console.table(status.environment);
+            return status;
+        };
         
-        QRUtils.log.info('Diagnostics exported');
+        window.qrReset = () => {
+            this.clearSession();
+        };
+        
+        window.qrPerf = () => {
+            console.table(this.performanceMetrics);
+            return this.performanceMetrics;
+        };
+        
+        QRUtils.log.info('Global diagnostic functions installed');
+    }
+    
+    showStartMessage() {
+        setTimeout(() => {
+            QRUtils.log.info('🚀 QR Code Component Scanner Ready');
+            QRUtils.log.info('📋 Load your Excel BOM file to begin');
+            QRUtils.log.info('⚡ Type qrDiagnostics() for system diagnostics');
+        }, 500);
     }
 }
 
-// Initialize the application
-window.qrApp = new QRCodeApp();
+// Application initialization
+document.addEventListener('DOMContentLoaded', () => {
+    QRUtils.log.info('DOM loaded, initializing application...');
+    
+    // Initialize main application
+    window.qrScannerApp = new QRScannerApp();
+    
+    // Install global debugging functions
+    window.qrScannerApp.installGlobalFunctions();
+    
+    // Show welcome message
+    window.qrScannerApp.showStartMessage();
+});
 
-// Expose diagnostics to console for debugging
-window.qrDiagnostics = () => {
-    console.table(window.qrApp.getDiagnostics());
-};
+// Handle hot reloads in development
+if (module && module.hot) {
+    module.hot.accept();
+}
 
-// Console welcome message
-console.log('%c🔍 QR Code Component Scanner', 'font-size: 16px; font-weight: bold; color: #000;');
-console.log('%cType qrDiagnostics() to see system status', 'color: #666;');
-console.log('%cPress Ctrl+Shift+R to reset • Ctrl+Del to clear session', 'color: #666;');
+// Global keyboard shortcuts
+document.addEventListener('keydown', (event) => {
+    // Global shortcuts that work regardless of focus
+    if (event.ctrlKey && event.shiftKey) {
+        switch (event.key) {
+            case 'R':
+                event.preventDefault();
+                if (window.qrScannerApp) {
+                    window.qrScannerApp.clearSession();
+                }
+                break;
+        }
+    }
+    
+    if (event.ctrlKey && event.key === 'Delete') {
+        event.preventDefault();
+        if (window.qrScannerApp) {
+            window.qrScannerApp.clearSession();
+        }
+    }
+});
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = QRScannerApp;
+}
+
+// Service Worker messaging
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+        const { type, message } = event.data;
+        
+        switch (type) {
+            case 'SYNC_STARTED':
+                QRUtils.setStatus(message, 'info');
+                break;
+            case 'SYNC_COMPLETED':
+                QRUtils.showSuccess(message);
+                break;
+            default:
+                QRUtils.log.info('SW Message:', event.data);
+        }
+    });
+}
+
+QRUtils.log.info('QR Code Component Scanner application loaded');
