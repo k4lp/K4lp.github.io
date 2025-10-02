@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Component Scanner — Alica Technologies</title>
+    <link rel="stylesheet" href="css/site/styles.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="back-nav">
+            <a href="index.html">← Back to Tools</a>
+        </nav>
+
+        <header class="header-grid">
+            <div>
+                <h1 class="header-title tracking-tight">QR Code Component Scanner</h1>
+                <p class="header-subtitle">Rapid component counting and BOM matching through scanning</p>
+            </div>
+            <div class="header-meta">
+                <span id="step-indicator">Step 1/5</span>
+                <span id="status-indicator">Ready</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Step 1: Import Excel File -->
+            <section class="section" id="step-1">
+                <h2 class="section-title">Step 1: Import Excel File</h2>
+                <div class="form-group">
+                    <label for="excel-file">Select Excel File</label>
+                    <input type="file" id="excel-file" accept=".xlsx,.xls" />
+                    <p class="form-help">Select an Excel file containing your BOM data</p>
+                </div>
+                <div id="file-info" class="hidden"></div>
+            </section>
+
+            <!-- Step 2: Select Sheet -->
+            <section class="section hidden" id="step-2">
+                <h2 class="section-title">Step 2: Select Sheet</h2>
+                <div class="form-group">
+                    <label for="sheet-select">Available Sheets</label>
+                    <select id="sheet-select">
+                        <option value="">Select a sheet...</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Step 3: Select Data Range -->
+            <section class="section hidden" id="step-3">
+                <h2 class="section-title">Step 3: Select Data Range</h2>
+                <div class="alert">
+                    <div class="alert-title">Visual Range Selection</div>
+                    Click and drag to select the data range containing your BOM items.
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label for="start-row">Start Row</label>
+                        <input type="number" id="start-row" min="1" value="1" />
+                    </div>
+                    <div>
+                        <label for="end-row">End Row</label>
+                        <input type="number" id="end-row" min="1" value="100" />
+                    </div>
+                    <div>
+                        <label for="start-col">Start Column</label>
+                        <input type="text" id="start-col" value="A" maxlength="3" />
+                    </div>
+                    <div>
+                        <label for="end-col">End Column</label>
+                        <input type="text" id="end-col" value="H" maxlength="3" />
+                    </div>
+                </div>
+                <div id="data-preview" class="table-container"></div>
+                <div class="btn-group">
+                    <button id="confirm-range" class="btn" disabled>Confirm Range</button>
+                    <button id="select-all-data" class="btn btn-secondary">Select All Data</button>
+                </div>
+            </section>
+
+            <!-- Step 4: Map Columns -->
+            <section class="section hidden" id="step-4">
+                <h2 class="section-title">Step 4: Map Data Columns</h2>
+                <div class="alert alert-info">
+                    <div class="alert-title">Column Mapping</div>
+                    Map your Excel columns to the required fields. The Target Column will be used for scanning and matching.
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="map-serial">Serial No. Column</label>
+                        <select id="map-serial">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="map-mpn">MPN Column</label>
+                        <select id="map-mpn">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="map-designators">Designators Column</label>
+                        <select id="map-designators">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="map-manufacturer">Manufacturer Column</label>
+                        <select id="map-manufacturer">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="map-quantity">Quantity Column</label>
+                        <select id="map-quantity">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="map-target">Target Column (for scanning) *</label>
+                        <select id="map-target" required>
+                            <option value="">Select column...</option>
+                        </select>
+                        <p class="form-help">This column will be matched against scanned values</p>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button id="confirm-mapping" class="btn" disabled>Confirm Mapping</button>
+                    <button id="auto-map" class="btn btn-secondary">Auto Map</button>
+                </div>
+            </section>
+
+            <!-- Step 5: QR Scanner -->
+            <section class="section hidden" id="step-5">
+                <h2 class="section-title">Step 5: QR/Barcode Scanner</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <div class="scanner-container">
+                            <video id="video-preview" autoplay muted playsinline></video>
+                            <canvas id="scan-canvas" style="display: none;"></canvas>
+                            <div id="scan-overlay" class="scan-overlay hidden">
+                                <div class="scan-region"></div>
+                            </div>
+                        </div>
+                        <div class="scan-controls">
+                            <div class="btn-group">
+                                <button id="start-camera" class="btn">Start Camera</button>
+                                <button id="stop-camera" class="btn btn-secondary" disabled>Stop Camera</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="camera-select">Camera</label>
+                                <select id="camera-select">
+                                    <option value="">Loading cameras...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="scan-info" class="panel">
+                            <h3>Scan Information</h3>
+                            <div id="current-match" class="empty">No matches yet</div>
+                            <div id="serial-display" class="hidden">
+                                <strong>Serial No.:</strong> <span id="serial-value">-</span>
+                            </div>
+                        </div>
+                        <div id="scan-results" class="panel mt-4">
+                            <h3>Scan Results</h3>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span class="stat-value" id="scan-count">0</span>
+                                    <span class="stat-label">Total Scans</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="match-count">0</span>
+                                    <span class="stat-label">Matches</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scan Records -->
+            <section class="section hidden" id="scan-records-section">
+                <h2 class="section-title">Scan Records</h2>
+                <div class="btn-group mb-4">
+                    <button id="export-excel" class="btn">Export to Excel</button>
+                    <button id="clear-records" class="btn btn-secondary">Clear Records</button>
+                </div>
+                <div id="records-table" class="table-container">
+                    <div class="empty">No scan records yet</div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <div>
+                    <h3 class="footer-section-title">Tool</h3>
+                    <span class="footer-link">QR Code Component Scanner</span>
+                </div>
+                <div>
+                    <h3 class="footer-section-title">Organization</h3>
+                    <span class="footer-link">Alica Technologies LLP</span>
+                </div>
+                <div>
+                    <h3 class="footer-section-title">Location</h3>
+                    <span class="footer-link">Ahmedabad, Gujarat, India</span>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span class="text-sm">© 2025 Alica Technologies LLP</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+    
+    <!-- Modular JavaScript -->
+    <script src="js/qrcode/utils.js"></script>
+    <script src="js/qrcode/excel-processor.js"></script>
+    <script src="js/qrcode/range-selector.js"></script>
+    <script src="js/qrcode/column-mapper.js"></script>
+    <script src="js/qrcode/scanner.js"></script>
+    <script src="js/qrcode/app.js"></script>
+</body>
+</html>
