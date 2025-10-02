@@ -781,10 +781,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.qrScannerApp.showStartMessage();
 });
 
-// Handle hot reloads in development
-if (module && module.hot) {
-    module.hot.accept();
-}
+// Handle hot reloads in development - REMOVE THE MODULE CHECK THAT CAUSES ERROR
+// This was causing 'module is not defined' error in browser environment
 
 // Global keyboard shortcuts
 document.addEventListener('keydown', (event) => {
@@ -808,7 +806,7 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
-// Export for module systems
+// Export for module systems (only in Node.js-like environments)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = QRScannerApp;
 }
