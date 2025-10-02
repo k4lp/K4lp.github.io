@@ -76,6 +76,12 @@ class QRCodeApp {
     }
     
     setupGlobalEventListeners() {
+        // Clear session button
+        const clearSessionBtn = QRUtils.$('clear-session-btn');
+        if (clearSessionBtn) {
+            clearSessionBtn.addEventListener('click', this.clearSession.bind(this));
+        }
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
         
@@ -94,11 +100,62 @@ class QRCodeApp {
         this.addResetFunctionality();
     }
     
+    async clearSession() {
+        if (!confirm('Clear the current session? This will remove all loaded data and scan results.')) {
+            return;
+        }
+        
+        try {
+            QRUtils.setStatus('Clearing session...', 'loading');
+            
+            // Stop scanner if active
+            if (window.qrScanner?.isScanning) {
+                await window.qrScanner.stopScanning();
+            }
+            
+            // Reset all modules but keep them initialized
+            if (window.excelProcessor) window.excelProcessor.reset();
+            if (window.rangeSelector) window.rangeSelector.reset();
+            if (window.columnMapper) window.columnMapper.reset();
+            if (window.qrScanner) window.qrScanner.reset();
+            
+            // Clear storage
+            QRUtils.storage.clear();
+            
+            // Reset app state
+            this.currentStep = 1;
+            QRUtils.setStep(1);
+            
+            // Hide all steps except first
+            for (let i = 2; i <= 5; i++) {
+                QRUtils.hide(`step-${i}`);
+            }
+            QRUtils.hide('scan-records-section');
+            
+            // Clear any error messages
+            document.querySelectorAll('.alert-error, .alert-warning').forEach(el => el.remove());
+            
+            QRUtils.setStatus('Session cleared successfully', 'success');
+            QRUtils.showSuccess('Session cleared - ready to start fresh');
+            QRUtils.log.success('Session cleared successfully');
+            
+        } catch (error) {
+            QRUtils.handleError(error, 'Clear Session');
+        }
+    }
+    
     handleKeyboardShortcuts(event) {
         // Ctrl/Cmd + R: Reset application
         if ((event.ctrlKey || event.metaKey) && event.key === 'r' && event.shiftKey) {
             event.preventDefault();
             this.resetApplication();
+            return;
+        }
+        
+        // Ctrl/Cmd + Delete: Clear session
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Delete') {
+            event.preventDefault();
+            this.clearSession();
             return;
         }
         
@@ -177,8 +234,11 @@ class QRCodeApp {
                     <button class="btn btn-ghost btn-sm" onclick="window.qrApp.resetApplication()">
                         Reset Application
                     </button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.qrApp.clearSession()" style="margin-left: 10px;">
+                        Clear Session
+                    </button>
                     <p class="text-xs" style="margin-top: 8px; color: var(--color-gray-500);">
-                        Use Ctrl+Shift+R to reset anytime
+                        Use Ctrl+Shift+R to reset • Ctrl+Del to clear session
                     </p>
                 </div>
             `;
@@ -260,7 +320,7 @@ class QRCodeApp {
     }
     
     async resetApplication() {
-        if (!confirm('Reset the entire application? This will clear all data and start over.')) {
+        if (!confirm('Reset the entire application? This will clear all data and restart completely.')) {
             return;
         }
         
@@ -292,9 +352,14 @@ class QRCodeApp {
             QRUtils.hide('scan-records-section');
             
             // Clear any error messages
-            document.querySelectorAll('.alert-error').forEach(el => el.remove());
+            document.querySelectorAll('.alert-error, .alert-warning').forEach(el => el.remove());
             
-            QRUtils.setStatus('Application reset successfully', 'success');
+            // Reload page to ensure clean state
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            
+            QRUtils.setStatus('Application reset - reloading...', 'success');
             QRUtils.log.success('Application reset completed');
             
         } catch (error) {
@@ -367,4 +432,4 @@ window.qrDiagnostics = () => {
 // Console welcome message
 console.log('%c🔍 QR Code Component Scanner', 'font-size: 16px; font-weight: bold; color: #000;');
 console.log('%cType qrDiagnostics() to see system status', 'color: #666;');
-console.log('%cPress Ctrl+Shift+R to reset application', 'color: #666;');
+console.log('%cPress Ctrl+Shift+R to reset • Ctrl+Del to clear session', 'color: #666;');
