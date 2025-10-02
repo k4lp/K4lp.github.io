@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <nav class="back-nav">
-            <a href="index.html">← Back to Tools</a>
+            <a href="index.html">BACK TO TOOLS</a>
         </nav>
 
         <header class="header-grid">
@@ -18,9 +18,9 @@
                 <p class="header-subtitle">Rapid component counting and BOM matching through QR/barcode scanning</p>
             </div>
             <div class="header-meta">
-                <div>Status: <span id="scannerStatus" class="status-ready">Ready</span></div>
-                <div>Scanned: <span id="scanCount">0</span></div>
-                <div>Matched: <span id="matchCount">0</span></div>
+                <div>STATUS: <span id="scannerStatus" class="status-ready">READY</span></div>
+                <div>SCANNED: <span id="scanCount">0</span></div>
+                <div>MATCHED: <span id="matchCount">0</span></div>
             </div>
         </header>
 
@@ -72,17 +72,17 @@
         <!-- Step 3: Data Range Selection -->
         <section id="step3" class="section hidden">
             <h2 class="section-title">Step 3: Select Data Range</h2>
-            <div class="alert">
+            <div class="alert alert-info">
                 Click and drag to select the data range containing your BOM line items. 
                 The selection should include headers and all relevant data rows.
             </div>
 
             <div class="form-row">
-                <div>
+                <div class="form-group">
                     <label>Start Cell (e.g., A1)</label>
                     <input type="text" id="startCell" placeholder="A1" readonly />
                 </div>
-                <div>
+                <div class="form-group">
                     <label>End Cell (e.g., F100)</label>
                     <input type="text" id="endCell" placeholder="F100" readonly />
                 </div>
@@ -93,15 +93,15 @@
             </div>
 
             <div class="btn-group">
-                <button id="confirmRange" class="btn-success" disabled>Confirm Selection</button>
-                <button id="clearRange" class="btn-secondary">Clear Selection</button>
+                <button id="confirmRange" class="btn btn-success" disabled>CONFIRM SELECTION</button>
+                <button id="clearRange" class="btn btn-secondary">CLEAR SELECTION</button>
             </div>
         </section>
 
         <!-- Step 4: Column Mapping -->
         <section id="step4" class="section hidden">
             <h2 class="section-title">Step 4: Map Data Columns</h2>
-            <div class="alert">
+            <div class="alert alert-info">
                 Map your Excel columns to the required BOM fields. The Target Column will be used for QR/barcode matching.
             </div>
 
@@ -142,7 +142,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label><strong>Target Column (for scanning)</strong></label>
+                    <label>Target Column (for scanning)</label>
                     <select id="targetColumn">
                         <option value="">Select target column...</option>
                     </select>
@@ -151,8 +151,8 @@
             </div>
 
             <div class="btn-group">
-                <button id="confirmMapping" class="btn-success" disabled>Start Scanner</button>
-                <button id="backToRange" class="btn-secondary">Back to Range Selection</button>
+                <button id="confirmMapping" class="btn btn-success" disabled>START SCANNER</button>
+                <button id="backToRange" class="btn btn-secondary">BACK TO RANGE SELECTION</button>
             </div>
         </section>
 
@@ -164,7 +164,7 @@
                 <div class="scanner-container">
                     <div id="qr-reader" class="camera-preview">
                         <div class="scanner-placeholder">
-                            <p>Click "Start Camera" to begin scanning</p>
+                            <p>CLICK START CAMERA TO BEGIN SCANNING</p>
                         </div>
                     </div>
                     <div class="scan-overlay" id="scanOverlay"></div>
@@ -172,9 +172,9 @@
 
                 <div class="scan-controls">
                     <div class="btn-group">
-                        <button id="startCamera" class="btn-success">Start Camera</button>
-                        <button id="stopCamera" class="btn-secondary" disabled>Stop Camera</button>
-                        <button id="switchCamera" class="btn-secondary" disabled>Switch Camera</button>
+                        <button id="startCamera" class="btn btn-success">START CAMERA</button>
+                        <button id="stopCamera" class="btn btn-secondary" disabled>STOP CAMERA</button>
+                        <button id="switchCamera" class="btn btn-secondary" disabled>SWITCH CAMERA</button>
                     </div>
 
                     <div class="form-group">
@@ -186,7 +186,7 @@
                 </div>
 
                 <div class="scan-result" id="currentMatch">
-                    <div class="empty">No scan results yet</div>
+                    <div class="empty">NO SCAN RESULTS YET</div>
                 </div>
             </div>
 
@@ -194,26 +194,26 @@
                 <div class="stats">
                     <div class="stat-item">
                         <span class="stat-value" id="totalScanned">0</span>
-                        <span class="stat-label">Total Scanned</span>
+                        <span class="stat-label">TOTAL SCANNED</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-value" id="successMatches">0</span>
-                        <span class="stat-label">Successful Matches</span>
+                        <span class="stat-label">SUCCESSFUL MATCHES</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-value" id="scanRate">0.0/min</span>
-                        <span class="stat-label">Scan Rate</span>
+                        <span class="stat-value" id="scanRate">0.0/MIN</span>
+                        <span class="stat-label">SCAN RATE</span>
                     </div>
                 </div>
 
                 <div class="btn-group">
-                    <button id="exportResults" class="btn-success" disabled>Export Results</button>
-                    <button id="clearResults" class="btn-secondary">Clear Results</button>
-                    <button id="resetScanner" class="btn-ghost">Reset All</button>
+                    <button id="exportResults" class="btn btn-success" disabled>EXPORT RESULTS</button>
+                    <button id="clearResults" class="btn btn-secondary">CLEAR RESULTS</button>
+                    <button id="resetScanner" class="btn btn-ghost">RESET ALL</button>
                 </div>
 
                 <div id="scanResults" class="table-container">
-                    <div class="empty">No scan results to display</div>
+                    <div class="empty">NO SCAN RESULTS TO DISPLAY</div>
                 </div>
             </div>
         </section>
