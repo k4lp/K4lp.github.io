@@ -30,5 +30,43 @@
             <p><a href="https://alicatechnologies.com">Alica Technologies LLP</a> — An electronics manufacturing service provider specializing in PCB assembly, rapid prototyping, and turnkey manufacturing solutions for OEMs.</p>
         </footer>
     </div>
+
+    <script>
+        // Wait for DOM load before rearranging
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            // Create a contact link container for sticky right side
+            const contactLink = document.createElement('a');
+            contactLink.href = 'contact.html';
+            contactLink.textContent = 'Contact';
+            contactLink.id = 'contactSticky';
+            contactLink.setAttribute('aria-label', 'Contact Page');
+            // Make it accessible and tab-focusable
+            contactLink.tabIndex = 0;
+
+            // Move original contact link from subtitle to hidden (avoid duplication)
+            const subtitle = container.querySelector('.subtitle a[href="contact.html"]');
+            if (subtitle) {
+                subtitle.style.display = 'none';
+            }
+
+            // Append the sticky contact link to body (without CSS, position must be set by user CSS)
+            document.body.appendChild(contactLink);
+
+            // Move footer out of container and fix it to bottom using JS by DOM positioning only
+            const footer = container.querySelector('footer');
+            if (footer) {
+                // Remove footer from container
+                container.removeChild(footer);
+                // Append to body so footer is outside container
+                document.body.appendChild(footer);
+
+                // Optional: Add aria-label for footer
+                footer.setAttribute('aria-label', 'Site Footer');
+            }
+        });
+    </script>
 </body>
 </html>
