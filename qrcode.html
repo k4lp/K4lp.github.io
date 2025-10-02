@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner - Inventory Matcher</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        .back-nav {
+            position: sticky;
+            top: 0;
+            background: #000;
+            color: #fff;
+            padding: 16px 20px;
+            z-index: 100;
+            border-bottom: 1px solid #000;
+        }
+        
+        .back-nav a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+        
+        .back-nav a:hover {
+            opacity: 0.7;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+            font-weight: 400;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            border-bottom: 1px solid #000;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        h2 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .section {
+            border: 1px solid #000;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .step {
+            display: none;
+        }
+        
+        .step.active {
+            display: block;
+        }
+        
+        button {
+            border: 1px solid #000;
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        button:hover { background: #333; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        button.secondary {
+            background: #fff;
+            color: #000;
+        }
+        
+        button.secondary:hover { background: #f5f5f5; }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .sheet-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .sheet-item {
+            border: 1px solid #000;
+            padding: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .sheet-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .sheet-item.selected {
+            background: #000;
+            color: #fff;
+        }
+        
+        .table-preview {
+            overflow: auto;
+            max-height: 500px;
+            border: 1px solid #000;
+            margin-top: 16px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+            min-width: 80px;
+        }
+        
+        th {
+            background: #f5f5f5;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        td.selectable {
+            cursor: pointer;
+        }
+        
+        td.selected-header {
+            background: #000;
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        td.selected-data {
+            background: #e0e0e0;
+        }
+        
+        .mapping-section {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .mapping-item {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .mapping-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+        
+        select {
+            width: 100%;
+            border: 1px solid #000;
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 14px;
+            background: #fff;
+        }
+        
+        .scanner-container {
+            position: relative;
+            margin-top: 16px;
+        }
+        
+        #videoPreview {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            display: block;
+            border: 1px solid #000;
+        }
+        
+        #scanCanvas {
+            display: none;
+        }
+        
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .scan-region {
+            position: absolute;
+            border: 2px solid #000;
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .scan-controls {
+            margin-top: 16px;
+            display: grid;
+            gap: 16px;
+        }
+        
+        .control-group {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+        }
+        
+        .scan-info {
+            margin-top: 16px;
+            padding: 12px;
+            border: 1px solid #000;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        
+        .scan-info.success {
+            background: #000;
+            color: #fff;
+        }
+        
+        .scan-info.error {
+            border-color: #d00;
+            color: #d00;
+        }
+        
+        .results-table {
+            margin-top: 16px;
+        }
+        
+        .matched-row {
+            background: #000 !important;
+            color: #fff !important;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+            font-size: 11px;
+        }
+        
+        .stat-item {
+            border: 1px solid #000;
+            padding: 12px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 10px;
+        }
+        
+        .hide {
+            display: none !important;
+        }
+        
+        .progress {
+            margin-top: 16px;
+            padding: 12px;
+            border: 1px solid #000;
+            font-size: 11px;
+        }
+        
+        .alert {
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #000;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="back-nav">
+        <a href="index.html">← Back to Tools</a>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>QR Code Scanner with Excel Integration</h1>
+            <div class="subtitle">Inventory Matching System</div>
+        </header>
+
+        <!-- Step 1: Import Excel -->
+        <div id="step1" class="step active">
+            <div class="section">
+                <h2>Step 1: Import Excel File</h2>
+                <p style="margin-bottom: 16px; font-size: 12px;">Upload an Excel workbook containing your inventory data.</p>
+                
+                <div class="file-input-wrapper">
+                    <button class="secondary">Choose Excel File</button>
+                    <input type="file" id="excelInput" accept=".xlsx,.xls">
+                </div>
+                
+                <div id="fileInfo" class="alert hide" style="margin-top: 16px;">
+                    File loaded: <span id="fileName"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Select Sheet -->
+        <div id="step2" class="step">
+            <div class="section">
+                <h2>Step 2: Select Sheet</h2>
+                <p style="margin-bottom: 16px; font-size: 12px;">Choose the sheet containing your inventory data.</p>
+                
+                <div id="sheetList" class="sheet-list"></div>
+                
+                <div class="btn-group">
+                    <button id="backToStep1" class="secondary">← Back</button>
+                    <button id="confirmSheet" disabled>Continue →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Select Data Range -->
+        <div id="step3" class="step">
+            <div class="section">
+                <h2>Step 3: Select Data Range</h2>
+                <p style="margin-bottom: 16px; font-size: 12px;">Click to select the header row, then select the data range.</p>
+                
+                <div class="alert" id="selectionGuide">
+                    Click the header row to begin selection
+                </div>
+                
+                <div class="table-preview">
+                    <table id="dataPreview"></table>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="backToStep2" class="secondary">← Back</button>
+                    <button id="resetSelection" class="secondary">Reset Selection</button>
+                    <button id="confirmRange" disabled>Continue →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Map Columns -->
+        <div id="step4" class="step">
+            <div class="section">
+                <h2>Step 4: Map Columns</h2>
+                <p style="margin-bottom: 16px; font-size: 12px;">Map your Excel columns to the required fields.</p>
+                
+                <div class="mapping-section">
+                    <div class="mapping-item">
+                        <div class="mapping-label">MPN (Part Number)</div>
+                        <select id="mpnColumn">
+                            <option value="">-- Select Column --</option>
+                        </select>
+                    </div>
+                    <div class="mapping-item">
+                        <div class="mapping-label">Manufacturer</div>
+                        <select id="mfgColumn">
+                            <option value="">-- Select Column --</option>
+                        </select>
+                    </div>
+                    <div class="mapping-item">
+                        <div class="mapping-label">Designators</div>
+                        <select id="desColumn">
+                            <option value="">-- Select Column --</option>
+                        </select>
+                    </div>
+                    <div class="mapping-item">
+                        <div class="mapping-label">Quantity</div>
+                        <select id="qtyColumn">
+                            <option value="">-- Select Column --</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="backToStep3" class="secondary">← Back</button>
+                    <button id="startScanning">Start Scanning →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Scanning -->
+        <div id="step5" class="step">
+            <div class="section">
+                <h2>Scanner Controls</h2>
+                
+                <div class="scanner-container">
+                    <video id="videoPreview" autoplay playsinline></video>
+                    <canvas id="scanCanvas"></canvas>
+                </div>
+                
+                <div class="scan-controls">
+                    <div class="control-group">
+                        <label>Scan Area Width</label>
+                        <input type="range" id="scanWidth" min="20" max="100" value="80" step="5">
+                    </div>
+                    <div class="control-group">
+                        <label>Scan Area Height</label>
+                        <input type="range" id="scanHeight" min="20" max="100" value="60" step="5">
+                    </div>
+                    <div class="control-group">
+                        <label>Detection Threshold</label>
+                        <input type="range" id="threshold" min="1" max="10" value="5" step="1">
+                    </div>
+                </div>
+                
+                <div id="scanInfo" class="scan-info hide"></div>
+                
+                <div class="btn-group">
+                    <button id="pauseScanning" class="secondary">Pause Scanning</button>
+                    <button id="resumeScanning" class="hide">Resume Scanning</button>
+                    <button id="resetScanner" class="secondary">Reset All Data</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Statistics</h2>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalItems">0</span>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="scannedItems">0</span>
+                        <div class="stat-label">Scanned</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="matchRate">0%</span>
+                        <div class="stat-label">Match Rate</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Inventory Data</h2>
+                <div class="table-preview results-table">
+                    <table id="resultsTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let workbook = null;
+        let selectedSheet = null;
+        let sheetData = null;
+        let headerRow = -1;
+        let dataStartRow = -1;
+        let dataEndRow = -1;
+        let selectedColumns = [];
+        let columnMapping = {};
+        let inventoryData = [];
+        let scannedCodes = new Set();
+        let scanningActive = false;
+        let videoStream = null;
+        let scanConfidenceThreshold = 5;
+        let lastScanTime = 0;
+        let scanDebounce = 1000;
+
+        // Load saved data from localStorage
+        function loadFromStorage() {
+            const saved = localStorage.getItem('qrScannerData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    inventoryData = data.inventoryData || [];
+                    scannedCodes = new Set(data.scannedCodes || []);
+                    columnMapping = data.columnMapping || {};
+                    return true;
+                } catch (e) {
+                    console.error('Error loading from storage:', e);
+                }
+            }
+            return false;
+        }
+
+        // Save to localStorage
+        function saveToStorage() {
+            const data = {
+                inventoryData: inventoryData,
+                scannedCodes: Array.from(scannedCodes),
+                columnMapping: columnMapping,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('qrScannerData', JSON.stringify(data));
+        }
+
+        // Step 1: Excel Import
+        document.getElementById('excelInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbook = XLSX.read(data, { type: 'array' });
+                    
+                    document.getElementById('fileName').textContent = file.name;
+                    document.getElementById('fileInfo').classList.remove('hide');
+                    
+                    setTimeout(() => {
+                        showStep(2);
+                        displaySheetList();
+                    }, 500);
+                } catch (error) {
+                    alert('Error reading Excel file: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Step 2: Sheet Selection
+        function displaySheetList() {
+            const sheetList = document.getElementById('sheetList');
+            sheetList.innerHTML = '';
+            
+            workbook.SheetNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'sheet-item';
+                div.textContent = name;
+                div.onclick = function() {
+                    document.querySelectorAll('.sheet-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    div.classList.add('selected');
+                    selectedSheet = name;
+                    document.getElementById('confirmSheet').disabled = false;
+                };
+                sheetList.appendChild(div);
+            });
+        }
+
+        document.getElementById('confirmSheet').addEventListener('click', function() {
+            if (!selectedSheet) return;
+            sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[selectedSheet], { header: 1, defval: '' });
+            showStep(3);
+            displayDataPreview();
+        });
+
+        // Step 3: Data Range Selection
+        function displayDataPreview() {
+            const table = document.getElementById('dataPreview');
+            table.innerHTML = '';
+            
+            sheetData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                
+                row.forEach((cell, colIndex) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell || '';
+                    td.className = 'selectable';
+                    td.dataset.row = rowIndex;
+                    td.dataset.col = colIndex;
+                    
+                    td.onclick = function() {
+                        handleCellSelection(rowIndex, colIndex);
+                    };
+                    
+                    tr.appendChild(td);
+                });
+                
+                table.appendChild(tr);
+            });
+        }
+
+        function handleCellSelection(row, col) {
+            if (headerRow === -1) {
+                // Select header row
+                headerRow = row;
+                dataStartRow = row + 1;
+                highlightHeaderRow();
+                document.getElementById('selectionGuide').textContent = 'Now click any cell in the last row of data';
+            } else if (dataEndRow === -1) {
+                // Select end of data
+                if (row > headerRow) {
+                    dataEndRow = row;
+                    highlightDataRange();
+                    document.getElementById('selectionGuide').textContent = 'Selection complete! Click Continue to proceed.';
+                    document.getElementById('confirmRange').disabled = false;
+                }
+            }
+        }
+
+        function highlightHeaderRow() {
+            document.querySelectorAll('#dataPreview td').forEach(td => {
+                if (parseInt(td.dataset.row) === headerRow) {
+                    td.classList.add('selected-header');
+                }
+            });
+        }
+
+        function highlightDataRange() {
+            document.querySelectorAll('#dataPreview td').forEach(td => {
+                const row = parseInt(td.dataset.row);
+                if (row > headerRow && row <= dataEndRow) {
+                    td.classList.add('selected-data');
+                }
+            });
+        }
+
+        document.getElementById('resetSelection').addEventListener('click', function() {
+            headerRow = -1;
+            dataStartRow = -1;
+            dataEndRow = -1;
+            document.querySelectorAll('#dataPreview td').forEach(td => {
+                td.classList.remove('selected-header', 'selected-data');
+            });
+            document.getElementById('selectionGuide').textContent = 'Click the header row to begin selection';
+            document.getElementById('confirmRange').disabled = true;
+        });
+
+        document.getElementById('confirmRange').addEventListener('click', function() {
+            showStep(4);
+            populateColumnMapping();
+        });
+
+        // Step 4: Column Mapping
+        function populateColumnMapping() {
+            const headers = sheetData[headerRow];
+            const selects = ['mpnColumn', 'mfgColumn', 'desColumn', 'qtyColumn'];
+            
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value="">-- Select Column --</option>';
+                
+                headers.forEach((header, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = header || `Column ${index + 1}`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        document.getElementById('startScanning').addEventListener('click', function() {
+            columnMapping = {
+                mpn: parseInt(document.getElementById('mpnColumn').value),
+                manufacturer: parseInt(document.getElementById('mfgColumn').value),
+                designators: parseInt(document.getElementById('desColumn').value),
+                quantity: parseInt(document.getElementById('qtyColumn').value)
+            };
+            
+            if (isNaN(columnMapping.mpn)) {
+                alert('MPN column is required!');
+                return;
+            }
+            
+            // Build inventory data
+            inventoryData = [];
+            for (let i = dataStartRow; i <= dataEndRow; i++) {
+                const row = sheetData[i];
+                if (row && row.length > 0) {
+                    inventoryData.push({
+                        mpn: String(row[columnMapping.mpn] || '').trim(),
+                        manufacturer: String(row[columnMapping.manufacturer] || '').trim(),
+                        designators: String(row[columnMapping.designators] || '').trim(),
+                        quantity: String(row[columnMapping.quantity] || '').trim(),
+                        scannedCode: '',
+                        scanTime: '',
+                        scanIndex: 0
+                    });
+                }
+            }
+            
+            saveToStorage();
+            showStep(5);
+            initializeScanner();
+            displayResultsTable();
+            updateStats();
+        });
+
+        // Step 5: Scanning
+        async function initializeScanner() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                
+                const video = document.getElementById('videoPreview');
+                video.srcObject = videoStream;
+                video.play();
+                
+                scanningActive = true;
+                requestAnimationFrame(scanFrame);
+            } catch (error) {
+                alert('Camera access denied: ' + error.message);
+            }
+        }
+
+        function scanFrame() {
+            if (!scanningActive) return;
+            
+            const video = document.getElementById('videoPreview');
+            const canvas = document.getElementById('scanCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Get scan region parameters
+                const widthPercent = parseInt(document.getElementById('scanWidth').value) / 100;
+                const heightPercent = parseInt(document.getElementById('scanHeight').value) / 100;
+                
+                const scanWidth = canvas.width * widthPercent;
+                const scanHeight = canvas.height * heightPercent;
+                const scanX = (canvas.width - scanWidth) / 2;
+                const scanY = (canvas.height - scanHeight) / 2;
+                
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.getImageData(scanX, scanY, scanWidth, scanHeight);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+                
+                if (code && code.data) {
+                    const now = Date.now();
+                    if (now - lastScanTime > scanDebounce) {
+                        processScannedCode(code.data);
+                        lastScanTime = now;
+                    }
+                }
+            }
+            
+            requestAnimationFrame(scanFrame);
+        }
+
+        function processScannedCode(code) {
+            code = code.trim();
+            
+            // Find best match in inventory
+            let bestMatch = null;
+            let exactMatch = false;
+            
+            for (let item of inventoryData) {
+                if (!item.scannedCode) {
+                    if (item.mpn === code) {
+                        bestMatch = item;
+                        exactMatch = true;
+                        break;
+                    } else if (item.mpn.includes(code) || code.includes(item.mpn)) {
+                        if (!bestMatch) bestMatch = item;
+                    }
+                }
+            }
+            
+            if (bestMatch) {
+                const scanIndex = scannedCodes.size + 1;
+                bestMatch.scannedCode = code;
+                bestMatch.scanTime = new Date().toLocaleString();
+                bestMatch.scanIndex = scanIndex;
+                scannedCodes.add(code);
+                
+                saveToStorage();
+                displayResultsTable();
+                updateStats();
+                
+                const infoDiv = document.getElementById('scanInfo');
+                infoDiv.className = 'scan-info success';
+                infoDiv.textContent = `✓ MATCHED: ${code} → MPN: ${bestMatch.mpn} (Scan #${scanIndex})`;
+                infoDiv.classList.remove('hide');
+                
+                setTimeout(() => {
+                    infoDiv.classList.add('hide');
+                }, 3000);
+            } else {
+                const infoDiv = document.getElementById('scanInfo');
+                infoDiv.className = 'scan-info error';
+                infoDiv.textContent = `✗ NO MATCH: ${code}`;
+                infoDiv.classList.remove('hide');
+                
+                setTimeout(() => {
+                    infoDiv.classList.add('hide');
+                }, 2000);
+            }
+        }
+
+        function displayResultsTable() {
+            const table = document.getElementById('resultsTable');
+            table.innerHTML = '';
+            
+            // Header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            ['Scan #', 'MPN', 'Manufacturer', 'Designators', 'Quantity', 'Scanned Code', 'Scan Time'].forEach(text => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // Body
+            const tbody = document.createElement('tbody');
+            inventoryData.forEach(item => {
+                const tr = document.createElement('tr');
+                if (item.scannedCode) {
+                    tr.className = 'matched-row';
+                }
+                
+                [
+                    item.scanIndex || '-',
+                    item.mpn,
+                    item.manufacturer,
+                    item.designators,
+                    item.quantity,
+                    item.scannedCode || '-',
+                    item.scanTime || '-'
+                ].forEach(text => {
+                    const td = document.createElement('td');
+                    td.textContent = text;
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+        }
+
+        function updateStats() {
+            document.getElementById('totalItems').textContent = inventoryData.length;
+            document.getElementById('scannedItems').textContent = scannedCodes.size;
+            
+            const matchRate = inventoryData.length > 0 
+                ? Math.round((scannedCodes.size / inventoryData.length) * 100)
+                : 0;
+            document.getElementById('matchRate').textContent = matchRate + '%';
+        }
+
+        // Scanner controls
+        document.getElementById('pauseScanning').addEventListener('click', function() {
+            scanningActive = false;
+            this.classList.add('hide');
+            document.getElementById('resumeScanning').classList.remove('hide');
+        });
+
+        document.getElementById('resumeScanning').addEventListener('click', function() {
+            scanningActive = true;
+            requestAnimationFrame(scanFrame);
+            this.classList.add('hide');
+            document.getElementById('pauseScanning').classList.remove('hide');
+        });
+
+        document.getElementById('resetScanner').addEventListener('click', function() {
+            if (confirm('This will clear all scanned data. Continue?')) {
+                scannedCodes.clear();
+                inventoryData.forEach(item => {
+                    item.scannedCode = '';
+                    item.scanTime = '';
+                    item.scanIndex = 0;
+                });
+                saveToStorage();
+                displayResultsTable();
+                updateStats();
+            }
+        });
+
+        document.getElementById('threshold').addEventListener('input', function() {
+            scanConfidenceThreshold = parseInt(this.value);
+        });
+
+        // Navigation
+        function showStep(stepNum) {
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('active');
+            });
+            document.getElementById('step' + stepNum).classList.add('active');
+        }
+
+        document.getElementById('backToStep1').addEventListener('click', () => showStep(1));
+        document.getElementById('backToStep2').addEventListener('click', () => showStep(2));
+        document.getElementById('backToStep3').addEventListener('click', () => showStep(3));
+
+        // Initialize
+        window.addEventListener('load', function() {
+            if (loadFromStorage() && inventoryData.length > 0) {
+                if (confirm('Previous session data found. Would you like to continue?')) {
+                    showStep(5);
+                    initializeScanner();
+                    displayResultsTable();
+                    updateStats();
+                } else {
+                    localStorage.removeItem('qrScannerData');
+                }
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
