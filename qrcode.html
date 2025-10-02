@@ -20,6 +20,7 @@
             <div class="header-meta">
                 <span id="step-indicator">Step 1/5</span>
                 <span id="status-indicator">Ready</span>
+                <button id="clear-session-btn" class="btn btn-danger btn-sm" title="Clear all data and start over">Clear Session</button>
             </div>
         </header>
 
@@ -136,11 +137,7 @@
                 <div class="grid grid-cols-2 gap-6">
                     <div>
                         <div class="scanner-container">
-                            <video id="video-preview" autoplay muted playsinline></video>
-                            <canvas id="scan-canvas" style="display: none;"></canvas>
-                            <div id="scan-overlay" class="scan-overlay hidden">
-                                <div class="scan-region"></div>
-                            </div>
+                            <div id="qr-reader" style="width: 100%; border: 2px solid #000; background: #f5f5f5; min-height: 300px;"></div>
                         </div>
                         <div class="scan-controls">
                             <div class="btn-group">
