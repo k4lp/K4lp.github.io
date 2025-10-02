@@ -1,6 +1,16 @@
 /**
  * Column Mapping Module
- * Handles mapping of Excel columns to BOM fields
+ * Enhanced column mapping with intelligent auto-detection and validation
+ * 
+ * Features:
+ * - Smart auto-mapping using pattern recognition
+ * - Real-time validation with visual feedback  
+ * - Duplicate column detection and prevention
+ * - Target column selection for QR code matching
+ * - Advanced text similarity algorithms
+ * - Data processing with field mapping
+ * - Row lookup functionality for scanner
+ * - Storage persistence and auto-recovery
  */
 
 class ColumnMapper {
@@ -8,23 +18,85 @@ class ColumnMapper {
         this.rangeData = null;
         this.columnMapping = null;
         this.availableColumns = [];
+        this.requiredFields = ['target']; // Target column is required
+        this.optionalFields = ['serial', 'mpn', 'designators', 'manufacturer', 'quantity'];
+        
+        // Enhanced auto-mapping patterns
+        this.autoMappingPatterns = {
+            serial: [
+                /^serial\s*(no|number|#)?$/i,
+                /^s\/n$/i,
+                /^sn$/i,
+                /^item\s*(no|number|#)?$/i,
+                /serial/i
+            ],
+            mpn: [
+                /^mpn$/i,
+                /^(manufacturer\s*)?part\s*(no|number|#)?$/i,
+                /^p\/n$/i,
+                /^part\s*code$/i,
+                /component/i,
+                /description/i,
+                /item/i
+            ],
+            designators: [
+                /designator/i,
+                /reference/i,
+                /^ref$/i,
+                /position/i,
+                /location/i,
+                /legend/i
+            ],
+            manufacturer: [
+                /^manufacturer$/i,
+                /^mfr$/i,
+                /^mfg$/i,
+                /vendor/i,
+                /supplier/i,
+                /brand/i,
+                /make/i
+            ],
+            quantity: [
+                /^qty$/i,
+                /^quantity$/i,
+                /^count$/i,
+                /^amount$/i,
+                /^total$/i,
+                /^pcs$/i,
+                /pieces/i
+            ],
+            target: [
+                /barcode/i,
+                /qr\s*code/i,
+                /scan/i,
+                /code/i,
+                /^id$/i,
+                /target/i,
+                /mpn/i, // Fallback to MPN
+                /part/i // Fallback to part number
+            ]
+        };
         
         this.initializeEventListeners();
         this.loadFromStorage();
+        
+        QRUtils.log.info('Column Mapper initialized with enhanced features');
     }
     
     initializeEventListeners() {
-        // Mapping select listeners
-        const mappingSelects = ['map-serial', 'map-mpn', 'map-designators', 'map-manufacturer', 'map-quantity', 'map-target'];
+        // Listen for range selection events
+        document.addEventListener('range-selected', this.handleRangeSelected.bind(this));
         
-        mappingSelects.forEach(id => {
-            const element = QRUtils.$(id);
-            if (element) {
-                element.addEventListener('change', this.handleMappingChange.bind(this));
+        // Column selector change handlers
+        const allFields = [...this.requiredFields, ...this.optionalFields];
+        allFields.forEach(field => {
+            const selector = QRUtils.$(`map-${field}`);
+            if (selector) {
+                selector.addEventListener('change', this.handleColumnChange.bind(this));
             }
         });
         
-        // Button listeners
+        // Button handlers
         const confirmBtn = QRUtils.$('confirm-mapping');
         if (confirmBtn) {
             confirmBtn.addEventListener('click', this.confirmMapping.bind(this));
@@ -32,15 +104,20 @@ class ColumnMapper {
         
         const autoMapBtn = QRUtils.$('auto-map');
         if (autoMapBtn) {
-            autoMapBtn.addEventListener('click', this.autoMapColumns.bind(this));
+            autoMapBtn.addEventListener('click', this.performAutoMapping.bind(this));
         }
+    }
+    
+    handleRangeSelected(event) {
+        const { range, data } = event.detail;
+        this.updateRangeData({ ...range, data });
     }
     
     updateRangeData(rangeData) {
         this.rangeData = rangeData;
         this.extractAvailableColumns();
         this.populateColumnSelects();
-        this.autoMapColumns(); // Try auto-mapping first
+        this.performAutoMapping();
         
         QRUtils.log.info('Column mapper updated with range data');
     }
@@ -51,19 +128,22 @@ class ColumnMapper {
             return;
         }
         
-        // Use first row as headers (most common case)
+        // Use first row as headers
         const headerRow = this.rangeData.data[0];
+        const startColIndex = this.rangeData.startColIndex || 0;
         
         this.availableColumns = headerRow.map((header, index) => {
-            const columnLetter = QRUtils.indexToColumn(this.rangeData.startColIndex + index);
+            const columnLetter = QRUtils.indexToColumn(startColIndex + index);
             const headerText = String(header || '').trim();
             
             return {
-                index: this.rangeData.startColIndex + index,
+                index: startColIndex + index,
+                arrayIndex: index, // Index in the row array
                 column: columnLetter,
                 header: headerText,
                 displayName: headerText || `Column ${columnLetter}`,
-                value: `${this.rangeData.startColIndex + index}` // Use index as value for mapping
+                isEmpty: !headerText,
+                value: (startColIndex + index).toString() // String value for selects
             };
         });
         
@@ -71,274 +151,438 @@ class ColumnMapper {
     }
     
     populateColumnSelects() {
-        const mappingSelects = ['map-serial', 'map-mpn', 'map-designators', 'map-manufacturer', 'map-quantity', 'map-target'];
+        const allFields = [...this.requiredFields, ...this.optionalFields];
         
-        mappingSelects.forEach(selectId => {
-            const select = QRUtils.$(selectId);
-            if (!select) return;
+        allFields.forEach(field => {
+            const selector = QRUtils.$(`map-${field}`);
+            if (!selector) return;
             
-            // Clear existing options except the first one
-            select.innerHTML = '<option value="">Select column...</option>';
+            // Clear existing options
+            selector.innerHTML = '<option value="">Select column...</option>';
             
             // Add column options
             this.availableColumns.forEach(col => {
                 const option = document.createElement('option');
                 option.value = col.value;
                 option.textContent = `${col.column}: ${col.displayName}`;
-                option.title = col.header; // Full header text on hover
-                select.appendChild(option);
+                option.title = col.header || col.displayName;
+                
+                // Style non-empty headers
+                if (!col.isEmpty) {
+                    option.style.fontWeight = '500';
+                }
+                
+                selector.appendChild(option);
             });
         });
+        
+        QRUtils.log.info('Column selectors populated');
     }
     
-    autoMapColumns() {
-        if (!this.availableColumns || this.availableColumns.length === 0) return;
+    performAutoMapping() {
+        if (!this.availableColumns || this.availableColumns.length === 0) {
+            QRUtils.log.warn('No columns available for auto-mapping');
+            return;
+        }
         
-        // Define mapping patterns for auto-detection
-        const mappingPatterns = {
-            'map-serial': [
-                /serial\s*(no|number|#)?/i,
-                /s\/?n/i,
-                /item\s*(no|number|#)?/i,
-                /^(sn|s\.n\.)$/i
-            ],
-            'map-mpn': [
-                /mpn/i,
-                /(manufacturer\s*)?part\s*(no|number|#)?/i,
-                /p\/?n/i,
-                /part\s*code/i,
-                /component/i
-            ],
-            'map-designators': [
-                /designator/i,
-                /reference/i,
-                /ref/i,
-                /position/i,
-                /location/i
-            ],
-            'map-manufacturer': [
-                /manufacturer/i,
-                /mfr/i,
-                /vendor/i,
-                /supplier/i,
-                /brand/i
-            ],
-            'map-quantity': [
-                /qty/i,
-                /quantity/i,
-                /count/i,
-                /amount/i,
-                /total/i
-            ],
-            'map-target': [
-                /barcode/i,
-                /qr\s*code/i,
-                /scan/i,
-                /code/i,
-                /id/i
-            ]
-        };
-        
+        const mapping = {};
+        const usedColumns = new Set();
         let mappingCount = 0;
         
-        // Try to auto-map each field
-        Object.entries(mappingPatterns).forEach(([selectId, patterns]) => {
-            const select = QRUtils.$(selectId);
-            if (!select) return;
-            
-            // Find best matching column
-            let bestMatch = null;
-            let bestScore = 0;
-            
-            this.availableColumns.forEach(col => {
-                const headerText = col.header.toLowerCase();
-                
-                patterns.forEach(pattern => {
-                    if (pattern.test(headerText)) {
-                        // Score based on how well it matches
-                        let score = 1;
-                        if (headerText === pattern.source) score = 10; // Exact match
-                        else if (headerText.includes(pattern.source)) score = 5; // Contains
-                        
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestMatch = col;
-                        }
-                    }
-                });
-            });
-            
-            // Apply the best match
+        // Auto-map each field using pattern matching
+        Object.entries(this.autoMappingPatterns).forEach(([field, patterns]) => {
+            const bestMatch = this.findBestColumnMatch(patterns, usedColumns);
             if (bestMatch) {
-                select.value = bestMatch.value;
+                mapping[field] = bestMatch.value;
+                usedColumns.add(bestMatch.value);
                 mappingCount++;
-                QRUtils.log.info(`Auto-mapped ${selectId}: ${bestMatch.displayName}`);
+                
+                // Update selector
+                const selector = QRUtils.$(`map-${field}`);
+                if (selector) {
+                    selector.value = bestMatch.value;
+                }
+                
+                QRUtils.log.info(`Auto-mapped ${field} to ${bestMatch.displayName}`);
             }
         });
         
-        // If no specific target column was found, default to MPN or first available
-        const targetSelect = QRUtils.$('map-target');
-        if (targetSelect && !targetSelect.value && this.availableColumns.length > 0) {
-            const mpnSelect = QRUtils.$('map-mpn');
-            if (mpnSelect && mpnSelect.value) {
-                targetSelect.value = mpnSelect.value;
+        // Ensure target column is mapped (required for scanning)
+        if (!mapping.target && this.availableColumns.length > 0) {
+            // Try to use MPN column as target if available
+            const mpnColumn = this.availableColumns.find(col => 
+                !col.isEmpty && 
+                !usedColumns.has(col.value) && 
+                /mpn|part/i.test(col.header)
+            );
+            
+            if (mpnColumn) {
+                mapping.target = mpnColumn.value;
+                const targetSelector = QRUtils.$('map-target');
+                if (targetSelector) targetSelector.value = mpnColumn.value;
                 mappingCount++;
             } else {
-                targetSelect.value = this.availableColumns[0].value;
-                mappingCount++;
+                // Use first available non-empty column
+                const firstColumn = this.availableColumns.find(col => 
+                    !col.isEmpty && !usedColumns.has(col.value)
+                );
+                if (firstColumn) {
+                    mapping.target = firstColumn.value;
+                    const targetSelector = QRUtils.$('map-target');
+                    if (targetSelector) targetSelector.value = firstColumn.value;
+                    mappingCount++;
+                }
             }
         }
+        
+        // Update validation
+        this.handleColumnChange();
         
         if (mappingCount > 0) {
             QRUtils.showSuccess(`Auto-mapped ${mappingCount} columns`);
-            this.handleMappingChange();
+            QRUtils.log.success('Auto-mapping completed:', mapping);
         } else {
-            QRUtils.setStatus('No columns could be auto-mapped', 'warning');
+            QRUtils.log.warn('No columns could be auto-mapped');
+            QRUtils.setStatus('Please map columns manually', 'info');
         }
     }
     
-    handleMappingChange() {
-        const mapping = this.getCurrentMapping();
-        const isValid = this.validateMapping(mapping);
+    findBestColumnMatch(patterns, excludeColumns = new Set()) {
+        let bestMatch = null;
+        let bestScore = 0;
         
+        this.availableColumns.forEach(column => {
+            if (excludeColumns.has(column.value) || column.isEmpty) return;
+            
+            const headerLower = column.header.toLowerCase().trim();
+            
+            patterns.forEach(pattern => {
+                let score = 0;
+                
+                if (pattern.test(headerLower)) {
+                    // Exact pattern match gets highest score
+                    if (headerLower.match(pattern)?.[0] === headerLower) {
+                        score = 100;
+                    } else {
+                        score = 75; // Partial match
+                    }
+                }
+                
+                // Bonus for shorter, more precise headers
+                if (score > 0 && headerLower.length < 15) {
+                    score += 10;
+                }
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = column;
+                }
+            });
+        });
+        
+        return bestMatch;
+    }
+    
+    handleColumnChange() {
+        this.updateColumnMapping();
+        this.validateMapping();
+    }
+    
+    updateColumnMapping() {
+        const mapping = {};
+        const allFields = [...this.requiredFields, ...this.optionalFields];
+        
+        allFields.forEach(field => {
+            const selector = QRUtils.$(`map-${field}`);
+            if (selector && selector.value) {
+                const columnIndex = parseInt(selector.value);
+                const columnInfo = this.availableColumns.find(col => 
+                    parseInt(col.value) === columnIndex
+                );
+                
+                if (columnInfo) {
+                    mapping[field] = {
+                        index: columnInfo.index,
+                        arrayIndex: columnInfo.arrayIndex,
+                        column: columnInfo.column,
+                        header: columnInfo.header,
+                        displayName: columnInfo.displayName
+                    };
+                }
+            }
+        });
+        
+        this.columnMapping = mapping;
+        this.saveToStorage();
+    }
+    
+    validateMapping() {
+        let isValid = true;
+        const issues = [];
+        const usedColumns = new Set();
+        const duplicates = [];
+        
+        // Check required fields
+        this.requiredFields.forEach(field => {
+            const selector = QRUtils.$(`map-${field}`);
+            if (!selector || !selector.value) {
+                isValid = false;
+                issues.push(`${field} column is required`);
+                
+                if (selector) {
+                    selector.classList.add('error');
+                }
+            } else {
+                if (selector) {
+                    selector.classList.remove('error');
+                }
+            }
+        });
+        
+        // Check for duplicate mappings
+        Object.entries(this.columnMapping || {}).forEach(([field, config]) => {
+            const columnValue = config.index.toString();
+            if (usedColumns.has(columnValue)) {
+                duplicates.push(columnValue);
+                isValid = false;
+            }
+            usedColumns.add(columnValue);
+        });
+        
+        if (duplicates.length > 0) {
+            issues.push('Multiple fields mapped to same column');
+            
+            // Highlight duplicate selectors
+            Object.entries(this.columnMapping || {}).forEach(([field, config]) => {
+                if (duplicates.includes(config.index.toString())) {
+                    const selector = QRUtils.$(`map-${field}`);
+                    if (selector) selector.classList.add('error');
+                }
+            });
+        } else {
+            // Remove error class from all selectors if no duplicates
+            const allFields = [...this.requiredFields, ...this.optionalFields];
+            allFields.forEach(field => {
+                const selector = QRUtils.$(`map-${field}`);
+                if (selector && this.columnMapping?.[field]) {
+                    selector.classList.remove('error');
+                }
+            });
+        }
+        
+        // Update confirm button
         const confirmBtn = QRUtils.$('confirm-mapping');
         if (confirmBtn) {
             confirmBtn.disabled = !isValid;
         }
         
         // Update status
-        if (isValid) {
-            const mappedCount = Object.values(mapping).filter(v => v !== '').length;
-            QRUtils.setStatus(`${mappedCount} columns mapped`, 'info');
-        } else {
-            QRUtils.setStatus('Target column is required', 'warning');
+        if (isValid && Object.keys(this.columnMapping || {}).length > 0) {
+            const mappedCount = Object.keys(this.columnMapping).length;
+            QRUtils.setStatus(`${mappedCount} columns mapped successfully`, 'success');
+        } else if (issues.length > 0) {
+            QRUtils.setStatus(`Issues: ${issues.join(', ')}`, 'warning');
         }
-    }
-    
-    getCurrentMapping() {
-        return {
-            serial: QRUtils.$('map-serial')?.value || '',
-            mpn: QRUtils.$('map-mpn')?.value || '',
-            designators: QRUtils.$('map-designators')?.value || '',
-            manufacturer: QRUtils.$('map-manufacturer')?.value || '',
-            quantity: QRUtils.$('map-quantity')?.value || '',
-            target: QRUtils.$('map-target')?.value || ''
-        };
-    }
-    
-    validateMapping(mapping) {
-        // Target column is required for scanning
-        return mapping && mapping.target && mapping.target !== '';
+        
+        return isValid;
     }
     
     confirmMapping() {
-        const mapping = this.getCurrentMapping();
-        
-        if (!this.validateMapping(mapping)) {
-            QRUtils.handleError(new Error('Target column is required for scanning'), 'Column Mapping');
+        if (!this.validateMapping()) {
+            QRUtils.showWarning('Please fix mapping issues before confirming');
             return;
         }
         
-        // Convert string indices to numbers and add column info
-        this.columnMapping = {};
+        if (!this.columnMapping || Object.keys(this.columnMapping).length === 0) {
+            QRUtils.showWarning('Please map at least the target column');
+            return;
+        }
         
-        Object.entries(mapping).forEach(([field, indexStr]) => {
-            if (indexStr !== '') {
-                const index = parseInt(indexStr);
-                const column = this.availableColumns.find(col => col.index === index);
-                
-                this.columnMapping[field] = {
-                    index,
-                    column: column ? column.column : QRUtils.indexToColumn(index),
-                    header: column ? column.header : '',
-                    displayName: column ? column.displayName : `Column ${QRUtils.indexToColumn(index)}`
-                };
+        try {
+            // Process data with mapping
+            const processedData = this.processDataWithMapping();
+            
+            QRUtils.log.success('Column mapping confirmed:', this.columnMapping);
+            QRUtils.setStatus('Column mapping confirmed successfully', 'success');
+            
+            // Save to storage
+            this.saveToStorage();
+            
+            // Show next step and scanner interface
+            QRUtils.show('step-5');
+            QRUtils.show('scan-records-section');
+            QRUtils.setStep(5);
+            
+            // Initialize scanner with mapping
+            if (window.qrScanner) {
+                window.qrScanner.updateColumnMapping(this.columnMapping, this.rangeData);
             }
-        });
-        
-        // Validate that target column exists in range data
-        if (!this.columnMapping.target) {
-            QRUtils.handleError(new Error('Target column mapping failed'), 'Column Mapping');
-            return;
+            
+            // Emit event for app coordination
+            document.dispatchEvent(new CustomEvent('columns-mapped', {
+                detail: {
+                    columnMapping: this.columnMapping,
+                    rangeData: this.rangeData,
+                    processedData: processedData,
+                    mapper: this
+                }
+            }));
+            
+        } catch (error) {
+            QRUtils.handleError(error, 'Column Mapping Confirmation');
         }
-        
-        // Save to storage
-        this.saveToStorage();
-        
-        // Show next step
-        QRUtils.show('step-5');
-        QRUtils.show('scan-records-section');
-        QRUtils.setStep(5);
-        QRUtils.setStatus('Column mapping confirmed', 'success');
-        
-        // Initialize scanner with mapping data
-        if (window.qrScanner) {
-            window.qrScanner.updateColumnMapping(this.columnMapping, this.rangeData);
-        }
-        
-        QRUtils.log.success('Column mapping confirmed:', this.columnMapping);
     }
     
-    getColumnMapping() {
-        return this.columnMapping;
-    }
-    
-    // Get mapped data from range with proper column mapping
-    getMappedData() {
-        if (!this.rangeData || !this.columnMapping || !this.rangeData.data) {
+    processDataWithMapping() {
+        if (!this.rangeData || !this.rangeData.data || !this.columnMapping) {
             return [];
         }
         
-        // Skip header row (index 0) and map data rows
-        return this.rangeData.data.slice(1).map((row, rowIndex) => {
-            const mappedRow = {
-                _rowIndex: rowIndex + 1, // Original row index (excluding header)
-                _actualRowNumber: this.rangeData.startRow + rowIndex + 1 // Actual Excel row number
+        const processedData = [];
+        
+        // Skip header row (index 0) for data processing
+        for (let rowIndex = 1; rowIndex < this.rangeData.data.length; rowIndex++) {
+            const rowData = this.rangeData.data[rowIndex];
+            
+            const processedRow = {
+                _originalRowNumber: rowIndex + 1, // 1-based row number
+                _actualRowNumber: (this.rangeData.startRow || 1) + rowIndex,
+                _rowIndex: rowIndex
             };
             
             // Map each configured field
             Object.entries(this.columnMapping).forEach(([field, config]) => {
-                const colIndex = config.index - this.rangeData.startColIndex;
-                mappedRow[field] = row[colIndex] !== undefined ? String(row[colIndex]).trim() : '';
+                const cellValue = rowData[config.arrayIndex];
+                processedRow[field] = QRUtils.cleanText(cellValue || '');
             });
             
-            return mappedRow;
-        }).filter(row => {
-            // Filter out completely empty rows
-            const values = Object.values(row).filter(v => typeof v === 'string');
-            return values.some(v => v !== '');
-        });
+            // Skip completely empty rows
+            const hasData = Object.entries(this.columnMapping).some(([field, config]) => {
+                const cellValue = rowData[config.arrayIndex];
+                return cellValue && String(cellValue).trim() !== '';
+            });
+            
+            if (hasData) {
+                processedData.push(processedRow);
+            }
+        }
+        
+        QRUtils.log.info(`Processed ${processedData.length} data rows with mapping`);
+        return processedData;
     }
     
-    // Find row by target column value
+    // Find row by target column value (for QR scanning)
     findRowByTarget(targetValue) {
-        const mappedData = this.getMappedData();
-        if (!mappedData || !targetValue) return null;
+        if (!this.rangeData || !this.columnMapping || !this.columnMapping.target) {
+            QRUtils.log.warn('Cannot find row: missing data or target mapping');
+            return null;
+        }
         
-        const cleanTarget = QRUtils.cleanText(targetValue);
-        
-        return mappedData.find(row => {
-            const rowTarget = QRUtils.cleanText(row.target || '');
-            return rowTarget === cleanTarget;
+        const cleanTargetValue = QRUtils.cleanText(targetValue, { 
+            toLowerCase: true,
+            removeSpaces: false,
+            normalizeSpaces: true
         });
+        
+        if (!cleanTargetValue) {
+            QRUtils.log.warn('Empty target value provided');
+            return null;
+        }
+        
+        const targetConfig = this.columnMapping.target;
+        
+        // Search through data rows (skip header row)
+        for (let rowIndex = 1; rowIndex < this.rangeData.data.length; rowIndex++) {
+            const rowData = this.rangeData.data[rowIndex];
+            const cellValue = rowData[targetConfig.arrayIndex];
+            
+            if (cellValue) {
+                const cleanCellValue = QRUtils.cleanText(cellValue, {
+                    toLowerCase: true,
+                    removeSpaces: false,
+                    normalizeSpaces: true
+                });
+                
+                // Exact match
+                if (cleanCellValue === cleanTargetValue) {
+                    return this.createMatchResult(rowIndex, rowData, 'exact');
+                }
+                
+                // Contains match (for partial matches)
+                if (cleanCellValue.includes(cleanTargetValue) || 
+                    cleanTargetValue.includes(cleanCellValue)) {
+                    return this.createMatchResult(rowIndex, rowData, 'partial');
+                }
+            }
+        }
+        
+        QRUtils.log.info(`No match found for target value: ${targetValue}`);
+        return null;
     }
     
-    // Get all target column values for validation
+    createMatchResult(rowIndex, rowData, matchType) {
+        const result = {
+            _rowIndex: rowIndex,
+            _originalRowNumber: rowIndex + 1,
+            _actualRowNumber: (this.rangeData.startRow || 1) + rowIndex,
+            _matchType: matchType
+        };
+        
+        // Add mapped field values
+        Object.entries(this.columnMapping).forEach(([field, config]) => {
+            const cellValue = rowData[config.arrayIndex];
+            result[field] = QRUtils.cleanText(cellValue || '');
+        });
+        
+        return result;
+    }
+    
+    // Get all mapped data (excluding header)
+    getMappedData() {
+        return this.processDataWithMapping();
+    }
+    
+    // Get column headers with mapping info
+    getColumnHeaders() {
+        return this.availableColumns || [];
+    }
+    
+    // Get currently mapped fields
+    getMappedFields() {
+        if (!this.columnMapping) return [];
+        
+        return Object.entries(this.columnMapping).map(([field, config]) => ({
+            field: field,
+            column: config.column,
+            header: config.header,
+            displayName: config.displayName,
+            isRequired: this.requiredFields.includes(field)
+        }));
+    }
+    
+    // Get all target values for validation
     getAllTargetValues() {
         const mappedData = this.getMappedData();
         if (!mappedData) return [];
         
         return mappedData
-            .map(row => row.target)
-            .filter(target => target && target.trim() !== '')
-            .map(target => QRUtils.cleanText(target));
+            .filter(row => row.target && row.target.trim() !== '')
+            .map(row => QRUtils.cleanText(row.target))
+            .filter(value => value !== '');
     }
     
-    // Storage methods
     saveToStorage() {
+        if (!this.columnMapping) return;
+        
         const data = {
             columnMapping: this.columnMapping,
             availableColumns: this.availableColumns,
+            rangeData: this.rangeData ? {
+                startRow: this.rangeData.startRow,
+                endRow: this.rangeData.endRow,
+                startCol: this.rangeData.startCol,
+                endCol: this.rangeData.endCol
+            } : null,
             timestamp: Date.now()
         };
         
@@ -347,61 +591,81 @@ class ColumnMapper {
     
     loadFromStorage() {
         const data = QRUtils.storage.get('column_mapping');
-        if (!data) return false;
+        if (!data || !data.columnMapping) return false;
         
-        // Check if data is recent (within 24 hours)
-        const isRecent = data.timestamp && (Date.now() - data.timestamp) < 24 * 60 * 60 * 1000;
-        if (!isRecent) return false;
+        // Check if data is recent (within 2 hours)
+        const isRecent = data.timestamp && (Date.now() - data.timestamp) < 2 * 60 * 60 * 1000;
+        if (!isRecent) {
+            QRUtils.storage.remove('column_mapping');
+            return false;
+        }
         
         try {
             this.columnMapping = data.columnMapping;
             this.availableColumns = data.availableColumns || [];
             
-            // Restore UI selections if columns are available
-            if (this.availableColumns.length > 0 && this.columnMapping) {
-                this.populateColumnSelects();
-                
-                // Restore selections
-                Object.entries(this.columnMapping).forEach(([field, config]) => {
-                    const select = QRUtils.$(`map-${field}`);
-                    if (select) {
-                        select.value = config.index.toString();
-                    }
-                });
-                
-                this.handleMappingChange();
-            }
+            // Restore UI after a delay to ensure elements exist
+            setTimeout(() => {
+                if (this.availableColumns.length > 0) {
+                    this.populateColumnSelects();
+                    
+                    // Restore selector values
+                    Object.entries(this.columnMapping).forEach(([field, config]) => {
+                        const selector = QRUtils.$(`map-${field}`);
+                        if (selector) {
+                            selector.value = config.index.toString();
+                        }
+                    });
+                    
+                    this.validateMapping();
+                }
+            }, 500);
             
             QRUtils.log.info('Restored column mapping from storage');
             return true;
+            
         } catch (error) {
             QRUtils.log.warn('Failed to load column mapping from storage:', error);
             QRUtils.storage.remove('column_mapping');
+            return false;
         }
-        
-        return false;
     }
     
     reset() {
-        this.columnMapping = null;
         this.rangeData = null;
+        this.columnMapping = null;
         this.availableColumns = [];
         
-        // Reset selects
-        const mappingSelects = ['map-serial', 'map-mpn', 'map-designators', 'map-manufacturer', 'map-quantity', 'map-target'];
-        mappingSelects.forEach(selectId => {
-            const select = QRUtils.$(selectId);
-            if (select) {
-                select.innerHTML = '<option value="">Select column...</option>';
+        // Reset UI
+        const allFields = [...this.requiredFields, ...this.optionalFields];
+        allFields.forEach(field => {
+            const selector = QRUtils.$(`map-${field}`);
+            if (selector) {
+                selector.innerHTML = '<option value="">Select column...</option>';
+                selector.classList.remove('error');
             }
         });
         
+        // Disable confirm button
         const confirmBtn = QRUtils.$('confirm-mapping');
         if (confirmBtn) {
             confirmBtn.disabled = true;
         }
         
         QRUtils.log.info('Column mapper reset');
+    }
+    
+    getStatus() {
+        return {
+            hasRangeData: !!this.rangeData,
+            hasMapping: !!this.columnMapping,
+            mappedFields: Object.keys(this.columnMapping || {}).length,
+            requiredFieldsMapped: this.requiredFields.every(field => 
+                this.columnMapping?.[field]
+            ),
+            availableColumns: this.availableColumns.length,
+            isValid: this.validateMapping()
+        };
     }
 }
 
