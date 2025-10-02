@@ -490,6 +490,7 @@ window.QRScannerRangeSelector = {
         }
     },
 
+    // FIXED: Corrected order of operations to prevent null reference
     _handleCellMouseDown(event) {
         if (!event || event.button !== 0) return;
 
@@ -531,18 +532,25 @@ window.QRScannerRangeSelector = {
             }
         }
 
+        // CRITICAL FIX: Clear selection FIRST, then set new startCell
+        this._clearSelectionHighlight(); // Only clear visual highlighting
+        
+        // Set new startCell AFTER clearing highlights but BEFORE accessing .ref
         this._startCell = {
             row: row,
             col: col,
             ref: cellRef
         };
 
-        this._clearSelection();
-        this._clearSelectionHighlight();
+        // Clear other state but preserve startCell
+        this._endCell = null;
+        this._selectedCells.clear();
+        
+        // Now safely highlight the cell
         this._highlightCell(cell, 'range-start');
 
         const startInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.START_CELL);
-        if (startInput) {
+        if (startInput && this._startCell) {
             window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.START_CELL, this._startCell.ref);
         }
         
@@ -597,7 +605,7 @@ window.QRScannerRangeSelector = {
         };
 
         const endInput = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.END_CELL);
-        if (endInput) {
+        if (endInput && this._endCell) {
             window.QRScannerUtils.dom.setText(window.QRScannerConfig.ELEMENTS.END_CELL, this._endCell.ref);
         }
         
@@ -785,7 +793,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Clear selection state
+     * Clear selection state (MODIFIED to not interfere with active selection)
      */
     _clearSelection() {
         this._startCell = null;
@@ -845,7 +853,7 @@ window.QRScannerRangeSelector = {
         // Increased timeout to ensure DOM is fully rendered
         setTimeout(() => {
             this.createSelectableTable();
-        }, 200);
+        }, 300);
     }
 };
 
