@@ -1,5 +1,5 @@
 /**
- * QR Code Component Scanner - Utility Functions
+ * QR Code Component Scanner - Utility Functions (Enhanced)
  * Alica Technologies
  */
 
@@ -80,6 +80,16 @@ window.QRScannerUtils = {
         },
 
         /**
+         * Set element HTML content
+         * @param {string|HTMLElement} element - Element ID or element
+         * @param {string} html - HTML content
+         */
+        setHTML: (element, html) => {
+            const el = typeof element === 'string' ? document.getElementById(element) : element;
+            if (el) el.innerHTML = html;
+        },
+
+        /**
          * Create HTML element with attributes
          * @param {string} tagName - Tag name
          * @param {Object} attributes - Attributes object
@@ -93,6 +103,18 @@ window.QRScannerUtils = {
             });
             if (content) element.innerHTML = content;
             return element;
+        },
+
+        /**
+         * Check if element exists and is visible
+         * @param {string|HTMLElement} element - Element ID or element
+         * @returns {boolean}
+         */
+        isVisible: (element) => {
+            const el = typeof element === 'string' ? document.getElementById(element) : element;
+            if (!el) return false;
+            return !el.classList.contains(window.QRScannerConfig.CLASSES.HIDDEN) && 
+                   el.offsetParent !== null;
         }
     },
 
@@ -130,7 +152,16 @@ window.QRScannerUtils = {
          * @param {number} maxSize - Maximum allowed size in bytes
          * @returns {boolean}
          */
-        isValidSize: (fileSize, maxSize) => fileSize <= maxSize
+        isValidSize: (fileSize, maxSize) => fileSize <= maxSize,
+
+        /**
+         * Get file extension
+         * @param {string} fileName - File name
+         * @returns {string} - File extension (lowercase)
+         */
+        getExtension: (fileName) => {
+            return fileName.split('.').pop().toLowerCase();
+        }
     },
 
     /**
@@ -172,21 +203,68 @@ window.QRScannerUtils = {
          * @returns {string} - Cell reference (e.g., "A1")
          */
         getCellRef: (row, col) => {
-            return this.excel.numToCol(col) + row;
+            return window.QRScannerUtils.excel.numToCol(col) + row;
         },
 
         /**
          * Parse cell reference to row and column
          * @param {string} cellRef - Cell reference (e.g., "A1")
-         * @returns {Object} - {row, col}
+         * @returns {Object|null} - {row, col} or null if invalid
          */
         parseCellRef: (cellRef) => {
             const match = cellRef.match(/^([A-Z]+)(\d+)$/);
             if (!match) return null;
             return {
-                col: this.excel.colToNum(match[1]),
+                col: window.QRScannerUtils.excel.colToNum(match[1]),
                 row: parseInt(match[2])
             };
+        },
+
+        /**
+         * Convert cell reference to position object
+         * @param {string} cellRef - Cell reference (e.g., "A1")
+         * @returns {Object|null} - {row, col} or null if invalid
+         */
+        cellRefToPosition: (cellRef) => {
+            return window.QRScannerUtils.excel.parseCellRef(cellRef);
+        },
+
+        /**
+         * Validate cell reference format
+         * @param {string} cellRef - Cell reference to validate
+         * @returns {boolean} - True if valid
+         */
+        isValidCellRef: (cellRef) => {
+            return /^[A-Z]+[1-9]\d*$/.test(cellRef);
+        },
+
+        /**
+         * Get range string from start and end positions
+         * @param {Object} start - Start position {row, col}
+         * @param {Object} end - End position {row, col}
+         * @returns {string} - Range string (e.g., "A1:C10")
+         */
+        getRangeString: (start, end) => {
+            const startRef = window.QRScannerUtils.excel.getCellRef(start.row, start.col);
+            const endRef = window.QRScannerUtils.excel.getCellRef(end.row, end.col);
+            return `${startRef}:${endRef}`;
+        },
+
+        /**
+         * Parse range string to start and end positions
+         * @param {string} rangeString - Range string (e.g., "A1:C10")
+         * @returns {Object|null} - {start: {row, col}, end: {row, col}} or null if invalid
+         */
+        parseRangeString: (rangeString) => {
+            const parts = rangeString.split(':');
+            if (parts.length !== 2) return null;
+            
+            const start = window.QRScannerUtils.excel.parseCellRef(parts[0]);
+            const end = window.QRScannerUtils.excel.parseCellRef(parts[1]);
+            
+            if (!start || !end) return null;
+            
+            return { start, end };
         }
     },
 
@@ -221,6 +299,15 @@ window.QRScannerUtils = {
          */
         isNumeric: (value) => {
             return !isNaN(value) && !isNaN(parseFloat(value));
+        },
+
+        /**
+         * Validate positive integer
+         * @param {any} value - Value to check
+         * @returns {boolean}
+         */
+        isPositiveInteger: (value) => {
+            return Number.isInteger(value) && value > 0;
         }
     },
 
@@ -247,6 +334,7 @@ window.QRScannerUtils = {
          * @returns {string} - Truncated string
          */
         truncate: (str, length, suffix = '...') => {
+            if (!str) return '';
             return str.length > length ? str.substring(0, length) + suffix : str;
         },
 
@@ -259,6 +347,30 @@ window.QRScannerUtils = {
             return str.replace(/\w\S*/g, (txt) => {
                 return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
             });
+        },
+
+        /**
+         * Clean and normalize string
+         * @param {string} str - String to clean
+         * @returns {string} - Cleaned string
+         */
+        clean: (str) => {
+            if (!str) return '';
+            return str.toString().trim().replace(/\s+/g, ' ');
+        },
+
+        /**
+         * Generate random string
+         * @param {number} length - Length of random string
+         * @returns {string} - Random string
+         */
+        random: (length = 8) => {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
     },
 
@@ -290,6 +402,16 @@ window.QRScannerUtils = {
          */
         diffMinutes: (startTime, endTime = Date.now()) => {
             return Math.round((endTime - startTime) / 60000);
+        },
+
+        /**
+         * Format timestamp as ISO string
+         * @param {Date|number} timestamp - Date object or timestamp
+         * @returns {string} - ISO date string
+         */
+        toISO: (timestamp = Date.now()) => {
+            const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+            return date.toISOString();
         }
     },
 
@@ -318,6 +440,37 @@ window.QRScannerUtils = {
                 groups[group].push(item);
                 return groups;
             }, {});
+        },
+
+        /**
+         * Chunk array into smaller arrays
+         * @param {Array} arr - Input array
+         * @param {number} size - Chunk size
+         * @returns {Array} - Array of chunks
+         */
+        chunk: (arr, size) => {
+            const chunks = [];
+            for (let i = 0; i < arr.length; i += size) {
+                chunks.push(arr.slice(i, i + size));
+            }
+            return chunks;
+        },
+
+        /**
+         * Flatten nested array
+         * @param {Array} arr - Input array
+         * @returns {Array} - Flattened array
+         */
+        flatten: (arr) => arr.flat(Infinity),
+
+        /**
+         * Check if array is empty or contains only empty values
+         * @param {Array} arr - Input array
+         * @returns {boolean} - True if effectively empty
+         */
+        isEmpty: (arr) => {
+            return !arr || arr.length === 0 || 
+                   arr.every(item => window.QRScannerUtils.validation.isEmpty(item));
         }
     },
 
@@ -352,7 +505,7 @@ window.QRScannerUtils = {
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + duration / 1000);
             } catch (error) {
-                console.warn('Audio feedback not supported:', error);
+                window.QRScannerUtils.log.warn('Audio feedback not supported:', error);
             }
         },
 
@@ -361,7 +514,7 @@ window.QRScannerUtils = {
          */
         success: () => {
             const config = window.QRScannerConfig.AUDIO;
-            this.audio.playTone(config.SUCCESS_FREQUENCY, config.SUCCESS_DURATION, config.VOLUME);
+            window.QRScannerUtils.audio.playTone(config.SUCCESS_FREQUENCY, config.SUCCESS_DURATION, config.VOLUME);
         },
 
         /**
@@ -369,7 +522,7 @@ window.QRScannerUtils = {
          */
         error: () => {
             const config = window.QRScannerConfig.AUDIO;
-            this.audio.playTone(config.ERROR_FREQUENCY, config.ERROR_DURATION, config.VOLUME);
+            window.QRScannerUtils.audio.playTone(config.ERROR_FREQUENCY, config.ERROR_DURATION, config.VOLUME);
         }
     },
 
@@ -389,7 +542,7 @@ window.QRScannerUtils = {
                     navigator.vibrate(pattern);
                 }
             } catch (error) {
-                console.warn('Vibration not supported:', error);
+                window.QRScannerUtils.log.warn('Vibration not supported:', error);
             }
         },
 
@@ -397,14 +550,137 @@ window.QRScannerUtils = {
          * Success vibration pattern
          */
         success: () => {
-            this.vibration.vibrate([100]);
+            window.QRScannerUtils.vibration.vibrate([100]);
         },
 
         /**
          * Error vibration pattern
          */
         error: () => {
-            this.vibration.vibrate([200, 100, 200]);
+            window.QRScannerUtils.vibration.vibrate([200, 100, 200]);
+        }
+    },
+
+    /**
+     * Device Utilities
+     */
+    device: {
+        /**
+         * Check if device is mobile
+         * @returns {boolean} - True if mobile device
+         */
+        isMobile: () => {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        },
+
+        /**
+         * Check if device supports touch
+         * @returns {boolean} - True if touch supported
+         */
+        isTouch: () => {
+            return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        },
+
+        /**
+         * Get device info
+         * @returns {Object} - Device information
+         */
+        getInfo: () => {
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                isMobile: window.QRScannerUtils.device.isMobile(),
+                isTouch: window.QRScannerUtils.device.isTouch()
+            };
+        }
+    },
+
+    /**
+     * Performance Utilities
+     */
+    performance: {
+        /**
+         * Start performance timer
+         * @param {string} label - Timer label
+         */
+        startTimer: (label) => {
+            if (window.QRScannerConfig.DEBUG) {
+                console.time(label);
+            }
+        },
+
+        /**
+         * End performance timer
+         * @param {string} label - Timer label
+         */
+        endTimer: (label) => {
+            if (window.QRScannerConfig.DEBUG) {
+                console.timeEnd(label);
+            }
+        },
+
+        /**
+         * Measure function execution time
+         * @param {Function} fn - Function to measure
+         * @param {string} label - Measurement label
+         * @returns {any} - Function result
+         */
+        measure: (fn, label = 'Function') => {
+            const start = performance.now();
+            const result = fn();
+            const end = performance.now();
+            
+            if (window.QRScannerConfig.DEBUG) {
+                console.log(`${label} took ${end - start} milliseconds.`);
+            }
+            
+            return result;
+        }
+    },
+
+    /**
+     * Debounce and Throttle Utilities
+     */
+    control: {
+        /**
+         * Debounce function calls
+         * @param {Function} func - Function to debounce
+         * @param {number} wait - Wait time in ms
+         * @param {boolean} immediate - Execute immediately
+         * @returns {Function} - Debounced function
+         */
+        debounce: (func, wait, immediate) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    timeout = null;
+                    if (!immediate) func(...args);
+                };
+                const callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func(...args);
+            };
+        },
+
+        /**
+         * Throttle function calls
+         * @param {Function} func - Function to throttle
+         * @param {number} limit - Time limit in ms
+         * @returns {Function} - Throttled function
+         */
+        throttle: (func, limit) => {
+            let inThrottle;
+            return function(...args) {
+                if (!inThrottle) {
+                    func.apply(this, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
         }
     },
 
@@ -418,7 +694,7 @@ window.QRScannerUtils = {
          * @param {...any} args - Additional arguments
          */
         debug: (message, ...args) => {
-            if (window.QRScannerConfig.DEBUG) {
+            if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
                 console.log(`[QR Scanner Debug] ${message}`, ...args);
             }
         },
@@ -453,6 +729,6 @@ window.QRScannerUtils = {
 };
 
 // Make utils available globally for debugging
-if (window.QRScannerConfig.DEBUG) {
+if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
     window.QRUtils = window.QRScannerUtils;
 }
