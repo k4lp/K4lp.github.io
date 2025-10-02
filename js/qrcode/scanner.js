@@ -45,7 +45,8 @@ class QRScanner {
                 useBarCodeDetectorIfSupported: true
             },
             rememberLastUsedCamera: true,
-            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+            // Remove Html5QrcodeScanType reference - use number instead
+            supportedScanTypes: [0], // 0 = CAMERA, 1 = FILE
             showTorchButtonIfSupported: true,
             showZoomSliderIfSupported: false,
             defaultZoomValueIfSupported: 2
