@@ -68,7 +68,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Validate cell element has required properties
+     * Validate cell element has required properties (ENHANCED)
      * @param {HTMLElement} cell - Cell element to validate
      * @returns {boolean} - True if valid
      */
@@ -92,7 +92,7 @@ window.QRScannerRangeSelector = {
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
 
-        if (isNaN(row) || isNaN(col)) {
+        if (isNaN(row) || isNaN(col) || row <= 0 || col <= 0) {
             return false;
         }
 
@@ -245,7 +245,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Create interactive selectable table
+     * Create interactive selectable table (ENHANCED WITH VALIDATION)
      * @param {Array} data - Sheet data
      * @returns {HTMLElement} - Table element
      */
@@ -309,15 +309,31 @@ window.QRScannerRangeSelector = {
                 td.textContent = displayValue;
                 td.title = cellValue;
                 
-                // CRITICAL: Set all data attributes
-                td.dataset.row = String(rowIndex + 1);
-                td.dataset.col = String(colIndex + 1);
-                td.dataset.cellRef = window.QRScannerUtils.excel.getCellRef(rowIndex + 1, colIndex + 1);
+                // CRITICAL: Set all data attributes with validation
+                const rowNum = rowIndex + 1;
+                const colNum = colIndex + 1;
+                
+                td.dataset.row = String(rowNum);
+                td.dataset.col = String(colNum);
+                
+                // Generate cellRef safely
+                try {
+                    td.dataset.cellRef = window.QRScannerUtils.excel.getCellRef(rowNum, colNum);
+                } catch (error) {
+                    window.QRScannerUtils.log.warn(`Failed to generate cellRef for row ${rowNum}, col ${colNum}:`, error);
+                    td.dataset.cellRef = `${window.QRScannerUtils.excel.numToCol(colNum)}${rowNum}`;
+                }
+                
+                // Additional validation - ensure all required properties exist
+                if (!td.dataset.row || !td.dataset.col || !td.dataset.cellRef) {
+                    window.QRScannerUtils.log.error(`Cell missing required dataset properties: row=${td.dataset.row}, col=${td.dataset.col}, cellRef=${td.dataset.cellRef}`);
+                    continue; // Skip this cell
+                }
                 
                 // Styling
                 td.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 0.2s;';
 
-                // Add event listeners
+                // Add event listeners only if cell is valid
                 this._addCellEventListeners(td);
 
                 tr.appendChild(td);
@@ -391,7 +407,7 @@ window.QRScannerRangeSelector = {
         
         // Robust validation
         if (!this._isValidCell(cell)) {
-            window.QRScannerUtils.log.warn('Touch start: Invalid cell');
+            window.QRScannerUtils.log.warn('Touch start: Invalid cell - missing dataset properties');
             return;
         }
         
@@ -477,15 +493,41 @@ window.QRScannerRangeSelector = {
 
         const cell = event.currentTarget;
         
-        // Robust validation
+        // Enhanced robust validation
         if (!this._isValidCell(cell)) {
-            window.QRScannerUtils.log.warn('Mouse down: Invalid cell');
+            window.QRScannerUtils.log.warn('Mouse down: Invalid cell - missing dataset properties');
+            return;
+        }
+
+        // Additional safety check for dataset properties
+        if (!cell.dataset || 
+            typeof cell.dataset.row === 'undefined' || 
+            typeof cell.dataset.col === 'undefined') {
+            window.QRScannerUtils.log.warn('Mouse down: Cell missing required dataset properties');
             return;
         }
 
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
-        const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
+        
+        // Validate parsed numbers
+        if (isNaN(row) || isNaN(col) || row <= 0 || col <= 0) {
+            window.QRScannerUtils.log.warn('Mouse down: Invalid row/col values');
+            return;
+        }
+
+        // Safe cellRef generation with fallback
+        let cellRef = cell.dataset.cellRef;
+        if (!cellRef) {
+            try {
+                cellRef = window.QRScannerUtils.excel.getCellRef(row, col);
+                // Set it for future use
+                cell.dataset.cellRef = cellRef;
+            } catch (error) {
+                window.QRScannerUtils.log.error('Failed to generate cellRef:', error);
+                cellRef = `${window.QRScannerUtils.excel.numToCol(col)}${row}`;
+            }
+        }
 
         this._startCell = {
             row: row,
@@ -512,13 +554,39 @@ window.QRScannerRangeSelector = {
         
         // Robust validation
         if (!this._isValidCell(cell)) {
-            window.QRScannerUtils.log.warn('Mouse up: Invalid cell');
+            window.QRScannerUtils.log.warn('Mouse up: Invalid cell - missing dataset properties');
+            return;
+        }
+
+        // Additional safety check for dataset properties
+        if (!cell.dataset || 
+            typeof cell.dataset.row === 'undefined' || 
+            typeof cell.dataset.col === 'undefined') {
+            window.QRScannerUtils.log.warn('Mouse up: Cell missing required dataset properties');
             return;
         }
 
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
-        const cellRef = cell.dataset.cellRef || window.QRScannerUtils.excel.getCellRef(row, col);
+        
+        // Validate parsed numbers
+        if (isNaN(row) || isNaN(col) || row <= 0 || col <= 0) {
+            window.QRScannerUtils.log.warn('Mouse up: Invalid row/col values');
+            return;
+        }
+
+        // Safe cellRef generation with fallback
+        let cellRef = cell.dataset.cellRef;
+        if (!cellRef) {
+            try {
+                cellRef = window.QRScannerUtils.excel.getCellRef(row, col);
+                // Set it for future use
+                cell.dataset.cellRef = cellRef;
+            } catch (error) {
+                window.QRScannerUtils.log.error('Failed to generate cellRef:', error);
+                cellRef = `${window.QRScannerUtils.excel.numToCol(col)}${row}`;
+            }
+        }
 
         this._endCell = {
             row: row,
@@ -769,12 +837,12 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Public method to trigger table creation
+     * Public method to trigger table creation (ENHANCED WITH LONGER TIMEOUT)
      */
     showRangeSelector() {
         setTimeout(() => {
             this.createSelectableTable();
-        }, 100);
+        }, 200); // Increased from 100ms to ensure DOM is fully ready
     }
 };
 
