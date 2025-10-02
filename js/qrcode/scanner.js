@@ -57,6 +57,156 @@ class QRScanner {
         // Initialize with delay to ensure DOM is ready
         setTimeout(() => this.initializeScanner(), 1000);
     }
+
+    
+    /**
+     * Import records from file - MISSING METHOD IMPLEMENTATION
+     * This method was referenced in event listeners but not implemented
+     */
+    async importRecords() {
+        try {
+            // Create file input for importing
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,.csv,.xlsx';
+            input.multiple = false;
+
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                try {
+                    QRUtils.setStatus('Importing records...', 'loading');
+
+                    let importedRecords = [];
+
+                    if (file.type === 'application/json') {
+                        // Handle JSON import
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        importedRecords = Array.isArray(data) ? data : data.scanResults || [];
+                    } else if (file.type === 'text/csv') {
+                        // Handle CSV import
+                        const text = await file.text();
+                        importedRecords = this.parseCSVRecords(text);
+                    } else if (file.name.endsWith('.xlsx')) {
+                        // Handle Excel import
+                        const buffer = await file.arrayBuffer();
+                        const workbook = XLSX.read(buffer, { type: 'buffer' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                        importedRecords = this.parseExcelRecords(jsonData);
+                    }
+
+                    if (importedRecords.length > 0) {
+                        // Validate and process imported records
+                        const validRecords = importedRecords.filter(record => 
+                            record && record.scannedValue && record.timestamp
+                        ).map(record => ({
+                            ...record,
+                            id: record.id || QRUtils.generateId(),
+                            timestamp: new Date(record.timestamp),
+                            imported: true,
+                            importedAt: new Date()
+                        }));
+
+                        // Merge with existing records
+                        this.scanResults = [...this.scanResults, ...validRecords];
+
+                        // Recalculate stats
+                        this.recalculateStats();
+
+                        // Update UI
+                        this.updateScanStats();
+                        this.updateRecordsTable();
+                        this.saveToStorage();
+
+                        QRUtils.showSuccess(`Imported ${validRecords.length} records successfully`);
+                        QRUtils.log.success(`Records imported: ${validRecords.length}`);
+                    } else {
+                        QRUtils.setStatus('No valid records found in file', 'warning');
+                    }
+
+                } catch (error) {
+                    QRUtils.handleError(error, 'Record Import');
+                }
+            };
+
+            // Trigger file selection
+            input.click();
+
+        } catch (error) {
+            QRUtils.handleError(error, 'Import Records');
+        }
+    }
+
+    /**
+     * Parse CSV records for import
+     */
+    parseCSVRecords(csvText) {
+        try {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return [];
+
+            const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+            const records = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+                const record = {};
+
+                headers.forEach((header, index) => {
+                    record[header] = values[index] || '';
+                });
+
+                // Map CSV fields to scanner record format
+                if (record['Scanned Value']) {
+                    records.push({
+                        scannedValue: record['Scanned Value'],
+                        originalValue: record['Original Value'] || record['Scanned Value'],
+                        matched: record['Status'] === 'Match',
+                        timestamp: new Date(record['Timestamp'] || Date.now()),
+                        scanIndex: parseInt(record['Scan Index']) || records.length + 1,
+                        decodedResult: {
+                            format: record['Format'] || 'IMPORTED'
+                        },
+                        scanMode: record['Scan Mode'] || 'imported',
+                        camera: record['Camera'] || 'Imported'
+                    });
+                }
+            }
+
+            return records;
+        } catch (error) {
+            QRUtils.log.error('CSV parsing failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Parse Excel records for import
+     */
+    parseExcelRecords(jsonData) {
+        try {
+            return jsonData.map((row, index) => ({
+                scannedValue: row['Scanned Value'] || row['scannedValue'] || '',
+                originalValue: row['Original Value'] || row['originalValue'] || row['Scanned Value'] || row['scannedValue'] || '',
+                matched: row['Status'] === 'Match' || row['matched'] === true,
+                timestamp: new Date(row['Timestamp'] || row['timestamp'] || Date.now()),
+                scanIndex: parseInt(row['Scan Index'] || row['scanIndex']) || index + 1,
+                decodedResult: {
+                    format: row['Format'] || row['format'] || 'IMPORTED'
+                },
+                scanMode: row['Scan Mode'] || row['scanMode'] || 'imported',
+                camera: row['Camera'] || row['camera'] || 'Imported'
+            })).filter(record => record.scannedValue);
+        } catch (error) {
+            QRUtils.log.error('Excel parsing failed:', error);
+            return [];
+        }
+    }
+
     
     async initializeScanner() {
         try {
