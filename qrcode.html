@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Component Scanner — Alica Technologies</title>
+    <link rel="stylesheet" href="css/site/styles.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="back-nav">
+            <a href="index.html">← Back to Tools</a>
+        </nav>
+
+        <header class="header-grid">
+            <div>
+                <h1 class="header-title tracking-tight">QR Code Component Scanner</h1>
+                <p class="header-subtitle">Rapid component counting and BOM matching through QR/barcode scanning</p>
+            </div>
+            <div class="header-meta">
+                <div>Status: <span id="scannerStatus" class="status-ready">Ready</span></div>
+                <div>Scanned: <span id="scanCount">0</span></div>
+                <div>Matched: <span id="matchCount">0</span></div>
+            </div>
+        </header>
+
+        <!-- Step 1: File Import -->
+        <section class="section">
+            <h2 class="section-title">Step 1: Import Excel File</h2>
+            <div class="form-group">
+                <label>Select Excel File (.xlsx, .xls)</label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" />
+                <div class="form-help">Upload your BOM Excel file to begin the scanning process</div>
+            </div>
+
+            <div id="fileInfo" class="panel hidden">
+                <h3>File Information</h3>
+                <div class="kv-list">
+                    <div class="kv-item">
+                        <div class="kv-key">File Name</div>
+                        <div class="kv-value" id="fileName"></div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">File Size</div>
+                        <div class="kv-value" id="fileSize"></div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Sheets Found</div>
+                        <div class="kv-value" id="sheetCount"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Sheet Selection -->
+        <section id="step2" class="section hidden">
+            <h2 class="section-title">Step 2: Select Sheet</h2>
+            <div class="form-group">
+                <label>Available Sheets</label>
+                <select id="sheetSelect">
+                    <option value="">Select a sheet...</option>
+                </select>
+                <div class="form-help">Choose the sheet containing your BOM data</div>
+            </div>
+
+            <div id="sheetPreview" class="table-container hidden">
+                <h3>Sheet Preview (First 10 rows)</h3>
+                <div id="previewTable"></div>
+            </div>
+        </section>
+
+        <!-- Step 3: Data Range Selection -->
+        <section id="step3" class="section hidden">
+            <h2 class="section-title">Step 3: Select Data Range</h2>
+            <div class="alert">
+                Click and drag to select the data range containing your BOM line items. 
+                The selection should include headers and all relevant data rows.
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Start Cell (e.g., A1)</label>
+                    <input type="text" id="startCell" placeholder="A1" readonly />
+                </div>
+                <div>
+                    <label>End Cell (e.g., F100)</label>
+                    <input type="text" id="endCell" placeholder="F100" readonly />
+                </div>
+            </div>
+
+            <div id="rangeSelector" class="table-container">
+                <div id="selectableTable"></div>
+            </div>
+
+            <div class="btn-group">
+                <button id="confirmRange" class="btn-success" disabled>Confirm Selection</button>
+                <button id="clearRange" class="btn-secondary">Clear Selection</button>
+            </div>
+        </section>
+
+        <!-- Step 4: Column Mapping -->
+        <section id="step4" class="section hidden">
+            <h2 class="section-title">Step 4: Map Data Columns</h2>
+            <div class="alert">
+                Map your Excel columns to the required BOM fields. The Target Column will be used for QR/barcode matching.
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label>Serial No. Column</label>
+                    <select id="serialColumn">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>MPN Column</label>
+                    <select id="mpnColumn">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Designators Column</label>
+                    <select id="designatorsColumn">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Manufacturer Column</label>
+                    <select id="manufacturerColumn">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Quantity Column</label>
+                    <select id="quantityColumn">
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label><strong>Target Column (for scanning)</strong></label>
+                    <select id="targetColumn">
+                        <option value="">Select target column...</option>
+                    </select>
+                    <div class="form-help">This column will be matched against scanned QR/barcode values</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button id="confirmMapping" class="btn-success" disabled>Start Scanner</button>
+                <button id="backToRange" class="btn-secondary">Back to Range Selection</button>
+            </div>
+        </section>
+
+        <!-- Step 5: Scanner Interface -->
+        <section id="step5" class="section hidden">
+            <h2 class="section-title">Step 5: QR/Barcode Scanner</h2>
+
+            <div class="scanner-section">
+                <div class="scanner-container">
+                    <div id="qr-reader" class="camera-preview">
+                        <div class="scanner-placeholder">
+                            <p>Click "Start Camera" to begin scanning</p>
+                        </div>
+                    </div>
+                    <div class="scan-overlay" id="scanOverlay"></div>
+                </div>
+
+                <div class="scan-controls">
+                    <div class="btn-group">
+                        <button id="startCamera" class="btn-success">Start Camera</button>
+                        <button id="stopCamera" class="btn-secondary" disabled>Stop Camera</button>
+                        <button id="switchCamera" class="btn-secondary" disabled>Switch Camera</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Camera Selection</label>
+                        <select id="cameraSelect" disabled>
+                            <option value="">Loading cameras...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="scan-result" id="currentMatch">
+                    <div class="empty">No scan results yet</div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalScanned">0</span>
+                        <span class="stat-label">Total Scanned</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="successMatches">0</span>
+                        <span class="stat-label">Successful Matches</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="scanRate">0.0/min</span>
+                        <span class="stat-label">Scan Rate</span>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button id="exportResults" class="btn-success" disabled>Export Results</button>
+                    <button id="clearResults" class="btn-secondary">Clear Results</button>
+                    <button id="resetScanner" class="btn-ghost">Reset All</button>
+                </div>
+
+                <div id="scanResults" class="table-container">
+                    <div class="empty">No scan results to display</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Load Libraries -->
+    <script src="js/qrcode/libs/xlsx.full.min.js"></script>
+    <script src="js/qrcode/libs/html5-qrcode.min.js"></script>
+
+    <!-- Load Application Modules -->
+    <script src="js/qrcode/config.js"></script>
+    <script src="js/qrcode/utils.js"></script>
+    <script src="js/qrcode/excel-handler.js"></script>
+    <script src="js/qrcode/range-selector.js"></script>
+    <script src="js/qrcode/scanner-manager.js"></script>
+    <script src="js/qrcode/data-manager.js"></script>
+    <script src="js/qrcode/main.js"></script>
+</body>
+</html>
