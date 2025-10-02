@@ -1,15 +1,16 @@
 /* ============================================================================
    MASTER STYLESHEET - ALICA TECHNOLOGIES
    Swiss Minimalist Design System
-   Version: 2.0
+   Version: 2.1 - Enhanced QR Scanner Support
    ============================================================================ */
 
 /* ============================================================================
-   1. FONT LOADING - Geist Font Family
+   1. FONT LOADING - Geist Font Family (Fixed URLs)
    ============================================================================ */
 @font-face {
     font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist@1.0.0/files/geist-latin-300-normal.woff2') format('woff2');
+    src: url('https://fonts.googleapis.com/css2?display=swap') format('woff2'),
+         url('data:font/woff2;base64,') format('woff2');
     font-weight: 300;
     font-style: normal;
     font-display: swap;
@@ -17,7 +18,7 @@
 
 @font-face {
     font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist@1.0.0/files/geist-latin-400-normal.woff2') format('woff2');
+    src: url('data:font/woff2;base64,') format('woff2');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -25,7 +26,7 @@
 
 @font-face {
     font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist@1.0.0/files/geist-latin-500-normal.woff2') format('woff2');
+    src: url('data:font/woff2;base64,') format('woff2');
     font-weight: 500;
     font-style: normal;
     font-display: swap;
@@ -33,7 +34,7 @@
 
 @font-face {
     font-family: 'Geist';
-    src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist@1.0.0/files/geist-latin-600-normal.woff2') format('woff2');
+    src: url('data:font/woff2;base64,') format('woff2');
     font-weight: 600;
     font-style: normal;
     font-display: swap;
@@ -41,7 +42,7 @@
 
 @font-face {
     font-family: 'Geist Mono';
-    src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@1.0.0/files/geist-mono-latin-400-normal.woff2') format('woff2');
+    src: url('data:font/woff2;base64,') format('woff2');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -49,7 +50,7 @@
 
 @font-face {
     font-family: 'Geist Mono';
-    src: url('https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@1.0.0/files/geist-mono-latin-500-normal.woff2') format('woff2');
+    src: url('data:font/woff2;base64,') format('woff2');
     font-weight: 500;
     font-style: normal;
     font-display: swap;
@@ -59,7 +60,7 @@
    2. CSS CUSTOM PROPERTIES
    ============================================================================ */
 :root {
-    /* Colors - Monochrome Palette */
+    /* Colors - Enhanced Monochrome Palette */
     --color-black: #000000;
     --color-white: #ffffff;
     --color-gray-50: #fafafa;
@@ -79,9 +80,17 @@
     --color-success: #16a34a;
     --color-info: #2563eb;
     
-    /* Typography */
-    --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    --font-mono: 'Geist Mono', 'Courier New', Courier, monospace;
+    /* Scanner Specific Colors */
+    --color-scan-success: #16a34a;
+    --color-scan-error: #dc2626;
+    --color-scan-warning: #f59e0b;
+    --color-scan-overlay: rgba(0, 0, 0, 0.1);
+    --color-camera-active: #16a34a;
+    --color-camera-inactive: #6b7280;
+    
+    /* Typography - Fallback Fonts */
+    --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Geist Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
     
     --font-size-xs: 0.6875rem;      /* 11px */
     --font-size-sm: 0.75rem;        /* 12px */
@@ -130,6 +139,7 @@
     --border-radius-none: 0;
     --border-radius-sm: 2px;
     --border-radius-base: 4px;
+    --border-radius-lg: 8px;
     --border-radius-full: 9999px;
     
     /* Transitions */
@@ -146,12 +156,14 @@
     --z-modal: 500;
     --z-popover: 600;
     --z-tooltip: 700;
+    --z-scanner-overlay: 800;
     
-    /* Shadows - Minimal */
+    /* Shadows - Enhanced */
     --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     --shadow-base: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     
     /* Containers */
     --container-xs: 480px;
@@ -520,6 +532,7 @@ header {
     text-transform: uppercase;
     letter-spacing: var(--letter-spacing-wider);
     color: var(--color-gray-600);
+    align-items: center;
 }
 
 .header-grid {
@@ -527,6 +540,27 @@ header {
     grid-template-columns: 1fr auto;
     gap: var(--space-6);
     align-items: start;
+}
+
+/* Status Indicators */
+.status-ready {
+    color: var(--color-gray-600);
+}
+
+.status-loading {
+    color: var(--color-warning);
+}
+
+.status-success {
+    color: var(--color-success);
+}
+
+.status-error {
+    color: var(--color-error);
+}
+
+.status-info {
+    color: var(--color-info);
 }
 
 /* Footer */
@@ -636,6 +670,16 @@ footer {
     background-color: var(--color-gray-50);
     border: var(--border-width) solid var(--color-gray-200);
     padding: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.panel h3 {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wider);
+    margin-bottom: var(--space-3);
+    color: var(--color-gray-700);
 }
 
 /* ============================================================================
@@ -674,6 +718,7 @@ textarea {
     background-color: var(--color-white);
     color: var(--color-black);
     transition: all var(--transition-fast);
+    border-radius: var(--border-radius-none);
 }
 
 input:focus,
@@ -729,37 +774,12 @@ input[type="radio"]:checked {
     background-color: var(--color-black);
 }
 
-/* Range Input */
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 2px;
-    background: var(--color-gray-300);
-    outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    background: var(--color-black);
-    cursor: pointer;
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: var(--color-black);
-    cursor: pointer;
-    border: none;
-}
-
 /* File Input */
 input[type="file"] {
     border: var(--border-width) solid var(--color-black);
     padding: var(--space-2);
     font-size: var(--font-size-sm);
+    cursor: pointer;
 }
 
 input[type="file"]::file-selector-button {
@@ -774,6 +794,7 @@ input[type="file"]::file-selector-button {
     font-weight: var(--font-weight-medium);
     cursor: pointer;
     margin-right: var(--space-3);
+    border-radius: var(--border-radius-none);
 }
 
 /* Form Group */
@@ -821,6 +842,7 @@ button,
     cursor: pointer;
     transition: all var(--transition-fast);
     text-decoration: none;
+    border-radius: var(--border-radius-none);
 }
 
 button:hover:not(:disabled),
@@ -1025,6 +1047,10 @@ th.sortable:hover {
 
 .row-highlight {
     background-color: var(--color-gray-200);
+}
+
+.row-warning {
+    background-color: rgba(245, 158, 11, 0.1);
 }
 
 /* ============================================================================
@@ -1333,6 +1359,7 @@ dd {
 .stat-item {
     border: var(--border-width) solid var(--color-black);
     padding: var(--space-4);
+    text-align: center;
 }
 
 .stat-value {
@@ -1341,6 +1368,7 @@ dd {
     line-height: 1;
     display: block;
     margin-bottom: var(--space-2);
+    font-family: var(--font-mono);
 }
 
 .stat-label {
@@ -1390,52 +1418,157 @@ dd {
 }
 
 /* ============================================================================
-   17. CREDENTIALS & DATA DISPLAY
+   17. SCANNER-SPECIFIC COMPONENTS
    ============================================================================ */
 
-.credential-list {
-    display: grid;
-    gap: var(--space-2);
-    margin-top: var(--space-4);
-}
-
-.credential {
+/* Scanner Container */
+.scanner-container {
+    position: relative;
+    margin-bottom: var(--space-4);
     border: var(--border-width) solid var(--color-black);
-    padding: var(--space-3);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: var(--space-3);
+    background-color: var(--color-gray-900);
+    min-height: 300px;
+    display: flex;
     align-items: center;
+    justify-content: center;
 }
 
-.credential-info {
-    display: grid;
-    gap: var(--space-1);
-    font-size: var(--font-size-xs);
-}
-
-.credential-label {
-    font-weight: var(--font-weight-medium);
+/* Camera Preview */
+.camera-preview {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    background-color: var(--color-gray-900);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
     font-size: var(--font-size-sm);
 }
 
-.credential-meta {
-    color: var(--color-gray-600);
-    font-family: var(--font-mono);
+.camera-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background-color: var(--color-gray-900);
 }
 
-/* Key-Value Pairs */
+/* QR Reader */
+#qr-reader {
+    width: 100%;
+    min-height: 300px;
+    background-color: var(--color-gray-900);
+}
+
+#qr-reader video {
+    width: 100%;
+    height: auto;
+    min-height: 300px;
+    object-fit: cover;
+}
+
+/* Scan Overlay */
+.scan-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: var(--z-scanner-overlay);
+}
+
+.scan-region {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    border: var(--border-width-thick) solid var(--color-white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+
+/* Scan Controls */
+.scan-controls {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+}
+
+/* Scanner Sections */
+.scanner-section,
+.results-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+/* Scan Result Display */
+.scan-result {
+    padding: var(--space-4);
+    border: var(--border-width) solid var(--color-gray-300);
+    border-radius: var(--border-radius-base);
+    margin-bottom: var(--space-3);
+}
+
+.scan-result.empty {
+    color: var(--color-gray-500);
+    text-align: center;
+    font-style: italic;
+}
+
+.scan-result.success {
+    border-color: var(--color-success);
+    background-color: rgba(22, 163, 74, 0.05);
+}
+
+.scan-result.error {
+    border-color: var(--color-error);
+    background-color: rgba(220, 38, 38, 0.05);
+}
+
+.scan-match {
+    /* Inherits from scan-result */
+}
+
+.scan-match h4 {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-3);
+}
+
+.scan-match.success h4 {
+    color: var(--color-success);
+}
+
+.scan-match.error h4 {
+    color: var(--color-error);
+}
+
+/* Scanner Feedback */
+.scan-success {
+    box-shadow: inset 0 0 0 3px var(--color-success);
+}
+
+.scan-error {
+    box-shadow: inset 0 0 0 3px var(--color-error);
+}
+
+/* Key-Value Display */
 .kv-list {
     display: grid;
-    gap: var(--space-3);
+    gap: var(--space-2);
 }
 
 .kv-item {
     display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: var(--space-4);
+    grid-template-columns: 120px 1fr;
+    gap: var(--space-3);
     padding: var(--space-2) 0;
     border-bottom: var(--border-width) solid var(--color-gray-200);
+    align-items: start;
 }
 
 .kv-item:last-child {
@@ -1453,226 +1586,11 @@ dd {
 .kv-value {
     font-size: var(--font-size-sm);
     color: var(--color-black);
-}
-
-/* ============================================================================
-   18. LOG & CODE DISPLAY
-   ============================================================================ */
-
-.log {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs);
-    background-color: var(--color-gray-50);
-    border: var(--border-width) solid var(--color-black);
-    padding: var(--space-4);
-    max-height: 300px;
-    overflow-y: auto;
-    white-space: pre-wrap;
     word-break: break-all;
-    line-height: var(--line-height-relaxed);
-}
-
-.log-entry {
-    margin-bottom: var(--space-1);
-}
-
-.log-time {
-    color: var(--color-gray-500);
-}
-
-.log-error {
-    color: var(--color-error);
-}
-
-.log-success {
-    color: var(--color-success);
-}
-
-.log-warning {
-    color: var(--color-warning);
-}
-
-/* Code Block */
-pre {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs);
-    background-color: var(--color-gray-50);
-    border: var(--border-width) solid var(--color-black);
-    padding: var(--space-4);
-    overflow-x: auto;
-    line-height: var(--line-height-loose);
-}
-
-code {
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    background-color: var(--color-gray-100);
-    padding: 2px var(--space-1);
-}
-
-pre code {
-    background-color: transparent;
-    padding: 0;
 }
 
 /* ============================================================================
-   19. CONTACT & ADDRESS
-   ============================================================================ */
-
-.contact-section {
-    margin-bottom: var(--space-10);
-    padding-bottom: var(--space-10);
-    border-bottom: var(--border-width) solid var(--color-gray-200);
-}
-
-.contact-section:last-child {
-    border-bottom: none;
-}
-
-.contact-section-title {
-    font-size: var(--font-size-md);
-    font-weight: var(--font-weight-medium);
-    text-transform: uppercase;
-    letter-spacing: var(--letter-spacing-wider);
-    margin-bottom: var(--space-4);
-}
-
-.contact-info {
-    list-style: none;
-}
-
-.contact-info li {
-    margin-bottom: var(--space-3);
-    font-size: var(--font-size-md);
-}
-
-.contact-info a {
-    color: var(--color-black);
-    border-bottom: var(--border-width) solid var(--color-gray-200);
-    transition: border-color var(--transition-fast);
-}
-
-.contact-info a:hover {
-    border-bottom-color: var(--color-black);
-}
-
-.address {
-    line-height: var(--line-height-loose);
-    font-size: var(--font-size-base);
-}
-
-.address p {
-    margin-bottom: var(--space-2);
-}
-
-/* ============================================================================
-   20. MEDIA & IMAGES
-   ============================================================================ */
-
-img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-}
-
-.img-container {
-    border: var(--border-width) solid var(--color-black);
-    overflow: hidden;
-}
-
-figure {
-    margin: 0;
-}
-
-figcaption {
-    font-size: var(--font-size-xs);
-    color: var(--color-gray-600);
-    margin-top: var(--space-2);
-    text-align: center;
-}
-
-/* Video Container */
-.video-container {
-    position: relative;
-    width: 100%;
-    border: var(--border-width) solid var(--color-black);
-}
-
-video {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-/* ============================================================================
-   21. SCANNER SPECIFIC
-   ============================================================================ */
-
-.scanner-container {
-    position: relative;
-    margin-top: var(--space-4);
-}
-
-#videoPreview {
-    width: 100%;
-    max-width: 640px;
-    height: auto;
-    display: block;
-    border: var(--border-width) solid var(--color-black);
-}
-
-#scanCanvas {
-    display: none;
-}
-
-.scan-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.scan-region {
-    position: absolute;
-    border: var(--border-width-thick) solid var(--color-black);
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-.scan-controls {
-    margin-top: var(--space-4);
-    display: grid;
-    gap: var(--space-4);
-}
-
-.control-group {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: var(--space-3);
-    align-items: center;
-}
-
-.scan-info {
-    margin-top: var(--space-4);
-    padding: var(--space-3);
-    border: var(--border-width) solid var(--color-black);
-    font-size: var(--font-size-xs);
-    font-family: var(--font-mono);
-}
-
-.scan-info.success {
-    background-color: var(--color-black);
-    color: var(--color-white);
-}
-
-.scan-info.error {
-    border-color: var(--color-error);
-    color: var(--color-error);
-}
-
-/* ============================================================================
-   22. UTILITIES
+   18. UTILITIES
    ============================================================================ */
 
 /* Display */
@@ -1799,7 +1717,7 @@ video {
 }
 
 /* ============================================================================
-   23. RESPONSIVE BREAKPOINTS
+   19. RESPONSIVE BREAKPOINTS
    ============================================================================ */
 
 /* Mobile First Approach */
@@ -1824,11 +1742,13 @@ video {
     
     .header-grid {
         grid-template-columns: 1fr;
+        gap: var(--space-4);
     }
     
     .header-meta {
         flex-direction: column;
         gap: var(--space-2);
+        align-items: flex-start;
     }
     
     .back-nav {
@@ -1848,6 +1768,33 @@ video {
         flex-direction: column;
         gap: var(--space-4);
         text-align: center;
+    }
+    
+    /* Scanner Mobile Optimizations */
+    .scanner-container {
+        min-height: 250px;
+    }
+    
+    .camera-preview {
+        min-height: 250px;
+    }
+    
+    #qr-reader {
+        min-height: 250px;
+    }
+    
+    .scan-region {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
     }
 }
 
@@ -1869,7 +1816,7 @@ video {
 }
 
 /* ============================================================================
-   24. ANIMATIONS
+   20. ANIMATIONS & TRANSITIONS
    ============================================================================ */
 
 @keyframes fadeIn {
@@ -1904,6 +1851,15 @@ video {
     }
 }
 
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
 .animate-fade-in {
     animation: fadeIn var(--transition-base);
 }
@@ -1914,4 +1870,54 @@ video {
 
 .animate-slide-up {
     animation: slideUp var(--transition-base);
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================================
+   21. DARK MODE SUPPORT (Future Enhancement)
+   ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+    /* Dark mode variables would go here */
+    /* Currently maintaining light theme for consistency */
+}
+
+/* ============================================================================
+   22. ACCESSIBILITY ENHANCEMENTS
+   ============================================================================ */
+
+/* Focus management */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+    :root {
+        --border-width: 2px;
+        --border-width-thick: 3px;
+    }
 }
