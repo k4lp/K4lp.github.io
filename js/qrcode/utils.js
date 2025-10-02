@@ -221,7 +221,7 @@ window.QRScannerUtils = {
         },
 
         /**
-         * Convert cell reference to position object
+         * Convert cell reference to position object (alias for parseCellRef)
          * @param {string} cellRef - Cell reference (e.g., "A1")
          * @returns {Object|null} - {row, col} or null if invalid
          */
@@ -485,7 +485,7 @@ window.QRScannerUtils = {
          * @param {number} volume - Volume 0.0 to 1.0
          */
         playTone: (frequency, duration, volume = 0.3) => {
-            if (!window.QRScannerConfig.SCANNER.AUDIO_FEEDBACK) return;
+            if (!window.QRScannerConfig || !window.QRScannerConfig.SCANNER.AUDIO_FEEDBACK) return;
 
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -513,6 +513,7 @@ window.QRScannerUtils = {
          * Play success sound
          */
         success: () => {
+            if (!window.QRScannerConfig) return;
             const config = window.QRScannerConfig.AUDIO;
             window.QRScannerUtils.audio.playTone(config.SUCCESS_FREQUENCY, config.SUCCESS_DURATION, config.VOLUME);
         },
@@ -521,6 +522,7 @@ window.QRScannerUtils = {
          * Play error sound
          */
         error: () => {
+            if (!window.QRScannerConfig) return;
             const config = window.QRScannerConfig.AUDIO;
             window.QRScannerUtils.audio.playTone(config.ERROR_FREQUENCY, config.ERROR_DURATION, config.VOLUME);
         }
@@ -535,7 +537,7 @@ window.QRScannerUtils = {
          * @param {number|Array} pattern - Vibration pattern
          */
         vibrate: (pattern) => {
-            if (!window.QRScannerConfig.SCANNER.VIBRATION_FEEDBACK) return;
+            if (!window.QRScannerConfig || !window.QRScannerConfig.SCANNER.VIBRATION_FEEDBACK) return;
 
             try {
                 if ('vibrate' in navigator) {
@@ -607,7 +609,7 @@ window.QRScannerUtils = {
          * @param {string} label - Timer label
          */
         startTimer: (label) => {
-            if (window.QRScannerConfig.DEBUG) {
+            if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
                 console.time(label);
             }
         },
@@ -617,7 +619,7 @@ window.QRScannerUtils = {
          * @param {string} label - Timer label
          */
         endTimer: (label) => {
-            if (window.QRScannerConfig.DEBUG) {
+            if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
                 console.timeEnd(label);
             }
         },
@@ -633,7 +635,7 @@ window.QRScannerUtils = {
             const result = fn();
             const end = performance.now();
             
-            if (window.QRScannerConfig.DEBUG) {
+            if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
                 console.log(`${label} took ${end - start} milliseconds.`);
             }
             
@@ -728,7 +730,10 @@ window.QRScannerUtils = {
     }
 };
 
-// Make utils available globally for debugging
-if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
-    window.QRUtils = window.QRScannerUtils;
+// Initialize utils when loaded
+if (typeof window !== 'undefined') {
+    // Make utils available globally for debugging
+    if (window.QRScannerConfig && window.QRScannerConfig.DEBUG) {
+        window.QRUtils = window.QRScannerUtils;
+    }
 }
