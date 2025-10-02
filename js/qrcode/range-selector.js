@@ -85,6 +85,7 @@ window.QRScannerRangeSelector = {
             return false;
         }
 
+        // Enhanced validation for dataset properties
         if (!cell.dataset.row || !cell.dataset.col) {
             return false;
         }
@@ -92,6 +93,7 @@ window.QRScannerRangeSelector = {
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
 
+        // Validate parsed numbers and ensure they're positive
         if (isNaN(row) || isNaN(col) || row <= 0 || col <= 0) {
             return false;
         }
@@ -245,7 +247,7 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Create interactive selectable table (ENHANCED WITH VALIDATION)
+     * Create interactive selectable table (ENHANCED)
      * @param {Array} data - Sheet data
      * @returns {HTMLElement} - Table element
      */
@@ -321,19 +323,19 @@ window.QRScannerRangeSelector = {
                     td.dataset.cellRef = window.QRScannerUtils.excel.getCellRef(rowNum, colNum);
                 } catch (error) {
                     window.QRScannerUtils.log.warn(`Failed to generate cellRef for row ${rowNum}, col ${colNum}:`, error);
-                    td.dataset.cellRef = `${window.QRScannerUtils.excel.numToCol(colNum)}${rowNum}`;
+                    td.dataset.cellRef = window.QRScannerUtils.excel.numToCol(colNum) + rowNum;
                 }
                 
-                // Additional validation - ensure all required properties exist
+                // Additional validation after setting dataset
                 if (!td.dataset.row || !td.dataset.col || !td.dataset.cellRef) {
-                    window.QRScannerUtils.log.error(`Cell missing required dataset properties: row=${td.dataset.row}, col=${td.dataset.col}, cellRef=${td.dataset.cellRef}`);
+                    window.QRScannerUtils.log.error('Failed to set cell dataset properties');
                     continue; // Skip this cell
                 }
                 
                 // Styling
                 td.style.cssText = 'border: 1px solid #dee2e6; padding: 8px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 0.2s;';
 
-                // Add event listeners only if cell is valid
+                // Add event listeners
                 this._addCellEventListeners(td);
 
                 tr.appendChild(td);
@@ -525,7 +527,7 @@ window.QRScannerRangeSelector = {
                 cell.dataset.cellRef = cellRef;
             } catch (error) {
                 window.QRScannerUtils.log.error('Failed to generate cellRef:', error);
-                cellRef = `${window.QRScannerUtils.excel.numToCol(col)}${row}`;
+                return;
             }
         }
 
@@ -584,7 +586,7 @@ window.QRScannerRangeSelector = {
                 cell.dataset.cellRef = cellRef;
             } catch (error) {
                 window.QRScannerUtils.log.error('Failed to generate cellRef:', error);
-                cellRef = `${window.QRScannerUtils.excel.numToCol(col)}${row}`;
+                return;
             }
         }
 
@@ -837,12 +839,13 @@ window.QRScannerRangeSelector = {
     },
 
     /**
-     * Public method to trigger table creation (ENHANCED WITH LONGER TIMEOUT)
+     * Public method to trigger table creation (ENHANCED)
      */
     showRangeSelector() {
+        // Increased timeout to ensure DOM is fully rendered
         setTimeout(() => {
             this.createSelectableTable();
-        }, 200); // Increased from 100ms to ensure DOM is fully ready
+        }, 200);
     }
 };
 
