@@ -31,41 +31,42 @@ window.QRScannerRangeSelector = {
     },
     
     /**
-     * Setup click selection mode toggle and UI
-     */
-    _setupClickSelectionToggle() {
-        // Create toggle button container
-        const controlsContainer = this._getOrCreateControlsContainer();
-        
-        // Add toggle button
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'click-selection-toggle';
-        toggleBtn.textContent = 'ENABLE CLICK SELECTION';
-        toggleBtn.className = 'btn btn-outline btn-sm';
-        toggleBtn.title = 'Toggle between drag selection and click selection modes';
-        
-        // Add toggle functionality
-        toggleBtn.addEventListener('click', this._toggleClickSelectionMode.bind(this));
-        
-        // Add visual indicator for click selection mode
-        const indicator = document.createElement('div');
-        indicator.id = 'click-selection-indicator';
-        indicator.className = 'alert alert-info';
-        indicator.style.cssText = 'display: none; margin-top: var(--space-3);';
-        indicator.innerHTML = `
-            <div class="alert-title">CLICK SELECTION MODE ACTIVE</div>
-            <div style="font-size: var(--font-size-xs); margin-top: var(--space-2);">
-                Step 1: Click on the first cell → Step 2: Click on the second cell → Range selected
-            </div>
-        `;
-        
-        // Add to controls container
-        controlsContainer.appendChild(toggleBtn);
-        controlsContainer.appendChild(indicator);
-        
-        // Add mode information panel
-        this._createModeInfoPanel(controlsContainer);
-    },
+ * Setup click selection mode toggle and UI
+ */
+_setupClickSelectionToggle() {
+    // Create toggle button container
+    const controlsContainer = this._getOrCreateControlsContainer();
+    
+    // Add toggle button
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'click-selection-toggle';
+    toggleBtn.textContent = 'ENABLE CLICK SELECTION';
+    toggleBtn.className = 'button button--ghost button--sm';
+    toggleBtn.title = 'Toggle between drag selection and click selection modes';
+    toggleBtn.style.cssText = 'margin-bottom: 16px;';
+    
+    // Add toggle functionality
+    toggleBtn.addEventListener('click', this._toggleClickSelectionMode.bind(this));
+    
+    // Add visual indicator for click selection mode
+    const indicator = document.createElement('div');
+    indicator.id = 'click-selection-indicator';
+    indicator.className = 'alert alert--success';
+    indicator.style.cssText = 'display: none; margin-bottom: 16px;';
+    indicator.innerHTML = `
+        <div class="alert__msg">
+            <strong>CLICK SELECTION MODE ACTIVE</strong><br>
+            <small>Tap first cell, then tap second cell to complete range selection</small>
+        </div>
+    `;
+    
+    // Add to controls container
+    controlsContainer.appendChild(toggleBtn);
+    controlsContainer.appendChild(indicator);
+    
+    // Add mode information panel
+    this._createModeInfoPanel(controlsContainer);
+}
     
     /**
      * Get or create controls container
