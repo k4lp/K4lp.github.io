@@ -31,169 +31,154 @@ window.QRScannerRangeSelector = {
     },
     
     /**
- * Setup click selection mode toggle and UI
- */
-/**
- * Setup click selection mode toggle and UI
- */
-_setupClickSelectionToggle() {
-    // Create toggle button container
-    const controlsContainer = this._getOrCreateControlsContainer();
-    
-    // Add toggle button
-    const toggleBtn = document.createElement('button');
-    toggleBtn.id = 'click-selection-toggle';
-    toggleBtn.textContent = 'ENABLE CLICK SELECTION';
-    toggleBtn.className = 'button button--ghost button--sm';
-    toggleBtn.title = 'Toggle between drag selection and click selection modes';
-    toggleBtn.style.cssText = 'margin-bottom: 16px;';
-    
-    // Add toggle functionality
-    toggleBtn.addEventListener('click', this._toggleClickSelectionMode.bind(this));
-    
-    // Add visual indicator for click selection mode
-    const indicator = document.createElement('div');
-    indicator.id = 'click-selection-indicator';
-    indicator.className = 'alert alert--success';
-    indicator.style.cssText = 'display: none; margin-bottom: 16px;';
-    indicator.innerHTML = `
-        <div class="alert__msg">
-            <strong>CLICK SELECTION MODE ACTIVE</strong><br>
-            <small>Tap first cell, then tap second cell to complete range selection</small>
-        </div>
-    `;
-    
-    // Add to controls container
-    controlsContainer.appendChild(toggleBtn);
-    controlsContainer.appendChild(indicator);
-    
-    // Add mode information panel
-    this._createModeInfoPanel(controlsContainer);
-},
+     * Setup click selection mode toggle and UI
+     */
+    _setupClickSelectionToggle() {
+        // Create toggle button container
+        const controlsContainer = this._getOrCreateControlsContainer();
+        
+        // Add toggle button
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'click-selection-toggle';
+        toggleBtn.textContent = 'ENABLE CLICK SELECTION';
+        toggleBtn.className = 'button button--ghost button--sm';
+        toggleBtn.title = 'Toggle between drag selection and click selection modes';
+        toggleBtn.style.cssText = 'margin-bottom: 16px;';
+        
+        // Add toggle functionality
+        toggleBtn.addEventListener('click', this._toggleClickSelectionMode.bind(this));
+        
+        // Add visual indicator for click selection mode
+        const indicator = document.createElement('div');
+        indicator.id = 'click-selection-indicator';
+        indicator.className = 'alert alert--success';
+        indicator.style.cssText = 'display: none; margin-bottom: 16px;';
+        indicator.innerHTML = `
+            <div class="alert__msg">
+                <strong>CLICK SELECTION MODE ACTIVE</strong><br>
+                <small>Tap first cell, then tap second cell to complete range selection</small>
+            </div>
+        `;
+        
+        // Add to controls container
+        controlsContainer.appendChild(toggleBtn);
+        controlsContainer.appendChild(indicator);
+        
+        // Add mode information panel
+        this._createModeInfoPanel(controlsContainer);
+    },
     
     /**
      * Get or create controls container
      */
-    /**
- * Get or create controls container
- */
-_getOrCreateControlsContainer() {
-    let container = document.getElementById('range-selection-controls');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'range-selection-controls';
-        container.style.cssText = 'margin-bottom: 24px;';
-        
-        // Find the best insertion point - before the table container
-        const tableWrapper = document.querySelector('#step3 .table-container');
-        if (tableWrapper && tableWrapper.parentNode) {
-            tableWrapper.parentNode.insertBefore(container, tableWrapper);
+    _getOrCreateControlsContainer() {
+        let container = document.getElementById('range-selection-controls');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'range-selection-controls';
+            container.style.cssText = 'margin-bottom: 24px;';
+            
+            // Find the best insertion point - before the table container
+            const tableWrapper = document.querySelector('#step3 .table-container');
+            if (tableWrapper && tableWrapper.parentNode) {
+                tableWrapper.parentNode.insertBefore(container, tableWrapper);
+            }
         }
-    }
-    return container;
-},
+        return container;
+    },
     
     /**
      * Create mode information panel
      */
-    /**
- * Create mode information panel
- */
-_createModeInfoPanel(parent) {
-    const infoPanel = document.createElement('div');
-    infoPanel.id = 'selection-mode-info';
-    infoPanel.className = 'alert alert--info';
-    infoPanel.style.cssText = 'margin-bottom: 16px;';
-    infoPanel.innerHTML = `
-        <div class="alert__msg">
-            <strong>SELECTION MODES</strong><br>
-            <small><strong>Drag Mode (Desktop):</strong> Click and drag to select range</small><br>
-            <small><strong>Click Mode (Mobile):</strong> Tap two cells to define range corners</small>
-        </div>
-    `;
-    parent.appendChild(infoPanel);
-},
+    _createModeInfoPanel(parent) {
+        const infoPanel = document.createElement('div');
+        infoPanel.id = 'selection-mode-info';
+        infoPanel.className = 'alert alert--info';
+        infoPanel.style.cssText = 'margin-bottom: 16px;';
+        infoPanel.innerHTML = `
+            <div class="alert__msg">
+                <strong>SELECTION MODES</strong><br>
+                <small><strong>Drag Mode (Desktop):</strong> Click and drag to select range</small><br>
+                <small><strong>Click Mode (Mobile):</strong> Tap two cells to define range corners</small>
+            </div>
+        `;
+        parent.appendChild(infoPanel);
+    },
     
     /**
      * Toggle click selection mode
      */
-    /**
- * Toggle click selection mode
- */
-_toggleClickSelectionMode() {
-    this._clickSelectionMode = !this._clickSelectionMode;
-    const toggleBtn = document.getElementById('click-selection-toggle');
-    const indicator = document.getElementById('click-selection-indicator');
-    
-    if (this._clickSelectionMode) {
-        // Enable click selection mode
-        toggleBtn.textContent = 'DISABLE CLICK SELECTION';
-        toggleBtn.className = 'button button--primary button--sm';
+    _toggleClickSelectionMode() {
+        this._clickSelectionMode = !this._clickSelectionMode;
+        const toggleBtn = document.getElementById('click-selection-toggle');
+        const indicator = document.getElementById('click-selection-indicator');
         
-        if (indicator) {
-            indicator.style.display = 'block';
+        if (this._clickSelectionMode) {
+            // Enable click selection mode
+            toggleBtn.textContent = 'DISABLE CLICK SELECTION';
+            toggleBtn.className = 'button button--primary button--sm';
+            
+            if (indicator) {
+                indicator.style.display = 'block';
+            }
+            
+            // Reset any active selection state
+            this._resetClickSelection();
+            this._clearSelectionHighlight();
+            
+            window.QRScannerUtils.log.debug('Click selection mode enabled');
+            this._showTemporaryMessage('Click selection enabled. Tap two cells to select range.', 'success');
+            
+        } else {
+            // Disable click selection mode
+            toggleBtn.textContent = 'ENABLE CLICK SELECTION';
+            toggleBtn.className = 'button button--ghost button--sm';
+            
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+            
+            // Reset click selection state
+            this._resetClickSelection();
+            
+            window.QRScannerUtils.log.debug('Click selection mode disabled');
+            this._showTemporaryMessage('Drag selection enabled. Click and drag to select range.', 'info');
         }
-        
-        // Reset any active selection state
-        this._resetClickSelection();
-        this._clearSelectionHighlight();
-        
-        window.QRScannerUtils.log.debug('Click selection mode enabled');
-        this._showTemporaryMessage('Click selection enabled. Tap two cells to select range.', 'success');
-        
-    } else {
-        // Disable click selection mode
-        toggleBtn.textContent = 'ENABLE CLICK SELECTION';
-        toggleBtn.className = 'button button--ghost button--sm';
-        
-        if (indicator) {
-            indicator.style.display = 'none';
-        }
-        
-        // Reset click selection state
-        this._resetClickSelection();
-        
-        window.QRScannerUtils.log.debug('Click selection mode disabled');
-        this._showTemporaryMessage('Drag selection enabled. Click and drag to select range.', 'info');
-    }
-},
+    },
     
     /**
      * Show temporary message
      */
-    /**
- * Show temporary message
- */
-_showTemporaryMessage(message, type = 'info') {
-    const existingMsg = document.getElementById('temp-selection-message');
-    if (existingMsg) {
-        existingMsg.remove();
-    }
-    
-    const msgDiv = document.createElement('div');
-    msgDiv.id = 'temp-selection-message';
-    msgDiv.className = `alert alert--${type}`;
-    msgDiv.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        z-index: 9999;
-        max-width: 400px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-    
-    msgDiv.innerHTML = `<div class="alert__msg"><strong>${message}</strong></div>`;
-    document.body.appendChild(msgDiv);
-    
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-        if (msgDiv.parentNode) {
-            msgDiv.style.opacity = '0';
-            msgDiv.style.transition = 'opacity 0.3s';
-            setTimeout(() => msgDiv.remove(), 300);
+    _showTemporaryMessage(message, type = 'info') {
+        const existingMsg = document.getElementById('temp-selection-message');
+        if (existingMsg) {
+            existingMsg.remove();
         }
-    }, 4000);
-},
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.id = 'temp-selection-message';
+        msgDiv.className = `alert alert--${type}`;
+        msgDiv.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        msgDiv.innerHTML = `<div class="alert__msg"><strong>${message}</strong></div>`;
+        document.body.appendChild(msgDiv);
+        
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            if (msgDiv.parentNode) {
+                msgDiv.style.opacity = '0';
+                msgDiv.style.transition = 'opacity 0.3s';
+                setTimeout(() => msgDiv.remove(), 300);
+            }
+        }, 4000);
+    },
     
     /**
      * Reset click selection state
@@ -233,55 +218,52 @@ _showTemporaryMessage(message, type = 'info') {
     /**
      * Update click selection status display
      */
-    /**
- * Update click selection status display
- */
-_updateClickSelectionStatus() {
-    let statusDiv = document.getElementById('click-selection-status');
-    
-    if (!this._clickSelectionMode) {
-        if (statusDiv) {
-            statusDiv.remove();
-        }
-        return;
-    }
-    
-    if (!statusDiv) {
-        statusDiv = document.createElement('div');
-        statusDiv.id = 'click-selection-status';
-        statusDiv.className = 'alert alert--info';
-        statusDiv.style.cssText = `
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            margin-bottom: 16px;
-            text-align: center;
-        `;
+    _updateClickSelectionStatus() {
+        let statusDiv = document.getElementById('click-selection-status');
         
-        const tableContainer = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
-        if (tableContainer && tableContainer.parentNode) {
-            tableContainer.parentNode.insertBefore(statusDiv, tableContainer);
+        if (!this._clickSelectionMode) {
+            if (statusDiv) {
+                statusDiv.remove();
+            }
+            return;
         }
-    }
-    
-    if (this._isWaitingForSecondClick && this._firstClickCell) {
-        statusDiv.innerHTML = `
-            <div class="alert__msg">
-                <strong>FIRST CELL SELECTED: ${this._firstClickCell.ref}</strong><br>
-                <small>Tap second cell to complete range</small>
-            </div>
-        `;
-        statusDiv.className = 'alert alert--success';
-    } else {
-        statusDiv.innerHTML = `
-            <div class="alert__msg">
-                <strong>CLICK SELECTION MODE</strong><br>
-                <small>Tap on first cell to start</small>
-            </div>
-        `;
-        statusDiv.className = 'alert alert--info';
-    }
-},
+        
+        if (!statusDiv) {
+            statusDiv = document.createElement('div');
+            statusDiv.id = 'click-selection-status';
+            statusDiv.className = 'alert alert--info';
+            statusDiv.style.cssText = `
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                margin-bottom: 16px;
+                text-align: center;
+            `;
+            
+            const tableContainer = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+            if (tableContainer && tableContainer.parentNode) {
+                tableContainer.parentNode.insertBefore(statusDiv, tableContainer);
+            }
+        }
+        
+        if (this._isWaitingForSecondClick && this._firstClickCell) {
+            statusDiv.innerHTML = `
+                <div class="alert__msg">
+                    <strong>FIRST CELL SELECTED: ${this._firstClickCell.ref}</strong><br>
+                    <small>Tap second cell to complete range</small>
+                </div>
+            `;
+            statusDiv.className = 'alert alert--success';
+        } else {
+            statusDiv.innerHTML = `
+                <div class="alert__msg">
+                    <strong>CLICK SELECTION MODE</strong><br>
+                    <small>Tap on first cell to start</small>
+                </div>
+            `;
+            statusDiv.className = 'alert alert--info';
+        }
+    },
 
     /**
      * Bind event listeners
@@ -329,7 +311,7 @@ _updateClickSelectionStatus() {
     },
 
     /**
-     * Validate cell element has required properties (ENHANCED)
+     * Validate cell element has required properties
      * @param {HTMLElement} cell - Cell element to validate
      * @returns {boolean} - True if valid
      */
@@ -505,184 +487,175 @@ _updateClickSelectionStatus() {
     },
 
     /**
-     * Create interactive selectable table (ENHANCED)
+     * Create interactive selectable table
      * @param {Array} data - Sheet data
      * @returns {HTMLElement} - Table element
      */
-    /**
- * Create interactive selectable table
- * @param {Array} data - Sheet data
- * @returns {HTMLElement} - Table element
- */
-_createSelectableTable(data) {
-    const table = document.createElement('table');
-    table.className = 'table-hover';
-    table.style.cssText = `
-        width: 100%;
-        border-collapse: collapse;
-        user-select: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-    `;
-
-    // Calculate max columns
-    const maxCols = Math.max(...data.map(r => r ? r.length : 0));
-    if (maxCols === 0) {
-        throw new Error('No data columns found');
-    }
-
-    // Create header row with column letters
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-
-    // Empty cell for row numbers
-    const cornerCell = document.createElement('th');
-    cornerCell.textContent = '';
-    cornerCell.style.cssText = `
-        position: sticky;
-        top: 0;
-        left: 0;
-        z-index: 3;
-        background: #f5f5f5;
-        border: 1px solid #000;
-        padding: 8px;
-        text-align: center;
-        font-weight: 600;
-        min-width: 50px;
-    `;
-    headerRow.appendChild(cornerCell);
-
-    // Column letter headers
-    for (let col = 0; col < maxCols; col++) {
-        const th = document.createElement('th');
-        th.textContent = window.QRScannerUtils.excel.numToCol(col + 1);
-        th.dataset.col = col + 1;
-        th.style.cssText = `
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background: #f5f5f5;
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: center;
-            font-weight: 600;
-            min-width: 100px;
+    _createSelectableTable(data) {
+        const table = document.createElement('table');
+        table.className = 'table-hover';
+        table.style.cssText = `
+            width: 100%;
+            border-collapse: collapse;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         `;
-        headerRow.appendChild(th);
-    }
 
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-
-    // Create data rows
-    const tbody = document.createElement('tbody');
-    data.forEach((row, rowIndex) => {
-        const tr = document.createElement('tr');
-
-        // Row number cell
-        const rowNumCell = document.createElement('th');
-        rowNumCell.textContent = rowIndex + 1;
-        rowNumCell.dataset.row = rowIndex + 1;
-        rowNumCell.style.cssText = `
-            position: sticky;
-            left: 0;
-            z-index: 1;
-            background: #f5f5f5;
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: center;
-            font-weight: 600;
-        `;
-        tr.appendChild(rowNumCell);
-
-        // Data cells
-        for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-            const td = document.createElement('td');
-            const cellValue = (row && row[colIndex]) ? String(row[colIndex]) : '';
-            const displayValue = window.QRScannerUtils.string.truncate(cellValue, 30);
-            
-            td.textContent = displayValue;
-            td.title = cellValue;
-            
-            const rowNum = rowIndex + 1;
-            const colNum = colIndex + 1;
-            
-            td.dataset.row = String(rowNum);
-            td.dataset.col = String(colNum);
-            
-            try {
-                td.dataset.cellRef = window.QRScannerUtils.excel.getCellRef(rowNum, colNum);
-            } catch (error) {
-                td.dataset.cellRef = window.QRScannerUtils.excel.numToCol(colNum) + rowNum;
-            }
-            
-            td.style.cssText = `
-                border: 1px solid #e5e5e5;
-                padding: 8px;
-                min-width: 100px;
-                transition: background-color 0.15s ease;
-            `;
-            
-            // Add event listeners
-            this._addCellEventListeners(td);
-
-            tr.appendChild(td);
+        // Calculate max columns
+        const maxCols = Math.max(...data.map(r => r ? r.length : 0));
+        if (maxCols === 0) {
+            throw new Error('No data columns found');
         }
 
-        tbody.appendChild(tr);
-    });
+        // Create header row with column letters
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
 
-    table.appendChild(tbody);
+        // Empty cell for row numbers
+        const cornerCell = document.createElement('th');
+        cornerCell.textContent = '';
+        cornerCell.style.cssText = `
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 3;
+            background: #f5f5f5;
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+            font-weight: 600;
+            min-width: 50px;
+        `;
+        headerRow.appendChild(cornerCell);
 
-    // Add table-level event listeners
-    this._addTableEventListeners(table);
+        // Column letter headers
+        for (let col = 0; col < maxCols; col++) {
+            const th = document.createElement('th');
+            th.textContent = window.QRScannerUtils.excel.numToCol(col + 1);
+            th.dataset.col = col + 1;
+            th.style.cssText = `
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: #f5f5f5;
+                border: 1px solid #000;
+                padding: 8px;
+                text-align: center;
+                font-weight: 600;
+                min-width: 100px;
+            `;
+            headerRow.appendChild(th);
+        }
 
-    return table;
-},
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Create data rows
+        const tbody = document.createElement('tbody');
+        data.forEach((row, rowIndex) => {
+            const tr = document.createElement('tr');
+
+            // Row number cell
+            const rowNumCell = document.createElement('th');
+            rowNumCell.textContent = rowIndex + 1;
+            rowNumCell.dataset.row = rowIndex + 1;
+            rowNumCell.style.cssText = `
+                position: sticky;
+                left: 0;
+                z-index: 1;
+                background: #f5f5f5;
+                border: 1px solid #000;
+                padding: 8px;
+                text-align: center;
+                font-weight: 600;
+            `;
+            tr.appendChild(rowNumCell);
+
+            // Data cells
+            for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+                const td = document.createElement('td');
+                const cellValue = (row && row[colIndex]) ? String(row[colIndex]) : '';
+                const displayValue = window.QRScannerUtils.string.truncate(cellValue, 30);
+                
+                td.textContent = displayValue;
+                td.title = cellValue;
+                
+                const rowNum = rowIndex + 1;
+                const colNum = colIndex + 1;
+                
+                td.dataset.row = String(rowNum);
+                td.dataset.col = String(colNum);
+                
+                try {
+                    td.dataset.cellRef = window.QRScannerUtils.excel.getCellRef(rowNum, colNum);
+                } catch (error) {
+                    td.dataset.cellRef = window.QRScannerUtils.excel.numToCol(colNum) + rowNum;
+                }
+                
+                td.style.cssText = `
+                    border: 1px solid #e5e5e5;
+                    padding: 8px;
+                    min-width: 100px;
+                    transition: background-color 0.15s ease;
+                `;
+                
+                // Add event listeners
+                this._addCellEventListeners(td);
+
+                tr.appendChild(td);
+            }
+
+            tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+
+        // Add table-level event listeners
+        this._addTableEventListeners(table);
+
+        return table;
+    },
 
     /**
      * Add event listeners to cell
      * @param {HTMLElement} cell - Table cell element
      */
-    /**
- * Add event listeners to cell
- * @param {HTMLElement} cell - Table cell element
- */
-_addCellEventListeners(cell) {
-    if (!cell || cell.tagName !== 'TD') return;
+    _addCellEventListeners(cell) {
+        if (!cell || cell.tagName !== 'TD') return;
 
-    // Mouse events
-    cell.addEventListener('mouseenter', this._handleCellEnter.bind(this));
-    cell.addEventListener('mousedown', this._handleCellMouseDown.bind(this));
-    cell.addEventListener('mouseup', this._handleCellMouseUp.bind(this));
-    
-    // Touch events for mobile
-    cell.addEventListener('touchstart', this._handleCellTouchStart.bind(this), { passive: true });
-    cell.addEventListener('touchmove', this._handleCellTouchMove.bind(this), { passive: false });
-    cell.addEventListener('touchend', this._handleCellTouchEnd.bind(this), { passive: false });
+        // Mouse events
+        cell.addEventListener('mouseenter', this._handleCellEnter.bind(this));
+        cell.addEventListener('mousedown', this._handleCellMouseDown.bind(this));
+        cell.addEventListener('mouseup', this._handleCellMouseUp.bind(this));
+        
+        // Touch events for mobile
+        cell.addEventListener('touchstart', this._handleCellTouchStart.bind(this), { passive: true });
+        cell.addEventListener('touchmove', this._handleCellTouchMove.bind(this), { passive: false });
+        cell.addEventListener('touchend', this._handleCellTouchEnd.bind(this), { passive: false });
 
-    // Hover effects (mouse only)
-    cell.addEventListener('mouseenter', () => {
-        if (!cell.classList.contains('cell-selected') && 
-            !cell.classList.contains('first-click') && 
-            !cell.classList.contains('click-pending')) {
-            if (this._clickSelectionMode && this._isWaitingForSecondClick) {
-                cell.style.backgroundColor = '#f5f5f5';
-            } else {
-                cell.style.backgroundColor = '#fafafa';
+        // Hover effects (mouse only)
+        cell.addEventListener('mouseenter', () => {
+            if (!cell.classList.contains('cell-selected') && 
+                !cell.classList.contains('first-click') && 
+                !cell.classList.contains('click-pending')) {
+                if (this._clickSelectionMode && this._isWaitingForSecondClick) {
+                    cell.style.backgroundColor = '#f5f5f5';
+                } else {
+                    cell.style.backgroundColor = '#fafafa';
+                }
             }
-        }
-    });
-    
-    cell.addEventListener('mouseleave', () => {
-        if (!cell.classList.contains('cell-selected') && 
-            !cell.classList.contains('first-click') && 
-            !cell.classList.contains('click-pending')) {
-            cell.style.backgroundColor = '';
-        }
-    });
-},
+        });
+        
+        cell.addEventListener('mouseleave', () => {
+            if (!cell.classList.contains('cell-selected') && 
+                !cell.classList.contains('first-click') && 
+                !cell.classList.contains('click-pending')) {
+                cell.style.backgroundColor = '';
+            }
+        });
+    },
 
     /**
      * Add table-level event listeners
@@ -703,114 +676,113 @@ _addCellEventListeners(cell) {
         table.addEventListener('touchstart', this._handleTouchStart.bind(this), { passive: false });
     },
 
-    // Touch Event Handlers (Robust)
     /**
- * Handle cell touch start - with scroll detection
- */
-_handleCellTouchStart(event) {
-    if (!event) return;
-    
-    const cell = event.currentTarget;
-    
-    // Robust validation
-    if (!this._isValidCell(cell)) {
-        return;
-    }
-    
-    // Store touch start info for scroll detection
-    const touch = event.touches[0];
-    this._touchStartX = touch.clientX;
-    this._touchStartY = touch.clientY;
-    this._touchStartTime = Date.now();
-    this._touchMoved = false;
-    
-    this._touchStarted = true;
-    this._isDragging = false;
-    
-    // Don't prevent default yet - allow scrolling to start
-},
-
-/**
- * Handle cell touch move - detect scroll intent
- */
-_handleCellTouchMove(event) {
-    if (!event || !this._touchStarted) return;
-    
-    const touch = event.touches[0];
-    if (!touch) return;
-
-    // Calculate movement
-    const deltaX = Math.abs(touch.clientX - this._touchStartX);
-    const deltaY = Math.abs(touch.clientY - this._touchStartY);
-    const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    
-    // If moved more than 10px, consider it a scroll
-    if (totalMovement > 10) {
-        this._touchMoved = true;
+     * Handle cell touch start - with scroll detection
+     */
+    _handleCellTouchStart(event) {
+        if (!event) return;
         
-        // In click selection mode, don't interfere with scrolling
-        if (this._clickSelectionMode) {
+        const cell = event.currentTarget;
+        
+        // Robust validation
+        if (!this._isValidCell(cell)) {
             return;
         }
         
-        // In drag mode, treat as drag selection
-        event.preventDefault();
-        this._isDragging = true;
+        // Store touch start info for scroll detection
+        const touch = event.touches[0];
+        this._touchStartX = touch.clientX;
+        this._touchStartY = touch.clientY;
+        this._touchStartTime = Date.now();
+        this._touchMoved = false;
         
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        this._touchStarted = true;
+        this._isDragging = false;
         
-        if (this._isValidCell(element)) {
-            if (this._lastTouchCell !== element) {
-                this._lastTouchCell = element;
-                this._handleCellEnter({ currentTarget: element });
+        // Don't prevent default yet - allow scrolling to start
+    },
+
+    /**
+     * Handle cell touch move - detect scroll intent
+     */
+    _handleCellTouchMove(event) {
+        if (!event || !this._touchStarted) return;
+        
+        const touch = event.touches[0];
+        if (!touch) return;
+
+        // Calculate movement
+        const deltaX = Math.abs(touch.clientX - this._touchStartX);
+        const deltaY = Math.abs(touch.clientY - this._touchStartY);
+        const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // If moved more than 10px, consider it a scroll
+        if (totalMovement > 10) {
+            this._touchMoved = true;
+            
+            // In click selection mode, don't interfere with scrolling
+            if (this._clickSelectionMode) {
+                return;
+            }
+            
+            // In drag mode, treat as drag selection
+            event.preventDefault();
+            this._isDragging = true;
+            
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (this._isValidCell(element)) {
+                if (this._lastTouchCell !== element) {
+                    this._lastTouchCell = element;
+                    this._handleCellEnter({ currentTarget: element });
+                }
             }
         }
-    }
-},
+    },
 
-/**
- * Handle cell touch end - distinguish tap from scroll
- */
-_handleCellTouchEnd(event) {
-    if (!event || !this._touchStarted) return;
-    
-    const cell = this._lastTouchCell || event.currentTarget;
-    
-    // Validate cell before proceeding
-    if (!this._isValidCell(cell)) {
+    /**
+     * Handle cell touch end - distinguish tap from scroll
+     */
+    _handleCellTouchEnd(event) {
+        if (!event || !this._touchStarted) return;
+        
+        const cell = this._lastTouchCell || event.currentTarget;
+        
+        // Validate cell before proceeding
+        if (!this._isValidCell(cell)) {
+            this._resetTouchState();
+            return;
+        }
+        
+        const touchDuration = Date.now() - this._touchStartTime;
+        
+        // If in click selection mode and it's a tap (not scroll)
+        if (this._clickSelectionMode && !this._touchMoved && touchDuration < 500) {
+            event.preventDefault();
+            this._handleCellMouseDown({ currentTarget: cell, button: 0 });
+            this._handleCellMouseUp({ currentTarget: cell });
+        }
+        // If in drag mode and was actually dragging
+        else if (!this._clickSelectionMode && this._isDragging) {
+            event.preventDefault();
+            this._handleCellMouseUp({ currentTarget: cell });
+        }
+        
         this._resetTouchState();
-        return;
-    }
-    
-    const touchDuration = Date.now() - this._touchStartTime;
-    
-    // If in click selection mode and it's a tap (not scroll)
-    if (this._clickSelectionMode && !this._touchMoved && touchDuration < 500) {
-        event.preventDefault();
-        this._handleCellMouseDown({ currentTarget: cell, button: 0 });
-        this._handleCellMouseUp({ currentTarget: cell });
-    }
-    // If in drag mode and was actually dragging
-    else if (!this._clickSelectionMode && this._isDragging) {
-        event.preventDefault();
-        this._handleCellMouseUp({ currentTarget: cell });
-    }
-    
-    this._resetTouchState();
-},
+    },
 
-/**
- * Reset touch state
- */
-_resetTouchState() {
-    this._touchStarted = false;
-    this._isDragging = false;
-    this._lastTouchCell = null;
-    this._touchStartX = 0;
-    this._touchStartY = 0;
-    this._touchStartTime = 0;
-    this._touchMoved = false;
-}
+    /**
+     * Reset touch state
+     */
+    _resetTouchState() {
+        this._touchStarted = false;
+        this._isDragging = false;
+        this._lastTouchCell = null;
+        this._touchStartX = 0;
+        this._touchStartY = 0;
+        this._touchStartTime = 0;
+        this._touchMoved = false;
+    },
 
     _handleTouchStart(event) {
         if (!event || !event.target) return;
@@ -820,7 +792,6 @@ _resetTouchState() {
         }
     },
 
-    // Mouse Event Handlers (Robust)
     _handleMouseDown(event) {
         if (!event || event.button !== 0) return;
 
@@ -851,7 +822,7 @@ _resetTouchState() {
     },
 
     /**
-     * ENHANCED: Handle cell mouse down with click selection support
+     * Handle cell mouse down with click selection support
      */
     _handleCellMouseDown(event) {
         if (!event || event.button !== 0) return;
@@ -1287,7 +1258,7 @@ _resetTouchState() {
     },
 
     /**
-     * ENHANCED: Handle clear range button
+     * Handle clear range button
      */
     _handleClearRange() {
         this._clearSelection();
@@ -1322,7 +1293,7 @@ _resetTouchState() {
     },
 
     /**
-     * ENHANCED: Clear selection state
+     * Clear selection state
      */
     _clearSelection() {
         this._startCell = null;
@@ -1338,82 +1309,74 @@ _resetTouchState() {
     },
 
     /**
-     * ENHANCED: Clear selection highlighting including click selection classes
+     * Clear selection highlighting including click selection classes
      */
-    /**
- * Clear selection highlighting including click selection classes
- */
-_clearSelectionHighlight() {
-    const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
-    if (!container) return;
+    _clearSelectionHighlight() {
+        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SELECTABLE_TABLE);
+        if (!container) return;
 
-    const table = container.querySelector('table');
-    if (!table) return;
+        const table = container.querySelector('table');
+        if (!table) return;
 
-    const cells = table.querySelectorAll('td, th');
-    cells.forEach(cell => {
-        if (!cell) return;
-        
-        // Remove all selection classes
-        cell.classList.remove('cell-selected', 'range-start', 'range-end', 'first-click', 'click-pending');
-        
-        if (cell.tagName === 'TD') {
-            cell.style.backgroundColor = '';
-            cell.style.color = '';
-            cell.style.border = '';
-            cell.style.boxShadow = '';
-            cell.style.fontWeight = '';
-        }
-    });
-}
+        const cells = table.querySelectorAll('td, th');
+        cells.forEach(cell => {
+            if (!cell) return;
+            
+            // Remove all selection classes
+            cell.classList.remove('cell-selected', 'range-start', 'range-end', 'first-click', 'click-pending');
+            
+            if (cell.tagName === 'TD') {
+                cell.style.backgroundColor = '';
+                cell.style.color = '';
+                cell.style.border = '';
+                cell.style.boxShadow = '';
+                cell.style.fontWeight = '';
+            }
+        });
+    },
 
     /**
-     * ENHANCED: Highlight cell with specific class including new click selection classes
+     * Highlight cell with specific class
      * @param {HTMLElement} cell - Cell element
      * @param {string} className - CSS class to add
      */
-    /**
- * Highlight cell with specific class - IMPROVED VISUALS
- * @param {HTMLElement} cell - Cell element
- * @param {string} className - CSS class to add
- */
-_highlightCell(cell, className) {
-    if (!cell) return;
+    _highlightCell(cell, className) {
+        if (!cell) return;
 
-    cell.classList.add(className);
-    
-    if (className === 'cell-selected') {
-        cell.style.backgroundColor = '#000';
-        cell.style.color = '#fff';
-        cell.style.border = '2px solid #000';
-        cell.style.fontWeight = '600';
-    } else if (className === 'range-start') {
-        cell.style.backgroundColor = '#000';
-        cell.style.color = '#fff';
-        cell.style.border = '3px solid #000';
-        cell.style.fontWeight = '700';
-        cell.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.2)';
-    } else if (className === 'range-end') {
-        cell.style.backgroundColor = '#000';
-        cell.style.color = '#fff';
-        cell.style.border = '3px solid #000';
-        cell.style.fontWeight = '700';
-        cell.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.2)';
-    } else if (className === 'first-click') {
-        cell.style.backgroundColor = '#000';
-        cell.style.color = '#fff';
-        cell.style.border = '3px solid #000';
-        cell.style.fontWeight = '700';
-        cell.style.boxShadow = '0 0 0 4px rgba(0,0,0,0.3), inset 0 0 0 2px #fff';
-    } else if (className === 'click-pending') {
-        cell.style.backgroundColor = '#f5f5f5';
-        cell.style.color = '#000';
-        cell.style.border = '2px dashed #999';
-    }
-}
+        cell.classList.add(className);
+        
+        if (className === 'cell-selected') {
+            cell.style.backgroundColor = '#000';
+            cell.style.color = '#fff';
+            cell.style.border = '2px solid #000';
+            cell.style.fontWeight = '600';
+        } else if (className === 'range-start') {
+            cell.style.backgroundColor = '#000';
+            cell.style.color = '#fff';
+            cell.style.border = '3px solid #000';
+            cell.style.fontWeight = '700';
+            cell.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.2)';
+        } else if (className === 'range-end') {
+            cell.style.backgroundColor = '#000';
+            cell.style.color = '#fff';
+            cell.style.border = '3px solid #000';
+            cell.style.fontWeight = '700';
+            cell.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.2)';
+        } else if (className === 'first-click') {
+            cell.style.backgroundColor = '#000';
+            cell.style.color = '#fff';
+            cell.style.border = '3px solid #000';
+            cell.style.fontWeight = '700';
+            cell.style.boxShadow = '0 0 0 4px rgba(0,0,0,0.3), inset 0 0 0 2px #fff';
+        } else if (className === 'click-pending') {
+            cell.style.backgroundColor = '#f5f5f5';
+            cell.style.color = '#000';
+            cell.style.border = '2px dashed #999';
+        }
+    },
 
     /**
-     * Public method to trigger table creation (ENHANCED)
+     * Public method to trigger table creation
      */
     showRangeSelector() {
         // Increased timeout to ensure DOM is fully rendered
