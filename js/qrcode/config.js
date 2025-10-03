@@ -168,7 +168,7 @@ window.QRScannerConfig = {
 
     // Audio settings for feedback
     AUDIO: {
-        SUCCESS_FREQUENCY: 800,     // Hz
+        SUCCESS_FREQUENCY: 5000,     // Hz
         SUCCESS_DURATION: 200,      // ms
         ERROR_FREQUENCY: 400,       // Hz
         ERROR_DURATION: 300,        // ms
