@@ -8,212 +8,266 @@
 </head>
 <body>
     <div class="container">
-        <nav class="back-nav">
-            <a href="index.html">BACK TO TOOLS</a>
+        <nav class="nav">
+            <div class="nav__item">
+                <a href="index.html" class="back-link">Back to Tools</a>
+            </div>
         </nav>
 
-        <header class="header-grid">
+        <header class="page-header">
             <div>
-                <h1 class="header-title tracking-tight">QR Code Component Scanner</h1>
-                <p class="header-subtitle">Rapid component counting and BOM matching through QR/barcode scanning</p>
+                <h1 class="page-header__title">QR Code Component Scanner</h1>
+                <p class="lead">Rapid component counting and BOM matching through QR/barcode scanning</p>
             </div>
-            <div class="header-meta">
-                <div>STATUS: <span id="scannerStatus" class="status-ready">READY</span></div>
-                <div>SCANNED: <span id="scanCount">0</span></div>
-                <div>MATCHED: <span id="matchCount">0</span></div>
+            <div class="page-header__meta">
+                <div class="meta">STATUS: <span id="scannerStatus" class="badge badge--success">READY</span></div>
+                <div class="meta">SCANNED: <span id="scanCount">0</span></div>
+                <div class="meta">MATCHED: <span id="matchCount">0</span></div>
             </div>
         </header>
 
         <!-- Step 1: File Import -->
-        <section class="section">
-            <h2 class="section-title">Step 1: Import Excel File</h2>
-            <div class="form-group">
-                <label>Select Excel File (.xlsx, .xls)</label>
-                <input type="file" id="excelFile" accept=".xlsx,.xls" />
-                <div class="form-help">Upload your BOM Excel file to begin the scanning process</div>
+        <section class="mb-48">
+            <h2 class="mb-16">Step 1: Import Excel File</h2>
+            <div class="form__group">
+                <label class="label">Select Excel File (.xlsx, .xls)</label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" class="input" />
+                <div class="form__help">Upload your BOM Excel file to begin the scanning process</div>
             </div>
 
-            <div id="fileInfo" class="panel hidden">
-                <h3>File Information</h3>
-                <div class="kv-list">
-                    <div class="kv-item">
-                        <div class="kv-key">File Name</div>
-                        <div class="kv-value" id="fileName"></div>
-                    </div>
-                    <div class="kv-item">
-                        <div class="kv-key">File Size</div>
-                        <div class="kv-value" id="fileSize"></div>
-                    </div>
-                    <div class="kv-item">
-                        <div class="kv-key">Sheets Found</div>
-                        <div class="kv-value" id="sheetCount"></div>
+            <div id="fileInfo" class="card mt-16 hidden">
+                <div class="card__header">
+                    <h3 class="card__title">File Information</h3>
+                </div>
+                <div class="p-16">
+                    <div class="kv">
+                        <div class="kv__pair">
+                            <div class="kv__key">File Name</div>
+                            <div class="kv__val" id="fileName"></div>
+                        </div>
+                        <div class="kv__pair">
+                            <div class="kv__key">File Size</div>
+                            <div class="kv__val" id="fileSize"></div>
+                        </div>
+                        <div class="kv__pair">
+                            <div class="kv__key">Sheets Found</div>
+                            <div class="kv__val" id="sheetCount"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Step 2: Sheet Selection -->
-        <section id="step2" class="section hidden">
-            <h2 class="section-title">Step 2: Select Sheet</h2>
-            <div class="form-group">
-                <label>Available Sheets</label>
-                <select id="sheetSelect">
+        <section id="step2" class="mb-48 hidden">
+            <h2 class="mb-16">Step 2: Select Sheet</h2>
+            <div class="form__group">
+                <label class="label">Available Sheets</label>
+                <select id="sheetSelect" class="select">
                     <option value="">Select a sheet...</option>
                 </select>
-                <div class="form-help">Choose the sheet containing your BOM data</div>
+                <div class="form__help">Choose the sheet containing your BOM data</div>
             </div>
 
-            <div id="sheetPreview" class="table-container hidden">
-                <h3>Sheet Preview (First 10 rows)</h3>
-                <div id="previewTable"></div>
+            <div id="sheetPreview" class="mt-24 hidden">
+                <h3 class="mb-16">Sheet Preview (First 10 rows)</h3>
+                <div id="previewTable" class="overflow-auto"></div>
             </div>
         </section>
 
         <!-- Step 3: Data Range Selection -->
-        <section id="step3" class="section hidden">
-            <h2 class="section-title">Step 3: Select Data Range</h2>
-            <div class="alert alert-info">
-                Click and drag to select the data range containing your BOM line items. 
-                The selection should include headers and all relevant data rows.
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Start Cell (e.g., A1)</label>
-                    <input type="text" id="startCell" placeholder="A1" readonly />
-                </div>
-                <div class="form-group">
-                    <label>End Cell (e.g., F100)</label>
-                    <input type="text" id="endCell" placeholder="F100" readonly />
+        <section id="step3" class="mb-48 hidden">
+            <h2 class="mb-16">Step 3: Select Data Range</h2>
+            <div class="alert alert--info mb-16">
+                <div class="alert__msg">
+                    Click and drag to select the data range containing your BOM line items. 
+                    The selection should include headers and all relevant data rows.
                 </div>
             </div>
 
-            <div id="rangeSelector" class="table-container">
+            <div class="grid-12 gap-16 mb-16">
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Start Cell (e.g., A1)</label>
+                        <input type="text" id="startCell" placeholder="A1" readonly class="input" />
+                    </div>
+                </div>
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">End Cell (e.g., F100)</label>
+                        <input type="text" id="endCell" placeholder="F100" readonly class="input" />
+                    </div>
+                </div>
+            </div>
+
+            <div id="rangeSelector" class="overflow-auto mb-16">
                 <div id="selectableTable"></div>
             </div>
 
-            <div class="btn-group">
-                <button id="confirmRange" class="btn btn-success" disabled>CONFIRM SELECTION</button>
-                <button id="clearRange" class="btn btn-secondary">CLEAR SELECTION</button>
+            <div class="button-group">
+                <button id="confirmRange" class="button button--primary" disabled>CONFIRM SELECTION</button>
+                <button id="clearRange" class="button button--ghost">CLEAR SELECTION</button>
             </div>
         </section>
 
         <!-- Step 4: Column Mapping -->
-        <section id="step4" class="section hidden">
-            <h2 class="section-title">Step 4: Map Data Columns</h2>
-            <div class="alert alert-info">
-                Map your Excel columns to the required BOM fields. The Target Column will be used for QR/barcode matching.
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="form-group">
-                    <label>Serial No. Column</label>
-                    <select id="serialColumn">
-                        <option value="">Select column...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>MPN Column</label>
-                    <select id="mpnColumn">
-                        <option value="">Select column...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Designators Column</label>
-                    <select id="designatorsColumn">
-                        <option value="">Select column...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Manufacturer Column</label>
-                    <select id="manufacturerColumn">
-                        <option value="">Select column...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Quantity Column</label>
-                    <select id="quantityColumn">
-                        <option value="">Select column...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Target Column (for scanning)</label>
-                    <select id="targetColumn">
-                        <option value="">Select target column...</option>
-                    </select>
-                    <div class="form-help">This column will be matched against scanned QR/barcode values</div>
+        <section id="step4" class="mb-48 hidden">
+            <h2 class="mb-16">Step 4: Map Data Columns</h2>
+            <div class="alert alert--info mb-16">
+                <div class="alert__msg">
+                    Map your Excel columns to the required BOM fields. The Target Column will be used for QR/barcode matching.
                 </div>
             </div>
 
-            <div class="btn-group">
-                <button id="confirmMapping" class="btn btn-success" disabled>START SCANNER</button>
-                <button id="backToRange" class="btn btn-secondary">BACK TO RANGE SELECTION</button>
-            </div>
-        </section>
-
-        <!-- Step 5: Scanner Interface -->
-        <section id="step5" class="section hidden">
-            <h2 class="section-title">Step 5: QR/Barcode Scanner</h2>
-
-            <div class="scanner-section">
-                <div class="scanner-container">
-                    <div id="qr-reader" class="camera-preview">
-                        <div class="scanner-placeholder">
-                            <p>CLICK START CAMERA TO BEGIN SCANNING</p>
-                        </div>
-                    </div>
-                    <div class="scan-overlay" id="scanOverlay"></div>
-                </div>
-
-                <div class="scan-controls">
-                    <div class="btn-group">
-                        <button id="startCamera" class="btn btn-success">START CAMERA</button>
-                        <button id="stopCamera" class="btn btn-secondary" disabled>STOP CAMERA</button>
-                        <button id="switchCamera" class="btn btn-secondary" disabled>SWITCH CAMERA</button>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Camera Selection</label>
-                        <select id="cameraSelect" disabled>
-                            <option value="">Loading cameras...</option>
+            <div class="grid-12 gap-16 mb-24">
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Serial No. Column</label>
+                        <select id="serialColumn" class="select">
+                            <option value="">Select column...</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="scan-result" id="currentMatch">
-                    <div class="empty">NO SCAN RESULTS YET</div>
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">MPN Column</label>
+                        <select id="mpnColumn" class="select">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Designators Column</label>
+                        <select id="designatorsColumn" class="select">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Manufacturer Column</label>
+                        <select id="manufacturerColumn" class="select">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Quantity Column</label>
+                        <select id="quantityColumn" class="select">
+                            <option value="">Select column...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Target Column (for scanning)</label>
+                        <select id="targetColumn" class="select">
+                            <option value="">Select target column...</option>
+                        </select>
+                        <div class="form__help">This column will be matched against scanned QR/barcode values</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="results-section">
-                <div class="stats">
-                    <div class="stat-item">
-                        <span class="stat-value" id="totalScanned">0</span>
-                        <span class="stat-label">TOTAL SCANNED</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="successMatches">0</span>
-                        <span class="stat-label">SUCCESSFUL MATCHES</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="scanRate">0.0/MIN</span>
-                        <span class="stat-label">SCAN RATE</span>
+            <div class="button-group">
+                <button id="confirmMapping" class="button button--primary" disabled>START SCANNER</button>
+                <button id="backToRange" class="button button--ghost">BACK TO RANGE SELECTION</button>
+            </div>
+        </section>
+
+        <!-- Step 5: Scanner Interface -->
+        <section id="step5" class="mb-48 hidden">
+            <h2 class="mb-16">Step 5: QR/Barcode Scanner</h2>
+
+            <div class="grid-12 gap-24 mb-24">
+                <div class="col-span-8">
+                    <div class="scanner border-2 border-black">
+                        <div id="qr-reader" class="scanner__overlay">
+                            <div class="flex items-center justify-center h-100 bg-gray-100">
+                                <p class="text-center uppercase tracking-wide font-semibold">CLICK START CAMERA TO BEGIN SCANNING</p>
+                            </div>
+                        </div>
+                        <div class="scanner__overlay" id="scanOverlay"></div>
                     </div>
                 </div>
 
-                <div class="btn-group">
-                    <button id="exportResults" class="btn btn-success" disabled>EXPORT RESULTS</button>
-                    <button id="clearResults" class="btn btn-secondary">CLEAR RESULTS</button>
-                    <button id="resetScanner" class="btn btn-ghost">RESET ALL</button>
-                </div>
+                <div class="col-span-4">
+                    <div class="card mb-16">
+                        <div class="card__header">
+                            <h3 class="card__title">Scanner Controls</h3>
+                        </div>
+                        <div class="p-16">
+                            <div class="button-group mb-16">
+                                <button id="startCamera" class="button button--primary button--sm">START CAMERA</button>
+                                <button id="stopCamera" class="button button--ghost button--sm" disabled>STOP CAMERA</button>
+                            </div>
+                            <div class="button-group mb-16">
+                                <button id="switchCamera" class="button button--ghost button--sm" disabled>SWITCH CAMERA</button>
+                            </div>
 
-                <div id="scanResults" class="table-container">
-                    <div class="empty">NO SCAN RESULTS TO DISPLAY</div>
+                            <div class="form__group">
+                                <label class="label">Camera Selection</label>
+                                <select id="cameraSelect" class="select" disabled>
+                                    <option value="">Loading cameras...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card__header">
+                            <h3 class="card__title">Current Match</h3>
+                        </div>
+                        <div class="p-16">
+                            <div id="currentMatch" class="scanner__match">
+                                <div class="text-center text-gray-500">NO SCAN RESULTS YET</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-24">
+                <div class="card__header">
+                    <h3 class="card__title">Statistics</h3>
+                </div>
+                <div class="p-16">
+                    <div class="stats">
+                        <div class="text-center">
+                            <div class="stat__value" id="totalScanned">0</div>
+                            <div class="stat__label">TOTAL SCANNED</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="successMatches">0</div>
+                            <div class="stat__label">SUCCESSFUL MATCHES</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="scanRate">0.0/MIN</div>
+                            <div class="stat__label">SCAN RATE</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group mb-24">
+                <button id="exportResults" class="button button--primary" disabled>EXPORT RESULTS</button>
+                <button id="clearResults" class="button button--ghost">CLEAR RESULTS</button>
+                <button id="resetScanner" class="button button--ghost">RESET ALL</button>
+            </div>
+
+            <div id="scanResults" class="card">
+                <div class="card__header">
+                    <h3 class="card__title">Scan Results</h3>
+                </div>
+                <div class="p-16">
+                    <div class="text-center text-gray-500">NO SCAN RESULTS TO DISPLAY</div>
                 </div>
             </div>
         </section>
