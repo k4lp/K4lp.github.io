@@ -125,30 +125,30 @@
                     <h2 class="card__title">Step 3: Select Data Range</h2>
                 </div>
                 <div>
-                    <div class="alert alert--info mb-16">
+                    <div class="alert alert--info mb-24">
                         <div class="alert__msg">
-                            Click and drag to select the data range containing your BOM line items. 
-                            The selection should include headers and all relevant data rows.
+                            <strong>Desktop:</strong> Click and drag to select the data range.<br>
+                            <strong>Mobile:</strong> Enable click selection mode, then tap two cells to define range corners.
                         </div>
                     </div>
 
-                    <div class="grid-12 gap-16 mb-16">
+                    <div class="grid-12 gap-16 mb-24">
                         <div class="col-span-6">
                             <div class="form__group">
-                                <label class="label">Start Cell (e.g., A1)</label>
+                                <label class="label">Start Cell</label>
                                 <input type="text" id="startCell" placeholder="A1" readonly class="input" />
                             </div>
                         </div>
                         <div class="col-span-6">
                             <div class="form__group">
-                                <label class="label">End Cell (e.g., F100)</label>
+                                <label class="label">End Cell</label>
                                 <input type="text" id="endCell" placeholder="F100" readonly class="input" />
                             </div>
                         </div>
                     </div>
 
-                    <div class="range-selector mb-16">
-                        <div id="rangeSelector" class="overflow-auto">
+                    <div class="mb-24">
+                        <div class="table-container" style="max-height: 500px; overflow: auto; border: 1px solid var(--color-gray-200, #e5e5e5); background: var(--color-white, #fff);">
                             <div id="selectableTable"></div>
                         </div>
                     </div>
@@ -344,11 +344,11 @@
         </section>
     </div>
 
-    <!-- Load Libraries - KEEP ALL EXISTING JAVASCRIPT -->
+    <!-- Load Libraries -->
     <script src="js/qrcode/libs/xlsx.full.min.js"></script>
     <script src="js/qrcode/libs/html5-qrcode.min.js"></script>
 
-    <!-- Load Application Modules - KEEP ALL EXISTING JAVASCRIPT -->
+    <!-- Load Application Modules -->
     <script src="js/qrcode/config.js"></script>
     <script src="js/qrcode/utils.js"></script>
     <script src="js/qrcode/excel-handler.js"></script>
