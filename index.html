@@ -8,45 +8,45 @@
 </head>
 <body>
     <div class="container">
-        <header class="page-header">
-            <div>
-                <h1 class="page-header__title">Tools Index</h1>
-                <p class="lead">We build Relationships, more than the Product.</p>
-            </div>
+        <header class="page-header" role="banner">
             <div class="page-header__meta">
                 <div class="meta">Alica Technologies</div>
             </div>
+            <div class="page-header__titleblock">
+                <h1 class="page-header__title">Tools Index</h1>
+                <p class="lead">We build Relationships, more than the Product.</p>
+            </div>
         </header>
 
-        <main>
+        <main role="main">
             <!-- Component Analysis Section -->
-            <section class="mb-48">
-                <h2 class="mb-24">Component Analysis</h2>
+            <section class="mb-48" aria-labelledby="section-component-analysis">
+                <h2 class="mb-24" id="section-component-analysis">Component Analysis</h2>
                 <div class="tools">
-                    <div class="tool">
-                        <h3 class="tool__title">
+                    <article class="tool" aria-labelledby="tool-digikey">
+                        <h3 class="tool__title" id="tool-digikey">
                             <a href="digikey.html" class="link">Digikey MPN Analyzer</a>
                         </h3>
                         <p class="tool__desc">Bulk MPN information gathering using API credentials — Your credentials are required.</p>
-                    </div>
+                    </article>
                 </div>
             </section>
 
             <!-- Inventory Management Section -->
-            <section class="mb-48">
-                <h2 class="mb-24">Inventory Management</h2>
+            <section class="mb-48" aria-labelledby="section-inventory-management">
+                <h2 class="mb-24" id="section-inventory-management">Inventory Management</h2>
                 <div class="tools">
-                    <div class="tool">
-                        <h3 class="tool__title">
+                    <article class="tool" aria-labelledby="tool-qrcode">
+                        <h3 class="tool__title" id="tool-qrcode">
                             <a href="qrcode.html" class="link">QR Code Component Scanner</a>
                         </h3>
                         <p class="tool__desc">Rapid component counting and BOM matching through QR/barcode scanning — Excel integration with visual range selection.</p>
-                    </div>
+                    </article>
                 </div>
             </section>
         </main>
 
-        <footer class="footer">
+        <footer class="footer" role="contentinfo">
             <div class="footer__cols">
                 <div>
                     <h3 class="label mb-8">Contact</h3>
