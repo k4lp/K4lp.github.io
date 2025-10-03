@@ -10,52 +10,63 @@
 </head>
 <body>
     <div class="container">
-    <nav class="back-nav">
-        <a href="index.html">← Back to Tools</a>
-    </nav>
-        <header>
-            <div>
-                <h1>Digi-Key MPN Analyzer</h1>
-                <p style="margin-top: 4px; color: #666; font-size: 13px;">Parallel processing with multiple API credentials</p>
+        <nav class="nav">
+            <div class="nav__item">
+                <a href="index.html" class="back-link">Back to Tools</a>
             </div>
-            <div class="meta">
-                <div>Credentials: <span id="credCount">0</span></div>
-                <div>Workers: <span id="workerCount">0</span></div>
-                <div id="authStatus" style="display: none; color: #ff9800; font-weight: 500;">🔄 Authenticating...</div>
+        </nav>
+        
+        <header class="page-header">
+            <div>
+                <h1 class="page-header__title">Digi-Key MPN Analyzer</h1>
+                <p class="lead">Parallel processing with multiple API credentials</p>
+            </div>
+            <div class="page-header__meta">
+                <div class="meta">Credentials: <span id="credCount">0</span></div>
+                <div class="meta">Workers: <span id="workerCount">0</span></div>
+                <div id="authStatus" class="meta text-warning" style="display: none;">🔄 Authenticating...</div>
             </div>
         </header>
 
-        <section class="section">
-            <h2>Credentials</h2>
+        <section class="mb-48">
+            <h2 class="mb-16">Credentials</h2>
             
-            <div class="grid grid-2">
-                <div>
-                    <label>Client ID</label>
-                    <input type="text" id="clientId" autocomplete="off">
+            <div class="grid-12 gap-16 mb-16">
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Client ID</label>
+                        <input type="text" id="clientId" autocomplete="off" class="input">
+                    </div>
                 </div>
-                <div>
-                    <label>Client Secret</label>
-                    <input type="password" id="clientSecret" autocomplete="off">
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Client Secret</label>
+                        <input type="password" id="clientSecret" autocomplete="off" class="input">
+                    </div>
                 </div>
             </div>
             
-            <div class="grid grid-2" style="margin-top: 16px;">
-                <div>
-                    <label>Label</label>
-                    <input type="text" id="credLabel" placeholder="Optional">
+            <div class="grid-12 gap-16 mb-16">
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Label</label>
+                        <input type="text" id="credLabel" placeholder="Optional" class="input">
+                    </div>
                 </div>
-                <div>
-                    <label>Environment</label>
-                    <select id="environment">
-                        <option value="production">Production</option>
-                        <option value="sandbox">Sandbox</option>
-                    </select>
+                <div class="col-span-6">
+                    <div class="form__group">
+                        <label class="label">Environment</label>
+                        <select id="environment" class="select">
+                            <option value="production">Production</option>
+                            <option value="sandbox">Sandbox</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             
-            <div style="margin-top: 16px;">
-                <label>Locale</label>
-                <select id="locale">
+            <div class="form__group mb-16">
+                <label class="label">Locale</label>
+                <select id="locale" class="select">
                     <option value="US/USD">US / USD</option>
                     <option value="CA/CAD">CA / CAD</option>
                     <option value="GB/GBP">GB / GBP</option>
@@ -64,71 +75,97 @@
                 </select>
             </div>
             
-            <div class="btn-group" style="margin-top: 16px;">
-                <button id="addCred">Add</button>
-                <button class="secondary" id="authAll">Authenticate All</button>
-                <button class="danger" id="clearCreds">Clear All</button>
+            <div class="button-group mb-16">
+                <button id="addCred" class="button button--primary">Add</button>
+                <button id="authAll" class="button button--ghost">Authenticate All</button>
+                <button id="clearCreds" class="button button--ghost text-error">Clear All</button>
             </div>
             
-            <div id="credList" class="credential-list"></div>
+            <div id="credList" class="mt-16"></div>
         </section>
 
-        <section class="section">
-            <h2>Processing</h2>
+        <section class="mb-48">
+            <h2 class="mb-16">Processing</h2>
             
-            <div class="alert">
-                Parallel processing distributes requests across multiple authenticated credentials to maximize throughput while respecting API rate limits. Authentication happens automatically when needed.
-            </div>
-            
-            <div>
-                <label>MPNs (one per line)</label>
-                <textarea id="mpnInput" placeholder="ECA-1VHG102
-STM32F103C8T6
-LM358P"></textarea>
-            </div>
-            
-            <div style="margin-top: 16px;">
-                <label>Concurrency per Credential</label>
-                <input type="number" id="concurrency" value="3" min="1" max="10">
-                <p style="font-size: 11px; color: #666; margin-top: 4px;">Recommended: 2-5</p>
-            </div>
-            
-            <div id="progress" class="progress-container">
-                <div id="progressText" class="mono" style="font-size: 11px; margin-bottom: 8px;"></div>
-                <div class="progress-bar-bg">
-                    <div id="progressBar" class="progress-bar"></div>
-                </div>
-                <div class="stats">
-                    <div><span class="stat-value" id="statProcessed">0</span> Processed</div>
-                    <div><span class="stat-value" id="statSuccess">0</span> Success</div>
-                    <div><span class="stat-value" id="statWarning">0</span> Warning</div>
-                    <div><span class="stat-value" id="statError">0</span> Error</div>
-                    <div><span class="stat-value" id="statRate">0/s</span> Rate</div>
-                    <div><span class="stat-value" id="statETA">--</span> ETA</div>
+            <div class="alert alert--info mb-16">
+                <div class="alert__msg">
+                    Parallel processing distributes requests across multiple authenticated credentials to maximize throughput while respecting API rate limits. Authentication happens automatically when needed.
                 </div>
             </div>
             
-            <div class="btn-group" style="margin-top: 16px;">
-                <button id="process">Process</button>
-                <button class="secondary" id="export" disabled>Export CSV</button>
-                <button class="secondary" id="clear">Clear Results</button>
+            <div class="form__group mb-16">
+                <label class="label">MPNs (one per line)</label>
+                <textarea id="mpnInput" placeholder="ECA-1VHG102&#10;STM32F103C8T6&#10;LM358P" class="textarea"></textarea>
+            </div>
+            
+            <div class="form__group mb-16">
+                <label class="label">Concurrency per Credential</label>
+                <input type="number" id="concurrency" value="3" min="1" max="10" class="input">
+                <div class="form__help">Recommended: 2-5</div>
+            </div>
+            
+            <div id="progress" class="card mb-16 hidden">
+                <div class="card__header">
+                    <h3 class="card__title">Processing Progress</h3>
+                </div>
+                <div class="p-16">
+                    <div id="progressText" class="font-mono text-xs mb-8"></div>
+                    <div class="progress mb-16">
+                        <div id="progressBar" class="progress__bar"></div>
+                    </div>
+                    <div class="stats">
+                        <div class="text-center">
+                            <div class="stat__value" id="statProcessed">0</div>
+                            <div class="stat__label">Processed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statSuccess">0</div>
+                            <div class="stat__label">Success</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statWarning">0</div>
+                            <div class="stat__label">Warning</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statError">0</div>
+                            <div class="stat__label">Error</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statRate">0/s</div>
+                            <div class="stat__label">Rate</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statETA">--</div>
+                            <div class="stat__label">ETA</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="process" class="button button--primary">Process</button>
+                <button id="export" class="button button--ghost" disabled>Export CSV</button>
+                <button id="clear" class="button button--ghost">Clear Results</button>
             </div>
         </section>
 
-        <section class="section">
-            <h2>Results</h2>
+        <section class="mb-48">
+            <h2 class="mb-16">Results</h2>
             <div id="resultsArea">
-                <div id="emptyResults" class="empty">No results yet</div>
-                <div id="resultsTable" class="table-container hide"></div>
+                <div id="emptyResults" class="card">
+                    <div class="p-24 text-center text-gray-500">No results yet</div>
+                </div>
+                <div id="resultsTable" class="results-table hidden"></div>
             </div>
         </section>
 
-        <section class="section">
-            <h2>Log</h2>
+        <section class="mb-48">
+            <h2 class="mb-16">Log</h2>
             <div id="log" class="log">System initialized - Auto-authentication enabled</div>
         </section>
     </div>
 
+    <!-- Keep the existing JavaScript as-is since it's working -->
     <script>
 (function() {
     'use strict';
@@ -312,24 +349,25 @@ LM358P"></textarea>
         render() {
             const container = $('credList');
             if (!state.credentials.length) {
-                container.innerHTML = '<div class="empty" style="padding: 20px;">No credentials added yet</div>';
+                container.innerHTML = '<div class="card"><div class="p-20 text-center text-gray-500">No credentials added yet</div></div>';
             } else {
                 container.innerHTML = state.credentials.map(c => {
                     const active = c.status === 'active' && c.token && c.expiry > Date.now();
                     const statusText = c.status === 'error' ? `Error: ${c.lastError}` : 
                                       active ? 'Active' : 'Inactive';
-                    const statusColor = c.status === 'error' ? '#f44336' : 
-                                       active ? '#4caf50' : '#999';
+                    const statusClass = c.status === 'error' ? 'badge--error' : 
+                                       active ? 'badge--success' : 'badge--neutral';
                     
                     return `
-                        <div class="credential">
-                            <div class="credential-info">
-                                <div><span class="status ${active ? 'active' : ''}" style="background: ${statusColor};"></span>${c.label}</div>
-                                <div style="color: #666; font-size: 12px;">ID: ${c.clientId.substr(0, 20)}...</div>
-                                <div style="color: #666; font-size: 12px;">Env: ${c.environment} | Locale: ${c.locale}</div>
-                                <div style="color: ${statusColor}; font-size: 11px;">Uses: ${c.uses} | ${statusText}</div>
+                        <div class="cred">
+                            <div class="cred__dot cred__dot--${active ? 'ok' : c.status === 'error' ? 'err' : 'warn'}"></div>
+                            <div class="cred__info">
+                                <div class="font-semibold">${c.label}</div>
+                                <div class="text-xs text-gray-500">ID: ${c.clientId.substr(0, 20)}...</div>
+                                <div class="text-xs text-gray-500">Env: ${c.environment} | Locale: ${c.locale}</div>
+                                <div class="text-xs mt-4"><span class="badge ${statusClass}">${statusText}</span> | Uses: ${c.uses}</div>
                             </div>
-                            <button class="danger" onclick="cm.remove('${c.id}')">Remove</button>
+                            <button class="cred__remove" onclick="cm.remove('${c.id}')">Remove</button>
                         </div>
                     `;
                 }).join('');
@@ -847,10 +885,10 @@ LM358P"></textarea>
         // Reset state
         state.results = [];
         state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: Date.now() };
-        $('emptyResults').classList.add('hide');
+        $('emptyResults').classList.add('hidden');
         $('resultsTable').innerHTML = '';
-        $('resultsTable').classList.add('hide');
-        $('progress').classList.add('visible');
+        $('resultsTable').classList.add('hidden');
+        $('progress').classList.remove('hidden');
         $('export').disabled = true;
 
         const btn = $('process');
@@ -927,7 +965,7 @@ LM358P"></textarea>
         
         if (!table.querySelector('table')) {
             table.innerHTML = `
-                <table>
+                <table class="results-table">
                     <thead>
                         <tr>
                             <th>Status</th>
@@ -946,18 +984,20 @@ LM358P"></textarea>
                     <tbody id="tbody"></tbody>
                 </table>
             `;
-            table.classList.remove('hide');
+            table.classList.remove('hidden');
         }
 
         const tbody = $('tbody');
         const row = tbody.insertRow();
         
         const datasheetCell = r.datasheet 
-            ? `<a href="${escapeHtml(r.datasheet)}" target="_blank" rel="noopener">View</a>`
+            ? `<a href="${escapeHtml(r.datasheet)}" target="_blank" rel="noopener" class="link">View</a>`
             : '';
         
+        const statusClass = r.status === 'success' ? 'success' : r.status === 'warning' ? 'warning' : 'error';
+        
         row.innerHTML = `
-            <td><span style="color: ${r.status === 'success' ? '#4caf50' : r.status === 'warning' ? '#ff9800' : '#f44336'}">${escapeHtml(r.status)}</span></td>
+            <td class="status ${statusClass}">${escapeHtml(r.status)}</td>
             <td class="mono">${escapeHtml(r.mpn)}</td>
             <td>${escapeHtml(r.description)}</td>
             <td>${escapeHtml(r.detailed)}</td>
@@ -980,9 +1020,9 @@ LM358P"></textarea>
         state.results = [];
         state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: 0 };
         $('resultsTable').innerHTML = '';
-        $('resultsTable').classList.add('hide');
-        $('emptyResults').classList.remove('hide');
-        $('progress').classList.remove('visible');
+        $('resultsTable').classList.add('hidden');
+        $('emptyResults').classList.remove('hidden');
+        $('progress').classList.add('hidden');
         $('export').disabled = true;
         log('Results cleared', 'success');
     }
