@@ -71,22 +71,24 @@ _setupClickSelectionToggle() {
     /**
      * Get or create controls container
      */
-    _getOrCreateControlsContainer() {
-        let container = document.getElementById('range-selection-controls');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'range-selection-controls';
-            container.className = 'panel';
-            container.style.cssText = 'margin-bottom: var(--space-4);';
-            
-            // Find the best insertion point
-            const confirmBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CONFIRM_RANGE);
-            if (confirmBtn && confirmBtn.parentNode) {
-                confirmBtn.parentNode.insertBefore(container, confirmBtn.parentNode.firstChild);
-            }
+    /**
+ * Get or create controls container
+ */
+_getOrCreateControlsContainer() {
+    let container = document.getElementById('range-selection-controls');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'range-selection-controls';
+        container.style.cssText = 'margin-bottom: 24px;';
+        
+        // Find the best insertion point - before the table container
+        const tableWrapper = document.querySelector('#step3 .table-container');
+        if (tableWrapper && tableWrapper.parentNode) {
+            tableWrapper.parentNode.insertBefore(container, tableWrapper);
         }
-        return container;
-    },
+    }
+    return container;
+}
     
     /**
      * Create mode information panel
