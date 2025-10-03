@@ -212,6 +212,12 @@ small { font-size: 0.85em; color: var(--gray-500); }
 }
 /* Utilities */
 
+#fileName {
+    word-break: break-all;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
 .block{display:block}.inline-block{display:inline-block}.inline{display:inline}
 .flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}
 .justify-start{justify-content:flex-start}.justify-center{justify-content:center}.justify-end{justify-content:flex-end}.justify-between{justify-content:space-between}
