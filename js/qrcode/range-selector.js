@@ -33,6 +33,9 @@ window.QRScannerRangeSelector = {
     /**
  * Setup click selection mode toggle and UI
  */
+/**
+ * Setup click selection mode toggle and UI
+ */
 _setupClickSelectionToggle() {
     // Create toggle button container
     const controlsContainer = this._getOrCreateControlsContainer();
@@ -66,7 +69,7 @@ _setupClickSelectionToggle() {
     
     // Add mode information panel
     this._createModeInfoPanel(controlsContainer);
-}
+},
     
     /**
      * Get or create controls container
@@ -88,7 +91,7 @@ _getOrCreateControlsContainer() {
         }
     }
     return container;
-}
+},
     
     /**
      * Create mode information panel
@@ -109,7 +112,7 @@ _createModeInfoPanel(parent) {
         </div>
     `;
     parent.appendChild(infoPanel);
-}
+},
     
     /**
      * Toggle click selection mode
@@ -153,7 +156,7 @@ _toggleClickSelectionMode() {
         window.QRScannerUtils.log.debug('Click selection mode disabled');
         this._showTemporaryMessage('Drag selection enabled. Click and drag to select range.', 'info');
     }
-}
+},
     
     /**
      * Show temporary message
@@ -190,7 +193,7 @@ _showTemporaryMessage(message, type = 'info') {
             setTimeout(() => msgDiv.remove(), 300);
         }
     }, 4000);
-}
+},
     
     /**
      * Reset click selection state
@@ -278,7 +281,7 @@ _updateClickSelectionStatus() {
         `;
         statusDiv.className = 'alert alert--info';
     }
-}
+},
 
     /**
      * Bind event listeners
@@ -636,7 +639,7 @@ _createSelectableTable(data) {
     this._addTableEventListeners(table);
 
     return table;
-}
+},
 
     /**
      * Add event listeners to cell
@@ -679,7 +682,7 @@ _addCellEventListeners(cell) {
             cell.style.backgroundColor = '';
         }
     });
-}
+},
 
     /**
      * Add table-level event listeners
@@ -725,7 +728,7 @@ _handleCellTouchStart(event) {
     this._isDragging = false;
     
     // Don't prevent default yet - allow scrolling to start
-}
+},
 
 /**
  * Handle cell touch move - detect scroll intent
@@ -763,7 +766,7 @@ _handleCellTouchMove(event) {
             }
         }
     }
-}
+},
 
 /**
  * Handle cell touch end - distinguish tap from scroll
@@ -794,7 +797,7 @@ _handleCellTouchEnd(event) {
     }
     
     this._resetTouchState();
-}
+},
 
 /**
  * Reset touch state
