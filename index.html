@@ -8,57 +8,123 @@
 </head>
 <body>
     <div class="container">
-        <header class="page-header" role="banner">
-            <div class="page-header__meta">
-                <div class="meta">Alica Technologies</div>
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav__item is-active">Tools</div>
+            <div class="nav__item">
+                <a href="contact.html">Contact</a>
             </div>
-            <div class="page-header__titleblock">
+        </nav>
+
+        <!-- Page Header -->
+        <header class="page-header">
+            <div>
                 <h1 class="page-header__title">Tools Index</h1>
                 <p class="lead">We build Relationships, more than the Product.</p>
             </div>
+            <div class="page-header__meta">
+                <div class="meta">Alica Technologies</div>
+                <div class="meta">Est. 2021</div>
+                <div class="meta">EMS Provider</div>
+            </div>
         </header>
 
-        <main role="main">
+        <main>
             <!-- Component Analysis Section -->
-            <section class="mb-48" aria-labelledby="section-component-analysis">
-                <h2 class="mb-24" id="section-component-analysis">Component Analysis</h2>
+            <section class="mb-48">
+                <h2 class="mb-24">Component Analysis</h2>
                 <div class="tools">
-                    <article class="tool" aria-labelledby="tool-digikey">
-                        <h3 class="tool__title" id="tool-digikey">
-                            <a href="digikey.html" class="link">Digikey MPN Analyzer</a>
-                        </h3>
+                    <a href="digikey.html" class="tool">
+                        <div class="mb-12">
+                            <div class="badge badge--neutral">API INTEGRATION</div>
+                        </div>
+                        <h3 class="tool__title">Digikey MPN Analyzer</h3>
                         <p class="tool__desc">Bulk MPN information gathering using API credentials — Your credentials are required.</p>
-                    </article>
+                        <div class="mt-16">
+                            <span class="text-xs uppercase tracking-wide text-gray-500">View Tool →</span>
+                        </div>
+                    </a>
                 </div>
             </section>
 
             <!-- Inventory Management Section -->
-            <section class="mb-48" aria-labelledby="section-inventory-management">
-                <h2 class="mb-24" id="section-inventory-management">Inventory Management</h2>
+            <section class="mb-48">
+                <h2 class="mb-24">Inventory Management</h2>
                 <div class="tools">
-                    <article class="tool" aria-labelledby="tool-qrcode">
-                        <h3 class="tool__title" id="tool-qrcode">
-                            <a href="qrcode.html" class="link">QR Code Component Scanner</a>
-                        </h3>
+                    <a href="qrcode.html" class="tool">
+                        <div class="mb-12">
+                            <div class="badge badge--neutral">SCANNER</div>
+                        </div>
+                        <h3 class="tool__title">QR Code Component Scanner</h3>
                         <p class="tool__desc">Rapid component counting and BOM matching through QR/barcode scanning — Excel integration with visual range selection.</p>
-                    </article>
+                        <div class="mt-16">
+                            <span class="text-xs uppercase tracking-wide text-gray-500">View Tool →</span>
+                        </div>
+                    </a>
+                </div>
+            </section>
+
+            <!-- System Information -->
+            <section class="mb-96">
+                <div class="card">
+                    <div class="grid-12 gap-32">
+                        <div class="col-span-8">
+                            <h3 class="mb-16">About This System</h3>
+                            <p class="mb-16">This internal tools platform provides electronics manufacturing professionals with specialized utilities for component analysis, inventory management, and supply chain operations.</p>
+                            <p class="text-sm text-gray-600">Built with Swiss Design principles — minimal, functional, and precise. All tools are optimized for production environments and support bulk operations.</p>
+                        </div>
+                        <div class="col-span-4">
+                            <div class="kv">
+                                <div class="kv__pair">
+                                    <div class="kv__key">System Status</div>
+                                    <div class="kv__val">
+                                        <span class="badge badge--success">OPERATIONAL</span>
+                                    </div>
+                                </div>
+                                <div class="kv__pair">
+                                    <div class="kv__key">Version</div>
+                                    <div class="kv__val kv__val--mono">1.0.0</div>
+                                </div>
+                                <div class="kv__pair">
+                                    <div class="kv__key">Tools Available</div>
+                                    <div class="kv__val">2</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
 
-        <footer class="footer" role="contentinfo">
-            <div class="footer__cols">
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-grid">
                 <div>
-                    <h3 class="label mb-8">Contact</h3>
-                    <a href="contact.html" class="link">Get in Touch</a>
+                    <h3 class="label mb-8">Tools</h3>
+                    <div class="space-y-4">
+                        <a href="digikey.html" class="link block">Digikey Analyzer</a>
+                        <a href="qrcode.html" class="link block">QR Scanner</a>
+                    </div>
                 </div>
                 <div>
-                    <h3 class="label mb-8">Organization</h3>
-                    <p class="text-sm">Alica Technologies LLP</p>
+                    <h3 class="label mb-8">Company</h3>
+                    <div class="space-y-4">
+                        <a href="contact.html" class="link block">Contact</a>
+                        <span class="text-sm block">Electronics Manufacturing</span>
+                    </div>
                 </div>
                 <div>
                     <h3 class="label mb-8">Location</h3>
-                    <p class="text-sm">Ahmedabad, Gujarat, India</p>
+                    <div class="space-y-4">
+                        <span class="text-sm block">Changodar, Ahmedabad</span>
+                        <span class="text-sm block">Gujarat, India</span>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="label mb-8">System</h3>
+                    <div class="space-y-4">
+                        <span class="text-xs block uppercase tracking-wide">Swiss Design System</span>
+                    </div>
                 </div>
             </div>
             <div class="footer__bottom">
