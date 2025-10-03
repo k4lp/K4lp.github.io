@@ -8,78 +8,92 @@
 </head>
 <body>
     <div class="container">
-        <div class="back-nav">
-            <a href="index.html">← Back to Tools</a>
-        </div>
-
-        <header class="header-grid">
-            <div>
-                <h1 class="header-title tracking-tight">Contact</h1>
-                <p class="header-subtitle">Connect with our Electronics Manufacturing Services team</p>
+        <nav class="nav">
+            <div class="nav__item">
+                <a href="index.html" class="back-link">Back to Tools</a>
             </div>
-            <div class="header-meta">
-                <span>Est. 2021</span>
-                <span>Ahmedabad, Gujarat</span>
-                <span>EMS Provider</span>
+        </nav>
+
+        <header class="page-header">
+            <div>
+                <h1 class="page-header__title">Contact</h1>
+                <p class="lead">Connect with our Electronics Manufacturing Services team</p>
+            </div>
+            <div class="page-header__meta">
+                <div class="meta">Est. 2021</div>
+                <div class="meta">Ahmedabad, Gujarat</div>
+                <div class="meta">EMS Provider</div>
             </div>
         </header>
 
         <main>
             <!-- Company Overview -->
-            <section class="section">
-                <h2 class="section-title">About Alica Technologies</h2>
-                <div class="grid grid-cols-2 gap-8">
-                    <div>
-                        <p>Alica Technologies LLP is a leading Electronics Manufacturing Service (EMS) provider specializing in PCB Assembly, Component Sourcing, and Rapid Prototyping. Since 2021, we've positioned ourselves as a proactive partner in the electronics industry, dedicated to quality and excellence.</p>
-                        <p class="mt-4">We deliver end-to-end electronics product development from concept refinement to optimized design-for-manufacturing through long-term production, serving OEMs across the globe with world-class precision electronics manufacturing.</p>
+            <section class="mb-48">
+                <h2 class="mb-24">About Alica Technologies</h2>
+                <div class="grid-12 gap-32">
+                    <div class="col-span-8">
+                        <p class="mb-16">Alica Technologies LLP is a leading Electronics Manufacturing Service (EMS) provider specializing in PCB Assembly, Component Sourcing, and Rapid Prototyping. Since 2021, we've positioned ourselves as a proactive partner in the electronics industry, dedicated to quality and excellence.</p>
+                        <p>We deliver end-to-end electronics product development from concept refinement to optimized design-for-manufacturing through long-term production, serving OEMs across the globe with world-class precision electronics manufacturing.</p>
                     </div>
-                    <div class="stats">
-                        <div class="stat-item">
-                            <span class="stat-value">2021</span>
-                            <span class="stat-label">Founded</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">11-50</span>
-                            <span class="stat-label">Employees</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-value">72hrs</span>
-                            <span class="stat-label">Prototyping</span>
+                    <div class="col-span-4">
+                        <div class="stats">
+                            <div class="text-center">
+                                <div class="stat__value">2021</div>
+                                <div class="stat__label">Founded</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="stat__value">11-50</div>
+                                <div class="stat__label">Employees</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="stat__value">72hrs</div>
+                                <div class="stat__label">Prototyping</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
             <!-- Primary Contact -->
-            <section class="section">
-                <h2 class="section-title">Primary Office</h2>
-                <div class="grid grid-cols-2 gap-8">
-                    <div class="contact-section">
-                        <h3 class="contact-section-title">Address</h3>
-                        <div class="address">
-                            <p><strong>Alica Technologies LLP</strong></p>
-                            <p>Meet House, Besides Zydus Research Centre</p>
-                            <p>Changodar, Ahmedabad 382213</p>
-                            <p>Gujarat, India</p>
+            <section class="mb-48">
+                <h2 class="mb-24">Primary Office</h2>
+                <div class="grid-12 gap-32">
+                    <div class="col-span-6">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3 class="card__title">Address</h3>
+                            </div>
+                            <div class="p-16">
+                                <p class="font-semibold">Alica Technologies LLP</p>
+                                <p class="text-sm">Meet House, Besides Zydus Research Centre</p>
+                                <p class="text-sm">Changodar, Ahmedabad 382213</p>
+                                <p class="text-sm">Gujarat, India</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="contact-section">
-                        <h3 class="contact-section-title">Registration Details</h3>
-                        <div class="kv-list">
-                            <div class="kv-item">
-                                <span class="kv-key">LLPIN</span>
-                                <span class="kv-value mono">AAR-7543</span>
+                    <div class="col-span-6">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3 class="card__title">Registration Details</h3>
                             </div>
-                            <div class="kv-item">
-                                <span class="kv-key">ROC</span>
-                                <span class="kv-value">RoC-Ahmedabad</span>
-                            </div>
-                            <div class="kv-item">
-                                <span class="kv-key">Status</span>
-                                <span class="kv-value">
-                                    <span class="status status-success"></span>Active
-                                </span>
+                            <div class="p-16">
+                                <div class="kv">
+                                    <div class="kv__pair">
+                                        <div class="kv__key">LLPIN</div>
+                                        <div class="kv__val kv__val--mono">AAR-7543</div>
+                                    </div>
+                                    <div class="kv__pair">
+                                        <div class="kv__key">ROC</div>
+                                        <div class="kv__val">RoC-Ahmedabad</div>
+                                    </div>
+                                    <div class="kv__pair">
+                                        <div class="kv__key">Status</div>
+                                        <div class="kv__val">
+                                            <span class="badge badge--success">Active</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -87,133 +101,154 @@
             </section>
 
             <!-- Contact Methods -->
-            <section class="section">
-                <h2 class="section-title">Get in Touch</h2>
-                <div class="grid grid-cols-3 gap-6">
-                    <div class="contact-section">
-                        <h3 class="contact-section-title">Phone</h3>
-                        <ul class="contact-info">
-                            <li><a href="tel:+919727178787">+91 97271 78787</a></li>
-                            <li><a href="tel:+919974580999">+91 99745 80999</a></li>
-                            <li><a href="tel:+918238794924">+91 82387 94924</a></li>
-                        </ul>
+            <section class="mb-48">
+                <h2 class="mb-24">Get in Touch</h2>
+                <div class="contact-grid">
+                    <div>
+                        <h3 class="contact-title">Phone</h3>
+                        <div class="contact-list">
+                            <a href="tel:+919727178787" class="link">+91 97271 78787</a><br>
+                            <a href="tel:+919974580999" class="link">+91 99745 80999</a><br>
+                            <a href="tel:+918238794924" class="link">+91 82387 94924</a>
+                        </div>
                     </div>
 
-                    <div class="contact-section">
-                        <h3 class="contact-section-title">Email</h3>
-                        <ul class="contact-info">
-                            <li><a href="mailto:info@alicatechnologies.com">info@alicatechnologies.com</a></li>
-                        </ul>
+                    <div>
+                        <h3 class="contact-title">Email</h3>
+                        <div class="contact-list">
+                            <a href="mailto:info@alicatechnologies.com" class="link">info@alicatechnologies.com</a>
+                        </div>
                     </div>
 
-                    <div class="contact-section">
-                        <h3 class="contact-section-title">Online</h3>
-                        <ul class="contact-info">
-                            <li><a href="https://alicatechnologies.com" target="_blank">alicatechnologies.com</a></li>
-                            <li><a href="https://linkedin.com/company/alica-technologies-llp" target="_blank">LinkedIn</a></li>
-                        </ul>
+                    <div>
+                        <h3 class="contact-title">Online</h3>
+                        <div class="contact-list">
+                            <a href="https://alicatechnologies.com" target="_blank" class="link">alicatechnologies.com</a><br>
+                            <a href="https://linkedin.com/company/alica-technologies-llp" target="_blank" class="link">LinkedIn</a>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Services & Capabilities -->
-            <section class="section">
-                <h2 class="section-title">Core Services</h2>
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Manufacturing Services</h3>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list">
-                                <li class="list-item">PCB Assembly & SMT</li>
-                                <li class="list-item">Rapid Prototyping (72 hours)</li>
-                                <li class="list-item">High-Mix, Flexible Volume</li>
-                                <li class="list-item">Box Build Assembly</li>
-                                <li class="list-item">New Product Introduction (NPI)</li>
-                            </ul>
+            <section class="mb-48">
+                <h2 class="mb-24">Core Services</h2>
+                <div class="grid-12 gap-24">
+                    <div class="col-span-6">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3 class="card__title">Manufacturing Services</h3>
+                            </div>
+                            <div class="p-16">
+                                <ul class="list-disc pl-20">
+                                    <li>PCB Assembly & SMT</li>
+                                    <li>Rapid Prototyping (72 hours)</li>
+                                    <li>High-Mix, Flexible Volume</li>
+                                    <li>Box Build Assembly</li>
+                                    <li>New Product Introduction (NPI)</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Support Services</h3>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list">
-                                <li class="list-item">Component Sourcing</li>
-                                <li class="list-item">Supply Chain Management</li>
-                                <li class="list-item">Design & Engineering</li>
-                                <li class="list-item">DFM Services</li>
-                                <li class="list-item">Quality Assurance & Testing</li>
-                            </ul>
+                    <div class="col-span-6">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3 class="card__title">Support Services</h3>
+                            </div>
+                            <div class="p-16">
+                                <ul class="list-disc pl-20">
+                                    <li>Component Sourcing</li>
+                                    <li>Supply Chain Management</li>
+                                    <li>Design & Engineering</li>
+                                    <li>DFM Services</li>
+                                    <li>Quality Assurance & Testing</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
             <!-- Industries Served -->
-            <section class="section">
-                <h2 class="section-title">Industries We Serve</h2>
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="badge badge-outline">Medical Electronics</div>
-                    <div class="badge badge-outline">Aerospace</div>
-                    <div class="badge badge-outline">Automotive</div>
-                    <div class="badge badge-outline">Communications</div>
-                    <div class="badge badge-outline">Railways</div>
-                    <div class="badge badge-outline">Industrial Automation</div>
-                    <div class="badge badge-outline">Power & Energy</div>
-                    <div class="badge badge-outline">IoT Devices</div>
+            <section class="mb-48">
+                <h2 class="mb-24">Industries We Serve</h2>
+                <div class="grid-cols-4 gap-16">
+                    <div class="badge badge--neutral">Medical Electronics</div>
+                    <div class="badge badge--neutral">Aerospace</div>
+                    <div class="badge badge--neutral">Automotive</div>
+                    <div class="badge badge--neutral">Communications</div>
+                    <div class="badge badge--neutral">Railways</div>
+                    <div class="badge badge--neutral">Industrial Automation</div>
+                    <div class="badge badge--neutral">Power & Energy</div>
+                    <div class="badge badge--neutral">IoT Devices</div>
                 </div>
             </section>
 
             <!-- Key Personnel -->
-            <section class="section">
-                <h2 class="section-title">Leadership Team</h2>
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="kv-list">
-                        <div class="kv-item">
-                            <span class="kv-key">Designated Partners</span>
-                            <span class="kv-value">4 Partners</span>
-                        </div>
-                        <div class="kv-item">
-                            <span class="kv-key">Founded By</span>
-                            <span class="kv-value">Kishan Sudhirkumar Changela</span>
-                        </div>
-                        <div class="kv-item">
-                            <span class="kv-key">Leadership</span>
-                            <span class="kv-value">Dharmarajsinh Balkrishna Jadeja</span>
+            <section class="mb-48">
+                <h2 class="mb-24">Leadership Team</h2>
+                <div class="grid-12 gap-24">
+                    <div class="col-span-6">
+                        <div class="kv">
+                            <div class="kv__pair">
+                                <div class="kv__key">Designated Partners</div>
+                                <div class="kv__val">4 Partners</div>
+                            </div>
+                            <div class="kv__pair">
+                                <div class="kv__key">Founded By</div>
+                                <div class="kv__val">Kishan Sudhirkumar Changela</div>
+                            </div>
+                            <div class="kv__pair">
+                                <div class="kv__key">Leadership</div>
+                                <div class="kv__val">Dharmarajsinh Balkrishna Jadeja</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="panel">
-                        <p class="text-sm">Our experienced leadership team brings together expertise in electronics manufacturing, quality management, and customer service to deliver exceptional results for our clients.</p>
+                    <div class="col-span-6">
+                        <div class="card">
+                            <div class="p-16">
+                                <p class="text-sm">Our experienced leadership team brings together expertise in electronics manufacturing, quality management, and customer service to deliver exceptional results for our clients.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
         </main>
 
-        <footer>
-            <div class="footer-content">
+        <footer class="footer">
+            <div class="footer-grid">
                 <div>
-                    <h3 class="footer-section-title">Tools</h3>
-                    <a href="index.html" class="footer-link">Back to Index</a>
-                    <a href="digikey.html" class="footer-link">Digikey Analyzer</a>
-                    <a href="qrcode.html" class="footer-link">QR Scanner</a>
+                    <h3 class="label mb-8">Tools</h3>
+                    <div class="space-y-4">
+                        <a href="index.html" class="link block">Back to Index</a>
+                        <a href="digikey.html" class="link block">Digikey Analyzer</a>
+                        <a href="qrcode.html" class="link block">QR Scanner</a>
+                    </div>
                 </div>
                 <div>
-                    <h3 class="footer-section-title">Company</h3>
-                    <span class="footer-link">Electronics Manufacturing</span>
-                    <span class="footer-link">ISO Certified Processes</span>
+                    <h3 class="label mb-8">Company</h3>
+                    <div class="space-y-4">
+                        <span class="text-sm block">Electronics Manufacturing</span>
+                        <span class="text-sm block">ISO Certified Processes</span>
+                    </div>
                 </div>
                 <div>
-                    <h3 class="footer-section-title">Location</h3>
-                    <span class="footer-link">Changodar, Ahmedabad</span>
-                    <span class="footer-link">Gujarat, India</span>
+                    <h3 class="label mb-8">Location</h3>
+                    <div class="space-y-4">
+                        <span class="text-sm block">Changodar, Ahmedabad</span>
+                        <span class="text-sm block">Gujarat, India</span>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="label mb-8">System</h3>
+                    <div class="space-y-4">
+                        <span class="text-xs block uppercase tracking-wide">Swiss Design System</span>
+                    </div>
                 </div>
             </div>
-            <div class="footer-bottom">
-                <span class="text-sm">© 2025 Alica Technologies LLP</span>
-                <span class="text-xs uppercase tracking-widest">Swiss Design System</span>
+            <div class="footer__bottom">
+                <span class="text-xs">© 2025 Alica Technologies LLP</span>
             </div>
         </footer>
     </div>
