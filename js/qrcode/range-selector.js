@@ -93,26 +93,23 @@ _getOrCreateControlsContainer() {
     /**
      * Create mode information panel
      */
-    _createModeInfoPanel(parent) {
-        const infoPanel = document.createElement('div');
-        infoPanel.id = 'selection-mode-info';
-        infoPanel.style.cssText = `
-            margin-top: var(--space-4);
-            padding: var(--space-3);
-            background-color: var(--color-gray-50);
-            border: var(--border-width) solid var(--color-gray-200);
-            font-size: var(--font-size-xs);
-            color: var(--color-gray-600);
-        `;
-        infoPanel.innerHTML = `
-            <div class="text-xs font-medium uppercase tracking-wider text-black mb-2">SELECTION MODES</div>
-            <div style="margin-top: var(--space-2);">
-                <div>DRAG MODE: Click and drag to select range</div>
-                <div>CLICK MODE: Click two cells to define range corners</div>
-            </div>
-        `;
-        parent.appendChild(infoPanel);
-    },
+    /**
+ * Create mode information panel
+ */
+_createModeInfoPanel(parent) {
+    const infoPanel = document.createElement('div');
+    infoPanel.id = 'selection-mode-info';
+    infoPanel.className = 'alert alert--info';
+    infoPanel.style.cssText = 'margin-bottom: 16px;';
+    infoPanel.innerHTML = `
+        <div class="alert__msg">
+            <strong>SELECTION MODES</strong><br>
+            <small><strong>Drag Mode (Desktop):</strong> Click and drag to select range</small><br>
+            <small><strong>Click Mode (Mobile):</strong> Tap two cells to define range corners</small>
+        </div>
+    `;
+    parent.appendChild(infoPanel);
+}
     
     /**
      * Toggle click selection mode
