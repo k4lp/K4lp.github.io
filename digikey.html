@@ -672,7 +672,7 @@
                         mpn: cleanMpn,
                         description: p.Description?.ProductDescription || '',
                         detailed: p.Description?.DetailedDescription || '',
-                        categzory: p.Category?.Name || '',           // NOTE: kept original key as-is
+                        category: p.Category?.Name || '',           // NOTE: kept original key as-is
                         manufacturer: p.Manufacturer?.Name || '',
                         package: extractParam(p.Parameters, ['Package', 'Case']),
                         mounting: extractParam(p.Parameters, ['Mounting', 'Mounting Type']),
