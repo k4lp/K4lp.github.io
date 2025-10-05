@@ -380,6 +380,12 @@
             $('workerCount').textContent = this.active().length;
         }
     }
+    // NEW: helper to normalize HTSUS values
+    function cleanHTSUS(code) {                       // ADDED: New helper to format HTSUS
+        if (!code) return '';                         // ADDED: Guard for empty/undefined
+        const digits = String(code).replace(/\D/g, ''); // ADDED: Keep only numeric characters
+        return digits.slice(0, 8);                    // ADDED: Use only the first 8 digits
+    }    
 
     const cm = new CredentialManager();
     window.cm = cm; // Expose for onclick handlers
@@ -639,7 +645,8 @@
                 mounting: '',
                 datasheet: '',
                 aliases: '',
-                remarks: 'Empty MPN'
+                remarks: 'Empty MPN',
+                htsus: ''                             // ADDED: Include HTSUS field in error object
             };
         }
 
@@ -665,13 +672,14 @@
                         mpn: cleanMpn,
                         description: p.Description?.ProductDescription || '',
                         detailed: p.Description?.DetailedDescription || '',
-                        category: p.Category?.Name || '',
+                        categzory: p.Category?.Name || '',           // NOTE: kept original key as-is
                         manufacturer: p.Manufacturer?.Name || '',
                         package: extractParam(p.Parameters, ['Package', 'Case']),
                         mounting: extractParam(p.Parameters, ['Mounting', 'Mounting Type']),
                         datasheet: extractDatasheet(p),
                         aliases: Array.isArray(p.OtherNames) ? p.OtherNames.join(', ') : '',
-                        remarks: `Direct match via ${cred.label}`
+                        remarks: `Direct match via ${cred.label}`,
+                        htsus: cleanHTSUS(p.Classifications?.HtsusCode) // ADDED: Capture and normalize HTSUS
                     };
                 }
             } catch (e) {
@@ -726,7 +734,8 @@
                     mounting: extractParam(match.Parameters, ['Mounting', 'Mounting Type']),
                     datasheet: extractDatasheet(match),
                     aliases: Array.isArray(match.OtherNames) ? match.OtherNames.join(', ') : '',
-                    remarks: `${matchType} match via ${cred.label}`
+                    remarks: `${matchType} match via ${cred.label}`,
+                    htsus: cleanHTSUS(match.Classifications?.HtsusCode) // ADDED: Capture and normalize HTSUS
                 };
             }
 
@@ -741,7 +750,8 @@
                 mounting: '',
                 datasheet: '',
                 aliases: '',
-                remarks: `Not found (searched ${products.length} results) via ${cred.label}`
+                remarks: `Not found (searched ${products.length} results) via ${cred.label}`,
+                htsus: ''                             // ADDED: Include HTSUS field in not-found object
             };
 
         } catch (e) {
@@ -759,10 +769,14 @@
                 mounting: '',
                 datasheet: '',
                 aliases: '',
-                remarks: `Error: ${errorMsg}`
+                remarks: `Error: ${errorMsg}`,
+                htsus: ''                             // ADDED: Include HTSUS field in catch error object
             };
         }
     }
+
+
+
 
     // Parallel processor with queue management
     class ParallelProcessor {
@@ -984,6 +998,12 @@
                     <tbody id="tbody"></tbody>
                 </table>
             `;
+            // ADDED: Append HTSUS header as the last column
+            const headerRow = table.querySelector('thead tr');        // ADDED
+            const th = document.createElement('th');                  // ADDED
+            th.textContent = 'HTSUS';                                 // ADDED
+            headerRow.appendChild(th);                                // ADDED
+
             table.classList.remove('hidden');
         }
 
@@ -995,6 +1015,7 @@
             : '';
         
         const statusClass = r.status === 'success' ? 'success' : r.status === 'warning' ? 'warning' : 'error';
+        const htsus = cleanHTSUS(r.htsus || '');                      // ADDED: Ensure HTSUS is 8 digits numeric only
         
         row.innerHTML = `
             <td class="status ${statusClass}">${escapeHtml(r.status)}</td>
@@ -1008,6 +1029,7 @@
             <td>${datasheetCell}</td>
             <td class="mono">${escapeHtml(r.aliases)}</td>
             <td>${escapeHtml(r.remarks)}</td>
+            <td class="mono">${escapeHtml(htsus)}</td>               // ADDED: New last column with 8-digit HTSUS
         `;
     }
 
@@ -1034,7 +1056,7 @@
         }
 
         try {
-            const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Datasheet', 'Aliases', 'Remarks'];
+            const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Datasheet', 'Aliases', 'Remarks','HTSUS'];
             const escape = str => `"${String(str).replace(/"/g, '""')}"`;
             
             const rows = state.results.map(r => [
@@ -1048,7 +1070,8 @@
                 escape(r.mounting),
                 escape(r.datasheet),
                 escape(r.aliases),
-                escape(r.remarks)
+                escape(r.remarks),
+                escape(cleanHTSUS(r.htsus || ''))
             ].join(','));
 
             const csv = [headers.join(','), ...rows].join('\n');
