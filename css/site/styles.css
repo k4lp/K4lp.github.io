@@ -4,8 +4,7 @@
    Notes: Typography-first, monochrome, brutal minimalism.
    Base: 13px; Geist + Geist Mono; no gradients; minimal shadows; square corners.
    Pages covered: index.html, contact.html, digikey.html, qrcode.html (scanner).
-   FIXED: Scan results table overflow and design issues
-   FIXED: Mobile centering for scanner controls and current match sections
+   CRITICAL FIXES: Mobile responsiveness, table overflow, serial number display
    ========================================================================== */
 
 :root {
@@ -452,7 +451,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
 .kv__val { font-size: 13px; }
 .kv__val--mono { font-family: var(--font-mono); }
 
-/* Key-Value Lists for Current Match Display - FIXED */
+/* CRITICAL FIX: Enhanced Key-Value Lists with better mobile handling */
 .kv-list {
   display: grid;
   gap: 8px;
@@ -475,6 +474,8 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   font-size: 12px;
   line-height: 1.4;
   word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .tools { display: grid; gap: 16px; }
@@ -504,7 +505,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
 .footer-grid { display: grid; gap: 24px; }
 @media (min-width: 1024px) { .footer-grid { grid-template-columns: repeat(4,1fr); } }
 
-/* Specialized: QR Scanner (qrcode.html) */
+/* CRITICAL FIX: Enhanced QR Scanner Components */
 .scanner {
   border: 2px solid var(--black); position: relative; background: var(--black);
   aspect-ratio: 16/9; width: 100%; min-height: 300px;
@@ -562,24 +563,29 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   z-index: 10;
 }
 
-/* ADDED: Serial number overlay for camera viewpoint */
+/* CRITICAL FIX: Enhanced Serial Number Overlay */
 .serial-overlay {
   position: absolute;
   top: 10px;
   left: 10px;
   right: 10px;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   color: var(--white);
   padding: var(--space-8) var(--space-12);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: var(--weight-semibold);
   text-align: center;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   z-index: 20;
   opacity: 0;
   transition: opacity var(--t-std) var(--easing);
   pointer-events: none;
+  /* CRITICAL FIX: Prevent overflow on mobile */
+  max-width: calc(100% - 20px);
+  word-break: break-all;
+  overflow-wrap: break-word;
+  line-height: 1.2;
 }
 
 .serial-overlay.visible {
@@ -587,7 +593,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
 }
 
 .serial-overlay .serial-label {
-  font-size: 10px;
+  font-size: 9px;
   text-transform: uppercase;
   letter-spacing: var(--track-caps);
   color: var(--gray-300);
@@ -596,22 +602,30 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
 }
 
 .serial-overlay .serial-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: var(--weight-bold);
   color: var(--white);
+  /* CRITICAL FIX: Prevent text overflow */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .scan-controls {
   margin-top: var(--space-16);
 }
 
-/* FIXED: Scan Result Display */
+/* CRITICAL FIX: Enhanced Scan Result Display */
 .scan-result {
   border: 1px solid var(--gray-200);
   background: var(--white);
   padding: var(--space-16);
   margin-top: var(--space-16);
   min-height: 120px;
+  /* CRITICAL FIX: Prevent overflow */
+  overflow-x: auto;
+  word-wrap: break-word;
 }
 
 .scan-result.success {
@@ -645,7 +659,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   margin-bottom: var(--space-32);
 }
 
-/* Step progress indicator */
+/* CRITICAL FIX: Enhanced Step Progress Indicator */
 .step-indicator {
   display: flex;
   align-items: center;
@@ -654,6 +668,9 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   padding: var(--space-16);
   border: 1px solid var(--gray-200);
   background: var(--gray-100);
+  /* CRITICAL FIX: Mobile responsiveness */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .step-indicator__item {
@@ -664,6 +681,9 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   text-transform: uppercase;
   letter-spacing: var(--track-caps);
   color: var(--gray-500);
+  /* CRITICAL FIX: Prevent shrinking on mobile */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .step-indicator__item.is-current {
@@ -684,6 +704,8 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   border: 1px solid currentColor;
   font-size: 10px;
   font-weight: var(--weight-bold);
+  /* CRITICAL FIX: Ensure perfect circle */
+  flex-shrink: 0;
 }
 
 .step-indicator__separator {
@@ -691,18 +713,21 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   background: var(--gray-300);
   flex: 1;
   margin: 0 var(--space-8);
+  /* CRITICAL FIX: Minimum width on mobile */
+  min-width: 20px;
 }
 
-/* FIXED: Table container improvements - CRITICAL FIX */
+/* CRITICAL FIX: Enhanced Table Container with Mobile Overflow */
 .table-container {
   position: relative;
   width: 100%;
   border: 1px solid var(--gray-200);
   background: var(--white);
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   max-height: 600px;
   -webkit-overflow-scrolling: touch;
+  /* CRITICAL FIX: Better mobile handling */
+  min-height: 200px;
 }
 
 .table-container .empty {
@@ -716,10 +741,10 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   color: var(--gray-500);
 }
 
-/* FIXED: Results table specific styling */
+/* CRITICAL FIX: Enhanced Results Table with Mobile Optimization */
 .results-table {
   width: 100%;
-  min-width: 800px; /* Ensure minimum width to prevent cramping */
+  min-width: 700px; /* Reduced from 800px for better mobile fit */
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -730,7 +755,9 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   border-bottom: 1px solid var(--gray-200);
   text-align: left;
   vertical-align: top;
-  white-space: nowrap;
+  /* CRITICAL FIX: Better text handling */
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .results-table th {
@@ -744,6 +771,8 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   top: 0;
   z-index: 10;
   border-bottom: 2px solid var(--black);
+  /* CRITICAL FIX: Prevent header text wrapping */
+  white-space: nowrap;
 }
 
 .results-table tbody tr:hover {
@@ -778,6 +807,22 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   font-size: 9px;
   height: 18px;
   padding: 0 6px;
+}
+
+/* CRITICAL FIX: Enhanced Zoom Container Support */
+.zoom-container {
+  position: relative;
+  overflow: auto;
+  /* Add zoom support indicators */
+  cursor: grab;
+}
+
+.zoom-container:active {
+  cursor: grabbing;
+}
+
+.zoom-container.zoomed {
+  overflow: scroll;
 }
 
 /* Range selector specific */
@@ -864,6 +909,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .status-dot--success { background: var(--success); }
@@ -915,7 +961,7 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   transition-timing-function: var(--easing);
 }
 
-/* Responsive behavior - ENHANCED WITH MOBILE CENTERING FIXES */
+/* CRITICAL FIX: Enhanced Mobile Responsiveness */
 @media (max-width: 639.98px) {
   .nav { height: 60px; }
   .page-header { grid-template-columns: 1fr; }
@@ -924,28 +970,43 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   .tools { grid-template-columns: 1fr; }
   .button { padding-inline: 12px; }
   .input, .select { height: 40px; }
-  .step-indicator { flex-direction: column; align-items: stretch; }
-  .step-indicator__separator { display: none; }
   .grid-12 { grid-template-columns: 1fr; }
   .mapping-grid { grid-template-columns: 1fr; }
   
-  /* FIXED: Mobile table improvements */
+  /* CRITICAL FIX: Mobile step indicator */
+  .step-indicator { 
+    padding: var(--space-12);
+    gap: var(--space-12);
+  }
+  .step-indicator__item {
+    font-size: 10px;
+  }
+  .step-indicator__separator { 
+    min-width: 15px;
+  }
+  
+  /* CRITICAL FIX: Mobile table improvements */
   .table-container {
     font-size: 11px;
     max-height: 400px;
   }
   .results-table {
-    min-width: 700px;
+    min-width: 600px;
   }
   .results-table th,
   .results-table td {
     padding: 6px 8px;
   }
+  
+  /* CRITICAL FIX: Mobile KV improvements */
   .kv-item {
     grid-template-columns: 80px 1fr;
   }
+  .kv-value {
+    font-size: 11px;
+  }
 
-  /* CRITICAL FIX: Mobile centering for scanner controls and current match */
+  /* CRITICAL FIX: Mobile scanner improvements */
   .scanner-section .grid-12 {
     display: block;
   }
@@ -973,6 +1034,21 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
     margin-right: auto;
     max-width: 600px;
   }
+  
+  /* CRITICAL FIX: Mobile serial overlay */
+  .serial-overlay {
+    font-size: 11px;
+    padding: var(--space-4) var(--space-8);
+  }
+  
+  .serial-overlay .serial-value {
+    font-size: 12px;
+  }
+  
+  /* CRITICAL FIX: Mobile camera preview */
+  .camera-preview {
+    min-height: 250px;
+  }
 }
 
 @media (max-width: 479.98px) {
@@ -980,7 +1056,7 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
     padding-inline: 16px;
   }
   .results-table {
-    min-width: 600px;
+    min-width: 500px;
   }
   .kv-item {
     grid-template-columns: 1fr;
@@ -988,6 +1064,25 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   }
   .kv-key {
     font-weight: var(--weight-bold);
+  }
+  
+  /* CRITICAL FIX: Extra small mobile fixes */
+  .serial-overlay {
+    font-size: 10px;
+    padding: var(--space-4);
+  }
+  
+  .serial-overlay .serial-value {
+    font-size: 11px;
+  }
+  
+  .step-indicator {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-8);
+  }
+  .step-indicator__separator {
+    display: none;
   }
 }
 
