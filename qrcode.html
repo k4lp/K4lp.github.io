@@ -136,19 +136,19 @@
                         <div class="col-span-6">
                             <div class="form__group">
                                 <label class="label">Start Cell</label>
-                                <input type="text" id="startCell" placeholder="A1" readonly class="input" />
+                                <input type="text" id="startCell" placeholder="A1" class="input" />
                             </div>
                         </div>
                         <div class="col-span-6">
                             <div class="form__group">
                                 <label class="label">End Cell</label>
-                                <input type="text" id="endCell" placeholder="F100" readonly class="input" />
+                                <input type="text" id="endCell" placeholder="F100" class="input" />
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-24">
-                        <div class="table-container" style="max-height: 500px; overflow: auto; border: 1px solid var(--color-gray-200, #e5e5e5); background: var(--color-white, #fff);">
+                        <div class="table-container zoom-container" style="max-height: 500px; overflow: auto; border: 1px solid var(--color-gray-200, #e5e5e5); background: var(--color-white, #fff);">
                             <div id="selectableTable"></div>
                         </div>
                     </div>
@@ -247,7 +247,7 @@
                                 </div>
                             </div>
                             <div class="scan-overlay" id="scanOverlay"></div>
-                            <!-- ADDED: Serial Number Overlay -->
+                            <!-- Serial Number Overlay -->
                             <div class="serial-overlay" id="serialOverlay">
                                 <span class="serial-label">MATCHED COMPONENT</span>
                                 <span class="serial-value" id="serialValue">-</span>
@@ -360,6 +360,9 @@
     <script src="js/qrcode/range-selector.js"></script>
     <script src="js/qrcode/scanner-manager.js"></script>
     <script src="js/qrcode/data-manager.js"></script>
+    <script src="js/qrcode/display/text-manager.js"></script>
+    <script src="js/qrcode/display/zoom-manager.js"></script>
+    <script src="js/qrcode/navigation/step-manager.js"></script>
     <script src="js/qrcode/main.js"></script>
 </body>
 </html>
