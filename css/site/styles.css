@@ -5,6 +5,7 @@
    Base: 13px; Geist + Geist Mono; no gradients; minimal shadows; square corners.
    Pages covered: index.html, contact.html, digikey.html, qrcode.html (scanner).
    FIXED: Scan results table overflow and design issues
+   FIXED: Mobile centering for scanner controls and current match sections
    ========================================================================== */
 
 :root {
@@ -268,7 +269,7 @@ small { font-size: 0.85em; color: var(--gray-500); }
 .p-0{padding:0}.p-4{padding:4px}.p-8{padding:8px}.p-12{padding:12px}.p-16{padding:16px}.p-20{padding:20px}.p-24{padding:24px}.p-32{padding:32px}.p-48{padding:48px}.p-64{padding:64px}.p-96{padding:96px}
 .pt-0{padding-top:0px}.pt-4{padding-top:4px}.pt-8{padding-top:8px}.pt-12{padding-top:12px}.pt-16{padding-top:16px}.pt-20{padding-top:20px}.pt-24{padding-top:24px}.pt-32{padding-top:32px}.pt-48{padding-top:48px}.pt-64{padding-top:64px}.pt-96{padding-top:96px}
 .pr-0{padding-right:0px}.pr-4{padding-right:4px}.pr-8{padding-right:8px}.pr-12{padding-right:12px}.pr-16{padding-right:16px}.pr-20{padding-right:20px}.pr-24{padding-right:24px}.pr-32{padding-right:32px}.pr-48{padding-right:48px}.pr-64{padding-right:64px}.pr-96{padding-right:96px}
-.pb-0{padding-bottom:0px}.pb-4{padding-bottom:4px}.pb-8{padding-bottom:8px}.pb-12{padding-bottom:12px}.pb-16{padding-bottom:16px}.pb-20{padding-bottom:20px}.pb-24{padding-bottom:24px}.pb-32{padding-bottom:32px}.pb-48{padding-bottom:48px}.pb-64{padding-bottom:64px}.pb-96{padding-bottom:96px}
+.pb-0{padding-bottom:0px}.pb-4{padding-bottom:4px}.pb-8{padding-bottom:8px}.pb-12{padding-bottom:12px}.pb-16{padding-bottom:16px}.pb-20{padding-bottom:20px}.pb-24{padding-bottom:24px}.pb-32{padding-right:32px}.pb-48{padding-bottom:48px}.pb-64{padding-bottom:64px}.pb-96{padding-bottom:96px}
 .pl-0{padding-left:0px}.pl-4{padding-left:4px}.pl-8{padding-left:8px}.pl-12{padding-left:12px}.pl-16{padding-left:16px}.pl-20{padding-left:20px}.pl-24{padding-left:24px}.pl-32{padding-left:32px}.pl-48{padding-left:48px}.pl-64{padding-left:64px}.pl-96{padding-left:96px}
 .px-0{padding-left:0px;padding-right:0px}.px-4{padding-left:4px;padding-right:4px}.px-8{padding-left:8px;padding-right:8px}.px-12{padding-left:12px;padding-right:12px}.px-16{padding-left:16px;padding-right:16px}.px-20{padding-left:20px;padding-right:20px}.px-24{padding-left:24px;padding-right:24px}.px-32{padding-left:32px;padding-right:32px}.px-48{padding-left:48px;padding-right:48px}.px-64{padding-left:64px;padding-right:64px}.px-96{padding-left:96px;padding-right:96px}
 .py-0{padding-top:0px;padding-bottom:0px}.py-4{padding-top:4px;padding-bottom:4px}.py-8{padding-top:8px;padding-bottom:8px}.py-12{padding-top:12px;padding-bottom:12px}.py-16{padding-top:16px;padding-bottom:16px}.py-20{padding-top:20px;padding-bottom:20px}.py-24{padding-top:24px;padding-bottom:24px}.py-32{padding-top:32px;padding-bottom:32px}.py-48{padding-top:48px;padding-bottom:48px}.py-64{padding-top:64px;padding-bottom:64px}.py-96{padding-top:96px;padding-bottom:96px}
@@ -559,6 +560,45 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   inset: 0;
   pointer-events: none;
   z-index: 10;
+}
+
+/* ADDED: Serial number overlay for camera viewpoint */
+.serial-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--white);
+  padding: var(--space-8) var(--space-12);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  text-align: center;
+  letter-spacing: 0.1em;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity var(--t-std) var(--easing);
+  pointer-events: none;
+}
+
+.serial-overlay.visible {
+  opacity: 1;
+}
+
+.serial-overlay .serial-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--gray-300);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.serial-overlay .serial-value {
+  font-size: 16px;
+  font-weight: var(--weight-bold);
+  color: var(--white);
 }
 
 .scan-controls {
@@ -875,7 +915,7 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   transition-timing-function: var(--easing);
 }
 
-/* Responsive behavior - ENHANCED */
+/* Responsive behavior - ENHANCED WITH MOBILE CENTERING FIXES */
 @media (max-width: 639.98px) {
   .nav { height: 60px; }
   .page-header { grid-template-columns: 1fr; }
@@ -903,6 +943,35 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   }
   .kv-item {
     grid-template-columns: 80px 1fr;
+  }
+
+  /* CRITICAL FIX: Mobile centering for scanner controls and current match */
+  .scanner-section .grid-12 {
+    display: block;
+  }
+  
+  .scanner-section .grid-12 > .col-span-8,
+  .scanner-section .grid-12 > .col-span-4 {
+    width: 100%;
+    margin: 0 auto;
+    max-width: 600px;
+  }
+  
+  .scanner-section .grid-12 > .col-span-4 {
+    margin-top: var(--space-24);
+  }
+  
+  /* Ensure scanner controls card is centered */
+  .scanner-section .card {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Center the current match display */
+  .scan-result {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 600px;
   }
 }
 
