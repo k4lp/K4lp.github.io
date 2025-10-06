@@ -1,7 +1,8 @@
 /**
- * QR Code Component Scanner - Zoom Manager
- * Alica Technologies
+ * QR Code Component Scanner - Enhanced Zoom Manager
+ * Alica Technologies - Version 3.0
  * 
+ * CRITICAL FIX: Added initializeContainer function and enhanced zoom support
  * Handles zoomable table interface with touch and mouse support
  */
 
@@ -22,14 +23,48 @@ window.QRScannerZoomManager = {
     _lastPanY: 0,
     _panStartX: 0,
     _panStartY: 0,
+    _initialized: false,
 
     /**
      * Initialize zoom manager
      */
     init() {
+        if (this._initialized) return;
+        
         this._createZoomControls();
         this._bindEvents();
+        this._initialized = true;
         window.QRScannerUtils.log.debug('Zoom manager initialized');
+    },
+
+    /**
+     * CRITICAL FIX: Initialize zoom functionality for a specific container
+     * This is called by the range selector when creating the selectable table
+     */
+    initializeContainer(container) {
+        if (!container) {
+            window.QRScannerUtils.log.warn('No container provided for zoom initialization');
+            return;
+        }
+
+        // Ensure zoom manager is initialized
+        if (!this._initialized) {
+            this.init();
+        }
+
+        // Store reference to the container for later use
+        this._targetContainer = container;
+        
+        // Add zoom-ready class to indicate container is ready for zoom
+        container.classList.add('zoom-ready');
+        
+        // Show zoom controls
+        const zoomControls = document.getElementById('zoom-controls');
+        if (zoomControls) {
+            zoomControls.style.display = 'flex';
+        }
+        
+        window.QRScannerUtils.log.debug('Container initialized for zoom functionality');
     },
 
     /**
@@ -83,6 +118,9 @@ window.QRScannerZoomManager = {
         container.appendChild(resetBtn);
         container.appendChild(toggleBtn);
         
+        // Initially hide zoom controls until a container is ready
+        container.style.display = 'none';
+        
         // Initially disable zoom controls
         this._updateZoomControlsState();
     },
@@ -112,6 +150,9 @@ window.QRScannerZoomManager = {
             
             if (tableContainer && tableContainer.parentNode) {
                 tableContainer.parentNode.insertBefore(container, tableContainer);
+            } else if (step3) {
+                // Fallback: append to step3 if table container not found yet
+                step3.appendChild(container);
             }
         }
         
@@ -179,12 +220,16 @@ window.QRScannerZoomManager = {
         
         if (this._isZoomEnabled) {
             this._enableZoomMode();
-            toggleBtn.textContent = 'DISABLE ZOOM';
-            toggleBtn.className = 'button button--ghost button--sm';
+            if (toggleBtn) {
+                toggleBtn.textContent = 'DISABLE ZOOM';
+                toggleBtn.className = 'button button--ghost button--sm';
+            }
         } else {
             this._disableZoomMode();
-            toggleBtn.textContent = 'ENABLE ZOOM';
-            toggleBtn.className = 'button button--primary button--sm';
+            if (toggleBtn) {
+                toggleBtn.textContent = 'ENABLE ZOOM';
+                toggleBtn.className = 'button button--primary button--sm';
+            }
         }
         
         this._updateZoomControlsState();
@@ -196,9 +241,21 @@ window.QRScannerZoomManager = {
      * Enable zoom mode
      */
     _enableZoomMode() {
-        const tableContainer = document.querySelector('#step3 .table-container');
+        // Use the target container if available, otherwise find the table container
+        let tableContainer = this._targetContainer;
+        
+        if (!tableContainer) {
+            tableContainer = document.querySelector('#step3 .table-container');
+        }
+        
         if (!tableContainer) {
             window.QRScannerUtils.log.warn('Table container not found for zoom');
+            return;
+        }
+        
+        // Don't wrap if already wrapped
+        if (tableContainer.closest('.zoom-container')) {
+            window.QRScannerUtils.log.debug('Container already in zoom mode');
             return;
         }
         
@@ -215,6 +272,7 @@ window.QRScannerZoomManager = {
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            max-height: 500px;
         `;
         
         // Create zoom content wrapper
@@ -355,7 +413,9 @@ window.QRScannerZoomManager = {
      */
     _handleMouseUp(e) {
         this._isDragging = false;
-        this._zoomContainer.style.cursor = 'grab';
+        if (this._zoomContainer) {
+            this._zoomContainer.style.cursor = 'grab';
+        }
         
         document.removeEventListener('mousemove', this._globalMouseMove);
         document.removeEventListener('mouseup', this._globalMouseUp);
@@ -448,6 +508,7 @@ window.QRScannerZoomManager = {
             this._currentZoom = newZoom;
             this._updateTransform();
             this._updateZoomIndicator();
+            this._updateZoomControlsState();
         }
     },
 
@@ -460,6 +521,7 @@ window.QRScannerZoomManager = {
         this._lastPanY = 0;
         this._updateTransform();
         this._updateZoomIndicator();
+        this._updateZoomControlsState();
     },
 
     /**
@@ -589,6 +651,20 @@ window.QRScannerZoomManager = {
     },
 
     /**
+     * Get zoom state for debugging
+     */
+    getState() {
+        return {
+            currentZoom: this._currentZoom,
+            isEnabled: this._isZoomEnabled,
+            panX: this._lastPanX,
+            panY: this._lastPanY,
+            hasContainer: !!this._zoomContainer,
+            hasTarget: !!this._targetContainer
+        };
+    },
+
+    /**
      * Clean up resources
      */
     destroy() {
@@ -602,6 +678,8 @@ window.QRScannerZoomManager = {
         }
         
         this._removeZoomHint();
+        this._targetContainer = null;
+        this._initialized = false;
     }
 };
 
