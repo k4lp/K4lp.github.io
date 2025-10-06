@@ -1,6 +1,12 @@
 /**
  * QR Code Component Scanner - Data Manager
- * Alica Technologies
+ * Alica Technologies - Fixed Version
+ * 
+ * FIXES:
+ * - Fixed Serial No. column data extraction bug
+ * - Improved error handling and validation
+ * - Better debugging information
+ * - Cleaned up code structure
  */
 
 window.QRScannerDataManager = {
@@ -107,7 +113,7 @@ window.QRScannerDataManager = {
      */
     _autoDetectColumns(headers) {
         const detectionMap = {
-            serial: ['serial', 'ser', 'sn', 's/n', 'serial number', 'serial no', 'item'],
+            serial: ['serial', 'ser', 'sn', 's/n', 'serial number', 'serial no', 'item', 'id'],
             mpn: ['mpn', 'part number', 'part no', 'partnumber', 'partno', 'manufacturer part number'],
             designators: ['designator', 'designators', 'ref', 'reference', 'references', 'refdes'],
             manufacturer: ['manufacturer', 'mfr', 'mfg', 'vendor', 'brand', 'make'],
@@ -215,15 +221,18 @@ window.QRScannerDataManager = {
             return;
         }
 
-        // Store column mapping
+        // Store column mapping - FIXED: Parse values as integers correctly
         this._columnMapping = {
-            serial: parseInt(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SERIAL_COLUMN).value) || null,
-            mpn: parseInt(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.MPN_COLUMN).value) || null,
-            designators: parseInt(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.DESIGNATORS_COLUMN).value) || null,
-            manufacturer: parseInt(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.MANUFACTURER_COLUMN).value) || null,
-            quantity: parseInt(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.QUANTITY_COLUMN).value) || null,
-            target: parseInt(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.TARGET_COLUMN).value)
+            serial: this._parseColumnIndex(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SERIAL_COLUMN).value),
+            mpn: this._parseColumnIndex(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.MPN_COLUMN).value),
+            designators: this._parseColumnIndex(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.DESIGNATORS_COLUMN).value),
+            manufacturer: this._parseColumnIndex(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.MANUFACTURER_COLUMN).value),
+            quantity: this._parseColumnIndex(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.QUANTITY_COLUMN).value),
+            target: this._parseColumnIndex(window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.TARGET_COLUMN).value)
         };
+
+        // Debug: Log the column mapping for troubleshooting
+        window.QRScannerUtils.log.debug('Column mapping confirmed:', this._columnMapping);
 
         // Initialize scanner interface
         this._initializeScannerInterface();
@@ -235,6 +244,17 @@ window.QRScannerDataManager = {
         window.QRScannerRangeSelector.createSelectableTable();
 
         window.QRScannerUtils.log.info('Column mapping confirmed, scanner ready');
+    },
+
+    /**
+     * Parse column index value - FIXED: Better validation
+     * @param {string} value - Column selector value
+     * @returns {number|null} - Parsed index or null
+     */
+    _parseColumnIndex(value) {
+        if (!value || value === '') return null;
+        const parsed = parseInt(value, 10);
+        return isNaN(parsed) ? null : parsed;
     },
 
     /**
@@ -305,7 +325,7 @@ window.QRScannerDataManager = {
     },
 
     /**
-     * Find match in BOM data
+     * Find match in BOM data - FIXED: Better error handling and debugging
      * @param {string} value - Value to search for
      * @returns {Object} - Match result
      */
@@ -315,7 +335,12 @@ window.QRScannerDataManager = {
                 success: false,
                 scannedValue: value,
                 timestamp: Date.now(),
-                reason: 'No BOM data or column mapping'
+                reason: 'No BOM data or column mapping',
+                debugInfo: {
+                    hasBomData: !!this._bomData,
+                    hasColumnMapping: !!this._columnMapping,
+                    targetColumn: this._columnMapping?.target
+                }
             };
         }
 
@@ -332,19 +357,29 @@ window.QRScannerDataManager = {
             if (cellValue.toLowerCase() === value.toLowerCase()) {
                 this._stats.successfulMatches++;
 
-                return {
+                const result = {
                     success: true,
                     scannedValue: value,
                     matchedValue: cellValue,
                     rowIndex: rowIndex,
                     rowData: row,
-                    serialNo: this._getColumnValue(row, 'serial'),
-                    mpn: this._getColumnValue(row, 'mpn'),
-                    designators: this._getColumnValue(row, 'designators'),
-                    manufacturer: this._getColumnValue(row, 'manufacturer'),
-                    quantity: this._getColumnValue(row, 'quantity'),
-                    timestamp: Date.now()
+                    serialNo: this._getColumnValueSafe(row, 'serial'),
+                    mpn: this._getColumnValueSafe(row, 'mpn'),
+                    designators: this._getColumnValueSafe(row, 'designators'),
+                    manufacturer: this._getColumnValueSafe(row, 'manufacturer'),
+                    quantity: this._getColumnValueSafe(row, 'quantity'),
+                    timestamp: Date.now(),
+                    // Debug info for troubleshooting
+                    debugInfo: {
+                        targetColumnIndex,
+                        rowLength: row.length,
+                        columnMapping: { ...this._columnMapping },
+                        allRowData: [...row]
+                    }
                 };
+
+                window.QRScannerUtils.log.debug('Match found:', result);
+                return result;
             }
         }
 
@@ -353,22 +388,44 @@ window.QRScannerDataManager = {
             success: false,
             scannedValue: value,
             timestamp: Date.now(),
-            reason: 'No matching value found in target column'
+            reason: 'No matching value found in target column',
+            debugInfo: {
+                targetColumnIndex,
+                totalRows: this._bomData.length,
+                searchedRows: this._bomData.length - 1
+            }
         };
     },
 
     /**
-     * Get value from row based on column mapping
+     * Get value from row based on column mapping - FIXED: Better validation and error handling
      * @param {Array} row - Data row
      * @param {string} columnType - Column type
      * @returns {string} - Column value
      */
-    _getColumnValue(row, columnType) {
-        const columnIndex = this._columnMapping[columnType];
-        if (columnIndex === null || columnIndex >= row.length) {
+    _getColumnValueSafe(row, columnType) {
+        if (!this._columnMapping || !row) {
+            window.QRScannerUtils.log.warn(`Missing column mapping or row data for ${columnType}`);
             return '';
         }
-        return String(row[columnIndex] || '').trim();
+
+        const columnIndex = this._columnMapping[columnType];
+        
+        // Check if column is mapped
+        if (columnIndex === null || columnIndex === undefined) {
+            window.QRScannerUtils.log.debug(`Column ${columnType} not mapped`);
+            return '';
+        }
+
+        // Check if row has enough columns
+        if (columnIndex >= row.length) {
+            window.QRScannerUtils.log.warn(`Column index ${columnIndex} (${columnType}) exceeds row length ${row.length}`);
+            return '';
+        }
+
+        const value = String(row[columnIndex] || '').trim();
+        window.QRScannerUtils.log.debug(`Column ${columnType} (index ${columnIndex}): ${value}`);
+        return value;
     },
 
     /**
@@ -390,12 +447,12 @@ window.QRScannerDataManager = {
     },
 
     /**
-     * Create results table
+     * Create results table - IMPROVED: Better responsive design and styling
      * @returns {HTMLElement} - Results table
      */
     _createResultsTable() {
         const table = document.createElement('table');
-        table.className = 'table-hover';
+        table.className = 'results-table';
 
         // Create header
         const thead = document.createElement('thead');
@@ -426,62 +483,72 @@ window.QRScannerDataManager = {
 
             // Status-based styling
             if (result.matchResult.success) {
-                row.classList.add('row-highlight');
+                row.classList.add('row-success');
+            } else {
+                row.classList.add('row-error');
             }
 
             // Scan index
             const scanCell = document.createElement('td');
             scanCell.textContent = result.scanIndex;
-            scanCell.className = 'cell-center mono';
+            scanCell.className = 'text-center font-mono';
             row.appendChild(scanCell);
 
             // Timestamp
             const timeCell = document.createElement('td');
             timeCell.textContent = new Date(result.timestamp).toLocaleTimeString();
-            timeCell.className = 'mono';
+            timeCell.className = 'font-mono';
             row.appendChild(timeCell);
 
             // Scanned value
             const valueCell = document.createElement('td');
             valueCell.textContent = window.QRScannerUtils.string.truncate(result.scannedValue, 30);
             valueCell.title = result.scannedValue;
-            valueCell.className = 'mono';
+            valueCell.className = 'font-mono text-wrap';
             row.appendChild(valueCell);
 
             // Status
             const statusCell = document.createElement('td');
             if (result.matchResult.success) {
-                statusCell.innerHTML = '<span class="text-success">✓ Match</span>';
+                statusCell.innerHTML = '<span class="badge badge--success">Match</span>';
             } else {
-                statusCell.innerHTML = '<span class="text-error">✗ No Match</span>';
+                statusCell.innerHTML = '<span class="badge badge--error">No Match</span>';
             }
             row.appendChild(statusCell);
 
-            // Serial No.
+            // Serial No. - FIXED: Better handling of empty values
             const serialCell = document.createElement('td');
-            serialCell.textContent = result.matchResult.serialNo || '—';
+            const serialValue = result.matchResult.serialNo || '—';
+            serialCell.textContent = serialValue;
+            serialCell.className = 'text-wrap';
+            if (!result.matchResult.serialNo && result.matchResult.success) {
+                serialCell.classList.add('text-warning');
+                serialCell.title = 'No serial number mapped or found';
+            }
             row.appendChild(serialCell);
 
             // MPN
             const mpnCell = document.createElement('td');
             mpnCell.textContent = result.matchResult.mpn || '—';
+            mpnCell.className = 'text-wrap';
             row.appendChild(mpnCell);
 
             // Manufacturer
             const mfrCell = document.createElement('td');
             mfrCell.textContent = result.matchResult.manufacturer || '—';
+            mfrCell.className = 'text-wrap';
             row.appendChild(mfrCell);
 
             // Row number
             const rowCell = document.createElement('td');
             rowCell.textContent = result.matchResult.success ? (result.matchResult.rowIndex + 1) : '—';
-            rowCell.className = 'cell-center';
+            rowCell.className = 'text-center';
             row.appendChild(rowCell);
 
             // Format
             const formatCell = document.createElement('td');
             formatCell.textContent = result.scanDetails.format;
-            formatCell.className = 'mono';
+            formatCell.className = 'font-mono';
             row.appendChild(formatCell);
 
             tbody.appendChild(row);
@@ -625,8 +692,8 @@ window.QRScannerDataManager = {
             // Reset status
             const statusEl = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SCANNER_STATUS);
             if (statusEl) {
-                statusEl.className = 'status-ready';
-                statusEl.textContent = 'Ready';
+                statusEl.className = 'badge badge--success';
+                statusEl.textContent = 'READY';
             }
 
             window.QRScannerUtils.log.info('Scanner reset completed');
@@ -666,6 +733,14 @@ window.QRScannerDataManager = {
      */
     getScanResults() {
         return [...this._scanResults];
+    },
+
+    /**
+     * Get current column mapping - for debugging
+     * @returns {Object} - Column mapping object
+     */
+    getColumnMapping() {
+        return { ...this._columnMapping };
     }
 };
 
