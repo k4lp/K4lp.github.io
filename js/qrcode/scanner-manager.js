@@ -1,12 +1,13 @@
 /**
  * QR Code Component Scanner - Scanner Manager
- * Alica Technologies - Fixed Version
+ * Alica Technologies - Enhanced Version
  * 
  * FIXES:
  * - Improved current match display with better debugging
  * - Fixed scan delay configuration
  * - Enhanced error handling
  * - Better match result formatting
+ * - ADDED: Serial number overlay in camera viewpoint
  */
 
 window.QRScannerManager = {
@@ -18,6 +19,7 @@ window.QRScannerManager = {
     _scanStartTime: null,
     _lastScanTime: 0,
     _scanDelay: window.QRScannerConfig.SCANNER.SCAN_DELAY, // Make scan delay configurable
+    _serialOverlayTimeout: null, // For auto-hide serial overlay
 
     /**
      * Initialize scanner manager
@@ -274,6 +276,9 @@ window.QRScannerManager = {
             this._isScanning = false;
             this._scanStartTime = null;
 
+            // Hide serial overlay when stopping
+            this._hideSerialOverlay();
+
             // Update UI
             this._updateScannerUI(false);
 
@@ -332,8 +337,75 @@ window.QRScannerManager = {
         // Update current match display - FIXED: Better display
         this._updateCurrentMatchDisplay(matchResult);
 
+        // ADDED: Update serial overlay in camera viewpoint
+        this._updateSerialOverlay(matchResult);
+
         // Update stats
         this._updateScanStats();
+    },
+
+    /**
+     * NEW: Update serial number overlay in camera viewpoint
+     * @param {Object} matchResult - Match result from data manager
+     */
+    _updateSerialOverlay(matchResult) {
+        const overlay = document.getElementById('serialOverlay');
+        const serialValue = document.getElementById('serialValue');
+        
+        if (!overlay || !serialValue) return;
+
+        // Clear any existing timeout
+        if (this._serialOverlayTimeout) {
+            clearTimeout(this._serialOverlayTimeout);
+            this._serialOverlayTimeout = null;
+        }
+
+        if (matchResult.success && matchResult.serialNo) {
+            // Show successful match
+            serialValue.textContent = matchResult.serialNo;
+            overlay.style.background = 'rgba(34, 197, 94, 0.9)'; // Success green
+            overlay.classList.add('visible');
+
+            // Auto-hide after 3 seconds
+            this._serialOverlayTimeout = setTimeout(() => {
+                this._hideSerialOverlay();
+            }, 3000);
+        } else if (matchResult.success) {
+            // Match found but no serial number
+            serialValue.textContent = 'NO SERIAL NUMBER';
+            overlay.style.background = 'rgba(245, 158, 11, 0.9)'; // Warning amber
+            overlay.classList.add('visible');
+
+            // Auto-hide after 2 seconds
+            this._serialOverlayTimeout = setTimeout(() => {
+                this._hideSerialOverlay();
+            }, 2000);
+        } else {
+            // No match found
+            serialValue.textContent = 'NO MATCH FOUND';
+            overlay.style.background = 'rgba(239, 68, 68, 0.9)'; // Error red
+            overlay.classList.add('visible');
+
+            // Auto-hide after 1.5 seconds
+            this._serialOverlayTimeout = setTimeout(() => {
+                this._hideSerialOverlay();
+            }, 1500);
+        }
+    },
+
+    /**
+     * NEW: Hide serial number overlay
+     */
+    _hideSerialOverlay() {
+        const overlay = document.getElementById('serialOverlay');
+        if (overlay) {
+            overlay.classList.remove('visible');
+        }
+
+        if (this._serialOverlayTimeout) {
+            clearTimeout(this._serialOverlayTimeout);
+            this._serialOverlayTimeout = null;
+        }
     },
 
     /**
