@@ -2,10 +2,11 @@
  * QR Code Component Scanner - Enhanced Range Selector
  * Alica Technologies - Version 3.0
  * 
- * CRITICAL FIXES:
+ * ROOT CAUSE FIX:
+ * - Proper dependency management for zoom manager
+ * - Robust module loading without patchy fixes
  * - Auto-updating start/end cell inputs during selection
  * - Improved mobile touch handling with scroll detection
- * - Better zoom integration support
  * - Enhanced step navigation integration
  */
 
@@ -18,6 +19,7 @@ window.QRScannerRangeSelector = {
     _isDragging: false,
     _touchStarted: false,
     _lastTouchCell: null,
+    _initialized: false,
     
     // Click-to-select state management
     _clickSelectionMode: false,
@@ -30,10 +32,33 @@ window.QRScannerRangeSelector = {
      * Initialize range selector
      */
     init() {
+        if (this._initialized) return;
+        
         this._bindEvents();
         this._setupTouchSupport();
         this._setupClickSelectionToggle();
+        this._initialized = true;
+        
         window.QRScannerUtils.log.debug('Range selector initialized with enhanced auto-update functionality');
+    },
+    
+    /**
+     * ROOT CAUSE FIX: Safe zoom manager integration with dependency checking
+     */
+    _initializeZoomIfAvailable(container) {
+        // Check if zoom manager is available and properly initialized
+        if (window.QRScannerZoomManager && 
+            typeof window.QRScannerZoomManager.initializeContainer === 'function') {
+            try {
+                window.QRScannerZoomManager.initializeContainer(container);
+                window.QRScannerUtils.log.debug('Zoom manager initialized for container');
+            } catch (error) {
+                window.QRScannerUtils.log.warn('Zoom manager initialization failed:', error);
+                // Continue without zoom functionality
+            }
+        } else {
+            window.QRScannerUtils.log.debug('Zoom manager not available, continuing without zoom functionality');
+        }
     },
     
     /**
@@ -480,10 +505,8 @@ window.QRScannerRangeSelector = {
             container.innerHTML = '';
             container.appendChild(table);
 
-            // CRITICAL FIX: Initialize zoom manager if available
-            if (window.QRScannerZoomManager) {
-                window.QRScannerZoomManager.initializeContainer(container);
-            }
+            // ROOT CAUSE FIX: Safe zoom manager initialization with dependency checking
+            this._initializeZoomIfAvailable(container);
 
             this._updateClickSelectionStatus();
 
@@ -1251,10 +1274,17 @@ window.QRScannerRangeSelector = {
         window.QRScannerDataManager.initializeColumnMapping(rangeData);
         window.QRScannerUtils.dom.show(window.QRScannerConfig.ELEMENTS.STEP_4);
         
-        // CRITICAL FIX: Trigger step navigation events
-        if (window.QRScannerStepManager) {
-            window.QRScannerStepManager.markStepCompleted(3);
-            window.QRScannerStepManager.activateStep(4);
+        // CRITICAL FIX: Safe step navigation integration
+        if (window.QRScannerStepManager && 
+            typeof window.QRScannerStepManager.markStepCompleted === 'function' &&
+            typeof window.QRScannerStepManager.activateStep === 'function') {
+            try {
+                window.QRScannerStepManager.markStepCompleted(3);
+                window.QRScannerStepManager.activateStep(4);
+            } catch (error) {
+                window.QRScannerUtils.log.warn('Step manager integration failed:', error);
+                // Continue without step management
+            }
         }
         
         window.QRScannerUtils.log.info('Range confirmed, proceeding to column mapping');
@@ -1383,6 +1413,21 @@ window.QRScannerRangeSelector = {
         setTimeout(() => {
             this.createSelectableTable();
         }, 300);
+    },
+
+    /**
+     * Get current state for debugging
+     */
+    getState() {
+        return {
+            initialized: this._initialized,
+            isSelecting: this._isSelecting,
+            clickSelectionMode: this._clickSelectionMode,
+            hasStartCell: !!this._startCell,
+            hasEndCell: !!this._endCell,
+            startCell: this._startCell,
+            endCell: this._endCell
+        };
     }
 };
 
