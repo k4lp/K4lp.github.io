@@ -4,6 +4,7 @@
    Notes: Typography-first, monochrome, brutal minimalism.
    Base: 13px; Geist + Geist Mono; no gradients; minimal shadows; square corners.
    Pages covered: index.html, contact.html, digikey.html, qrcode.html (scanner).
+   FIXED: Scan results table overflow and design issues
    ========================================================================== */
 
 :root {
@@ -450,6 +451,31 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
 .kv__val { font-size: 13px; }
 .kv__val--mono { font-family: var(--font-mono); }
 
+/* Key-Value Lists for Current Match Display - FIXED */
+.kv-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.kv-item {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.kv-key {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--gray-600);
+  font-weight: var(--weight-semibold);
+}
+.kv-value {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 .tools { display: grid; gap: 16px; }
 @media (min-width: 640px) { .tools { grid-template-columns: repeat(2,1fr); } }
 @media (min-width: 1024px) { .tools { grid-template-columns: repeat(3,1fr); } }
@@ -539,16 +565,30 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   margin-top: var(--space-16);
 }
 
+/* FIXED: Scan Result Display */
 .scan-result {
+  border: 1px solid var(--gray-200);
+  background: var(--white);
+  padding: var(--space-16);
   margin-top: var(--space-16);
-  min-height: 60px;
+  min-height: 120px;
+}
+
+.scan-result.success {
+  border-left: 4px solid var(--success);
+  background: #f0f9f0;
+}
+
+.scan-result.error {
+  border-left: 4px solid var(--error);
+  background: #fef2f2;
 }
 
 .scan-result .empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 60px;
+  height: 100px;
   background: var(--gray-100);
   border: 1px solid var(--gray-200);
   font-size: 11px;
@@ -613,11 +653,16 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   margin: 0 var(--space-8);
 }
 
-/* Table container improvements */
+/* FIXED: Table container improvements - CRITICAL FIX */
 .table-container {
+  position: relative;
+  width: 100%;
   border: 1px solid var(--gray-200);
   background: var(--white);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 600px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table-container .empty {
@@ -629,6 +674,70 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   text-transform: uppercase;
   letter-spacing: var(--track-caps);
   color: var(--gray-500);
+}
+
+/* FIXED: Results table specific styling */
+.results-table {
+  width: 100%;
+  min-width: 800px; /* Ensure minimum width to prevent cramping */
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.results-table th,
+.results-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gray-200);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.results-table th {
+  background: var(--gray-100);
+  font-weight: var(--weight-semibold);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--track-caps);
+  color: var(--gray-600);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 2px solid var(--black);
+}
+
+.results-table tbody tr:hover {
+  background: var(--gray-100);
+}
+
+.results-table tbody tr:nth-child(even) {
+  background: rgba(245, 245, 245, 0.5);
+}
+
+.results-table tbody tr:nth-child(even):hover {
+  background: var(--gray-200);
+}
+
+.results-table .text-wrap {
+  white-space: normal;
+  min-width: 120px;
+  max-width: 200px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.results-table .row-success {
+  border-left: 3px solid var(--success);
+}
+
+.results-table .row-error {
+  border-left: 3px solid var(--error);
+}
+
+.results-table .badge {
+  font-size: 9px;
+  height: 18px;
+  padding: 0 6px;
 }
 
 /* Range selector specific */
@@ -766,20 +875,51 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   transition-timing-function: var(--easing);
 }
 
-/* Responsive behavior */
+/* Responsive behavior - ENHANCED */
 @media (max-width: 639.98px) {
   .nav { height: 60px; }
   .page-header { grid-template-columns: 1fr; }
   .page-header__meta { text-align: left; }
   .contact-grid { grid-template-columns: 1fr; }
   .tools { grid-template-columns: 1fr; }
-  .table, .results-table { display: block; overflow-x: auto; white-space: nowrap; }
   .button { padding-inline: 12px; }
   .input, .select { height: 40px; }
   .step-indicator { flex-direction: column; align-items: stretch; }
   .step-indicator__separator { display: none; }
   .grid-12 { grid-template-columns: 1fr; }
   .mapping-grid { grid-template-columns: 1fr; }
+  
+  /* FIXED: Mobile table improvements */
+  .table-container {
+    font-size: 11px;
+    max-height: 400px;
+  }
+  .results-table {
+    min-width: 700px;
+  }
+  .results-table th,
+  .results-table td {
+    padding: 6px 8px;
+  }
+  .kv-item {
+    grid-template-columns: 80px 1fr;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .container {
+    padding-inline: 16px;
+  }
+  .results-table {
+    min-width: 600px;
+  }
+  .kv-item {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .kv-key {
+    font-weight: var(--weight-bold);
+  }
 }
 
 /* Transitions + interactions */
@@ -890,147 +1030,4 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
 .xl\:col-span-10{grid-column:span 10}
 .xl\:col-span-11{grid-column:span 11}
 .xl\:col-span-12{grid-column:span 12}
-}
-
-/* ==========================================================================
-   FUNCTIONAL & UX ENHANCEMENTS (APPEND TO EXISTING CSS)
-   ========================================================================== */
-
-/* 1. Table Container (Fix for Horizontal Overflow) */
-.table-container {
-  border: 1px solid var(--gray-200);
-  overflow-x: auto; /* This is the key fix */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
-  background: var(--white);
-}
-.results-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.results-table th,
-.results-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--gray-200);
-  white-space: nowrap; /* Prevent content from wrapping by default */
-  font-size: 12px;
-}
-.results-table th {
-  background: var(--gray-100);
-  font-weight: var(--weight-semibold);
-  text-align: left;
-  position: sticky; /* Keep header visible on vertical scroll */
-  top: 0;
-  z-index: 10;
-}
-.results-table tbody tr:hover {
-  background-color: var(--gray-100);
-}
-/* Allow specific columns to wrap text */
-.results-table .text-wrap {
-  white-space: normal;
-  min-width: 250px; /* Give wrapping columns a reasonable minimum width */
-}
-/* Zebra-striping for better readability */
-.results-table tbody tr:nth-child(even) {
-  background-color: var(--gray-100);
-}
-.results-table tbody tr:nth-child(even):hover {
-  background-color: #dcdcdc; /* Slightly darker hover for even rows */
-}
-.results-table td.status .badge {
-  font-size: 9px;
-  height: 18px;
-}
-
-
-/* 2. Non-Blocking Notification System */
-#notification-area {
-  position: fixed;
-  top: var(--space-16);
-  right: var(--space-16);
-  z-index: var(--z-modal);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
-  width: 320px;
-}
-.notification {
-  display: flex;
-  align-items: start;
-  gap: var(--space-8);
-  background: var(--white);
-  color: var(--black);
-  padding: var(--space-12) var(--space-16);
-  border-left-width: 4px;
-  border-left-style: solid;
-  border-color: var(--gray-300);
-  box-shadow: 0 4px 12px rgba(0,0,0,.1);
-  transition: opacity 300ms var(--easing), transform 300ms var(--easing);
-}
-.notification.is-hidden {
-  opacity: 0;
-  transform: translateX(20px);
-}
-.notification--info    { border-color: var(--info); }
-.notification--success { border-color: var(--success); }
-.notification--warning { border-color: var(--warning); }
-.notification--error   { border-color: var(--error); }
-.notification__msg {
-  flex: 1;
-  font-size: 13px;
-  line-height: 1.4;
-}
-.notification__close {
-  background: none;
-  border: 0;
-  color: var(--gray-400);
-  font-size: 18px;
-  line-height: 1;
-  padding: 0;
-  margin-left: auto;
-}
-.notification__close:hover {
-  color: var(--black);
-}
-
-/* 3. Credential List Polish */
-.cred {
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-}
-.cred__actions {
-  display: flex;
-  gap: var(--space-8);
-}
-.cred__actions .button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  font-size: 14px;
-}
-
-/* 4. Page Header Meta Polish */
-.page-header__meta .meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-8);
-}
-#authStatus {
-  display: none; /* Hide by default, JS will show it */
-}
-#authStatus::before {
-  content: "";
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: 1px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 6px;
-}
-
-/* 5. General Table Enhancements */
-.results-table td {
-  vertical-align: top;
 }
