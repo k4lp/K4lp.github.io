@@ -1,6 +1,12 @@
 /**
  * QR Code Component Scanner - Scanner Manager
- * Alica Technologies
+ * Alica Technologies - Fixed Version
+ * 
+ * FIXES:
+ * - Improved current match display with better debugging
+ * - Fixed scan delay configuration
+ * - Enhanced error handling
+ * - Better match result formatting
  */
 
 window.QRScannerManager = {
@@ -11,6 +17,7 @@ window.QRScannerManager = {
     _currentCameraId: null,
     _scanStartTime: null,
     _lastScanTime: 0,
+    _scanDelay: window.QRScannerConfig.SCANNER.SCAN_DELAY, // Make scan delay configurable
 
     /**
      * Initialize scanner manager
@@ -18,6 +25,7 @@ window.QRScannerManager = {
     init() {
         this._bindEvents();
         this._loadCameras();
+        this._createScanDelayControl();
         window.QRScannerUtils.log.debug('Scanner manager initialized');
     },
 
@@ -34,6 +42,47 @@ window.QRScannerManager = {
         if (stopBtn) stopBtn.addEventListener('click', this._handleStopCamera.bind(this));
         if (switchBtn) switchBtn.addEventListener('click', this._handleSwitchCamera.bind(this));
         if (cameraSelect) cameraSelect.addEventListener('change', this._handleCameraSelect.bind(this));
+    },
+
+    /**
+     * Create scan delay control - NEW FEATURE
+     */
+    _createScanDelayControl() {
+        const controlsCard = document.querySelector('.card .scan-controls');
+        if (!controlsCard) return;
+
+        // Create scan delay control group
+        const delayGroup = document.createElement('div');
+        delayGroup.className = 'form__group';
+        delayGroup.innerHTML = `
+            <label class="label">Scan Delay (ms)</label>
+            <select id="scanDelaySelect" class="select">
+                <option value="100">100ms - Very Fast</option>
+                <option value="250">250ms - Fast</option>
+                <option value="500" selected>500ms - Normal</option>
+                <option value="750">750ms - Slow</option>
+                <option value="1000">1000ms - Very Slow</option>
+                <option value="2000">2000ms - Debug Mode</option>
+            </select>
+            <div class="form__help">Adjust time between consecutive scans</div>
+        `;
+
+        // Insert after camera selection
+        const cameraGroup = controlsCard.querySelector('.form__group');
+        if (cameraGroup && cameraGroup.nextSibling) {
+            controlsCard.insertBefore(delayGroup, cameraGroup.nextSibling);
+        } else {
+            controlsCard.appendChild(delayGroup);
+        }
+
+        // Bind event listener
+        const delaySelect = document.getElementById('scanDelaySelect');
+        if (delaySelect) {
+            delaySelect.addEventListener('change', (e) => {
+                this._scanDelay = parseInt(e.target.value);
+                window.QRScannerUtils.log.debug('Scan delay changed to:', this._scanDelay, 'ms');
+            });
+        }
     },
 
     /**
@@ -237,14 +286,14 @@ window.QRScannerManager = {
     },
 
     /**
-     * Handle successful scan
+     * Handle successful scan - FIXED: Use configurable scan delay
      * @param {string} decodedText - Scanned text
      * @param {Object} decodedResult - Scan result object
      */
     _onScanSuccess(decodedText, decodedResult) {
-        // Implement scan delay to avoid rapid scanning
+        // Implement scan delay to avoid rapid scanning - FIXED: Use configurable delay
         const now = Date.now();
-        if (now - this._lastScanTime < window.QRScannerConfig.SCANNER.SCAN_DELAY) {
+        if (now - this._lastScanTime < this._scanDelay) {
             return;
         }
         this._lastScanTime = now;
@@ -280,7 +329,7 @@ window.QRScannerManager = {
         // Pass to data manager for processing
         const matchResult = window.QRScannerDataManager.processScannedValue(scannedValue, scanResult);
 
-        // Update current match display
+        // Update current match display - FIXED: Better display
         this._updateCurrentMatchDisplay(matchResult);
 
         // Update stats
@@ -288,7 +337,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * Update current match display
+     * Update current match display - FIXED: Better formatting and debugging info
      * @param {Object} matchResult - Match result from data manager
      */
     _updateCurrentMatchDisplay(matchResult) {
@@ -299,44 +348,84 @@ window.QRScannerManager = {
 
         if (matchResult.success) {
             container.className = 'scan-result success';
+            
+            // FIXED: Better display of match information
             container.innerHTML = `
-                <h4 class="text-success">✓ Match Found</h4>
+                <h4 class="text-success mb-12">✓ MATCH FOUND</h4>
                 <div class="kv-list">
                     <div class="kv-item">
                         <div class="kv-key">Scanned Value</div>
-                        <div class="kv-value">${window.QRScannerUtils.string.escapeHtml(matchResult.scannedValue)}</div>
+                        <div class="kv-value font-mono">${window.QRScannerUtils.string.escapeHtml(matchResult.scannedValue)}</div>
                     </div>
                     <div class="kv-item">
                         <div class="kv-key">Serial No.</div>
-                        <div class="kv-value">${window.QRScannerUtils.string.escapeHtml(matchResult.serialNo || 'N/A')}</div>
+                        <div class="kv-value ${!matchResult.serialNo ? 'text-warning' : ''}">
+                            ${window.QRScannerUtils.string.escapeHtml(matchResult.serialNo || 'Not Available')}
+                            ${!matchResult.serialNo ? '<span class="text-xs block">Serial column not mapped or empty</span>' : ''}
+                        </div>
                     </div>
                     <div class="kv-item">
-                        <div class="kv-key">Matched Row</div>
-                        <div class="kv-value">${matchResult.rowIndex + 1}</div>
+                        <div class="kv-key">MPN</div>
+                        <div class="kv-value font-mono">${window.QRScannerUtils.string.escapeHtml(matchResult.mpn || 'N/A')}</div>
                     </div>
                     <div class="kv-item">
-                        <div class="kv-key">Scan Time</div>
-                        <div class="kv-value">${window.QRScannerUtils.date.format(matchResult.timestamp)}</div>
+                        <div class="kv-key">Manufacturer</div>
+                        <div class="kv-value">${window.QRScannerUtils.string.escapeHtml(matchResult.manufacturer || 'N/A')}</div>
                     </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Excel Row</div>
+                        <div class="kv-value font-mono">${matchResult.rowIndex + 1}</div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Match Time</div>
+                        <div class="kv-value font-mono text-xs">${window.QRScannerUtils.date.format(matchResult.timestamp)}</div>
+                    </div>
+                    ${window.QRScannerConfig.DEBUG && matchResult.debugInfo ? this._createDebugInfo(matchResult.debugInfo) : ''}
                 </div>
             `;
         } else {
             container.className = 'scan-result error';
             container.innerHTML = `
-                <h4 class="text-error">✗ No Match Found</h4>
+                <h4 class="text-error mb-12">✗ NO MATCH FOUND</h4>
                 <div class="kv-list">
                     <div class="kv-item">
                         <div class="kv-key">Scanned Value</div>
-                        <div class="kv-value">${window.QRScannerUtils.string.escapeHtml(matchResult.scannedValue)}</div>
+                        <div class="kv-value font-mono">${window.QRScannerUtils.string.escapeHtml(matchResult.scannedValue)}</div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Reason</div>
+                        <div class="kv-value text-sm">${matchResult.reason || 'Unknown reason'}</div>
                     </div>
                     <div class="kv-item">
                         <div class="kv-key">Scan Time</div>
-                        <div class="kv-value">${window.QRScannerUtils.date.format(matchResult.timestamp)}</div>
+                        <div class="kv-value font-mono text-xs">${window.QRScannerUtils.date.format(matchResult.timestamp)}</div>
+                    </div>
+                    ${window.QRScannerConfig.DEBUG && matchResult.debugInfo ? this._createDebugInfo(matchResult.debugInfo) : ''}
+                </div>
+                <div class="alert alert--warning mt-16">
+                    <div class="alert__msg text-sm">
+                        This value was not found in the selected target column. 
+                        Check your column mapping or verify the scanned data.
                     </div>
                 </div>
-                <p class="text-sm text-gray mt-2">This value was not found in the selected target column.</p>
             `;
         }
+    },
+
+    /**
+     * Create debug info HTML - NEW: For troubleshooting
+     * @param {Object} debugInfo - Debug information
+     * @returns {string} - Debug info HTML
+     */
+    _createDebugInfo(debugInfo) {
+        return `
+            <details class="mt-16">
+                <summary class="text-xs text-gray-500 cursor-pointer">Debug Info</summary>
+                <div class="mt-8 p-12 bg-gray-100 border text-xs font-mono">
+                    <pre>${JSON.stringify(debugInfo, null, 2)}</pre>
+                </div>
+            </details>
+        `;
     },
 
     /**
@@ -348,17 +437,19 @@ window.QRScannerManager = {
         const stopBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.STOP_CAMERA);
         const switchBtn = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SWITCH_CAMERA);
         const cameraSelect = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CAMERA_SELECT);
+        const delaySelect = document.getElementById('scanDelaySelect');
 
         if (startBtn) window.QRScannerUtils.dom.setEnabled(startBtn, !isScanning);
         if (stopBtn) window.QRScannerUtils.dom.setEnabled(stopBtn, isScanning);
         if (switchBtn) window.QRScannerUtils.dom.setEnabled(switchBtn, isScanning);
         if (cameraSelect) window.QRScannerUtils.dom.setEnabled(cameraSelect, !isScanning);
+        if (delaySelect) window.QRScannerUtils.dom.setEnabled(delaySelect, !isScanning);
 
         // Update status
         const statusEl = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SCANNER_STATUS);
         if (statusEl) {
-            statusEl.className = isScanning ? 'status-success' : 'status-ready';
-            statusEl.textContent = isScanning ? 'Scanning' : 'Ready';
+            statusEl.className = isScanning ? 'badge badge--success' : 'badge badge--success';
+            statusEl.textContent = isScanning ? 'SCANNING' : 'READY';
         }
     },
 
@@ -407,8 +498,8 @@ window.QRScannerManager = {
         // Update UI to error state
         const statusEl = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SCANNER_STATUS);
         if (statusEl) {
-            statusEl.className = 'status-error';
-            statusEl.textContent = 'Camera Error';
+            statusEl.className = 'badge badge--error';
+            statusEl.textContent = 'CAMERA ERROR';
         }
 
         // Disable scanner controls
@@ -425,8 +516,22 @@ window.QRScannerManager = {
             isScanning: this._isScanning,
             camerasAvailable: this._cameras.length,
             currentCameraId: this._currentCameraId,
-            scanStartTime: this._scanStartTime
+            scanStartTime: this._scanStartTime,
+            scanDelay: this._scanDelay
         };
+    },
+
+    /**
+     * Set scan delay programmatically
+     * @param {number} delay - Delay in milliseconds
+     */
+    setScanDelay(delay) {
+        this._scanDelay = delay;
+        const delaySelect = document.getElementById('scanDelaySelect');
+        if (delaySelect) {
+            delaySelect.value = delay;
+        }
+        window.QRScannerUtils.log.debug('Scan delay set to:', delay, 'ms');
     }
 };
 
