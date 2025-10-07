@@ -1,0 +1,16 @@
+# QR Scanner Analysis Files
+*.log
+*.tmp
+
+# Development files
+node_modules/
+.env
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.backup
