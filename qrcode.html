@@ -362,7 +362,14 @@
     <script src="js/qrcode/data-manager.js"></script>
     <script src="js/qrcode/display/text-manager.js"></script>
     <script src="js/qrcode/display/zoom-manager.js"></script>
+    
+    <!-- Load Smart Step Tracker FIRST -->
+    <script src="js/qrcode/navigation/step-tracker.js"></script>
+    
+    <!-- Then load Step Manager (uses SmartStepTracker) -->
     <script src="js/qrcode/navigation/step-manager.js"></script>
+    
+    <!-- Load Main Application -->
     <script src="js/qrcode/main.js"></script>
 </body>
 </html>
