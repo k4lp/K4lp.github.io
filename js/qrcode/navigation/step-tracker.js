@@ -1,20 +1,19 @@
 /**
- * Smart Step Tracker - Revamped Implementation
+ * Smart Step Tracker - Production Implementation
  * QR Code Component Scanner
  * 
- * REVAMPED: October 8, 2025
- * - Maintains smart viewport detection (IntersectionObserver)
- * - Cleaned up over-complex logic while preserving intelligent features
- * - Natural human behavior consideration for navigation
- * - Automatic current step detection based on viewport visibility
- * - Smart prev/next navigation based on actual viewing state
+ * UPDATED: October 8, 2025
+ * - Fixed step indicator at top of page to update properly
+ * - Removed debug info from production navigation
+ * - Enhanced visual design following Swiss principles
+ * - Improved reliability and mobile responsiveness
  */
 
 window.SmartStepTracker = {
-    // Core state - simplified but smart
+    // Core state - clean and focused
     state: {
-        currentVisible: 1,        // What user is actually viewing
-        highestCompleted: 0,      // Progress tracking
+        currentVisible: 1,
+        highestCompleted: 0,
         availableSteps: new Set([1]),
         completedSteps: new Set(),
         transitionInProgress: false
@@ -53,6 +52,11 @@ window.SmartStepTracker = {
             this._bindEvents();
             this._performInitialScan();
             
+            // Force initial step indicator update
+            setTimeout(() => {
+                this._updateStepIndicator();
+            }, 100);
+            
             this.initialized = true;
             console.log('✓ Smart Step Tracker initialized successfully');
             
@@ -69,7 +73,7 @@ window.SmartStepTracker = {
             const id = parseInt(stepId);
             let element = null;
             
-            // Multiple strategies to find elements (keeping robust detection)
+            // Multiple strategies to find elements
             const strategies = [
                 () => document.querySelector(config.selector),
                 () => {
@@ -140,8 +144,8 @@ window.SmartStepTracker = {
         // Smart observer configuration
         const options = {
             root: null,
-            rootMargin: '-15% 0px -35% 0px', // Smart detection zone
-            threshold: [0, 0.1, 0.25, 0.5, 0.75, 0.9] // Multiple thresholds for accuracy
+            rootMargin: '-15% 0px -35% 0px',
+            threshold: [0, 0.1, 0.25, 0.5, 0.75, 0.9]
         };
         
         this.intersectionObserver = new IntersectionObserver(
@@ -160,10 +164,10 @@ window.SmartStepTracker = {
         console.log('✓ Smart viewport detection setup complete');
     },
     
-    // Handle smart viewport intersection - determines what user is actually viewing
+    // Handle smart viewport intersection
     _handleViewportIntersection(entries) {
         if (this.state.transitionInProgress) {
-            return; // Skip during programmatic transitions
+            return;
         }
         
         let mostVisibleStep = null;
@@ -194,7 +198,7 @@ window.SmartStepTracker = {
                 const isLaterStep = stepId > (mostVisibleStep || 0);
                 const significantlyMoreVisible = visibility > maxVisibility + 0.15;
                 
-                // Prefer later steps if visibility is similar (natural progression)
+                // Prefer later steps if visibility is similar
                 if (significantlyMoreVisible || (visibility >= maxVisibility && isLaterStep)) {
                     maxVisibility = visibility;
                     mostVisibleStep = stepId;
@@ -217,9 +221,6 @@ window.SmartStepTracker = {
                 }
             }));
         }
-        
-        // Update debug info
-        this._updateDebugInfo(visibleSteps, mostVisibleStep);
     },
     
     // Setup mutation observer for visibility changes
@@ -247,7 +248,6 @@ window.SmartStepTracker = {
                                 
                                 if (isVisible) {
                                     this.state.availableSteps.add(stepId);
-                                    // Re-observe if needed
                                     if (this.intersectionObserver) {
                                         this.intersectionObserver.observe(stepData.element);
                                     }
@@ -328,7 +328,7 @@ window.SmartStepTracker = {
         }
     },
     
-    // Create smart navigation controls
+    // Create clean navigation controls (NO DEBUG INFO)
     _createNavigationControls() {
         this.navigationContainer = this._getOrCreateNavigationContainer();
         
@@ -343,37 +343,25 @@ window.SmartStepTracker = {
         indicator.id = 'step-nav-indicator';
         indicator.className = 'meta';
         indicator.style.cssText = `
-            margin: 0 12px;
+            margin: 0 16px;
             display: flex;
             align-items: center;
             text-align: center;
             min-width: 140px;
             font-size: 10px;
             font-weight: 600;
+            letter-spacing: 0.1em;
         `;
         
         // Next button
         const nextBtn = this._createNavigationButton('step-nav-next', 'NEXT →', this._handleSmartNext.bind(this));
         
-        // Debug info
-        const debugInfo = document.createElement('div');
-        debugInfo.id = 'step-debug-info';
-        debugInfo.className = 'meta';
-        debugInfo.style.cssText = `
-            margin-left: 12px;
-            font-size: 8px;
-            opacity: 0.7;
-            max-width: 120px;
-            overflow: hidden;
-        `;
-        
-        // Add to container
+        // Add to container (NO DEBUG INFO)
         this.navigationContainer.appendChild(prevBtn);
         this.navigationContainer.appendChild(indicator);
         this.navigationContainer.appendChild(nextBtn);
-        this.navigationContainer.appendChild(debugInfo);
         
-        console.log('✓ Smart navigation controls created');
+        console.log('✓ Clean navigation controls created (no debug info)');
     },
     
     // Create navigation button helper
@@ -382,12 +370,18 @@ window.SmartStepTracker = {
         button.id = id;
         button.className = 'button button--ghost button--sm';
         button.innerHTML = text;
-        button.style.cssText = 'margin: 0 6px; font-size: 10px;';
+        button.style.cssText = `
+            margin: 0 4px; 
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        `;
         button.addEventListener('click', clickHandler);
         return button;
     },
     
-    // Get or create navigation container
+    // Get or create navigation container with enhanced styling
     _getOrCreateNavigationContainer() {
         let container = document.getElementById('step-navigation-controls');
         
@@ -402,26 +396,35 @@ window.SmartStepTracker = {
                 z-index: 100;
                 display: flex;
                 align-items: center;
-                padding: 8px 12px;
-                background: var(--color-white, #fff);
-                border: 2px solid var(--color-black, #000);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                min-width: 340px;
+                padding: 12px 16px;
+                background: var(--white, #fff);
+                border: 2px solid var(--black, #000);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+                min-width: 280px;
                 max-width: 90vw;
-                font-size: 10px;
+                font-family: var(--font-sans);
+                backdrop-filter: blur(8px);
+                transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
             `;
             
-            // Mobile responsive
+            // Enhanced mobile responsive styling
             const mediaQuery = window.matchMedia('(max-width: 768px)');
-            if (mediaQuery.matches) {
-                container.style.cssText += `
-                    bottom: 16px;
-                    right: 16px;
-                    left: 16px;
-                    min-width: auto;
-                    max-width: none;
-                `;
-            }
+            const applyMobileStyles = () => {
+                if (mediaQuery.matches) {
+                    container.style.cssText += `
+                        bottom: 16px;
+                        right: 16px;
+                        left: 16px;
+                        min-width: auto;
+                        max-width: none;
+                        justify-content: center;
+                        padding: 10px 12px;
+                    `;
+                }
+            };
+            
+            applyMobileStyles();
+            mediaQuery.addListener(applyMobileStyles);
             
             document.body.appendChild(container);
         }
@@ -431,13 +434,8 @@ window.SmartStepTracker = {
     
     // Bind event listeners
     _bindEvents() {
-        // Listen for step completion
         document.addEventListener('step:completed', this._handleStepCompleted.bind(this));
-        
-        // Listen for step activation
         document.addEventListener('step:activated', this._handleStepActivated.bind(this));
-        
-        // Listen for resize
         window.addEventListener('resize', this._handleResize.bind(this), { passive: true });
         
         console.log('✓ Event listeners bound');
@@ -483,7 +481,6 @@ window.SmartStepTracker = {
             stepData.element.classList.remove('hidden');
             stepData.isVisible = true;
             
-            // Re-observe if needed
             if (this.intersectionObserver) {
                 this.intersectionObserver.observe(stepData.element);
             }
@@ -504,17 +501,17 @@ window.SmartStepTracker = {
                     left: 16px;
                     min-width: auto;
                     max-width: none;
+                    justify-content: center;
                 `;
             }
         }
     },
     
-    // Smart previous step navigation - considers natural user behavior
+    // Smart previous step navigation
     _handleSmartPrevious() {
         const currentStep = this.state.currentVisible;
         let targetStep = null;
         
-        // Find previous available step
         for (let stepId = currentStep - 1; stepId >= 1; stepId--) {
             const stepData = this.elements.get(stepId);
             if (stepData?.element && stepData.isVisible) {
@@ -526,17 +523,14 @@ window.SmartStepTracker = {
         if (targetStep) {
             console.log(`Smart navigation: ${currentStep} → ${targetStep} (previous)`);
             this._smartScrollToStep(targetStep);
-        } else {
-            console.log('No previous step available');
         }
     },
     
-    // Smart next step navigation - considers natural user behavior
+    // Smart next step navigation
     _handleSmartNext() {
         const currentStep = this.state.currentVisible;
         let targetStep = null;
         
-        // Find next available step
         for (let stepId = currentStep + 1; stepId <= 5; stepId++) {
             const stepData = this.elements.get(stepId);
             if (stepData?.element && stepData.isVisible) {
@@ -548,12 +542,10 @@ window.SmartStepTracker = {
         if (targetStep) {
             console.log(`Smart navigation: ${currentStep} → ${targetStep} (next)`);
             this._smartScrollToStep(targetStep);
-        } else {
-            console.log('No next step available');
         }
     },
     
-    // Smart scroll to step - human-friendly scrolling
+    // Smart scroll to step
     _smartScrollToStep(stepId) {
         const stepData = this.elements.get(stepId);
         if (!stepData?.element || !stepData.isVisible) {
@@ -566,14 +558,13 @@ window.SmartStepTracker = {
         try {
             const rect = stepData.element.getBoundingClientRect();
             const absoluteTop = rect.top + window.pageYOffset;
-            const offset = window.innerHeight * 0.12; // Smart offset for natural viewing
+            const offset = window.innerHeight * 0.12;
             
             window.scrollTo({
                 top: Math.max(0, absoluteTop - offset),
                 behavior: 'smooth'
             });
             
-            // Clear transition flag after scroll
             setTimeout(() => {
                 this.state.transitionInProgress = false;
             }, 1000);
@@ -592,7 +583,6 @@ window.SmartStepTracker = {
     _performInitialScan() {
         console.log('Performing initial step scan...');
         
-        // Identify initially visible steps
         this.elements.forEach((stepData, stepId) => {
             if (stepData.element && !stepData.element.classList.contains('hidden')) {
                 stepData.isVisible = true;
@@ -601,7 +591,6 @@ window.SmartStepTracker = {
             }
         });
         
-        // Set current visible step
         const availableSteps = Array.from(this.state.availableSteps).sort((a, b) => a - b);
         if (availableSteps.length > 0) {
             this.state.currentVisible = availableSteps[0];
@@ -611,47 +600,115 @@ window.SmartStepTracker = {
         this._updateUI();
     },
     
-    // Update all UI components
+    // Update all UI components - ENHANCED with better reliability
     _updateUI() {
-        this._updateStepIndicator();
-        this._updateNavigationButtons();
-        this._updateNavigationIndicator();
-        this._notifyStateChange();
+        // Use requestAnimationFrame for smooth updates
+        requestAnimationFrame(() => {
+            this._updateStepIndicator();
+            this._updateNavigationButtons();
+            this._updateNavigationIndicator();
+            this._notifyStateChange();
+        });
     },
     
-    // Update step indicator visual state
+    // ENHANCED step indicator update - FOCUSES ON TOP PAGE INDICATOR
     _updateStepIndicator() {
         const indicators = document.querySelectorAll('.step-indicator__item');
+        
+        if (indicators.length === 0) {
+            console.warn('No step indicator items found at top of page');
+            return;
+        }
+        
+        console.log(`Updating step indicator: Current=${this.state.currentVisible}, Completed=[${Array.from(this.state.completedSteps).join(', ')}], Available=[${Array.from(this.state.availableSteps).join(', ')}]`);
         
         indicators.forEach((indicator, index) => {
             const stepId = index + 1;
             const numberEl = indicator.querySelector('.step-indicator__number');
-            if (!numberEl) return;
+            if (!numberEl) {
+                console.warn(`Step indicator number element not found for step ${stepId}`);
+                return;
+            }
             
-            // Clear all state classes
+            // FORCE clear all existing state classes
             indicator.classList.remove('is-current', 'is-complete', 'is-active');
+            indicator.className = indicator.className.replace(/\bis-(current|complete|active)\b/g, '').trim();
             
-            // Reset styles
-            numberEl.style.backgroundColor = '';
-            numberEl.style.color = '';
+            // Reset all styles completely
+            numberEl.style.cssText = '';
+            numberEl.removeAttribute('style');
             numberEl.textContent = stepId;
             
-            // Apply appropriate state
+            // Apply state with enhanced styling and !important for reliability
             if (this.state.completedSteps.has(stepId)) {
                 indicator.classList.add('is-complete');
-                numberEl.style.backgroundColor = 'var(--color-success, #22c55e)';
-                numberEl.style.color = 'white';
+                numberEl.style.cssText = `
+                    background-color: var(--success, #22c55e) !important;
+                    color: white !important;
+                    border-color: var(--success, #22c55e) !important;
+                    font-weight: 700 !important;
+                    transform: scale(1.0) !important;
+                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+                `;
                 numberEl.textContent = '✓';
+                console.log(`Step ${stepId} marked as COMPLETE`);
             } else if (stepId === this.state.currentVisible) {
                 indicator.classList.add('is-current');
-                numberEl.style.backgroundColor = 'var(--color-black, #000)';
-                numberEl.style.color = 'white';
+                numberEl.style.cssText = `
+                    background-color: var(--black, #000) !important;
+                    color: white !important;
+                    border-color: var(--black, #000) !important;
+                    font-weight: 700 !important;
+                    transform: scale(1.1) !important;
+                    box-shadow: 0 0 0 3px rgba(0,0,0,0.1) !important;
+                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+                `;
+                console.log(`Step ${stepId} marked as CURRENT`);
             } else if (this.state.availableSteps.has(stepId)) {
                 indicator.classList.add('is-active');
+                numberEl.style.cssText = `
+                    background-color: transparent !important;
+                    color: var(--black, #000) !important;
+                    border-color: var(--black, #000) !important;
+                    font-weight: 600 !important;
+                    transform: scale(1.0) !important;
+                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+                `;
+                console.log(`Step ${stepId} marked as ACTIVE`);
             } else {
-                numberEl.style.color = 'var(--color-gray-400, #9ca3af)';
+                numberEl.style.cssText = `
+                    background-color: transparent !important;
+                    color: var(--gray-400, #9ca3af) !important;
+                    border-color: var(--gray-400, #9ca3af) !important;
+                    font-weight: 400 !important;
+                    opacity: 0.6 !important;
+                    transform: scale(1.0) !important;
+                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+                `;
+                console.log(`Step ${stepId} marked as INACTIVE`);
             }
         });
+        
+        // Also update the separator lines between steps
+        const separators = document.querySelectorAll('.step-indicator__separator');
+        separators.forEach((separator, index) => {
+            const stepId = index + 1; // Separator after step N
+            if (this.state.completedSteps.has(stepId) && stepId < 5) {
+                separator.style.cssText = `
+                    background-color: var(--success, #22c55e) !important;
+                    height: 3px !important;
+                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+                `;
+            } else {
+                separator.style.cssText = `
+                    background-color: var(--gray-300, #d4d4d4) !important;
+                    height: 1px !important;
+                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+                `;
+            }
+        });
+        
+        console.log(`✓ Step indicator at top of page updated successfully`);
     },
     
     // Update navigation buttons
@@ -687,18 +744,18 @@ window.SmartStepTracker = {
             }
         }
         
-        // Update button states
+        // Update button states with enhanced styling
         prevBtn.disabled = !hasPrevious;
         nextBtn.disabled = !hasNext;
         
-        prevBtn.style.opacity = hasPrevious ? '1' : '0.4';
-        nextBtn.style.opacity = hasNext ? '1' : '0.4';
+        prevBtn.style.opacity = hasPrevious ? '1' : '0.3';
+        nextBtn.style.opacity = hasNext ? '1' : '0.3';
         
         prevBtn.title = hasPrevious ? `Previous: ${previousTitle}` : 'No previous step';
         nextBtn.title = hasNext ? `Next: ${nextTitle}` : 'No next step';
     },
     
-    // Update navigation indicator
+    // Update navigation indicator with enhanced styling
     _updateNavigationIndicator() {
         const indicator = document.getElementById('step-nav-indicator');
         if (!indicator) return;
@@ -707,29 +764,16 @@ window.SmartStepTracker = {
         if (stepData) {
             const isCompleted = this.state.completedSteps.has(this.state.currentVisible);
             const completionMark = isCompleted ? ' ✓' : '';
+            const progress = ((this.state.currentVisible - 1) / 4 * 100).toFixed(0);
             
             indicator.innerHTML = `
                 <div style="text-align: center; line-height: 1.1;">
-                    <div style="font-weight: 700;">STEP ${this.state.currentVisible}/5${completionMark}</div>
-                    <div style="font-size: 8px; margin-top: 2px; opacity: 0.8;">${stepData.config.title.toUpperCase()}</div>
+                    <div style="font-weight: 700; font-size: 11px;">STEP ${this.state.currentVisible}/5${completionMark}</div>
+                    <div style="font-size: 8px; margin-top: 2px; opacity: 0.8; color: var(--gray-600);">${stepData.config.title.toUpperCase()}</div>
+                    <div style="font-size: 7px; margin-top: 2px; opacity: 0.6; font-family: var(--font-mono);">${progress}% COMPLETE</div>
                 </div>
             `;
         }
-    },
-    
-    // Update debug info
-    _updateDebugInfo(visibleSteps, currentStep) {
-        const debugInfo = document.getElementById('step-debug-info');
-        if (!debugInfo) return;
-        
-        const visible = visibleSteps?.map(s => s.stepId).join(',') || 'none';
-        debugInfo.innerHTML = `
-            <div style="line-height: 1.1;">
-                <div>VIS: ${visible}</div>
-                <div>CUR: ${currentStep || this.state.currentVisible}</div>
-                <div>AVL: ${Array.from(this.state.availableSteps).join(',')}</div>
-            </div>
-        `;
     },
     
     // Notify of state changes
@@ -760,7 +804,6 @@ window.SmartStepTracker = {
     
     // PUBLIC API
     
-    // Complete a step
     completeStep(stepId) {
         if (!this._isValidStep(stepId)) return false;
         
@@ -770,7 +813,6 @@ window.SmartStepTracker = {
         return true;
     },
     
-    // Activate a step
     activateStep(stepId) {
         if (!this._isValidStep(stepId)) return false;
         
@@ -780,7 +822,6 @@ window.SmartStepTracker = {
         return true;
     },
     
-    // Navigate to step
     navigateToStep(stepId) {
         if (!this._isValidStep(stepId) || !this.state.availableSteps.has(stepId)) {
             console.warn(`Cannot navigate to step ${stepId}: not available`);
@@ -790,22 +831,18 @@ window.SmartStepTracker = {
         return this._smartScrollToStep(stepId);
     },
     
-    // Get current visible step
     getCurrentStep() {
         return this.state.currentVisible;
     },
     
-    // Get available steps
     getAvailableSteps() {
         return Array.from(this.state.availableSteps).sort((a, b) => a - b);
     },
     
-    // Get completed steps
     getCompletedSteps() {
         return Array.from(this.state.completedSteps).sort((a, b) => a - b);
     },
     
-    // Get full state
     getState() {
         return {
             currentVisible: this.state.currentVisible,
@@ -816,7 +853,16 @@ window.SmartStepTracker = {
         };
     },
     
-    // Reset tracker
+    // Force manual refresh - useful for troubleshooting
+    forceRefresh() {
+        console.log('Forcing step indicator refresh...');
+        this._performInitialScan();
+        setTimeout(() => {
+            this._updateStepIndicator();
+        }, 50);
+        this._updateUI();
+    },
+    
     reset() {
         this.state.currentVisible = 1;
         this.state.highestCompleted = 0;
@@ -824,7 +870,6 @@ window.SmartStepTracker = {
         this.state.completedSteps.clear();
         this.state.availableSteps.add(1);
         
-        // Hide all steps except first
         this.elements.forEach((stepData, stepId) => {
             if (stepId > 1 && stepData.element) {
                 stepData.element.classList.add('hidden');
@@ -836,11 +881,9 @@ window.SmartStepTracker = {
         console.log('✓ Smart Step Tracker reset');
     },
     
-    // Destroy tracker
     destroy() {
         console.log('Destroying Smart Step Tracker...');
         
-        // Disconnect observers
         if (this.intersectionObserver) {
             this.intersectionObserver.disconnect();
             this.intersectionObserver = null;
@@ -851,13 +894,11 @@ window.SmartStepTracker = {
             this.mutationObserver = null;
         }
         
-        // Remove navigation container
         if (this.navigationContainer?.parentNode) {
             this.navigationContainer.parentNode.removeChild(this.navigationContainer);
             this.navigationContainer = null;
         }
         
-        // Clear state
         this.elements.clear();
         this.state.availableSteps.clear();
         this.state.completedSteps.clear();
