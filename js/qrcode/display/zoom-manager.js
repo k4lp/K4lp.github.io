@@ -1,8 +1,8 @@
 /**
  * QR Code Component Scanner - Enhanced Zoom Manager
- * Alica Technologies - Version 3.0
+ * Alica Technologies - Version 3.1 FIXED
  * 
- * CRITICAL FIX: Added initializeContainer function and enhanced zoom support
+ * CRITICAL FIX: Proper initializeContainer function and enhanced zoom support
  * Handles zoomable table interface with touch and mouse support
  */
 
@@ -24,6 +24,7 @@ window.QRScannerZoomManager = {
     _panStartX: 0,
     _panStartY: 0,
     _initialized: false,
+    _targetContainer: null,
 
     /**
      * Initialize zoom manager
@@ -34,7 +35,7 @@ window.QRScannerZoomManager = {
         this._createZoomControls();
         this._bindEvents();
         this._initialized = true;
-        window.QRScannerUtils.log.debug('Zoom manager initialized');
+        window.QRScannerUtils?.log?.debug('Zoom manager initialized') || console.log('Zoom manager initialized');
     },
 
     /**
@@ -43,7 +44,7 @@ window.QRScannerZoomManager = {
      */
     initializeContainer(container) {
         if (!container) {
-            window.QRScannerUtils.log.warn('No container provided for zoom initialization');
+            window.QRScannerUtils?.log?.warn('No container provided for zoom initialization') || console.warn('No container provided for zoom initialization');
             return;
         }
 
@@ -64,7 +65,7 @@ window.QRScannerZoomManager = {
             zoomControls.style.display = 'flex';
         }
         
-        window.QRScannerUtils.log.debug('Container initialized for zoom functionality');
+        window.QRScannerUtils?.log?.debug('Container initialized for zoom functionality') || console.log('Container initialized for zoom functionality');
     },
 
     /**
@@ -140,19 +141,21 @@ window.QRScannerZoomManager = {
                 align-items: center;
                 padding: 12px 16px;
                 margin-bottom: 16px;
-                background: var(--gray-100);
-                border: 1px solid var(--gray-200);
+                background: var(--gray-100, #f5f5f5);
+                border: 1px solid var(--gray-200, #e5e5e5);
             `;
             
             // Insert before the table container in step 3
             const step3 = document.getElementById('step3');
-            const tableContainer = step3?.querySelector('.table-container');
-            
-            if (tableContainer && tableContainer.parentNode) {
-                tableContainer.parentNode.insertBefore(container, tableContainer);
-            } else if (step3) {
-                // Fallback: append to step3 if table container not found yet
-                step3.appendChild(container);
+            if (step3) {
+                const tableContainer = step3.querySelector('.table-container') || step3.querySelector('.zoom-container');
+                
+                if (tableContainer && tableContainer.parentNode) {
+                    tableContainer.parentNode.insertBefore(container, tableContainer);
+                } else {
+                    // Fallback: append to step3 if table container not found yet
+                    step3.appendChild(container);
+                }
             }
         }
         
@@ -234,7 +237,7 @@ window.QRScannerZoomManager = {
         
         this._updateZoomControlsState();
         
-        window.QRScannerUtils.log.debug('Zoom mode', this._isZoomEnabled ? 'enabled' : 'disabled');
+        window.QRScannerUtils?.log?.debug('Zoom mode', this._isZoomEnabled ? 'enabled' : 'disabled') || console.log('Zoom mode', this._isZoomEnabled ? 'enabled' : 'disabled');
     },
 
     /**
@@ -245,17 +248,17 @@ window.QRScannerZoomManager = {
         let tableContainer = this._targetContainer;
         
         if (!tableContainer) {
-            tableContainer = document.querySelector('#step3 .table-container');
+            tableContainer = document.querySelector('#step3 .table-container') || document.querySelector('#selectableTable');
         }
         
         if (!tableContainer) {
-            window.QRScannerUtils.log.warn('Table container not found for zoom');
+            window.QRScannerUtils?.log?.warn('Table container not found for zoom') || console.warn('Table container not found for zoom');
             return;
         }
         
         // Don't wrap if already wrapped
         if (tableContainer.closest('.zoom-container')) {
-            window.QRScannerUtils.log.debug('Container already in zoom mode');
+            window.QRScannerUtils?.log?.debug('Container already in zoom mode') || console.log('Container already in zoom mode');
             return;
         }
         
@@ -265,8 +268,8 @@ window.QRScannerZoomManager = {
         this._zoomContainer.style.cssText = `
             position: relative;
             overflow: hidden;
-            border: 2px solid var(--black);
-            background: var(--white);
+            border: 2px solid var(--black, #000);
+            background: var(--white, #fff);
             cursor: grab;
             user-select: none;
             -webkit-user-select: none;
@@ -307,7 +310,7 @@ window.QRScannerZoomManager = {
         this._removeZoomEventListeners();
         
         // Get the table container
-        const tableContainer = this._zoomContent.querySelector('.table-container');
+        const tableContainer = this._zoomContent.querySelector('.table-container, #selectableTable');
         if (tableContainer) {
             // Reset any transforms
             tableContainer.style.transform = '';
