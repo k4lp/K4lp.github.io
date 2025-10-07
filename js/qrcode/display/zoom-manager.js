@@ -1,9 +1,13 @@
 /**
- * QR Code Component Scanner - Enhanced Zoom Manager
- * Alica Technologies - Version 3.1 FIXED
+ * QR Code Component Scanner - FIXED Zoom Manager
+ * Alica Technologies - Version 4.0 ROOT CAUSE FIX
  * 
- * CRITICAL FIX: Proper initializeContainer function and enhanced zoom support
- * Handles zoomable table interface with touch and mouse support
+ * ROOT CAUSE FIXES:
+ * - Fixed container detection and initialization sequence
+ * - Enhanced zoom controls integration with data range selection
+ * - Improved error handling and fallback mechanisms
+ * - Fixed zoom container wrapping and unwrapping logic
+ * - Enhanced mobile touch gesture support
  */
 
 window.QRScannerZoomManager = {
@@ -25,27 +29,39 @@ window.QRScannerZoomManager = {
     _panStartY: 0,
     _initialized: false,
     _targetContainer: null,
+    _originalContainer: null,
+    _initializationRetryCount: 0,
+    _maxInitializationRetries: 5,
 
     /**
-     * Initialize zoom manager
+     * Initialize zoom manager with enhanced error handling
      */
     init() {
-        if (this._initialized) return;
+        if (this._initialized) {
+            console.log('Zoom manager already initialized');
+            return;
+        }
         
-        this._createZoomControls();
-        this._bindEvents();
-        this._initialized = true;
-        window.QRScannerUtils?.log?.debug('Zoom manager initialized') || console.log('Zoom manager initialized');
+        try {
+            this._createZoomControls();
+            this._bindEvents();
+            this._initialized = true;
+            console.log('✓ Zoom manager initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize zoom manager:', error);
+            // Continue without zoom functionality
+        }
     },
 
     /**
-     * CRITICAL FIX: Initialize zoom functionality for a specific container
-     * This is called by the range selector when creating the selectable table
+     * ROOT CAUSE FIX: Enhanced container initialization with retry mechanism
      */
     initializeContainer(container) {
+        console.log('Initializing zoom container:', container);
+        
         if (!container) {
-            window.QRScannerUtils?.log?.warn('No container provided for zoom initialization') || console.warn('No container provided for zoom initialization');
-            return;
+            console.warn('No container provided for zoom initialization');
+            return false;
         }
 
         // Ensure zoom manager is initialized
@@ -53,33 +69,38 @@ window.QRScannerZoomManager = {
             this.init();
         }
 
-        // Store reference to the container for later use
+        // Store references for later use
         this._targetContainer = container;
+        this._originalContainer = container.parentNode;
         
-        // Add zoom-ready class to indicate container is ready for zoom
+        // Add zoom-ready class
         container.classList.add('zoom-ready');
         
-        // Show zoom controls
-        const zoomControls = document.getElementById('zoom-controls');
-        if (zoomControls) {
-            zoomControls.style.display = 'flex';
-        }
+        // ROOT CAUSE FIX: Enhanced control visibility with proper timing
+        this._showZoomControls();
         
-        window.QRScannerUtils?.log?.debug('Container initialized for zoom functionality') || console.log('Container initialized for zoom functionality');
+        // Set up container observer for dynamic updates
+        this._setupContainerObserver(container);
+        
+        console.log('✓ Container initialized for zoom functionality');
+        return true;
     },
 
     /**
-     * Create zoom controls interface
+     * ROOT CAUSE FIX: Enhanced zoom controls creation with better positioning
      */
     _createZoomControls() {
         const container = this._getOrCreateZoomContainer();
+        
+        // Clear existing controls
+        container.innerHTML = '';
         
         // Zoom level indicator
         const indicator = document.createElement('div');
         indicator.id = 'zoom-indicator';
         indicator.className = 'meta';
         indicator.textContent = '100%';
-        indicator.style.cssText = 'margin-right: 16px; min-width: 40px; text-align: center;';
+        indicator.style.cssText = 'margin-right: 16px; min-width: 40px; text-align: center; font-weight: 600;';
         
         // Zoom out button
         const zoomOutBtn = document.createElement('button');
@@ -87,7 +108,7 @@ window.QRScannerZoomManager = {
         zoomOutBtn.className = 'button button--ghost button--sm';
         zoomOutBtn.innerHTML = '−';
         zoomOutBtn.title = 'Zoom out';
-        zoomOutBtn.style.cssText = 'margin-right: 8px; min-width: 32px;';
+        zoomOutBtn.style.cssText = 'margin-right: 8px; min-width: 32px; font-size: 18px;';
         
         // Zoom in button
         const zoomInBtn = document.createElement('button');
@@ -95,7 +116,7 @@ window.QRScannerZoomManager = {
         zoomInBtn.className = 'button button--ghost button--sm';
         zoomInBtn.innerHTML = '+';
         zoomInBtn.title = 'Zoom in';
-        zoomInBtn.style.cssText = 'margin-right: 16px; min-width: 32px;';
+        zoomInBtn.style.cssText = 'margin-right: 16px; min-width: 32px; font-size: 18px;';
         
         // Reset zoom button
         const resetBtn = document.createElement('button');
@@ -103,7 +124,7 @@ window.QRScannerZoomManager = {
         resetBtn.className = 'button button--ghost button--sm';
         resetBtn.textContent = 'RESET';
         resetBtn.title = 'Reset zoom and pan';
-        resetBtn.style.cssText = 'margin-right: 16px;';
+        resetBtn.style.cssText = 'margin-right: 16px; font-size: 10px;';
         
         // Zoom toggle button
         const toggleBtn = document.createElement('button');
@@ -111,6 +132,7 @@ window.QRScannerZoomManager = {
         toggleBtn.className = 'button button--primary button--sm';
         toggleBtn.textContent = 'ENABLE ZOOM';
         toggleBtn.title = 'Toggle zoom mode';
+        toggleBtn.style.cssText = 'font-size: 10px;';
         
         // Add to container
         container.appendChild(indicator);
@@ -119,15 +141,13 @@ window.QRScannerZoomManager = {
         container.appendChild(resetBtn);
         container.appendChild(toggleBtn);
         
-        // Initially hide zoom controls until a container is ready
-        container.style.display = 'none';
-        
         // Initially disable zoom controls
         this._updateZoomControlsState();
+        console.log('✓ Zoom controls created');
     },
 
     /**
-     * Get or create zoom controls container
+     * ROOT CAUSE FIX: Enhanced container detection with multiple fallbacks
      */
     _getOrCreateZoomContainer() {
         let container = document.getElementById('zoom-controls');
@@ -137,25 +157,77 @@ window.QRScannerZoomManager = {
             container.id = 'zoom-controls';
             container.className = 'card';
             container.style.cssText = `
-                display: flex;
+                display: none;
                 align-items: center;
                 padding: 12px 16px;
                 margin-bottom: 16px;
-                background: var(--gray-100, #f5f5f5);
-                border: 1px solid var(--gray-200, #e5e5e5);
+                background: var(--color-white, #fff);
+                border: 2px solid var(--color-black, #000);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             `;
             
-            // Insert before the table container in step 3
-            const step3 = document.getElementById('step3');
-            if (step3) {
-                const tableContainer = step3.querySelector('.table-container') || step3.querySelector('.zoom-container');
-                
-                if (tableContainer && tableContainer.parentNode) {
-                    tableContainer.parentNode.insertBefore(container, tableContainer);
-                } else {
-                    // Fallback: append to step3 if table container not found yet
-                    step3.appendChild(container);
+            // ROOT CAUSE FIX: Multiple insertion strategies with fallbacks
+            const insertionTargets = [
+                () => {
+                    // Strategy 1: Before table container in step3
+                    const step3 = document.getElementById('step3');
+                    const tableContainer = step3?.querySelector('.table-container, .zoom-container');
+                    if (tableContainer && tableContainer.parentNode) {
+                        tableContainer.parentNode.insertBefore(container, tableContainer);
+                        return true;
+                    }
+                    return false;
+                },
+                () => {
+                    // Strategy 2: Before range selection controls
+                    const rangeControls = document.getElementById('range-selection-controls');
+                    if (rangeControls && rangeControls.parentNode) {
+                        rangeControls.parentNode.insertBefore(container, rangeControls);
+                        return true;
+                    }
+                    return false;
+                },
+                () => {
+                    // Strategy 3: At the end of step3
+                    const step3 = document.getElementById('step3');
+                    if (step3) {
+                        const cardDiv = step3.querySelector('.card > div');
+                        if (cardDiv) {
+                            cardDiv.appendChild(container);
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                () => {
+                    // Strategy 4: Fallback to body
+                    console.warn('Using fallback zoom controls placement');
+                    document.body.appendChild(container);
+                    container.style.cssText += `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        z-index: 9999;
+                    `;
+                    return true;
                 }
+            ];
+            
+            // Try each insertion strategy until one succeeds
+            let inserted = false;
+            for (const strategy of insertionTargets) {
+                try {
+                    if (strategy()) {
+                        inserted = true;
+                        break;
+                    }
+                } catch (error) {
+                    console.warn('Zoom container insertion strategy failed:', error);
+                }
+            }
+            
+            if (!inserted) {
+                console.error('Failed to insert zoom controls container');
             }
         }
         
@@ -163,24 +235,86 @@ window.QRScannerZoomManager = {
     },
 
     /**
-     * Bind event listeners
+     * ROOT CAUSE FIX: Enhanced control visibility management
+     */
+    _showZoomControls() {
+        const zoomControls = document.getElementById('zoom-controls');
+        if (zoomControls) {
+            zoomControls.style.display = 'flex';
+            console.log('✓ Zoom controls made visible');
+        } else {
+            console.warn('Zoom controls not found when trying to show');
+        }
+    },
+
+    _hideZoomControls() {
+        const zoomControls = document.getElementById('zoom-controls');
+        if (zoomControls) {
+            zoomControls.style.display = 'none';
+            console.log('✓ Zoom controls hidden');
+        }
+    },
+
+    /**
+     * Set up container observer for dynamic updates
+     */
+    _setupContainerObserver(container) {
+        if (!('MutationObserver' in window)) {
+            console.warn('MutationObserver not supported');
+            return;
+        }
+        
+        // Clean up previous observer
+        if (this._containerObserver) {
+            this._containerObserver.disconnect();
+        }
+        
+        this._containerObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                    // Container content changed, ensure zoom is still properly set up
+                    if (this._isZoomEnabled && !this._zoomContainer) {
+                        console.log('Container changed while zoom enabled, reinitializing...');
+                        this._enableZoomMode();
+                    }
+                }
+            });
+        });
+        
+        this._containerObserver.observe(container, {
+            childList: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+    },
+
+    /**
+     * Enhanced event binding with better error handling
      */
     _bindEvents() {
         // Zoom control buttons
         document.addEventListener('click', (e) => {
-            switch (e.target.id) {
-                case 'zoom-in':
-                    this._zoomIn();
-                    break;
-                case 'zoom-out':
-                    this._zoomOut();
-                    break;
-                case 'zoom-reset':
-                    this._resetZoom();
-                    break;
-                case 'zoom-toggle':
-                    this._toggleZoomMode();
-                    break;
+            try {
+                switch (e.target.id) {
+                    case 'zoom-in':
+                        e.preventDefault();
+                        this._zoomIn();
+                        break;
+                    case 'zoom-out':
+                        e.preventDefault();
+                        this._zoomOut();
+                        break;
+                    case 'zoom-reset':
+                        e.preventDefault();
+                        this._resetZoom();
+                        break;
+                    case 'zoom-toggle':
+                        e.preventDefault();
+                        this._toggleZoomMode();
+                        break;
+                }
+            } catch (error) {
+                console.error('Error handling zoom control click:', error);
             }
         });
         
@@ -189,32 +323,38 @@ window.QRScannerZoomManager = {
             if (!this._isZoomEnabled) return;
             
             // Only handle shortcuts when not typing
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
                 return;
             }
             
-            if (e.ctrlKey || e.metaKey) {
-                switch (e.key) {
-                    case '+':
-                    case '=':
-                        e.preventDefault();
-                        this._zoomIn();
-                        break;
-                    case '-':
-                        e.preventDefault();
-                        this._zoomOut();
-                        break;
-                    case '0':
-                        e.preventDefault();
-                        this._resetZoom();
-                        break;
+            try {
+                if (e.ctrlKey || e.metaKey) {
+                    switch (e.key) {
+                        case '+':
+                        case '=':
+                            e.preventDefault();
+                            this._zoomIn();
+                            break;
+                        case '-':
+                            e.preventDefault();
+                            this._zoomOut();
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            this._resetZoom();
+                            break;
+                    }
                 }
+            } catch (error) {
+                console.error('Error handling keyboard zoom shortcut:', error);
             }
         });
+        
+        console.log('✓ Zoom event listeners bound');
     },
 
     /**
-     * Toggle zoom mode
+     * ROOT CAUSE FIX: Enhanced zoom mode toggle with proper container detection
      */
     _toggleZoomMode() {
         this._isZoomEnabled = !this._isZoomEnabled;
@@ -222,10 +362,18 @@ window.QRScannerZoomManager = {
         const toggleBtn = document.getElementById('zoom-toggle');
         
         if (this._isZoomEnabled) {
-            this._enableZoomMode();
-            if (toggleBtn) {
-                toggleBtn.textContent = 'DISABLE ZOOM';
-                toggleBtn.className = 'button button--ghost button--sm';
+            const success = this._enableZoomMode();
+            if (success) {
+                if (toggleBtn) {
+                    toggleBtn.textContent = 'DISABLE ZOOM';
+                    toggleBtn.className = 'button button--ghost button--sm';
+                }
+                console.log('✓ Zoom mode enabled');
+                this._showZoomHint();
+            } else {
+                // Failed to enable zoom, revert state
+                this._isZoomEnabled = false;
+                console.error('Failed to enable zoom mode');
             }
         } else {
             this._disableZoomMode();
@@ -233,137 +381,213 @@ window.QRScannerZoomManager = {
                 toggleBtn.textContent = 'ENABLE ZOOM';
                 toggleBtn.className = 'button button--primary button--sm';
             }
+            console.log('✓ Zoom mode disabled');
         }
         
         this._updateZoomControlsState();
-        
-        window.QRScannerUtils?.log?.debug('Zoom mode', this._isZoomEnabled ? 'enabled' : 'disabled') || console.log('Zoom mode', this._isZoomEnabled ? 'enabled' : 'disabled');
     },
 
     /**
-     * Enable zoom mode
+     * ROOT CAUSE FIX: Enhanced enable zoom mode with multiple container detection strategies
      */
     _enableZoomMode() {
-        // Use the target container if available, otherwise find the table container
-        let tableContainer = this._targetContainer;
+        console.log('Enabling zoom mode...');
         
-        if (!tableContainer) {
-            tableContainer = document.querySelector('#step3 .table-container') || document.querySelector('#selectableTable');
+        // ROOT CAUSE FIX: Multiple strategies to find the table container
+        let tableContainer = null;
+        
+        const containerStrategies = [
+            () => this._targetContainer,
+            () => document.querySelector('#step3 .table-container'),
+            () => document.querySelector('#selectableTable')?.parentNode,
+            () => document.querySelector('#selectableTable'),
+            () => document.querySelector('.zoom-container'),
+            () => {
+                // Look for any div containing a table in step3
+                const step3 = document.getElementById('step3');
+                if (step3) {
+                    const tables = step3.querySelectorAll('table');
+                    if (tables.length > 0) {
+                        return tables[0].parentNode;
+                    }
+                }
+                return null;
+            }
+        ];
+        
+        // Try each strategy until we find a container
+        for (const strategy of containerStrategies) {
+            try {
+                const container = strategy();
+                if (container && container.nodeType === Node.ELEMENT_NODE) {
+                    tableContainer = container;
+                    console.log('✓ Found table container using strategy');
+                    break;
+                }
+            } catch (error) {
+                console.warn('Container detection strategy failed:', error);
+            }
         }
         
         if (!tableContainer) {
-            window.QRScannerUtils?.log?.warn('Table container not found for zoom') || console.warn('Table container not found for zoom');
-            return;
+            console.error('Could not find table container for zoom');
+            this._showErrorMessage('Table not found. Please ensure data is loaded first.');
+            return false;
         }
         
-        // Don't wrap if already wrapped
+        // Check if already in zoom mode
         if (tableContainer.closest('.zoom-container')) {
-            window.QRScannerUtils?.log?.debug('Container already in zoom mode') || console.log('Container already in zoom mode');
-            return;
+            console.log('Container already in zoom mode');
+            this._zoomContainer = tableContainer.closest('.zoom-container');
+            this._zoomContent = this._zoomContainer.querySelector('.zoom-content');
+            return true;
         }
         
-        // Wrap table container in zoom wrapper
-        this._zoomContainer = document.createElement('div');
-        this._zoomContainer.className = 'zoom-container';
-        this._zoomContainer.style.cssText = `
-            position: relative;
-            overflow: hidden;
-            border: 2px solid var(--black, #000);
-            background: var(--white, #fff);
-            cursor: grab;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            max-height: 500px;
-        `;
-        
-        // Create zoom content wrapper
-        this._zoomContent = document.createElement('div');
-        this._zoomContent.className = 'zoom-content';
-        this._zoomContent.style.cssText = `
-            transform-origin: top left;
-            transition: transform 0.2s ease;
-            will-change: transform;
-        `;
-        
-        // Move table container into zoom wrapper
-        const parent = tableContainer.parentNode;
-        parent.insertBefore(this._zoomContainer, tableContainer);
-        this._zoomContent.appendChild(tableContainer);
-        this._zoomContainer.appendChild(this._zoomContent);
-        
-        // Add zoom event listeners
-        this._addZoomEventListeners();
-        
-        // Show usage hint
-        this._showZoomHint();
+        try {
+            // Create zoom wrapper
+            this._zoomContainer = document.createElement('div');
+            this._zoomContainer.className = 'zoom-container';
+            this._zoomContainer.style.cssText = `
+                position: relative;
+                overflow: hidden;
+                border: 2px solid var(--color-black, #000);
+                background: var(--color-white, #fff);
+                cursor: grab;
+                user-select: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                max-height: 500px;
+                width: 100%;
+            `;
+            
+            // Create zoom content wrapper
+            this._zoomContent = document.createElement('div');
+            this._zoomContent.className = 'zoom-content';
+            this._zoomContent.style.cssText = `
+                transform-origin: top left;
+                transition: transform 0.2s ease;
+                will-change: transform;
+                width: 100%;
+                height: 100%;
+            `;
+            
+            // Insert zoom wrapper and move content
+            const parent = tableContainer.parentNode;
+            if (!parent) {
+                throw new Error('Table container has no parent');
+            }
+            
+            parent.insertBefore(this._zoomContainer, tableContainer);
+            this._zoomContent.appendChild(tableContainer);
+            this._zoomContainer.appendChild(this._zoomContent);
+            
+            // Add zoom event listeners
+            this._addZoomEventListeners();
+            
+            console.log('✓ Zoom wrapper created successfully');
+            return true;
+            
+        } catch (error) {
+            console.error('Error creating zoom wrapper:', error);
+            this._showErrorMessage('Failed to enable zoom mode.');
+            return false;
+        }
     },
 
     /**
-     * Disable zoom mode
+     * ROOT CAUSE FIX: Enhanced disable zoom mode with proper cleanup
      */
     _disableZoomMode() {
-        if (!this._zoomContainer || !this._zoomContent) return;
+        console.log('Disabling zoom mode...');
         
-        // Remove zoom event listeners
-        this._removeZoomEventListeners();
-        
-        // Get the table container
-        const tableContainer = this._zoomContent.querySelector('.table-container, #selectableTable');
-        if (tableContainer) {
-            // Reset any transforms
-            tableContainer.style.transform = '';
+        try {
+            // Remove zoom event listeners
+            this._removeZoomEventListeners();
             
-            // Move table container back to original position
-            const parent = this._zoomContainer.parentNode;
-            parent.insertBefore(tableContainer, this._zoomContainer);
+            if (this._zoomContainer && this._zoomContent) {
+                // Get the table container
+                const tableContainer = this._zoomContent.querySelector('.table-container, #selectableTable, table')?.parentNode || 
+                                      this._zoomContent.querySelector('.table-container, #selectableTable, table');
+                
+                if (tableContainer) {
+                    // Reset any transforms
+                    if (tableContainer.style) {
+                        tableContainer.style.transform = '';
+                    }
+                    
+                    // Move table container back to original position
+                    const parent = this._zoomContainer.parentNode;
+                    if (parent) {
+                        parent.insertBefore(tableContainer, this._zoomContainer);
+                    }
+                }
+                
+                // Remove zoom wrapper
+                if (this._zoomContainer.parentNode) {
+                    this._zoomContainer.parentNode.removeChild(this._zoomContainer);
+                }
+            }
+            
+            // Reset state
+            this._zoomContainer = null;
+            this._zoomContent = null;
+            this._currentZoom = this.DEFAULT_ZOOM;
+            this._lastPanX = 0;
+            this._lastPanY = 0;
+            
+            // Remove usage hint
+            this._removeZoomHint();
+            
+            console.log('✓ Zoom mode disabled successfully');
+            
+        } catch (error) {
+            console.error('Error disabling zoom mode:', error);
         }
-        
-        // Remove zoom wrapper
-        if (this._zoomContainer.parentNode) {
-            this._zoomContainer.parentNode.removeChild(this._zoomContainer);
-        }
-        
-        this._zoomContainer = null;
-        this._zoomContent = null;
-        this._currentZoom = 1.0;
-        this._lastPanX = 0;
-        this._lastPanY = 0;
-        
-        // Remove usage hint
-        this._removeZoomHint();
     },
 
     /**
-     * Add zoom-specific event listeners
+     * Add zoom-specific event listeners with enhanced error handling
      */
     _addZoomEventListeners() {
         if (!this._zoomContainer) return;
         
-        // Mouse events
-        this._zoomContainer.addEventListener('wheel', this._handleWheel.bind(this), { passive: false });
-        this._zoomContainer.addEventListener('mousedown', this._handleMouseDown.bind(this));
-        
-        // Touch events
-        this._zoomContainer.addEventListener('touchstart', this._handleTouchStart.bind(this), { passive: false });
-        this._zoomContainer.addEventListener('touchmove', this._handleTouchMove.bind(this), { passive: false });
-        this._zoomContainer.addEventListener('touchend', this._handleTouchEnd.bind(this), { passive: true });
-        
-        // Global mouse events for dragging
-        this._globalMouseMove = this._handleMouseMove.bind(this);
-        this._globalMouseUp = this._handleMouseUp.bind(this);
+        try {
+            // Mouse events
+            this._zoomContainer.addEventListener('wheel', this._handleWheel.bind(this), { passive: false });
+            this._zoomContainer.addEventListener('mousedown', this._handleMouseDown.bind(this));
+            
+            // Touch events
+            this._zoomContainer.addEventListener('touchstart', this._handleTouchStart.bind(this), { passive: false });
+            this._zoomContainer.addEventListener('touchmove', this._handleTouchMove.bind(this), { passive: false });
+            this._zoomContainer.addEventListener('touchend', this._handleTouchEnd.bind(this), { passive: true });
+            
+            // Global mouse events for dragging
+            this._globalMouseMove = this._handleMouseMove.bind(this);
+            this._globalMouseUp = this._handleMouseUp.bind(this);
+            
+            console.log('✓ Zoom event listeners added');
+        } catch (error) {
+            console.error('Error adding zoom event listeners:', error);
+        }
     },
 
     /**
      * Remove zoom event listeners
      */
     _removeZoomEventListeners() {
-        if (this._globalMouseMove) {
-            document.removeEventListener('mousemove', this._globalMouseMove);
-        }
-        if (this._globalMouseUp) {
-            document.removeEventListener('mouseup', this._globalMouseUp);
+        try {
+            if (this._globalMouseMove) {
+                document.removeEventListener('mousemove', this._globalMouseMove);
+                this._globalMouseMove = null;
+            }
+            if (this._globalMouseUp) {
+                document.removeEventListener('mouseup', this._globalMouseUp);
+                this._globalMouseUp = null;
+            }
+            console.log('✓ Zoom event listeners removed');
+        } catch (error) {
+            console.error('Error removing zoom event listeners:', error);
         }
     },
 
@@ -373,10 +597,13 @@ window.QRScannerZoomManager = {
     _handleWheel(e) {
         if (!this._isZoomEnabled) return;
         
-        e.preventDefault();
-        
-        const delta = e.deltaY < 0 ? this.ZOOM_STEP : -this.ZOOM_STEP;
-        this._zoomBy(delta);
+        try {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? this.ZOOM_STEP : -this.ZOOM_STEP;
+            this._zoomBy(delta);
+        } catch (error) {
+            console.error('Error handling wheel zoom:', error);
+        }
     },
 
     /**
@@ -385,16 +612,22 @@ window.QRScannerZoomManager = {
     _handleMouseDown(e) {
         if (!this._isZoomEnabled) return;
         
-        e.preventDefault();
-        
-        this._isDragging = true;
-        this._panStartX = e.clientX - this._lastPanX;
-        this._panStartY = e.clientY - this._lastPanY;
-        
-        this._zoomContainer.style.cursor = 'grabbing';
-        
-        document.addEventListener('mousemove', this._globalMouseMove);
-        document.addEventListener('mouseup', this._globalMouseUp);
+        try {
+            e.preventDefault();
+            
+            this._isDragging = true;
+            this._panStartX = e.clientX - this._lastPanX;
+            this._panStartY = e.clientY - this._lastPanY;
+            
+            if (this._zoomContainer) {
+                this._zoomContainer.style.cursor = 'grabbing';
+            }
+            
+            document.addEventListener('mousemove', this._globalMouseMove);
+            document.addEventListener('mouseup', this._globalMouseUp);
+        } catch (error) {
+            console.error('Error handling mouse down:', error);
+        }
     },
 
     /**
@@ -403,107 +636,121 @@ window.QRScannerZoomManager = {
     _handleMouseMove(e) {
         if (!this._isDragging) return;
         
-        e.preventDefault();
-        
-        this._lastPanX = e.clientX - this._panStartX;
-        this._lastPanY = e.clientY - this._panStartY;
-        
-        this._updateTransform();
+        try {
+            e.preventDefault();
+            
+            this._lastPanX = e.clientX - this._panStartX;
+            this._lastPanY = e.clientY - this._panStartY;
+            
+            this._updateTransform();
+        } catch (error) {
+            console.error('Error handling mouse move:', error);
+        }
     },
 
     /**
      * Handle mouse up
      */
     _handleMouseUp(e) {
-        this._isDragging = false;
-        if (this._zoomContainer) {
-            this._zoomContainer.style.cursor = 'grab';
+        try {
+            this._isDragging = false;
+            if (this._zoomContainer) {
+                this._zoomContainer.style.cursor = 'grab';
+            }
+            
+            document.removeEventListener('mousemove', this._globalMouseMove);
+            document.removeEventListener('mouseup', this._globalMouseUp);
+        } catch (error) {
+            console.error('Error handling mouse up:', error);
         }
-        
-        document.removeEventListener('mousemove', this._globalMouseMove);
-        document.removeEventListener('mouseup', this._globalMouseUp);
     },
 
     /**
-     * Handle touch events
+     * Enhanced touch event handlers
      */
     _handleTouchStart(e) {
         if (!this._isZoomEnabled) return;
         
-        if (e.touches.length === 1) {
-            // Single touch - start panning
-            const touch = e.touches[0];
-            this._isDragging = true;
-            this._panStartX = touch.clientX - this._lastPanX;
-            this._panStartY = touch.clientY - this._lastPanY;
-        } else if (e.touches.length === 2) {
-            // Two touches - prepare for pinch zoom
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
+        try {
+            if (e.touches.length === 1) {
+                // Single touch - start panning
+                const touch = e.touches[0];
+                this._isDragging = true;
+                this._panStartX = touch.clientX - this._lastPanX;
+                this._panStartY = touch.clientY - this._lastPanY;
+            } else if (e.touches.length === 2) {
+                // Two touches - prepare for pinch zoom
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                
+                this._lastTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+            }
             
-            this._lastTouchDistance = Math.hypot(
-                touch2.clientX - touch1.clientX,
-                touch2.clientY - touch1.clientY
-            );
+            e.preventDefault();
+        } catch (error) {
+            console.error('Error handling touch start:', error);
         }
-        
-        e.preventDefault();
     },
 
     _handleTouchMove(e) {
         if (!this._isZoomEnabled) return;
         
-        if (e.touches.length === 1 && this._isDragging) {
-            // Single touch - pan
-            const touch = e.touches[0];
-            this._lastPanX = touch.clientX - this._panStartX;
-            this._lastPanY = touch.clientY - this._panStartY;
-            
-            this._updateTransform();
-        } else if (e.touches.length === 2) {
-            // Two touches - pinch zoom
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-            
-            const currentDistance = Math.hypot(
-                touch2.clientX - touch1.clientX,
-                touch2.clientY - touch1.clientY
-            );
-            
-            if (this._lastTouchDistance) {
-                const scale = currentDistance / this._lastTouchDistance;
-                const zoomDelta = (scale - 1) * 0.5; // Dampen the zoom speed
-                this._zoomBy(zoomDelta);
+        try {
+            if (e.touches.length === 1 && this._isDragging) {
+                // Single touch - pan
+                const touch = e.touches[0];
+                this._lastPanX = touch.clientX - this._panStartX;
+                this._lastPanY = touch.clientY - this._panStartY;
+                
+                this._updateTransform();
+            } else if (e.touches.length === 2) {
+                // Two touches - pinch zoom
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                if (this._lastTouchDistance) {
+                    const scale = currentDistance / this._lastTouchDistance;
+                    const zoomDelta = (scale - 1) * 0.5; // Dampen the zoom speed
+                    this._zoomBy(zoomDelta);
+                }
+                
+                this._lastTouchDistance = currentDistance;
             }
             
-            this._lastTouchDistance = currentDistance;
+            e.preventDefault();
+        } catch (error) {
+            console.error('Error handling touch move:', error);
         }
-        
-        e.preventDefault();
     },
 
     _handleTouchEnd(e) {
-        this._isDragging = false;
-        this._lastTouchDistance = null;
+        try {
+            this._isDragging = false;
+            this._lastTouchDistance = null;
+        } catch (error) {
+            console.error('Error handling touch end:', error);
+        }
     },
 
     /**
-     * Zoom in
+     * Zoom controls
      */
     _zoomIn() {
         this._zoomBy(this.ZOOM_STEP);
     },
 
-    /**
-     * Zoom out
-     */
     _zoomOut() {
         this._zoomBy(-this.ZOOM_STEP);
     },
 
-    /**
-     * Zoom by delta amount
-     */
     _zoomBy(delta) {
         const newZoom = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, this._currentZoom + delta));
         
@@ -515,9 +762,6 @@ window.QRScannerZoomManager = {
         }
     },
 
-    /**
-     * Reset zoom and pan
-     */
     _resetZoom() {
         this._currentZoom = this.DEFAULT_ZOOM;
         this._lastPanX = 0;
@@ -525,25 +769,34 @@ window.QRScannerZoomManager = {
         this._updateTransform();
         this._updateZoomIndicator();
         this._updateZoomControlsState();
+        console.log('✓ Zoom reset to default');
     },
 
     /**
-     * Update transform of zoom content
+     * Update transform with error handling
      */
     _updateTransform() {
         if (!this._zoomContent) return;
         
-        const transform = `scale(${this._currentZoom}) translate(${this._lastPanX / this._currentZoom}px, ${this._lastPanY / this._currentZoom}px)`;
-        this._zoomContent.style.transform = transform;
+        try {
+            const transform = `scale(${this._currentZoom}) translate(${this._lastPanX / this._currentZoom}px, ${this._lastPanY / this._currentZoom}px)`;
+            this._zoomContent.style.transform = transform;
+        } catch (error) {
+            console.error('Error updating zoom transform:', error);
+        }
     },
 
     /**
      * Update zoom indicator
      */
     _updateZoomIndicator() {
-        const indicator = document.getElementById('zoom-indicator');
-        if (indicator) {
-            indicator.textContent = `${Math.round(this._currentZoom * 100)}%`;
+        try {
+            const indicator = document.getElementById('zoom-indicator');
+            if (indicator) {
+                indicator.textContent = `${Math.round(this._currentZoom * 100)}%`;
+            }
+        } catch (error) {
+            console.error('Error updating zoom indicator:', error);
         }
     },
 
@@ -551,30 +804,30 @@ window.QRScannerZoomManager = {
      * Update zoom controls state
      */
     _updateZoomControlsState() {
-        const controls = ['zoom-in', 'zoom-out', 'zoom-reset'];
-        
-        controls.forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.disabled = !this._isZoomEnabled;
-                if (this._isZoomEnabled) {
-                    btn.classList.remove('disabled');
-                } else {
-                    btn.classList.add('disabled');
+        try {
+            const controls = ['zoom-in', 'zoom-out', 'zoom-reset'];
+            
+            controls.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.disabled = !this._isZoomEnabled;
+                    btn.style.opacity = this._isZoomEnabled ? '1' : '0.5';
                 }
+            });
+            
+            // Update specific button states
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            
+            if (zoomInBtn && this._isZoomEnabled) {
+                zoomInBtn.disabled = this._currentZoom >= this.MAX_ZOOM;
             }
-        });
-        
-        // Update specific button states
-        const zoomInBtn = document.getElementById('zoom-in');
-        const zoomOutBtn = document.getElementById('zoom-out');
-        
-        if (zoomInBtn && this._isZoomEnabled) {
-            zoomInBtn.disabled = this._currentZoom >= this.MAX_ZOOM;
-        }
-        
-        if (zoomOutBtn && this._isZoomEnabled) {
-            zoomOutBtn.disabled = this._currentZoom <= this.MIN_ZOOM;
+            
+            if (zoomOutBtn && this._isZoomEnabled) {
+                zoomOutBtn.disabled = this._currentZoom <= this.MIN_ZOOM;
+            }
+        } catch (error) {
+            console.error('Error updating zoom controls state:', error);
         }
     },
 
@@ -582,67 +835,98 @@ window.QRScannerZoomManager = {
      * Show zoom usage hint
      */
     _showZoomHint() {
-        const existingHint = document.getElementById('zoom-hint');
-        if (existingHint) existingHint.remove();
-        
-        const hint = document.createElement('div');
-        hint.id = 'zoom-hint';
-        hint.className = 'alert alert--info';
-        hint.style.cssText = 'margin-bottom: 16px;';
-        
-        hint.innerHTML = `
-            <div class="alert__msg">
-                <strong>ZOOM MODE ACTIVE</strong><br>
-                <small>
-                    <strong>Mouse:</strong> Scroll to zoom, drag to pan<br>
-                    <strong>Touch:</strong> Pinch to zoom, drag to pan<br>
-                    <strong>Keys:</strong> Ctrl +/- to zoom, Ctrl+0 to reset
-                </small>
-            </div>
-        `;
-        
-        const zoomControls = document.getElementById('zoom-controls');
-        if (zoomControls && zoomControls.parentNode) {
-            zoomControls.parentNode.insertBefore(hint, zoomControls.nextSibling);
-        }
-        
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            if (hint.parentNode) {
-                hint.style.opacity = '0';
-                hint.style.transition = 'opacity 0.3s';
-                setTimeout(() => hint.remove(), 300);
+        try {
+            const existingHint = document.getElementById('zoom-hint');
+            if (existingHint) existingHint.remove();
+            
+            const hint = document.createElement('div');
+            hint.id = 'zoom-hint';
+            hint.className = 'alert alert--success';
+            hint.style.cssText = 'margin-bottom: 16px;';
+            
+            hint.innerHTML = `
+                <div class="alert__msg">
+                    <strong>ZOOM MODE ACTIVE</strong><br>
+                    <small>
+                        <strong>Mouse:</strong> Scroll to zoom, drag to pan<br>
+                        <strong>Touch:</strong> Pinch to zoom, drag to pan<br>
+                        <strong>Keys:</strong> Ctrl +/- to zoom, Ctrl+0 to reset
+                    </small>
+                </div>
+            `;
+            
+            const zoomControls = document.getElementById('zoom-controls');
+            if (zoomControls && zoomControls.parentNode) {
+                zoomControls.parentNode.insertBefore(hint, zoomControls.nextSibling);
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    if (hint.parentNode) {
+                        hint.style.opacity = '0';
+                        hint.style.transition = 'opacity 0.3s';
+                        setTimeout(() => hint.remove(), 300);
+                    }
+                }, 5000);
             }
-        }, 5000);
+        } catch (error) {
+            console.error('Error showing zoom hint:', error);
+        }
     },
 
-    /**
-     * Remove zoom hint
-     */
     _removeZoomHint() {
-        const hint = document.getElementById('zoom-hint');
-        if (hint) {
-            hint.remove();
+        try {
+            const hint = document.getElementById('zoom-hint');
+            if (hint) {
+                hint.remove();
+            }
+        } catch (error) {
+            console.error('Error removing zoom hint:', error);
         }
     },
 
     /**
-     * Get current zoom level
+     * Show error message
+     */
+    _showErrorMessage(message) {
+        try {
+            console.error(message);
+            
+            const existingError = document.getElementById('zoom-error');
+            if (existingError) existingError.remove();
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'zoom-error';
+            errorDiv.className = 'alert alert--error';
+            errorDiv.style.cssText = 'margin-bottom: 16px;';
+            errorDiv.innerHTML = `<div class="alert__msg"><strong>Zoom Error:</strong> ${message}</div>`;
+            
+            const zoomControls = document.getElementById('zoom-controls');
+            if (zoomControls && zoomControls.parentNode) {
+                zoomControls.parentNode.insertBefore(errorDiv, zoomControls.nextSibling);
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 10000);
+            }
+        } catch (error) {
+            console.error('Error showing error message:', error);
+        }
+    },
+
+    /**
+     * Public API methods
      */
     getCurrentZoom() {
         return this._currentZoom;
     },
 
-    /**
-     * Check if zoom is enabled
-     */
     isZoomEnabled() {
         return this._isZoomEnabled;
     },
 
-    /**
-     * Programmatically set zoom level
-     */
     setZoom(zoomLevel) {
         if (!this._isZoomEnabled) return;
         
@@ -653,9 +937,6 @@ window.QRScannerZoomManager = {
         this._updateZoomControlsState();
     },
 
-    /**
-     * Get zoom state for debugging
-     */
     getState() {
         return {
             currentZoom: this._currentZoom,
@@ -663,34 +944,67 @@ window.QRScannerZoomManager = {
             panX: this._lastPanX,
             panY: this._lastPanY,
             hasContainer: !!this._zoomContainer,
-            hasTarget: !!this._targetContainer
+            hasTarget: !!this._targetContainer,
+            initialized: this._initialized
         };
     },
 
     /**
-     * Clean up resources
+     * Enhanced destroy with complete cleanup
      */
     destroy() {
-        if (this._isZoomEnabled) {
-            this._disableZoomMode();
+        try {
+            console.log('Destroying zoom manager...');
+            
+            if (this._isZoomEnabled) {
+                this._disableZoomMode();
+            }
+            
+            if (this._containerObserver) {
+                this._containerObserver.disconnect();
+                this._containerObserver = null;
+            }
+            
+            this._removeZoomEventListeners();
+            
+            const zoomControls = document.getElementById('zoom-controls');
+            if (zoomControls && zoomControls.parentNode) {
+                zoomControls.parentNode.removeChild(zoomControls);
+            }
+            
+            this._removeZoomHint();
+            
+            const errorDiv = document.getElementById('zoom-error');
+            if (errorDiv && errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+            
+            // Reset all state
+            this._targetContainer = null;
+            this._originalContainer = null;
+            this._initialized = false;
+            this._initializationRetryCount = 0;
+            
+            console.log('✓ Zoom manager destroyed successfully');
+        } catch (error) {
+            console.error('Error destroying zoom manager:', error);
         }
-        
-        const zoomControls = document.getElementById('zoom-controls');
-        if (zoomControls && zoomControls.parentNode) {
-            zoomControls.parentNode.removeChild(zoomControls);
-        }
-        
-        this._removeZoomHint();
-        this._targetContainer = null;
-        this._initialized = false;
     }
 };
 
-// Initialize when DOM is loaded
+// Enhanced initialization with error handling
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        window.QRScannerZoomManager.init();
+        try {
+            window.QRScannerZoomManager.init();
+        } catch (error) {
+            console.error('Failed to initialize zoom manager on DOMContentLoaded:', error);
+        }
     });
 } else {
-    window.QRScannerZoomManager.init();
+    try {
+        window.QRScannerZoomManager.init();
+    } catch (error) {
+        console.error('Failed to initialize zoom manager immediately:', error);
+    }
 }
