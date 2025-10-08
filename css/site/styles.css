@@ -5,7 +5,7 @@
    Base: 13px; Geist + Geist Mono; no gradients; minimal shadows; square corners.
    Pages covered: index.html, contact.html, digikey.html, qrcode.html (scanner).
    CRITICAL FIXES: Mobile responsiveness, table overflow, serial number display
-   ENHANCED: Added flash effects for scan feedback
+   ENHANCED: Added flash effects for scan feedback & horizontal scanning line
    ========================================================================== */
 
 :root {
@@ -587,6 +587,56 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   animation: flashError 0.6s ease-in-out;
 }
 
+/* CRITICAL ENHANCEMENT: Horizontal Scanning Line */
+.scanning-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(34, 197, 94, 0.8) 20%, 
+    rgba(34, 197, 94, 1) 50%, 
+    rgba(34, 197, 94, 0.8) 80%, 
+    transparent 100%
+  );
+  transform: translateY(-50%);
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
+}
+
+/* CRITICAL ENHANCEMENT: Animated Scanning Line */
+@keyframes scanLine {
+  0% {
+    transform: translateY(-50%) translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) translateX(100%);
+    opacity: 0;
+  }
+}
+
+.scanning-line.active {
+  opacity: 1;
+  animation: scanLine 2s ease-in-out infinite;
+}
+
+/* Alternative static scanning line (always visible when active) */
+.scanning-line.static {
+  opacity: 0.6;
+  animation: none;
+}
+
 /* CRITICAL FIX: Enhanced Serial Number Overlay */
 .serial-overlay {
   position: absolute;
@@ -1073,6 +1123,11 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   .camera-preview {
     min-height: 250px;
   }
+  
+  /* CRITICAL FIX: Mobile scanning line */
+  .scanning-line {
+    height: 1px; /* Thinner line on mobile */
+  }
 }
 
 @media (max-width: 479.98px) {
@@ -1160,7 +1215,7 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
 .space-x-32 > * + *{margin-left:32px}
 
 /* Order utilities */
-.order-1{order:1}.order-2{order:2}.order-3{order:3}.order-4{order:4}.order-5{order:5}.order-6{order:6}.order-7{order:7}.order-8{order:8}.order-9{order:9}.order-10{order:10}.order-11{order:11}.order-12{order:12}
+.order-1{order:1}.order-2{order:2}.order-3{order:3}.order-4{order:4}.order-5{order:5}.order-6{order:6}.order-7{order:7}.order-8{order:8}.order-9{order:9}.order-10{order:10}.order-11{order:order:11}.order-12{order:12}
 
 /* Additional responsive grid utilities */
 @media(min-width:640px){
