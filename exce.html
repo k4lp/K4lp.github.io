@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="css/site/styles.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Excel API Processor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <div class="nav__item">
+                <a href="index.html" class="back-link">Back to Tools</a>
+            </div>
+        </nav>
+        
+        <header class="page-header">
+            <div>
+                <h1 class="page-header__title">Excel API Processor</h1>
+                <p class="lead">Enhanced Excel processing with Digikey and Mouser API integration</p>
+            </div>
+            <div class="page-header__meta">
+                <div class="meta">APIs: <span id="apiCount">0</span></div>
+                <div class="meta">Status: <span id="systemStatus">Ready</span></div>
+                <div id="processingStatus" class="meta text-warning" style="display: none;">🔄 Processing...</div>
+            </div>
+        </header>
+
+        <!-- Settings Panel -->
+        <section class="mb-48">
+            <div class="flex justify-between items-center mb-16">
+                <h2>Configuration</h2>
+                <button id="toggleSettings" class="button button--ghost">Expand Settings</button>
+            </div>
+            
+            <div id="settingsPanel" class="card" style="display: none;">
+                <div class="card__header">
+                    <h3 class="card__title">API Credentials</h3>
+                </div>
+                
+                <!-- Digikey Credentials -->
+                <div class="mb-32">
+                    <h4 class="mb-16">Digikey Configuration</h4>
+                    <div class="grid-12 gap-16 mb-16">
+                        <div class="col-span-6">
+                            <div class="form__group">
+                                <label class="label">Client ID</label>
+                                <input type="text" id="digikeyClientId" autocomplete="off" class="input">
+                            </div>
+                        </div>
+                        <div class="col-span-6">
+                            <div class="form__group">
+                                <label class="label">Client Secret</label>
+                                <input type="password" id="digikeyClientSecret" autocomplete="off" class="input">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid-12 gap-16 mb-16">
+                        <div class="col-span-4">
+                            <div class="form__group">
+                                <label class="label">Environment</label>
+                                <select id="digikeyEnvironment" class="select">
+                                    <option value="production">Production</option>
+                                    <option value="sandbox">Sandbox</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-span-4">
+                            <div class="form__group">
+                                <label class="label">Locale</label>
+                                <select id="digikeyLocale" class="select">
+                                    <option value="US/USD">US / USD</option>
+                                    <option value="CA/CAD">CA / CAD</option>
+                                    <option value="GB/GBP">GB / GBP</option>
+                                    <option value="DE/EUR">DE / EUR</option>
+                                    <option value="JP/JPY">JP / JPY</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-span-4">
+                            <div class="form__group">
+                                <label class="label">Status</label>
+                                <div class="status-indicator" id="digikeyStatus">
+                                    <div class="status-dot status-dot--inactive"></div>
+                                    <span>Inactive</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group mb-16">
+                        <button id="saveDigikeyCredentials" class="button button--primary">Save & Test</button>
+                        <button id="clearDigikeyCredentials" class="button button--ghost text-error">Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Mouser Credentials -->
+                <div class="mb-32">
+                    <h4 class="mb-16">Mouser Configuration</h4>
+                    <div class="grid-12 gap-16 mb-16">
+                        <div class="col-span-8">
+                            <div class="form__group">
+                                <label class="label">API Key</label>
+                                <input type="password" id="mouserApiKey" autocomplete="off" class="input">
+                            </div>
+                        </div>
+                        <div class="col-span-4">
+                            <div class="form__group">
+                                <label class="label">Status</label>
+                                <div class="status-indicator" id="mouserStatus">
+                                    <div class="status-dot status-dot--inactive"></div>
+                                    <span>Inactive</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group mb-16">
+                        <button id="saveMouserCredentials" class="button button--primary">Save & Test</button>
+                        <button id="clearMouserCredentials" class="button button--ghost text-error">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- File Upload -->
+        <section class="mb-48">
+            <h2 class="mb-16">File Upload</h2>
+            
+            <div class="form__group mb-16">
+                <label class="label">Excel File</label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" class="input">
+                <div class="form__help">Select an Excel file (.xlsx or .xls format)</div>
+            </div>
+            
+            <div id="fileInfo" class="card mb-16" style="display: none;">
+                <div class="kv-list">
+                    <div class="kv-item">
+                        <div class="kv-key">Filename</div>
+                        <div class="kv-value" id="fileName">-</div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Size</div>
+                        <div class="kv-value" id="fileSize">-</div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Sheets</div>
+                        <div class="kv-value" id="sheetCount">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="sheetSelection" class="form__group mb-16" style="display: none;">
+                <label class="label">Select Sheet</label>
+                <select id="sheetSelect" class="select">
+                    <option value="">Choose a sheet...</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Sheet Preview -->
+        <section id="previewSection" class="mb-48" style="display: none;">
+            <h2 class="mb-16">Sheet Preview</h2>
+            
+            <div class="table-container mb-16">
+                <div id="sheetPreview"></div>
+            </div>
+        </section>
+
+        <!-- Column Mapping -->
+        <section id="mappingSection" class="mb-48" style="display: none;">
+            <h2 class="mb-16">Column Mapping</h2>
+            
+            <div class="alert alert--info mb-16">
+                <div class="alert__msg">
+                    Select columns containing MPN, Manufacturer, and Quantity. Then add output columns for API data.
+                </div>
+            </div>
+            
+            <!-- Source Column Selection -->
+            <div class="card mb-24">
+                <div class="card__header">
+                    <h3 class="card__title">Source Columns</h3>
+                </div>
+                
+                <div class="grid-12 gap-16">
+                    <div class="col-span-4">
+                        <div class="form__group">
+                            <label class="label">MPN Column</label>
+                            <select id="mpnColumn" class="select">
+                                <option value="">Select column...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-span-4">
+                        <div class="form__group">
+                            <label class="label">Manufacturer Column</label>
+                            <select id="manufacturerColumn" class="select">
+                                <option value="">Select column...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-span-4">
+                        <div class="form__group">
+                            <label class="label">Quantity Column</label>
+                            <select id="quantityColumn" class="select">
+                                <option value="">Select column...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Output Column Configuration -->
+            <div class="card mb-24">
+                <div class="card__header">
+                    <h3 class="card__title">Output Columns</h3>
+                    <button id="addOutputColumn" class="button button--sm">Add Column</button>
+                </div>
+                
+                <div id="outputColumns" class="space-y-16">
+                    <!-- Output columns will be added dynamically -->
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="processData" class="button button--primary">Process Data</button>
+                <button id="clearMapping" class="button button--ghost">Clear Mapping</button>
+            </div>
+        </section>
+
+        <!-- Processing Progress -->
+        <section id="progressSection" class="mb-48" style="display: none;">
+            <h2 class="mb-16">Processing Progress</h2>
+            
+            <div class="card">
+                <div class="card__header">
+                    <h3 class="card__title">API Processing Status</h3>
+                </div>
+                
+                <div class="p-16">
+                    <div id="progressText" class="font-mono text-xs mb-8"></div>
+                    <div class="progress mb-16">
+                        <div id="progressBar" class="progress__bar"></div>
+                    </div>
+                    
+                    <div class="stats">
+                        <div class="text-center">
+                            <div class="stat__value" id="statProcessed">0</div>
+                            <div class="stat__label">Processed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statSuccess">0</div>
+                            <div class="stat__label">Success</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statError">0</div>
+                            <div class="stat__label">Error</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="stat__value" id="statRate">0/s</div>
+                            <div class="stat__label">Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Export Section -->
+        <section id="exportSection" class="mb-48" style="display: none;">
+            <h2 class="mb-16">Export Results</h2>
+            
+            <div class="alert alert--success mb-16">
+                <div class="alert__msg">
+                    Processing complete! Your original Excel file has been enhanced with API data.
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="exportExcel" class="button button--primary">Download Enhanced Excel</button>
+                <button id="resetProcessor" class="button button--ghost">Start Over</button>
+            </div>
+        </section>
+
+        <!-- Log Section -->
+        <section class="mb-48">
+            <h2 class="mb-16">Activity Log</h2>
+            <div id="activityLog" class="log">System initialized - Ready to process Excel files</div>
+        </section>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script src="js/exce/config.js"></script>
+    <script src="js/exce/utils.js"></script>
+    <script src="js/exce/credentials-manager.js"></script>
+    <script src="js/exce/excel-processor.js"></script>
+    <script src="js/exce/api-client.js"></script>
+    <script src="js/exce/export-handler.js"></script>
+    <script src="js/exce/main.js"></script>
+</body>
+</html>
