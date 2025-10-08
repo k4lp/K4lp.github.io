@@ -165,7 +165,6 @@
         </section>
     </div>
 
-    <!-- Keep the existing JavaScript as-is since it's working -->
     <script>
 (function() {
     'use strict';
@@ -380,12 +379,13 @@
             $('workerCount').textContent = this.active().length;
         }
     }
+    
     // NEW: helper to normalize HTSUS values
-    function cleanHTSUS(code) {                       // ADDED: New helper to format HTSUS
-        if (!code) return '';                         // ADDED: Guard for empty/undefined
-        const digits = String(code).replace(/\D/g, ''); // ADDED: Keep only numeric characters
-        return digits.slice(0, 8);                    // ADDED: Use only the first 8 digits
-    }    
+    function cleanHTSUS(code) {
+        if (!code) return '';
+        const digits = String(code).replace(/\D/g, '');
+        return digits.slice(0, 8);
+    }
 
     const cm = new CredentialManager();
     window.cm = cm; // Expose for onclick handlers
@@ -632,7 +632,7 @@
     }
 
     // Process single MPN with comprehensive error handling
-    async function processMPN(mpn, cred) {
+    async function processMPN(mpn, cred, originalIndex) {
         if (!mpn || !mpn.trim()) {
             return {
                 status: 'error',
@@ -646,7 +646,8 @@
                 datasheet: '',
                 aliases: '',
                 remarks: 'Empty MPN',
-                htsus: ''                             // ADDED: Include HTSUS field in error object
+                htsus: '',
+                originalIndex: originalIndex // FIXED: Add original index
             };
         }
 
@@ -672,14 +673,15 @@
                         mpn: cleanMpn,
                         description: p.Description?.ProductDescription || '',
                         detailed: p.Description?.DetailedDescription || '',
-                        category: p.Category?.Name || '',           // NOTE: kept original key as-is
+                        category: p.Category?.Name || '',
                         manufacturer: p.Manufacturer?.Name || '',
                         package: extractParam(p.Parameters, ['Package', 'Case']),
                         mounting: extractParam(p.Parameters, ['Mounting', 'Mounting Type']),
                         datasheet: extractDatasheet(p),
                         aliases: Array.isArray(p.OtherNames) ? p.OtherNames.join(', ') : '',
                         remarks: `Direct match via ${cred.label}`,
-                        htsus: cleanHTSUS(p.Classifications?.HtsusCode) // ADDED: Capture and normalize HTSUS
+                        htsus: cleanHTSUS(p.Classifications?.HtsusCode),
+                        originalIndex: originalIndex // FIXED: Add original index
                     };
                 }
             } catch (e) {
@@ -735,7 +737,8 @@
                     datasheet: extractDatasheet(match),
                     aliases: Array.isArray(match.OtherNames) ? match.OtherNames.join(', ') : '',
                     remarks: `${matchType} match via ${cred.label}`,
-                    htsus: cleanHTSUS(match.Classifications?.HtsusCode) // ADDED: Capture and normalize HTSUS
+                    htsus: cleanHTSUS(match.Classifications?.HtsusCode),
+                    originalIndex: originalIndex // FIXED: Add original index
                 };
             }
 
@@ -751,7 +754,8 @@
                 datasheet: '',
                 aliases: '',
                 remarks: `Not found (searched ${products.length} results) via ${cred.label}`,
-                htsus: ''                             // ADDED: Include HTSUS field in not-found object
+                htsus: '',
+                originalIndex: originalIndex // FIXED: Add original index
             };
 
         } catch (e) {
@@ -770,22 +774,21 @@
                 datasheet: '',
                 aliases: '',
                 remarks: `Error: ${errorMsg}`,
-                htsus: ''                             // ADDED: Include HTSUS field in catch error object
+                htsus: '',
+                originalIndex: originalIndex // FIXED: Add original index
             };
         }
     }
 
-
-
-
-    // Parallel processor with queue management
+    // FIXED: Parallel processor with order preservation
     class ParallelProcessor {
         constructor(mpns, creds, concurrency) {
-            this.mpns = [...mpns];
+            this.originalMpns = [...mpns]; // FIXED: Keep original order reference
+            this.mpnWithIndex = mpns.map((mpn, index) => ({ mpn, index })); // FIXED: Add index tracking
             this.creds = creds;
             this.concurrency = concurrency;
-            this.queue = [...mpns];
-            this.results = [];
+            this.queue = [...this.mpnWithIndex]; // FIXED: Use indexed items
+            this.results = new Array(mpns.length); // FIXED: Pre-allocate results array
             this.processing = new Set();
             this.failed = new Set();
         }
@@ -803,28 +806,28 @@
             }
             
             await Promise.all(workers);
-            return this.results;
+            return this.results.filter(r => r != null); // FIXED: Filter out null slots
         }
 
         async worker(cred, onProgress) {
             while (true) {
-                const mpn = this.getNext();
-                if (!mpn) break;
+                const item = this.getNext();
+                if (!item) break;
 
                 await sleep(CONFIG.MIN_DELAY);
 
                 try {
-                    const result = await processMPN(mpn, cred);
-                    this.results.push(result);
+                    const result = await processMPN(item.mpn, cred, item.index); // FIXED: Pass original index
+                    this.results[item.index] = result; // FIXED: Store in original position
                     if (onProgress) onProgress(result);
                 } catch (e) {
-                    log(`Worker error for ${mpn}: ${e.message}`, 'error');
-                    this.failed.add(mpn);
+                    log(`Worker error for ${item.mpn}: ${e.message}`, 'error');
+                    this.failed.add(item.mpn);
                     
                     // Return error result
                     const errorResult = {
                         status: 'error',
-                        mpn: mpn,
+                        mpn: item.mpn,
                         description: '',
                         detailed: '',
                         category: '',
@@ -833,22 +836,24 @@
                         mounting: '',
                         datasheet: '',
                         aliases: '',
-                        remarks: `Worker error: ${e.message}`
+                        remarks: `Worker error: ${e.message}`,
+                        htsus: '',
+                        originalIndex: item.index // FIXED: Add original index
                     };
-                    this.results.push(errorResult);
+                    this.results[item.index] = errorResult; // FIXED: Store in original position
                     if (onProgress) onProgress(errorResult);
                 } finally {
-                    this.processing.delete(mpn);
+                    this.processing.delete(item.mpn);
                 }
             }
         }
 
         getNext() {
             while (this.queue.length > 0) {
-                const mpn = this.queue.shift();
-                if (!this.processing.has(mpn) && !this.failed.has(mpn)) {
-                    this.processing.add(mpn);
-                    return mpn;
+                const item = this.queue.shift();
+                if (!this.processing.has(item.mpn) && !this.failed.has(item.mpn)) {
+                    this.processing.add(item.mpn);
+                    return item;
                 }
             }
             return null;
@@ -914,10 +919,10 @@
             log(`Starting batch process: ${mpns.length} MPN(s) with ${active.length} credential(s), concurrency: ${concurrency}`, 'success');
 
             const processor = new ParallelProcessor(mpns, active, concurrency);
+            const orderedResults = new Array(mpns.length); // FIXED: Pre-allocate ordered results
 
             const onProgress = (result) => {
-                state.results.push(result);
-                addResult(result);
+                orderedResults[result.originalIndex] = result; // FIXED: Store in original order
                 
                 state.stats.processed++;
                 if (result.status === 'success') state.stats.success++;
@@ -928,6 +933,12 @@
             };
 
             await processor.process(onProgress);
+            
+            // FIXED: Store results in their original order
+            state.results = orderedResults.filter(r => r != null);
+            
+            // FIXED: Display results in original order
+            displayOrderedResults();
             
             const elapsed = ((Date.now() - state.stats.startTime) / 1000).toFixed(1);
             log(`✓ Batch complete: ${mpns.length} processed in ${elapsed}s (${state.stats.success} success, ${state.stats.warning} warning, ${state.stats.error} error)`, 'success');
@@ -974,64 +985,65 @@
         return div.innerHTML;
     }
 
-    function addResult(r) {
+    // FIXED: Display results in original order
+    function displayOrderedResults() {
         let table = $('resultsTable');
         
-        if (!table.querySelector('table')) {
-            table.innerHTML = `
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th>Status</th>
-                            <th>MPN</th>
-                            <th>Description</th>
-                            <th>Detailed</th>
-                            <th>Category</th>
-                            <th>Manufacturer</th>
-                            <th>Package</th>
-                            <th>Mounting</th>
-                            <th>Datasheet</th>
-                            <th>Aliases</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody"></tbody>
-                </table>
-            `;
-            // ADDED: Append HTSUS header as the last column
-            const headerRow = table.querySelector('thead tr');        // ADDED
-            const th = document.createElement('th');                  // ADDED
-            th.textContent = 'HTSUS';                                 // ADDED
-            headerRow.appendChild(th);                                // ADDED
-
-            table.classList.remove('hidden');
-        }
-
-        const tbody = $('tbody');
-        const row = tbody.insertRow();
-        
-        const datasheetCell = r.datasheet 
-            ? `<a href="${escapeHtml(r.datasheet)}" target="_blank" rel="noopener" class="link">View</a>`
-            : '';
-        
-        const statusClass = r.status === 'success' ? 'success' : r.status === 'warning' ? 'warning' : 'error';
-        const htsus = cleanHTSUS(r.htsus || '');                      // ADDED: Ensure HTSUS is 8 digits numeric only
-        
-        row.innerHTML = `
-            <td class="status ${statusClass}">${escapeHtml(r.status)}</td>
-            <td class="mono">${escapeHtml(r.mpn)}</td>
-            <td>${escapeHtml(r.description)}</td>
-            <td>${escapeHtml(r.detailed)}</td>
-            <td>${escapeHtml(r.category)}</td>
-            <td>${escapeHtml(r.manufacturer)}</td>
-            <td>${escapeHtml(r.package)}</td>
-            <td>${escapeHtml(r.mounting)}</td>
-            <td>${datasheetCell}</td>
-            <td class="mono">${escapeHtml(r.aliases)}</td>
-            <td>${escapeHtml(r.remarks)}</td>
-            <td class="mono">${escapeHtml(htsus)}</td>
+        // Clear existing table
+        table.innerHTML = `
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>MPN</th>
+                        <th>Description</th>
+                        <th>Detailed</th>
+                        <th>Category</th>
+                        <th>Manufacturer</th>
+                        <th>Package</th>
+                        <th>Mounting</th>
+                        <th>Datasheet</th>
+                        <th>Aliases</th>
+                        <th>Remarks</th>
+                        <th>HTSUS</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+            </table>
         `;
+        
+        table.classList.remove('hidden');
+        const tbody = $('tbody');
+        
+        // FIXED: Add all results in their original order
+        state.results.forEach(r => {
+            const row = tbody.insertRow();
+            
+            const datasheetCell = r.datasheet 
+                ? `<a href="${escapeHtml(r.datasheet)}" target="_blank" rel="noopener" class="link">View</a>`
+                : '';
+            
+            const statusClass = r.status === 'success' ? 'success' : r.status === 'warning' ? 'warning' : 'error';
+            const htsus = cleanHTSUS(r.htsus || '');
+            
+            row.innerHTML = `
+                <td class="status ${statusClass}">${escapeHtml(r.status)}</td>
+                <td class="mono">${escapeHtml(r.mpn)}</td>
+                <td>${escapeHtml(r.description)}</td>
+                <td>${escapeHtml(r.detailed)}</td>
+                <td>${escapeHtml(r.category)}</td>
+                <td>${escapeHtml(r.manufacturer)}</td>
+                <td>${escapeHtml(r.package)}</td>
+                <td>${escapeHtml(r.mounting)}</td>
+                <td>${datasheetCell}</td>
+                <td class="mono">${escapeHtml(r.aliases)}</td>
+                <td>${escapeHtml(r.remarks)}</td>
+                <td class="mono">${escapeHtml(htsus)}</td>
+            `;
+        });
     }
+
+    // REMOVED: addResult function - no longer needed as we display all at once in order
 
     function clearResults() {
         if (state.results.length === 0) {
@@ -1059,6 +1071,7 @@
             const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Datasheet', 'Aliases', 'Remarks','HTSUS'];
             const escape = str => `"${String(str).replace(/"/g, '""')}"`;
             
+            // FIXED: Export results in their original order (state.results is already ordered)
             const rows = state.results.map(r => [
                 escape(r.status),
                 escape(r.mpn),
