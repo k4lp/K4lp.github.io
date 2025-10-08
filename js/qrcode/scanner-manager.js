@@ -257,6 +257,12 @@ window.QRScannerManager = {
                 this._onScanError.bind(this)
             );
 
+            const videoTrack = this._html5QrCode._localMediaStream?.getVideoTracks?.()[0];
+            if (videoTrack) {
+                const settings = videoTrack.getSettings();
+                console.log("📸 Active camera settings:", settings);
+            }
+
             this._isScanning = true;
             this._scanStartTime = Date.now();
 
