@@ -239,16 +239,16 @@ window.QRScannerManager = {
 
             const config = {
                 fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
-                },
+                qrbox: { width: 250, height: 250 },
                 aspectRatio: 1.0,
                 disableFlip: false,
                 videoConstraints: {
-                    facingMode: "environment"
+                    facingMode: "environment",
+                    width: { ideal: 3840, max: 3840 },  // request up to 4K
+                    height: { ideal: 2160, max: 2160 }  // request up to 4K
                 }
             };
+
 
             await this._html5QrCode.start(
                 this._currentCameraId,
