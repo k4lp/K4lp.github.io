@@ -1,14 +1,13 @@
 /**
  * QR Code Component Scanner - Scanner Manager
- * Alica Technologies - Enhanced Version
+ * Alica Technologies - Enhanced Version with Fixed Color Feedback
  * 
- * FIXES:
- * - Improved current match display with better debugging
+ * CRITICAL FIXES:
+ * - Fixed color flashing logic (was always green, now shows proper success/error colors)
+ * - Enhanced scan overlay visual feedback with proper color coding
+ * - Improved current match display with better error handling
  * - Fixed scan delay configuration
- * - Enhanced error handling
- * - Better match result formatting
- * - ADDED: Serial number overlay in camera viewpoint
- * - ADDED: Speech synthesis for successful matches
+ * - Added proper visual feedback for matches vs no-matches
  */
 
 window.QRScannerManager = {
@@ -314,8 +313,6 @@ window.QRScannerManager = {
         console.log('Scan successful:', decodedText);
 
         this._processScanResult(decodedText, decodedResult);
-
-        this._provideScanFeedback(true);
     },
 
     /**
@@ -336,10 +333,13 @@ window.QRScannerManager = {
             window.QRScannerDataManager.processScannedValue(scannedValue, scanResult) :
             { success: false, scannedValue: scannedValue, reason: 'Data manager not available' };
 
+        // CRITICAL FIX: Provide proper visual feedback based on match result
+        this._provideScanFeedback(matchResult.success);
+        
         this._updateCurrentMatchDisplay(matchResult);
         this._updateSerialOverlay(matchResult);
         
-        // CRITICAL FIX: Add speech synthesis for successful matches
+        // Speech synthesis for successful matches
         if (matchResult.success && matchResult.serialNo) {
             this._speak(`Serial number ${matchResult.serialNo}`);
         } else if (matchResult.success) {
@@ -350,7 +350,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * Update serial number overlay in camera viewpoint
+     * CRITICAL FIX: Update serial number overlay with proper color coding
      */
     _updateSerialOverlay(matchResult) {
         const overlay = document.getElementById('serialOverlay');
@@ -363,30 +363,37 @@ window.QRScannerManager = {
             this._serialOverlayTimeout = null;
         }
 
-        if (matchResult.success && matchResult.serialNo) {
-            serialValue.textContent = matchResult.serialNo;
-            overlay.style.background = 'rgba(34, 197, 94, 0.9)';
+        // CRITICAL FIX: Proper condition checking and color assignment
+        if (matchResult.success) {
+            if (matchResult.serialNo && matchResult.serialNo.trim() !== '') {
+                // Success with serial number - GREEN
+                serialValue.textContent = matchResult.serialNo;
+                overlay.style.background = 'rgba(34, 197, 94, 0.9)'; // Green
+                overlay.style.color = '#ffffff';
+                console.log('🟢 Match found with serial number:', matchResult.serialNo);
+            } else {
+                // Success but no serial number - ORANGE/YELLOW
+                serialValue.textContent = 'MATCH - NO SERIAL';
+                overlay.style.background = 'rgba(245, 158, 11, 0.9)'; // Orange/Yellow
+                overlay.style.color = '#ffffff';
+                console.log('🟡 Match found but no serial number');
+            }
             overlay.classList.add('visible');
-
+            
             this._serialOverlayTimeout = setTimeout(() => {
                 this._hideSerialOverlay();
             }, 3000);
-        } else if (matchResult.success) {
-            serialValue.textContent = 'NO SERIAL NUMBER';
-            overlay.style.background = 'rgba(245, 158, 11, 0.9)';
+        } else {
+            // No match found - RED
+            serialValue.textContent = 'NO MATCH FOUND';
+            overlay.style.background = 'rgba(239, 68, 68, 0.9)'; // Red
+            overlay.style.color = '#ffffff';
             overlay.classList.add('visible');
+            console.log('🔴 No match found for:', matchResult.scannedValue);
 
             this._serialOverlayTimeout = setTimeout(() => {
                 this._hideSerialOverlay();
             }, 2000);
-        } else {
-            serialValue.textContent = 'NO MATCH FOUND';
-            overlay.style.background = 'rgba(239, 68, 68, 0.9)';
-            overlay.classList.add('visible');
-
-            this._serialOverlayTimeout = setTimeout(() => {
-                this._hideSerialOverlay();
-            }, 1500);
         }
     },
 
@@ -406,7 +413,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * Update current match display
+     * CRITICAL FIX: Enhanced current match display with proper error handling and preview
      */
     _updateCurrentMatchDisplay(matchResult) {
         const container = document.getElementById('currentMatch');
@@ -417,6 +424,7 @@ window.QRScannerManager = {
         if (matchResult.success) {
             container.className = 'scan-result success';
             
+            // CRITICAL FIX: Enhanced match display with better data presentation
             container.innerHTML = `
                 <h4 class="text-success mb-12">✓ MATCH FOUND</h4>
                 <div class="kv-list">
@@ -425,10 +433,14 @@ window.QRScannerManager = {
                         <div class="kv-value font-mono">${this._escapeHtml(matchResult.scannedValue)}</div>
                     </div>
                     <div class="kv-item">
+                        <div class="kv-key">Matched Column</div>
+                        <div class="kv-value font-mono text-success">${this._escapeHtml(matchResult.matchedValue || matchResult.scannedValue)}</div>
+                    </div>
+                    <div class="kv-item">
                         <div class="kv-key">Serial No.</div>
                         <div class="kv-value ${!matchResult.serialNo ? 'text-warning' : ''}">
                             ${this._escapeHtml(matchResult.serialNo || 'Not Available')}
-                            ${!matchResult.serialNo ? '<span class="text-xs block">Serial column not mapped or empty</span>' : ''}
+                            ${!matchResult.serialNo ? '<span class="text-xs block mt-2 text-warning">⚠ Serial column not mapped or empty</span>' : ''}
                         </div>
                     </div>
                     <div class="kv-item">
@@ -438,6 +450,14 @@ window.QRScannerManager = {
                     <div class="kv-item">
                         <div class="kv-key">Manufacturer</div>
                         <div class="kv-value">${this._escapeHtml(matchResult.manufacturer || 'N/A')}</div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Designators</div>
+                        <div class="kv-value font-mono">${this._escapeHtml(matchResult.designators || 'N/A')}</div>
+                    </div>
+                    <div class="kv-item">
+                        <div class="kv-key">Quantity</div>
+                        <div class="kv-value font-mono">${this._escapeHtml(matchResult.quantity || 'N/A')}</div>
                     </div>
                     <div class="kv-item">
                         <div class="kv-key">Excel Row</div>
@@ -538,11 +558,55 @@ window.QRScannerManager = {
     },
 
     /**
-     * Provide scan feedback
+     * CRITICAL FIX: Provide proper visual feedback with screen flash effects
      */
     _provideScanFeedback(success) {
-        // Basic feedback - could be enhanced with audio/vibration
         console.log('Scan feedback:', success ? 'success' : 'error');
+        
+        // CRITICAL FIX: Screen flash effect for visual feedback
+        const overlay = document.getElementById('scanOverlay');
+        if (overlay) {
+            // Remove any existing flash classes
+            overlay.classList.remove('flash-success', 'flash-error');
+            
+            // Add appropriate flash class
+            if (success) {
+                overlay.classList.add('flash-success');
+                console.log('🟢 Applied success flash');
+            } else {
+                overlay.classList.add('flash-error');
+                console.log('🔴 Applied error flash');
+            }
+            
+            // Remove flash after animation
+            setTimeout(() => {
+                overlay.classList.remove('flash-success', 'flash-error');
+            }, 600);
+        }
+        
+        // Audio feedback (optional)
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            if (success) {
+                oscillator.frequency.setValueAtTime(1000, audioContext.currentTime); // Higher pitch for success
+            } else {
+                oscillator.frequency.setValueAtTime(400, audioContext.currentTime);  // Lower pitch for error
+            }
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (audioError) {
+            // Audio feedback not critical, continue silently
+        }
     },
 
     /**
