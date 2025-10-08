@@ -5,7 +5,8 @@
    Base: 13px; Geist + Geist Mono; no gradients; minimal shadows; square corners.
    Pages covered: index.html, contact.html, digikey.html, qrcode.html (scanner).
    CRITICAL FIXES: Mobile responsiveness, table overflow, serial number display
-   ENHANCED: Added flash effects for scan feedback & horizontal scanning line
+   ENHANCED: Added flash effects for scan feedback & RED horizontal scanning line
+   BULLETPROOF: Enhanced scanning line visibility and guaranteed table display
    ========================================================================== */
 
 :root {
@@ -587,28 +588,35 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   animation: flashError 0.6s ease-in-out;
 }
 
-/* CRITICAL ENHANCEMENT: Horizontal Scanning Line */
+/* BULLETPROOF ENHANCEMENT: RED Horizontal Scanning Line */
 .scanning-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
+  position: absolute !important;
+  top: 50% !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important; /* Made thicker for better visibility */
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(34, 197, 94, 0.8) 20%, 
-    rgba(34, 197, 94, 1) 50%, 
-    rgba(34, 197, 94, 0.8) 80%, 
+    rgba(239, 68, 68, 0.9) 10%, 
+    rgba(239, 68, 68, 1) 50%, 
+    rgba(239, 68, 68, 0.9) 90%, 
     transparent 100%
-  );
-  transform: translateY(-50%);
-  z-index: 15;
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-  pointer-events: none;
+  ) !important;
+  transform: translateY(-50%) !important;
+  z-index: 15 !important;
+  opacity: 0 !important;
+  transition: opacity 0.3s ease-in-out !important;
+  pointer-events: none !important;
+  /* BULLETPROOF: Multiple shadow effects for maximum visibility */
+  box-shadow: 
+    0 0 6px rgba(239, 68, 68, 0.8),
+    0 0 12px rgba(239, 68, 68, 0.6),
+    0 0 18px rgba(239, 68, 68, 0.4) !important;
+  /* BULLETPROOF: Ensure it's always on top */
+  will-change: opacity !important;
 }
 
-/* CRITICAL ENHANCEMENT: Animated Scanning Line */
+/* BULLETPROOF ENHANCEMENT: Multiple animation options for scanning line */
 @keyframes scanLine {
   0% {
     transform: translateY(-50%) translateX(-100%);
@@ -626,15 +634,54 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   }
 }
 
-.scanning-line.active {
-  opacity: 1;
-  animation: scanLine 2s ease-in-out infinite;
+@keyframes scanPulse {
+  0%, 100% {
+    opacity: 0.8;
+    box-shadow: 
+      0 0 6px rgba(239, 68, 68, 0.8),
+      0 0 12px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 
+      0 0 10px rgba(239, 68, 68, 1),
+      0 0 20px rgba(239, 68, 68, 0.8),
+      0 0 30px rgba(239, 68, 68, 0.6);
+  }
 }
 
-/* Alternative static scanning line (always visible when active) */
+/* BULLETPROOF: Active states with forced visibility */
+.scanning-line.active {
+  opacity: 1 !important;
+  animation: scanPulse 2s ease-in-out infinite !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* BULLETPROOF: Alternative moving line animation */
+.scanning-line.moving {
+  opacity: 1 !important;
+  animation: scanLine 3s ease-in-out infinite !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* BULLETPROOF: Static always-visible line */
 .scanning-line.static {
-  opacity: 0.6;
-  animation: none;
+  opacity: 0.9 !important;
+  animation: scanPulse 1.5s ease-in-out infinite !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* BULLETPROOF: Force visibility on video containers */
+#qr-reader {
+  position: relative !important;
+}
+
+#qr-reader .scanning-line {
+  position: absolute !important;
+  display: block !important;
 }
 
 /* CRITICAL FIX: Enhanced Serial Number Overlay */
@@ -791,7 +838,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   min-width: 20px;
 }
 
-/* CRITICAL FIX: Enhanced Table Container with Mobile Overflow */
+/* BULLETPROOF FIX: Enhanced Table Container with Guaranteed Display */
 .table-container {
   position: relative;
   width: 100%;
@@ -800,7 +847,7 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   overflow: auto;
   max-height: 600px;
   -webkit-overflow-scrolling: touch;
-  /* CRITICAL FIX: Better mobile handling */
+  /* BULLETPROOF: Ensure minimum display size */
   min-height: 200px;
 }
 
@@ -815,72 +862,97 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   color: var(--gray-500);
 }
 
-/* CRITICAL FIX: Enhanced Results Table with Mobile Optimization */
+/* BULLETPROOF FIX: Enhanced Results Table with Guaranteed Visibility */
 .results-table {
-  width: 100%;
+  width: 100% !important;
   min-width: 700px; /* Reduced from 800px for better mobile fit */
-  border-collapse: collapse;
+  border-collapse: collapse !important;
   font-size: 12px;
+  /* BULLETPROOF: Force table display */
+  display: table !important;
+  table-layout: auto !important;
+  visibility: visible !important;
 }
 
 .results-table th,
 .results-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--gray-200);
-  text-align: left;
-  vertical-align: top;
-  /* CRITICAL FIX: Better text handling */
-  word-break: break-word;
-  overflow-wrap: break-word;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--gray-200) !important;
+  text-align: left !important;
+  vertical-align: top !important;
+  /* BULLETPROOF: Better text handling */
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  /* BULLETPROOF: Force cell display */
+  display: table-cell !important;
 }
 
 .results-table th {
-  background: var(--gray-100);
-  font-weight: var(--weight-semibold);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: var(--track-caps);
-  color: var(--gray-600);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  border-bottom: 2px solid var(--black);
-  /* CRITICAL FIX: Prevent header text wrapping */
-  white-space: nowrap;
+  background: var(--gray-100) !important;
+  font-weight: var(--weight-semibold) !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  letter-spacing: var(--track-caps) !important;
+  color: var(--gray-600) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  border-bottom: 2px solid var(--black) !important;
+  /* BULLETPROOF: Prevent header text wrapping */
+  white-space: nowrap !important;
+}
+
+.results-table tbody {
+  /* BULLETPROOF: Force tbody display */
+  display: table-row-group !important;
+}
+
+.results-table tbody tr {
+  /* BULLETPROOF: Force row display */
+  display: table-row !important;
 }
 
 .results-table tbody tr:hover {
-  background: var(--gray-100);
+  background: var(--gray-100) !important;
 }
 
 .results-table tbody tr:nth-child(even) {
-  background: rgba(245, 245, 245, 0.5);
+  background: rgba(245, 245, 245, 0.5) !important;
 }
 
 .results-table tbody tr:nth-child(even):hover {
-  background: var(--gray-200);
+  background: var(--gray-200) !important;
 }
 
 .results-table .text-wrap {
-  white-space: normal;
-  min-width: 120px;
-  max-width: 200px;
-  word-break: break-word;
-  overflow-wrap: break-word;
+  white-space: normal !important;
+  min-width: 120px !important;
+  max-width: 200px !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
 }
 
 .results-table .row-success {
-  border-left: 3px solid var(--success);
+  border-left: 3px solid var(--success) !important;
 }
 
 .results-table .row-error {
-  border-left: 3px solid var(--error);
+  border-left: 3px solid var(--error) !important;
 }
 
 .results-table .badge {
-  font-size: 9px;
-  height: 18px;
-  padding: 0 6px;
+  font-size: 9px !important;
+  height: 18px !important;
+  padding: 0 6px !important;
+}
+
+/* BULLETPROOF: Force table to be visible in all conditions */
+#scanResults .results-table,
+[id="scanResults"] .results-table,
+.table-container .results-table {
+  display: table !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* CRITICAL FIX: Enhanced Zoom Container Support */
@@ -1109,6 +1181,11 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
     max-width: 600px;
   }
   
+  /* BULLETPROOF: Mobile scanning line */
+  .scanning-line {
+    height: 2px !important; /* Slightly thinner on mobile but still visible */
+  }
+  
   /* CRITICAL FIX: Mobile serial overlay */
   .serial-overlay {
     font-size: 11px;
@@ -1122,11 +1199,6 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   /* CRITICAL FIX: Mobile camera preview */
   .camera-preview {
     min-height: 250px;
-  }
-  
-  /* CRITICAL FIX: Mobile scanning line */
-  .scanning-line {
-    height: 1px; /* Thinner line on mobile */
   }
 }
 
@@ -1145,7 +1217,7 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
     font-weight: var(--weight-bold);
   }
   
-  /* CRITICAL FIX: Extra small mobile fixes */
+  /* BULLETPROOF: Extra small mobile fixes */
   .serial-overlay {
     font-size: 10px;
     padding: var(--space-4);
@@ -1162,6 +1234,14 @@ button, .button, .card, .tool, .input, .select, .textarea, .nav__item, .link {
   }
   .step-indicator__separator {
     display: none;
+  }
+  
+  /* BULLETPROOF: Ensure scanning line visibility on very small screens */
+  .scanning-line {
+    height: 2px !important;
+    box-shadow: 
+      0 0 4px rgba(239, 68, 68, 0.9),
+      0 0 8px rgba(239, 68, 68, 0.7) !important;
   }
 }
 
