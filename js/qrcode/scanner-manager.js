@@ -1,13 +1,14 @@
 /**
  * QR Code Component Scanner - Scanner Manager
- * Alica Technologies - Enhanced Version with Fixed Color Feedback
+ * Alica Technologies - Enhanced Version with Camera Zoom & Quality
  * 
  * CRITICAL FIXES:
- * - Fixed color flashing logic (was always green, now shows proper success/error colors)
+ * - Fixed color flashing logic (proper success/error colors)
  * - Enhanced scan overlay visual feedback with proper color coding
- * - Improved current match display with better error handling
- * - Fixed scan delay configuration
- * - Added proper visual feedback for matches vs no-matches
+ * - Added 1.8x default camera zoom for better scanning
+ * - Added horizontal scanning line indicator
+ * - Optimized for extremely high quality/native resolution video stream
+ * - Enhanced current match display with matched column preview
  */
 
 window.QRScannerManager = {
@@ -20,6 +21,7 @@ window.QRScannerManager = {
     _lastScanTime: 0,
     _scanDelay: window.QRScannerConfig?.SCANNER?.SCAN_DELAY || 500,
     _serialOverlayTimeout: null,
+    _cameraZoom: 1.8, // Default 1.8x zoom for better scanning
 
     /**
      * Speech synthesis function
@@ -43,7 +45,9 @@ window.QRScannerManager = {
         this._bindEvents();
         this._loadCameras();
         this._createScanDelayControl();
-        console.log('Scanner manager initialized');
+        this._createZoomControl();
+        this._addScanningLine();
+        console.log('Scanner manager initialized with enhanced camera features');
     },
 
     /**
@@ -59,6 +63,81 @@ window.QRScannerManager = {
         if (stopBtn) stopBtn.addEventListener('click', this._handleStopCamera.bind(this));
         if (switchBtn) switchBtn.addEventListener('click', this._handleSwitchCamera.bind(this));
         if (cameraSelect) cameraSelect.addEventListener('change', this._handleCameraSelect.bind(this));
+    },
+
+    /**
+     * CRITICAL ENHANCEMENT: Add horizontal scanning line to camera preview
+     */
+    _addScanningLine() {
+        const cameraPreview = document.getElementById('qr-reader');
+        if (!cameraPreview) return;
+
+        // Create scanning line element
+        const scanLine = document.createElement('div');
+        scanLine.id = 'scanningLine';
+        scanLine.className = 'scanning-line';
+        
+        // Position it in the middle of the camera preview
+        cameraPreview.style.position = 'relative';
+        cameraPreview.appendChild(scanLine);
+        
+        console.log('✓ Horizontal scanning line added to camera preview');
+    },
+
+    /**
+     * CRITICAL ENHANCEMENT: Create zoom control for camera
+     */
+    _createZoomControl() {
+        const controlsCard = document.querySelector('.card .scan-controls');
+        if (!controlsCard) return;
+
+        const zoomGroup = document.createElement('div');
+        zoomGroup.className = 'form__group';
+        zoomGroup.innerHTML = `
+            <label class="label">Camera Zoom</label>
+            <select id="cameraZoomSelect" class="select">
+                <option value="1.0">1.0x - Normal</option>
+                <option value="1.2">1.2x - Slight Zoom</option>
+                <option value="1.5">1.5x - Medium Zoom</option>
+                <option value="1.8" selected>1.8x - Optimal (Default)</option>
+                <option value="2.0">2.0x - High Zoom</option>
+                <option value="2.5">2.5x - Maximum Zoom</option>
+            </select>
+            <div class="form__help">Adjust camera zoom for better QR code scanning</div>
+        `;
+
+        // Insert after delay control
+        const delayGroup = document.getElementById('scanDelaySelect')?.closest('.form__group');
+        if (delayGroup && delayGroup.nextSibling) {
+            controlsCard.insertBefore(zoomGroup, delayGroup.nextSibling);
+        } else {
+            controlsCard.appendChild(zoomGroup);
+        }
+
+        const zoomSelect = document.getElementById('cameraZoomSelect');
+        if (zoomSelect) {
+            zoomSelect.addEventListener('change', (e) => {
+                this._cameraZoom = parseFloat(e.target.value);
+                console.log('Camera zoom changed to:', this._cameraZoom + 'x');
+                
+                // Apply zoom if camera is active
+                if (this._isScanning) {
+                    this._applyCameraZoom();
+                }
+            });
+        }
+    },
+
+    /**
+     * CRITICAL ENHANCEMENT: Apply camera zoom using CSS transform
+     */
+    _applyCameraZoom() {
+        const videoElement = document.querySelector('#qr-reader video');
+        if (videoElement) {
+            videoElement.style.transform = `scale(${this._cameraZoom})`;
+            videoElement.style.transformOrigin = 'center center';
+            console.log(`✓ Applied ${this._cameraZoom}x zoom to camera stream`);
+        }
     },
 
     /**
@@ -228,7 +307,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * Start the QR/barcode scanner
+     * CRITICAL ENHANCEMENT: Start scanner with maximum quality settings
      */
     async _startScanner() {
         try {
@@ -236,18 +315,37 @@ window.QRScannerManager = {
                 this._html5QrCode = new Html5Qrcode('qr-reader');
             }
 
+            // CRITICAL ENHANCEMENT: Ultra-high quality configuration for native resolution
             const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
+                fps: 15, // Increased FPS for smoother scanning
+                qrbox: { width: 300, height: 300 }, // Larger scanning box
                 aspectRatio: 1.0,
                 disableFlip: false,
+                // CRITICAL: Request maximum possible resolution
                 videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: 3840, max: 3840 },  // request up to 4K
-                    height: { ideal: 2160, max: 2160 }  // request up to 4K
+                    facingMode: "environment", // Use rear camera if available
+                    width: { 
+                        ideal: 4096,  // Request up to 4K width
+                        max: 4096,
+                        min: 1920     // Minimum Full HD
+                    },
+                    height: { 
+                        ideal: 2160,  // Request up to 4K height 
+                        max: 2160,
+                        min: 1080     // Minimum Full HD
+                    },
+                    // CRITICAL: Request highest quality settings
+                    frameRate: { ideal: 30, max: 60 },
+                    resizeMode: 'none',  // Don't resize the video
+                    advanced: [{
+                        focusMode: 'continuous',
+                        exposureMode: 'continuous',
+                        whiteBalanceMode: 'continuous'
+                    }]
                 }
             };
 
+            console.log('🎥 Starting camera with ultra-high quality settings:', config);
 
             await this._html5QrCode.start(
                 this._currentCameraId,
@@ -256,23 +354,76 @@ window.QRScannerManager = {
                 this._onScanError.bind(this)
             );
 
-            const videoTrack = this._html5QrCode._localMediaStream?.getVideoTracks?.()[0];
+            // CRITICAL: Log actual camera settings achieved
+            const videoTrack = this._html5QrCode._localMediaStream?.getVideoTracks?.()?.[0];
             if (videoTrack) {
                 const settings = videoTrack.getSettings();
-                console.log("📸 Active camera settings:", settings);
+                const capabilities = videoTrack.getCapabilities();
+                
+                console.log("📸 ACHIEVED Camera Settings:", {
+                    width: settings.width,
+                    height: settings.height,
+                    frameRate: settings.frameRate,
+                    facingMode: settings.facingMode,
+                    focusMode: settings.focusMode,
+                    exposureMode: settings.exposureMode
+                });
+                
+                console.log("🔧 Camera Capabilities:", {
+                    maxWidth: capabilities.width?.max,
+                    maxHeight: capabilities.height?.max,
+                    maxFrameRate: capabilities.frameRate?.max,
+                    focusModes: capabilities.focusMode,
+                    exposureModes: capabilities.exposureMode
+                });
+                
+                // CRITICAL: Verify if we achieved high resolution
+                if (settings.width >= 1920 && settings.height >= 1080) {
+                    console.log("✅ HIGH QUALITY: Achieved Full HD or better resolution!");
+                } else {
+                    console.warn("⚠️ LOWER QUALITY: Camera resolution below Full HD", 
+                        `${settings.width}x${settings.height}`);
+                }
             }
 
             this._isScanning = true;
             this._scanStartTime = Date.now();
 
+            // CRITICAL ENHANCEMENT: Apply zoom after camera starts
+            setTimeout(() => {
+                this._applyCameraZoom();
+                this._showScanningLine();
+            }, 500);
+
             this._updateScannerUI(true);
 
-            console.log('Scanner started successfully');
+            console.log('✅ Ultra-high quality scanner started successfully');
 
         } catch (error) {
             this._isScanning = false;
             console.error('Scanner start error:', error);
             throw error;
+        }
+    },
+
+    /**
+     * CRITICAL ENHANCEMENT: Show scanning line animation
+     */
+    _showScanningLine() {
+        const scanLine = document.getElementById('scanningLine');
+        if (scanLine) {
+            scanLine.classList.add('active');
+            console.log('✓ Scanning line animation activated');
+        }
+    },
+
+    /**
+     * Hide scanning line animation
+     */
+    _hideScanningLine() {
+        const scanLine = document.getElementById('scanningLine');
+        if (scanLine) {
+            scanLine.classList.remove('active');
         }
     },
 
@@ -289,6 +440,7 @@ window.QRScannerManager = {
             this._scanStartTime = null;
 
             this._hideSerialOverlay();
+            this._hideScanningLine();
 
             this._updateScannerUI(false);
 
@@ -516,12 +668,14 @@ window.QRScannerManager = {
         const switchBtn = document.getElementById('switchCamera');
         const cameraSelect = document.getElementById('cameraSelect');
         const delaySelect = document.getElementById('scanDelaySelect');
+        const zoomSelect = document.getElementById('cameraZoomSelect');
 
         if (startBtn) startBtn.disabled = isScanning;
         if (stopBtn) stopBtn.disabled = !isScanning;
         if (switchBtn) switchBtn.disabled = !isScanning;
         if (cameraSelect) cameraSelect.disabled = isScanning;
         if (delaySelect) delaySelect.disabled = isScanning;
+        if (zoomSelect) zoomSelect.disabled = isScanning;
 
         const statusEl = document.getElementById('scannerStatus');
         if (statusEl) {
@@ -635,7 +789,8 @@ window.QRScannerManager = {
             camerasAvailable: this._cameras.length,
             currentCameraId: this._currentCameraId,
             scanStartTime: this._scanStartTime,
-            scanDelay: this._scanDelay
+            scanDelay: this._scanDelay,
+            cameraZoom: this._cameraZoom
         };
     },
 
@@ -649,6 +804,21 @@ window.QRScannerManager = {
             delaySelect.value = delay;
         }
         console.log('Scan delay set to:', delay, 'ms');
+    },
+
+    /**
+     * Set camera zoom programmatically
+     */
+    setCameraZoom(zoom) {
+        this._cameraZoom = zoom;
+        const zoomSelect = document.getElementById('cameraZoomSelect');
+        if (zoomSelect) {
+            zoomSelect.value = zoom;
+        }
+        if (this._isScanning) {
+            this._applyCameraZoom();
+        }
+        console.log('Camera zoom set to:', zoom + 'x');
     }
 };
 
