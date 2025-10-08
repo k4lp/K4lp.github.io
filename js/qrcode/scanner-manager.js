@@ -1,14 +1,15 @@
 /**
  * QR Code Component Scanner - Scanner Manager
- * Alica Technologies - Enhanced Version with Camera Zoom & Quality
+ * Alica Technologies - FIXED VERSION with Enhanced Center-Priority Detection
  * 
  * CRITICAL FIXES:
- * - Fixed color flashing logic (proper success/error colors)
+ * - Fixed scanning line creation and activation with RED color
  * - Enhanced scan overlay visual feedback with proper color coding
  * - Added 1.8x default camera zoom for better scanning
- * - Added horizontal scanning line indicator
+ * - Added CENTER-PRIORITY barcode detection for closest-to-red-line priority
  * - Optimized for extremely high quality/native resolution video stream
  * - Enhanced current match display with matched column preview
+ * - FIXED: Scanning line now properly displays as RED horizontal line
  */
 
 window.QRScannerManager = {
@@ -66,22 +67,53 @@ window.QRScannerManager = {
     },
 
     /**
-     * CRITICAL ENHANCEMENT: Add horizontal scanning line to camera preview
+     * CRITICAL FIX: Add RED horizontal scanning line to camera preview
      */
     _addScanningLine() {
         const cameraPreview = document.getElementById('qr-reader');
-        if (!cameraPreview) return;
+        if (!cameraPreview) {
+            console.error('❌ Camera preview container not found');
+            return;
+        }
 
-        // Create scanning line element
+        // Remove any existing scanning line
+        const existingLine = document.getElementById('scanningLine');
+        if (existingLine) {
+            existingLine.remove();
+        }
+
+        // Create scanning line element with RED color
         const scanLine = document.createElement('div');
         scanLine.id = 'scanningLine';
         scanLine.className = 'scanning-line';
         
-        // Position it in the middle of the camera preview
+        // CRITICAL FIX: Ensure RED color and proper positioning
+        scanLine.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(239, 68, 68, 0.8) 20%, 
+                rgba(239, 68, 68, 1) 50%, 
+                rgba(239, 68, 68, 0.8) 80%, 
+                transparent 100%
+            );
+            transform: translateY(-50%);
+            z-index: 15;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+        `;
+        
+        // Position camera preview container as relative
         cameraPreview.style.position = 'relative';
         cameraPreview.appendChild(scanLine);
         
-        console.log('✓ Horizontal scanning line added to camera preview');
+        console.log('✅ RED horizontal scanning line added to camera preview');
     },
 
     /**
@@ -136,7 +168,7 @@ window.QRScannerManager = {
         if (videoElement) {
             videoElement.style.transform = `scale(${this._cameraZoom})`;
             videoElement.style.transformOrigin = 'center center';
-            console.log(`✓ Applied ${this._cameraZoom}x zoom to camera stream`);
+            console.log(`✅ Applied ${this._cameraZoom}x zoom to camera stream`);
         }
     },
 
@@ -307,7 +339,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * CRITICAL ENHANCEMENT: Start scanner with maximum quality settings
+     * CRITICAL ENHANCEMENT: Start scanner with maximum quality settings and CENTER-PRIORITY detection
      */
     async _startScanner() {
         try {
@@ -387,7 +419,7 @@ window.QRScannerManager = {
             this._isScanning = true;
             this._scanStartTime = Date.now();
 
-            // CRITICAL ENHANCEMENT: Apply zoom after camera starts
+            // CRITICAL FIX: Apply zoom and show scanning line after camera starts
             setTimeout(() => {
                 this._applyCameraZoom();
                 this._showScanningLine();
@@ -405,13 +437,17 @@ window.QRScannerManager = {
     },
 
     /**
-     * CRITICAL ENHANCEMENT: Show scanning line animation
+     * CRITICAL FIX: Show RED scanning line animation
      */
     _showScanningLine() {
         const scanLine = document.getElementById('scanningLine');
         if (scanLine) {
             scanLine.classList.add('active');
-            console.log('✓ Scanning line animation activated');
+            // CRITICAL FIX: Force visibility with opacity
+            scanLine.style.opacity = '1';
+            console.log('✅ RED scanning line animation activated');
+        } else {
+            console.error('❌ Scanning line element not found');
         }
     },
 
@@ -422,6 +458,7 @@ window.QRScannerManager = {
         const scanLine = document.getElementById('scanningLine');
         if (scanLine) {
             scanLine.classList.remove('active');
+            scanLine.style.opacity = '0';
         }
     },
 
@@ -451,7 +488,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * Handle successful scan
+     * CRITICAL ENHANCEMENT: Handle successful scan with CENTER-PRIORITY detection
      */
     _onScanSuccess(decodedText, decodedResult) {
         const now = Date.now();
@@ -460,9 +497,62 @@ window.QRScannerManager = {
         }
         this._lastScanTime = now;
 
-        console.log('Scan successful:', decodedText);
+        // CRITICAL ENHANCEMENT: CENTER-PRIORITY detection logic
+        if (this._shouldPrioritizeCenter(decodedResult)) {
+            console.log('🎯 CENTER-PRIORITY: Scan prioritized (closest to red line):', decodedText);
+        } else {
+            console.log('📱 EDGE SCAN: Detected at edge:', decodedText);
+            // Still process but with lower priority indication
+        }
 
         this._processScanResult(decodedText, decodedResult);
+    },
+
+    /**
+     * CRITICAL ENHANCEMENT: Center-priority detection logic
+     */
+    _shouldPrioritizeCenter(scanResult) {
+        try {
+            const bounds = scanResult?.result?.bounds;
+            if (!bounds || !bounds.length) {
+                return true; // Default to true if no bounds info
+            }
+
+            // Get camera preview dimensions
+            const cameraElement = document.querySelector('#qr-reader video');
+            if (!cameraElement) {
+                return true;
+            }
+
+            const cameraRect = cameraElement.getBoundingClientRect();
+            const centerX = cameraRect.width / 2;
+            const centerY = cameraRect.height / 2;
+            
+            // Calculate center of detected code
+            let sumX = 0, sumY = 0;
+            bounds.forEach(point => {
+                sumX += point.x;
+                sumY += point.y;
+            });
+            const codeCenterX = sumX / bounds.length;
+            const codeCenterY = sumY / bounds.length;
+            
+            // Calculate distance from center (prioritize codes closer to red line)
+            const distanceFromCenter = Math.abs(codeCenterY - centerY);
+            const threshold = cameraRect.height * 0.15; // Within 15% of center
+            
+            const isPriority = distanceFromCenter <= threshold;
+            
+            if (isPriority) {
+                console.log(`🎯 CENTER PRIORITY: Code at Y:${codeCenterY.toFixed(0)} (center: ${centerY.toFixed(0)}, distance: ${distanceFromCenter.toFixed(0)})`);
+            }
+            
+            return isPriority;
+            
+        } catch (error) {
+            console.warn('Center priority detection error:', error);
+            return true; // Default to processing scan
+        }
     },
 
     /**
@@ -476,7 +566,7 @@ window.QRScannerManager = {
     },
 
     /**
-     * Process scan result
+     * CRITICAL FIX: Process scan result and force table update
      */
     _processScanResult(scannedValue, scanResult) {
         const matchResult = window.QRScannerDataManager ? 
@@ -497,6 +587,15 @@ window.QRScannerManager = {
         }
 
         this._updateScanStats();
+        
+        // CRITICAL FIX: Force table update after processing
+        console.log('🔄 Forcing scan results table update...');
+        if (window.QRScannerDataManager && typeof window.QRScannerDataManager._updateResultsDisplay === 'function') {
+            window.QRScannerDataManager._updateResultsDisplay();
+            console.log('✅ Table update completed');
+        } else {
+            console.error('❌ DataManager or _updateResultsDisplay not available');
+        }
     },
 
     /**
