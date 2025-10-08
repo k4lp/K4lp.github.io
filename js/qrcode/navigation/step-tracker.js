@@ -610,105 +610,60 @@ window.SmartStepTracker = {
             this._notifyStateChange();
         });
     },
-    
-    // ENHANCED step indicator update - FOCUSES ON TOP PAGE INDICATOR
+
+    // ENHANCED step indicator update - RELIABLE METHOD
     _updateStepIndicator() {
         const indicators = document.querySelectorAll('.step-indicator__item');
         
         if (indicators.length === 0) {
-            console.warn('No step indicator items found at top of page');
+            console.warn('No step indicator items found');
             return;
         }
         
-        console.log(`Updating step indicator: Current=${this.state.currentVisible}, Completed=[${Array.from(this.state.completedSteps).join(', ')}], Available=[${Array.from(this.state.availableSteps).join(', ')}]`);
+        console.log(`Updating indicators: Current=${this.state.currentVisible}, Completed=[${Array.from(this.state.completedSteps).join(', ')}]`);
         
         indicators.forEach((indicator, index) => {
             const stepId = index + 1;
             const numberEl = indicator.querySelector('.step-indicator__number');
-            if (!numberEl) {
-                console.warn(`Step indicator number element not found for step ${stepId}`);
-                return;
-            }
+            if (!numberEl) return;
             
-            // FORCE clear all existing state classes
-            indicator.classList.remove('is-current', 'is-complete', 'is-active');
-            indicator.className = indicator.className.replace(/\bis-(current|complete|active)\b/g, '').trim();
+            // Remove ALL state classes first
+            indicator.className = 'step-indicator__item';
             
-            // Reset all styles completely
-            numberEl.style.cssText = '';
-            numberEl.removeAttribute('style');
+            // Reset number element
             numberEl.textContent = stepId;
+            numberEl.removeAttribute('style');
             
-            // Apply state with enhanced styling and !important for reliability
-            if (this.state.completedSteps.has(stepId)) {
+            // Determine state and apply
+            const isCompleted = this.state.completedSteps.has(stepId);
+            const isCurrent = stepId === this.state.currentVisible;
+            const isAvailable = this.state.availableSteps.has(stepId);
+            
+            if (isCompleted) {
                 indicator.classList.add('is-complete');
-                numberEl.style.cssText = `
-                    background-color: var(--success, #22c55e) !important;
-                    color: white !important;
-                    border-color: var(--success, #22c55e) !important;
-                    font-weight: 700 !important;
-                    transform: scale(1.0) !important;
-                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                `;
                 numberEl.textContent = '✓';
-                console.log(`Step ${stepId} marked as COMPLETE`);
-            } else if (stepId === this.state.currentVisible) {
+                console.log(`✓ Step ${stepId} = COMPLETE`);
+            } else if (isCurrent) {
                 indicator.classList.add('is-current');
-                numberEl.style.cssText = `
-                    background-color: var(--black, #000) !important;
-                    color: white !important;
-                    border-color: var(--black, #000) !important;
-                    font-weight: 700 !important;
-                    transform: scale(1.1) !important;
-                    box-shadow: 0 0 0 3px rgba(0,0,0,0.1) !important;
-                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                `;
-                console.log(`Step ${stepId} marked as CURRENT`);
-            } else if (this.state.availableSteps.has(stepId)) {
+                console.log(`▶ Step ${stepId} = CURRENT`);
+            } else if (isAvailable) {
                 indicator.classList.add('is-active');
-                numberEl.style.cssText = `
-                    background-color: transparent !important;
-                    color: var(--black, #000) !important;
-                    border-color: var(--black, #000) !important;
-                    font-weight: 600 !important;
-                    transform: scale(1.0) !important;
-                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                `;
-                console.log(`Step ${stepId} marked as ACTIVE`);
-            } else {
-                numberEl.style.cssText = `
-                    background-color: transparent !important;
-                    color: var(--gray-400, #9ca3af) !important;
-                    border-color: var(--gray-400, #9ca3af) !important;
-                    font-weight: 400 !important;
-                    opacity: 0.6 !important;
-                    transform: scale(1.0) !important;
-                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                `;
-                console.log(`Step ${stepId} marked as INACTIVE`);
+                console.log(`○ Step ${stepId} = ACTIVE`);
             }
         });
         
-        // Also update the separator lines between steps
+        // Update separators
         const separators = document.querySelectorAll('.step-indicator__separator');
         separators.forEach((separator, index) => {
-            const stepId = index + 1; // Separator after step N
-            if (this.state.completedSteps.has(stepId) && stepId < 5) {
-                separator.style.cssText = `
-                    background-color: var(--success, #22c55e) !important;
-                    height: 3px !important;
-                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                `;
+            const stepBefore = index + 1;
+            if (this.state.completedSteps.has(stepBefore)) {
+                separator.classList.add('is-complete');
             } else {
-                separator.style.cssText = `
-                    background-color: var(--gray-300, #d4d4d4) !important;
-                    height: 1px !important;
-                    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-                `;
+                separator.classList.remove('is-complete');
             }
         });
         
-        console.log(`✓ Step indicator at top of page updated successfully`);
+        console.log('✓ Step indicator updated');
     },
     
     // Update navigation buttons
