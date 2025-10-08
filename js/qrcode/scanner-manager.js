@@ -326,16 +326,14 @@ window.QRScannerManager = {
                     facingMode: "environment", // Use rear camera if available
                     width: { 
                         ideal: 4096,  // Request up to 4K width
-                        max: 4096,
-                        min: 1920     // Minimum Full HD
+                        max: 4096
                     },
                     height: { 
                         ideal: 2160,  // Request up to 4K height 
-                        max: 2160,
-                        min: 1080     // Minimum Full HD
+                        max: 2160
                     },
                     // CRITICAL: Request highest quality settings
-                    frameRate: { ideal: 30, max: 60 },
+                    frameRate: { ideal: 15, max: 20 },
                     resizeMode: 'none',  // Don't resize the video
                     advanced: [{
                         focusMode: 'continuous',
