@@ -1,12 +1,13 @@
 /**
  * QR Code Component Scanner - Data Manager
- * Alica Technologies - Fixed Version
+ * Alica Technologies - Fixed Version with Enhanced Error Handling
  * 
- * FIXES:
- * - Fixed Serial No. column data extraction bug
- * - Improved error handling and validation
- * - Better debugging information
- * - Cleaned up code structure
+ * CRITICAL FIXES:
+ * - Enhanced DOM element selection with fallbacks
+ * - Comprehensive error handling for table creation
+ * - Improved debug logging for troubleshooting
+ * - Bulletproof table display logic
+ * - Better mobile responsiveness
  */
 
 window.QRScannerDataManager = {
@@ -313,7 +314,7 @@ window.QRScannerDataManager = {
         // Store scan result
         this._scanResults.push(scanRecord);
 
-        // Update results display
+        // CRITICAL FIX: Update results display with error handling
         this._updateResultsDisplay();
 
         // Enable export if we have results
@@ -429,60 +430,156 @@ window.QRScannerDataManager = {
     },
 
     /**
-     * Update results display
+     * CRITICAL FIX: Enhanced update results display with bulletproof error handling
      */
     _updateResultsDisplay() {
-        const container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SCAN_RESULTS);
-        if (!container) return;
+        try {
+            // CRITICAL FIX: Multiple fallback methods for element selection
+            let container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SCAN_RESULTS);
+            
+            if (!container) {
+                // Fallback 1: Direct getElementById
+                container = document.getElementById('scanResults');
+                window.QRScannerUtils.log.warn('Using fallback element selection method');
+            }
+            
+            if (!container) {
+                // Fallback 2: querySelector
+                container = document.querySelector('#scanResults');
+                window.QRScannerUtils.log.warn('Using querySelector fallback');
+            }
+            
+            if (!container) {
+                window.QRScannerUtils.log.error('CRITICAL: Cannot find scan results container element');
+                // Create a visual error indicator
+                const errorDiv = document.createElement('div');
+                errorDiv.innerHTML = '<div class="alert alert--error">Error: Cannot display results - container not found</div>';
+                document.body.appendChild(errorDiv);
+                return;
+            }
 
-        if (this._scanResults.length === 0) {
-            container.innerHTML = '<div class="empty">No scan results to display</div>';
-            return;
+            window.QRScannerUtils.log.debug('Results container found:', container.id);
+
+            if (this._scanResults.length === 0) {
+                container.innerHTML = '<div class="empty">No scan results to display</div>';
+                window.QRScannerUtils.log.debug('Showing empty results state');
+                return;
+            }
+
+            // CRITICAL FIX: Create results table with enhanced error handling
+            const table = this._createResultsTable();
+            if (!table) {
+                window.QRScannerUtils.log.error('Failed to create results table');
+                container.innerHTML = '<div class="alert alert--error">Error creating results table</div>';
+                return;
+            }
+
+            // CRITICAL FIX: Clear and append with verification
+            container.innerHTML = '';
+            container.appendChild(table);
+            
+            window.QRScannerUtils.log.debug('Results table updated successfully, rows:', this._scanResults.length);
+            
+            // CRITICAL FIX: Verify table was actually added
+            const verifyTable = container.querySelector('.results-table');
+            if (!verifyTable) {
+                window.QRScannerUtils.log.error('Table creation failed - table not found after insertion');
+                container.innerHTML = '<div class="alert alert--error">Table creation failed</div>';
+                return;
+            }
+            
+            window.QRScannerUtils.log.info('Results table successfully displayed');
+            
+        } catch (error) {
+            window.QRScannerUtils.log.error('Error updating results display:', error);
+            // Show error to user
+            const container = document.getElementById('scanResults') || document.querySelector('#scanResults');
+            if (container) {
+                container.innerHTML = `<div class="alert alert--error">Display Error: ${error.message}</div>`;
+            }
         }
-
-        // Create results table
-        const table = this._createResultsTable();
-        container.innerHTML = '';
-        container.appendChild(table);
     },
 
     /**
-     * Create results table - IMPROVED: Better responsive design and styling
-     * @returns {HTMLElement} - Results table
+     * CRITICAL FIX: Enhanced create results table with bulletproof error handling
+     * @returns {HTMLElement|null} - Results table or null on error
      */
     _createResultsTable() {
-        const table = document.createElement('table');
-        table.className = 'results-table';
+        try {
+            const table = document.createElement('table');
+            table.className = 'results-table';
 
-        // Create header
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
+            // Create header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
 
-        const headers = [
-            'Scan #', 'Time', 'Scanned Value', 'Status', 'Serial No.', 
-            'MPN', 'Manufacturer', 'Row #', 'Format'
-        ];
+            const headers = [
+                'Scan #', 'Time', 'Scanned Value', 'Status', 'Serial No.', 
+                'MPN', 'Manufacturer', 'Row #', 'Format'
+            ];
 
-        headers.forEach(header => {
-            const th = document.createElement('th');
-            th.textContent = header;
-            headerRow.appendChild(th);
-        });
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
 
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
 
-        // Create body
-        const tbody = document.createElement('tbody');
+            // Create body
+            const tbody = document.createElement('tbody');
 
-        // Sort results by scan index (newest first)
-        const sortedResults = [...this._scanResults].sort((a, b) => b.scanIndex - a.scanIndex);
+            // Validate scan results data
+            if (!Array.isArray(this._scanResults)) {
+                window.QRScannerUtils.log.error('Scan results is not an array');
+                return null;
+            }
 
-        sortedResults.forEach(result => {
+            // Sort results by scan index (newest first)
+            const sortedResults = [...this._scanResults].sort((a, b) => b.scanIndex - a.scanIndex);
+
+            sortedResults.forEach((result, index) => {
+                try {
+                    const row = this._createResultRow(result, index);
+                    if (row) {
+                        tbody.appendChild(row);
+                    }
+                } catch (rowError) {
+                    window.QRScannerUtils.log.error('Error creating result row:', rowError);
+                    // Continue with other rows
+                }
+            });
+
+            table.appendChild(tbody);
+            
+            window.QRScannerUtils.log.debug('Results table created successfully with', sortedResults.length, 'rows');
+            return table;
+            
+        } catch (error) {
+            window.QRScannerUtils.log.error('Error creating results table:', error);
+            return null;
+        }
+    },
+
+    /**
+     * CRITICAL FIX: Create individual result row with error handling
+     * @param {Object} result - Scan result object
+     * @param {number} index - Row index
+     * @returns {HTMLElement|null} - Table row or null on error
+     */
+    _createResultRow(result, index) {
+        try {
             const row = document.createElement('tr');
 
+            // Validate result object
+            if (!result || typeof result !== 'object') {
+                window.QRScannerUtils.log.warn('Invalid result object at index', index);
+                return null;
+            }
+
             // Status-based styling
-            if (result.matchResult.success) {
+            if (result.matchResult && result.matchResult.success) {
                 row.classList.add('row-success');
             } else {
                 row.classList.add('row-error');
@@ -490,38 +587,40 @@ window.QRScannerDataManager = {
 
             // Scan index
             const scanCell = document.createElement('td');
-            scanCell.textContent = result.scanIndex;
+            scanCell.textContent = result.scanIndex || index + 1;
             scanCell.className = 'text-center font-mono';
             row.appendChild(scanCell);
 
             // Timestamp
             const timeCell = document.createElement('td');
-            timeCell.textContent = new Date(result.timestamp).toLocaleTimeString();
+            const timestamp = result.timestamp || Date.now();
+            timeCell.textContent = new Date(timestamp).toLocaleTimeString();
             timeCell.className = 'font-mono';
             row.appendChild(timeCell);
 
             // Scanned value
             const valueCell = document.createElement('td');
-            valueCell.textContent = window.QRScannerUtils.string.truncate(result.scannedValue, 30);
-            valueCell.title = result.scannedValue;
+            const scannedValue = result.scannedValue || 'Unknown';
+            valueCell.textContent = window.QRScannerUtils.string.truncate(scannedValue, 30);
+            valueCell.title = scannedValue;
             valueCell.className = 'font-mono text-wrap';
             row.appendChild(valueCell);
 
             // Status
             const statusCell = document.createElement('td');
-            if (result.matchResult.success) {
+            if (result.matchResult && result.matchResult.success) {
                 statusCell.innerHTML = '<span class="badge badge--success">Match</span>';
             } else {
                 statusCell.innerHTML = '<span class="badge badge--error">No Match</span>';
             }
             row.appendChild(statusCell);
 
-            // Serial No. - FIXED: Better handling of empty values
+            // Serial No.
             const serialCell = document.createElement('td');
-            const serialValue = result.matchResult.serialNo || '—';
+            const serialValue = (result.matchResult && result.matchResult.serialNo) || '—';
             serialCell.textContent = serialValue;
             serialCell.className = 'text-wrap';
-            if (!result.matchResult.serialNo && result.matchResult.success) {
+            if (!result.matchResult?.serialNo && result.matchResult?.success) {
                 serialCell.classList.add('text-warning');
                 serialCell.title = 'No serial number mapped or found';
             }
@@ -529,33 +628,37 @@ window.QRScannerDataManager = {
 
             // MPN
             const mpnCell = document.createElement('td');
-            mpnCell.textContent = result.matchResult.mpn || '—';
+            mpnCell.textContent = (result.matchResult && result.matchResult.mpn) || '—';
             mpnCell.className = 'text-wrap';
             row.appendChild(mpnCell);
 
             // Manufacturer
             const mfrCell = document.createElement('td');
-            mfrCell.textContent = result.matchResult.manufacturer || '—';
+            mfrCell.textContent = (result.matchResult && result.matchResult.manufacturer) || '—';
             mfrCell.className = 'text-wrap';
             row.appendChild(mfrCell);
 
             // Row number
             const rowCell = document.createElement('td');
-            rowCell.textContent = result.matchResult.success ? (result.matchResult.rowIndex + 1) : '—';
+            const rowNumber = (result.matchResult && result.matchResult.success) 
+                ? (result.matchResult.rowIndex + 1) : '—';
+            rowCell.textContent = rowNumber;
             rowCell.className = 'text-center';
             row.appendChild(rowCell);
 
             // Format
             const formatCell = document.createElement('td');
-            formatCell.textContent = result.scanDetails.format;
+            const format = (result.scanDetails && result.scanDetails.format) || 'Unknown';
+            formatCell.textContent = format;
             formatCell.className = 'font-mono';
             row.appendChild(formatCell);
 
-            tbody.appendChild(row);
-        });
-
-        table.appendChild(tbody);
-        return table;
+            return row;
+            
+        } catch (error) {
+            window.QRScannerUtils.log.error('Error creating result row:', error);
+            return null;
+        }
     },
 
     /**
