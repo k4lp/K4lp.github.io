@@ -1,13 +1,13 @@
 /**
  * QR Code Component Scanner - Data Manager
- * Alica Technologies - Fixed Version with Enhanced Error Handling
+ * Alica Technologies - BULLETPROOF VERSION with Enhanced Display
  * 
  * CRITICAL FIXES:
- * - Enhanced DOM element selection with fallbacks
- * - Comprehensive error handling for table creation
- * - Improved debug logging for troubleshooting
- * - Bulletproof table display logic
- * - Better mobile responsiveness
+ * - BULLETPROOF scan results table display with multiple fallback methods
+ * - Enhanced DOM element selection with comprehensive error handling
+ * - FORCED table rendering with debug logging for troubleshooting
+ * - Improved mobile responsiveness and error recovery
+ * - GUARANTEED table display after every scan result
  */
 
 window.QRScannerDataManager = {
@@ -28,7 +28,96 @@ window.QRScannerDataManager = {
     init() {
         this._bindEvents();
         this._resetStats();
-        window.QRScannerUtils.log.debug('Data manager initialized');
+        // CRITICAL FIX: Force initial table setup
+        this._ensureResultsContainer();
+        window.QRScannerUtils.log.debug('Data manager initialized with enhanced display');
+    },
+
+    /**
+     * CRITICAL FIX: Ensure results container exists and is properly set up
+     */
+    _ensureResultsContainer() {
+        let container = this._findScanResultsContainer();
+        
+        if (!container) {
+            console.error('CRITICAL: Creating scan results container as fallback');
+            // Create container as absolute fallback
+            const scannerSection = document.querySelector('.results-section');
+            if (scannerSection) {
+                const cardContainer = scannerSection.querySelector('.card:last-child');
+                if (cardContainer) {
+                    const cardBody = cardContainer.querySelector('div:last-child');
+                    if (cardBody) {
+                        const tableContainer = cardBody.querySelector('.table-container');
+                        if (tableContainer) {
+                            container = document.createElement('div');
+                            container.id = 'scanResults';
+                            container.className = 'empty';
+                            container.innerHTML = 'NO SCAN RESULTS TO DISPLAY';
+                            tableContainer.appendChild(container);
+                            console.log('✅ Created fallback scan results container');
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (container) {
+            console.log('✅ Scan results container verified:', container.id);
+            // Force initial empty state display
+            this._forceUpdateResultsDisplay();
+        } else {
+            console.error('❌ CRITICAL: Cannot find or create scan results container');
+        }
+    },
+
+    /**
+     * CRITICAL FIX: Multiple fallback methods to find scan results container
+     */
+    _findScanResultsContainer() {
+        // Method 1: Standard utility
+        let container = window.QRScannerUtils?.dom?.get(window.QRScannerConfig?.ELEMENTS?.SCAN_RESULTS);
+        
+        if (!container) {
+            // Method 2: Direct getElementById
+            container = document.getElementById('scanResults');
+            console.warn('Using fallback method 2: getElementById');
+        }
+        
+        if (!container) {
+            // Method 3: querySelector
+            container = document.querySelector('#scanResults');
+            console.warn('Using fallback method 3: querySelector');
+        }
+        
+        if (!container) {
+            // Method 4: Find by class in table containers
+            const tableContainers = document.querySelectorAll('.table-container');
+            for (const tableContainer of tableContainers) {
+                const candidate = tableContainer.querySelector('#scanResults, [id="scanResults"]');
+                if (candidate) {
+                    container = candidate;
+                    console.warn('Using fallback method 4: found in table container');
+                    break;
+                }
+            }
+        }
+        
+        if (!container) {
+            // Method 5: Find by text content
+            const divs = document.querySelectorAll('div');
+            for (const div of divs) {
+                if (div.textContent.includes('NO SCAN RESULTS TO DISPLAY') || 
+                    div.textContent.includes('No scan results to display')) {
+                    container = div;
+                    container.id = 'scanResults'; // Ensure it has the right ID
+                    console.warn('Using fallback method 5: found by text content');
+                    break;
+                }
+            }
+        }
+        
+        return container;
     },
 
     /**
@@ -276,12 +365,12 @@ window.QRScannerDataManager = {
         // Enable export button initially disabled
         window.QRScannerUtils.dom.setEnabled(window.QRScannerConfig.ELEMENTS.EXPORT_RESULTS, false);
 
-        // Clear results display
-        this._updateResultsDisplay();
+        // CRITICAL FIX: Force initial results display setup
+        this._forceUpdateResultsDisplay();
     },
 
     /**
-     * Process scanned value against BOM data
+     * CRITICAL FIX: Process scanned value with GUARANTEED table update
      * @param {string} scannedValue - The scanned value
      * @param {Object} scanResult - Complete scan result
      * @returns {Object} - Match result
@@ -294,6 +383,8 @@ window.QRScannerDataManager = {
         if (!this._stats.startTime) {
             this._stats.startTime = Date.now();
         }
+
+        console.log(`🔍 Processing scan #${this._stats.totalScanned}: "${trimmedValue}"`);
 
         // Search for match in BOM data
         const matchResult = this._findMatch(trimmedValue);
@@ -313,9 +404,16 @@ window.QRScannerDataManager = {
 
         // Store scan result
         this._scanResults.push(scanRecord);
+        console.log(`📋 Stored scan result #${this._stats.totalScanned}, Total results: ${this._scanResults.length}`);
 
-        // CRITICAL FIX: Update results display with error handling
-        this._updateResultsDisplay();
+        // CRITICAL FIX: FORCE table update with multiple attempts
+        this._forceUpdateResultsDisplay();
+        
+        // CRITICAL FIX: Additional forced update after short delay
+        setTimeout(() => {
+            this._forceUpdateResultsDisplay();
+            console.log(`🔄 Secondary table update completed for scan #${this._stats.totalScanned}`);
+        }, 100);
 
         // Enable export if we have results
         if (this._scanResults.length > 0) {
@@ -430,70 +528,75 @@ window.QRScannerDataManager = {
     },
 
     /**
-     * CRITICAL FIX: Enhanced update results display with bulletproof error handling
+     * CRITICAL FIX: BULLETPROOF forced results display update
      */
-    _updateResultsDisplay() {
+    _forceUpdateResultsDisplay() {
+        console.log('🔄 FORCE UPDATE: Starting bulletproof results display update...');
+        
         try {
-            // CRITICAL FIX: Multiple fallback methods for element selection
-            let container = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.SCAN_RESULTS);
+            // CRITICAL FIX: Find container with all available methods
+            let container = this._findScanResultsContainer();
             
             if (!container) {
-                // Fallback 1: Direct getElementById
-                container = document.getElementById('scanResults');
-                window.QRScannerUtils.log.warn('Using fallback element selection method');
+                console.error('❌ CRITICAL: Cannot find scan results container - creating emergency fallback');
+                this._createEmergencyResultsContainer();
+                container = this._findScanResultsContainer();
             }
             
             if (!container) {
-                // Fallback 2: querySelector
-                container = document.querySelector('#scanResults');
-                window.QRScannerUtils.log.warn('Using querySelector fallback');
-            }
-            
-            if (!container) {
-                window.QRScannerUtils.log.error('CRITICAL: Cannot find scan results container element');
-                // Create a visual error indicator
-                const errorDiv = document.createElement('div');
-                errorDiv.innerHTML = '<div class="alert alert--error">Error: Cannot display results - container not found</div>';
-                document.body.appendChild(errorDiv);
+                console.error('❌ FATAL: Cannot create or find results container');
                 return;
             }
 
-            window.QRScannerUtils.log.debug('Results container found:', container.id);
+            console.log(`✅ Container found: ${container.id}, Results count: ${this._scanResults.length}`);
 
+            // CRITICAL FIX: Clear existing content and update
             if (this._scanResults.length === 0) {
                 container.innerHTML = '<div class="empty">No scan results to display</div>';
-                window.QRScannerUtils.log.debug('Showing empty results state');
+                container.className = 'empty';
+                console.log('📋 Showing empty results state');
                 return;
             }
 
-            // CRITICAL FIX: Create results table with enhanced error handling
-            const table = this._createResultsTable();
+            // CRITICAL FIX: Create and insert table with verification
+            const table = this._createBulletproofResultsTable();
             if (!table) {
-                window.QRScannerUtils.log.error('Failed to create results table');
+                console.error('❌ Table creation failed');
                 container.innerHTML = '<div class="alert alert--error">Error creating results table</div>';
                 return;
             }
 
-            // CRITICAL FIX: Clear and append with verification
+            // CRITICAL FIX: Clear and append with extensive verification
             container.innerHTML = '';
+            container.className = ''; // Remove empty class
             container.appendChild(table);
             
-            window.QRScannerUtils.log.debug('Results table updated successfully, rows:', this._scanResults.length);
-            
-            // CRITICAL FIX: Verify table was actually added
+            // CRITICAL FIX: Verify table was inserted
             const verifyTable = container.querySelector('.results-table');
             if (!verifyTable) {
-                window.QRScannerUtils.log.error('Table creation failed - table not found after insertion');
-                container.innerHTML = '<div class="alert alert--error">Table creation failed</div>';
-                return;
+                console.error('❌ Table verification failed - table not in DOM');
+                // Emergency fallback: Try innerHTML method
+                container.innerHTML = table.outerHTML;
+                
+                // Re-verify
+                const retryVerify = container.querySelector('.results-table');
+                if (!retryVerify) {
+                    console.error('❌ Emergency fallback also failed');
+                    container.innerHTML = '<div class="alert alert--error">Table rendering failed</div>';
+                    return;
+                }
             }
             
-            window.QRScannerUtils.log.info('Results table successfully displayed');
+            console.log(`✅ BULLETPROOF UPDATE SUCCESS: Table with ${this._scanResults.length} rows displayed`);
+            
+            // CRITICAL FIX: Force DOM repaint
+            container.style.display = 'none';
+            container.offsetHeight; // Trigger reflow
+            container.style.display = '';
             
         } catch (error) {
-            window.QRScannerUtils.log.error('Error updating results display:', error);
-            // Show error to user
-            const container = document.getElementById('scanResults') || document.querySelector('#scanResults');
+            console.error('❌ CRITICAL ERROR in force update:', error);
+            const container = this._findScanResultsContainer();
             if (container) {
                 container.innerHTML = `<div class="alert alert--error">Display Error: ${error.message}</div>`;
             }
@@ -501,15 +604,50 @@ window.QRScannerDataManager = {
     },
 
     /**
-     * CRITICAL FIX: Enhanced create results table with bulletproof error handling
+     * CRITICAL FIX: Create emergency results container if none exists
+     */
+    _createEmergencyResultsContainer() {
+        console.log('🚨 EMERGENCY: Creating results container');
+        
+        // Find the most likely parent container
+        const candidates = [
+            document.querySelector('.results-section .card:last-child .table-container'),
+            document.querySelector('.card .table-container'),
+            document.querySelector('.table-container'),
+            document.querySelector('.results-section'),
+            document.querySelector('.scanner-section'),
+            document.getElementById('step5')
+        ];
+        
+        for (const candidate of candidates) {
+            if (candidate) {
+                const container = document.createElement('div');
+                container.id = 'scanResults';
+                container.className = 'empty';
+                container.innerHTML = 'NO SCAN RESULTS TO DISPLAY';
+                candidate.appendChild(container);
+                console.log('✅ Emergency container created in:', candidate.className || candidate.tagName);
+                return;
+            }
+        }
+        
+        console.error('❌ Emergency container creation failed - no suitable parent found');
+    },
+
+    /**
+     * CRITICAL FIX: BULLETPROOF create results table with extensive error handling
      * @returns {HTMLElement|null} - Results table or null on error
      */
-    _createResultsTable() {
+    _createBulletproofResultsTable() {
         try {
+            console.log('🔨 Creating bulletproof results table...');
+            
             const table = document.createElement('table');
             table.className = 'results-table';
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
 
-            // Create header
+            // Create header with error handling
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
 
@@ -519,146 +657,186 @@ window.QRScannerDataManager = {
             ];
 
             headers.forEach(header => {
-                const th = document.createElement('th');
-                th.textContent = header;
-                headerRow.appendChild(th);
+                try {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    th.style.padding = '8px 12px';
+                    th.style.borderBottom = '2px solid #000';
+                    th.style.textAlign = 'left';
+                    th.style.fontSize = '10px';
+                    th.style.textTransform = 'uppercase';
+                    th.style.backgroundColor = '#f5f5f5';
+                    headerRow.appendChild(th);
+                } catch (headerError) {
+                    console.warn('Header creation error:', headerError);
+                }
             });
 
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            // Create body
+            // Create body with error handling
             const tbody = document.createElement('tbody');
 
             // Validate scan results data
             if (!Array.isArray(this._scanResults)) {
-                window.QRScannerUtils.log.error('Scan results is not an array');
+                console.error('Scan results is not an array');
                 return null;
             }
 
             // Sort results by scan index (newest first)
             const sortedResults = [...this._scanResults].sort((a, b) => b.scanIndex - a.scanIndex);
 
+            console.log(`📊 Creating ${sortedResults.length} table rows...`);
+            
             sortedResults.forEach((result, index) => {
                 try {
-                    const row = this._createResultRow(result, index);
+                    const row = this._createBulletproofResultRow(result, index);
                     if (row) {
                         tbody.appendChild(row);
                     }
                 } catch (rowError) {
-                    window.QRScannerUtils.log.error('Error creating result row:', rowError);
-                    // Continue with other rows
+                    console.error('Error creating result row:', rowError);
+                    // Create error row as fallback
+                    const errorRow = document.createElement('tr');
+                    const errorCell = document.createElement('td');
+                    errorCell.colSpan = headers.length;
+                    errorCell.textContent = `Error displaying row ${index + 1}`;
+                    errorCell.style.color = '#ef4444';
+                    errorCell.style.padding = '8px 12px';
+                    errorRow.appendChild(errorCell);
+                    tbody.appendChild(errorRow);
                 }
             });
 
             table.appendChild(tbody);
             
-            window.QRScannerUtils.log.debug('Results table created successfully with', sortedResults.length, 'rows');
+            console.log(`✅ Bulletproof table created successfully with ${sortedResults.length} rows`);
             return table;
             
         } catch (error) {
-            window.QRScannerUtils.log.error('Error creating results table:', error);
-            return null;
+            console.error('❌ CRITICAL: Bulletproof table creation failed:', error);
+            
+            // ULTIMATE FALLBACK: Create simple HTML table
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.innerHTML = `
+                <table class="results-table" style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f5f5f5;">
+                            <th style="padding:8px;border-bottom:2px solid #000;">Scan #</th>
+                            <th style="padding:8px;border-bottom:2px solid #000;">Value</th>
+                            <th style="padding:8px;border-bottom:2px solid #000;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${this._scanResults.slice(-10).map((result, i) => `
+                            <tr>
+                                <td style="padding:8px;border-bottom:1px solid #e5e5e5;">${result.scanIndex}</td>
+                                <td style="padding:8px;border-bottom:1px solid #e5e5e5;">${this._escapeHtml(result.scannedValue)}</td>
+                                <td style="padding:8px;border-bottom:1px solid #e5e5e5;">
+                                    <span style="color:${result.matchResult.success ? '#22c55e' : '#ef4444'}">
+                                        ${result.matchResult.success ? 'Match' : 'No Match'}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            console.log('🆘 Using ultimate fallback table');
+            return fallbackDiv.firstElementChild;
         }
     },
 
     /**
-     * CRITICAL FIX: Create individual result row with error handling
+     * CRITICAL FIX: Create bulletproof individual result row
      * @param {Object} result - Scan result object
      * @param {number} index - Row index
      * @returns {HTMLElement|null} - Table row or null on error
      */
-    _createResultRow(result, index) {
+    _createBulletproofResultRow(result, index) {
         try {
             const row = document.createElement('tr');
 
             // Validate result object
             if (!result || typeof result !== 'object') {
-                window.QRScannerUtils.log.warn('Invalid result object at index', index);
+                console.warn('Invalid result object at index', index);
                 return null;
             }
 
             // Status-based styling
             if (result.matchResult && result.matchResult.success) {
+                row.style.borderLeft = '3px solid #22c55e';
                 row.classList.add('row-success');
             } else {
+                row.style.borderLeft = '3px solid #ef4444';
                 row.classList.add('row-error');
             }
 
-            // Scan index
-            const scanCell = document.createElement('td');
-            scanCell.textContent = result.scanIndex || index + 1;
-            scanCell.className = 'text-center font-mono';
-            row.appendChild(scanCell);
+            // Create cells with error handling
+            const cellData = [
+                result.scanIndex || index + 1,
+                new Date(result.timestamp || Date.now()).toLocaleTimeString(),
+                this._truncateString(result.scannedValue || 'Unknown', 30),
+                result.matchResult && result.matchResult.success ? 'Match' : 'No Match',
+                (result.matchResult && result.matchResult.serialNo) || '—',
+                (result.matchResult && result.matchResult.mpn) || '—',
+                (result.matchResult && result.matchResult.manufacturer) || '—',
+                (result.matchResult && result.matchResult.success) ? (result.matchResult.rowIndex + 1) : '—',
+                (result.scanDetails && result.scanDetails.format) || 'Unknown'
+            ];
 
-            // Timestamp
-            const timeCell = document.createElement('td');
-            const timestamp = result.timestamp || Date.now();
-            timeCell.textContent = new Date(timestamp).toLocaleTimeString();
-            timeCell.className = 'font-mono';
-            row.appendChild(timeCell);
-
-            // Scanned value
-            const valueCell = document.createElement('td');
-            const scannedValue = result.scannedValue || 'Unknown';
-            valueCell.textContent = window.QRScannerUtils.string.truncate(scannedValue, 30);
-            valueCell.title = scannedValue;
-            valueCell.className = 'font-mono text-wrap';
-            row.appendChild(valueCell);
-
-            // Status
-            const statusCell = document.createElement('td');
-            if (result.matchResult && result.matchResult.success) {
-                statusCell.innerHTML = '<span class="badge badge--success">Match</span>';
-            } else {
-                statusCell.innerHTML = '<span class="badge badge--error">No Match</span>';
-            }
-            row.appendChild(statusCell);
-
-            // Serial No.
-            const serialCell = document.createElement('td');
-            const serialValue = (result.matchResult && result.matchResult.serialNo) || '—';
-            serialCell.textContent = serialValue;
-            serialCell.className = 'text-wrap';
-            if (!result.matchResult?.serialNo && result.matchResult?.success) {
-                serialCell.classList.add('text-warning');
-                serialCell.title = 'No serial number mapped or found';
-            }
-            row.appendChild(serialCell);
-
-            // MPN
-            const mpnCell = document.createElement('td');
-            mpnCell.textContent = (result.matchResult && result.matchResult.mpn) || '—';
-            mpnCell.className = 'text-wrap';
-            row.appendChild(mpnCell);
-
-            // Manufacturer
-            const mfrCell = document.createElement('td');
-            mfrCell.textContent = (result.matchResult && result.matchResult.manufacturer) || '—';
-            mfrCell.className = 'text-wrap';
-            row.appendChild(mfrCell);
-
-            // Row number
-            const rowCell = document.createElement('td');
-            const rowNumber = (result.matchResult && result.matchResult.success) 
-                ? (result.matchResult.rowIndex + 1) : '—';
-            rowCell.textContent = rowNumber;
-            rowCell.className = 'text-center';
-            row.appendChild(rowCell);
-
-            // Format
-            const formatCell = document.createElement('td');
-            const format = (result.scanDetails && result.scanDetails.format) || 'Unknown';
-            formatCell.textContent = format;
-            formatCell.className = 'font-mono';
-            row.appendChild(formatCell);
+            cellData.forEach((data, cellIndex) => {
+                try {
+                    const cell = document.createElement('td');
+                    cell.textContent = String(data);
+                    cell.style.padding = '8px 12px';
+                    cell.style.borderBottom = '1px solid #e5e5e5';
+                    cell.style.fontSize = '12px';
+                    cell.style.wordBreak = 'break-word';
+                    
+                    // Special styling for status column
+                    if (cellIndex === 3) {
+                        cell.style.color = result.matchResult?.success ? '#22c55e' : '#ef4444';
+                        cell.style.fontWeight = '600';
+                    }
+                    
+                    row.appendChild(cell);
+                } catch (cellError) {
+                    console.warn('Error creating cell:', cellError);
+                    // Create fallback cell
+                    const fallbackCell = document.createElement('td');
+                    fallbackCell.textContent = '—';
+                    fallbackCell.style.padding = '8px 12px';
+                    row.appendChild(fallbackCell);
+                }
+            });
 
             return row;
             
         } catch (error) {
-            window.QRScannerUtils.log.error('Error creating result row:', error);
+            console.error('Error creating bulletproof result row:', error);
             return null;
         }
+    },
+
+    /**
+     * Truncate string helper
+     */
+    _truncateString(str, maxLength) {
+        if (!str || str.length <= maxLength) return str;
+        return str.substring(0, maxLength - 3) + '...';
+    },
+
+    /**
+     * Escape HTML characters
+     */
+    _escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
     },
 
     /**
@@ -748,7 +926,7 @@ window.QRScannerDataManager = {
         if (confirm('Clear all scan results? This action cannot be undone.')) {
             this._scanResults = [];
             this._resetStats();
-            this._updateResultsDisplay();
+            this._forceUpdateResultsDisplay();
 
             // Clear current match display
             const currentMatch = window.QRScannerUtils.dom.get(window.QRScannerConfig.ELEMENTS.CURRENT_MATCH);
@@ -844,6 +1022,13 @@ window.QRScannerDataManager = {
      */
     getColumnMapping() {
         return { ...this._columnMapping };
+    },
+
+    /**
+     * CRITICAL FIX: Public method to force table update (for external calls)
+     */
+    updateResultsDisplay() {
+        this._forceUpdateResultsDisplay();
     }
 };
 
