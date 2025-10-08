@@ -5,6 +5,7 @@
    Base: 13px; Geist + Geist Mono; no gradients; minimal shadows; square corners.
    Pages covered: index.html, contact.html, digikey.html, qrcode.html (scanner).
    CRITICAL FIXES: Mobile responsiveness, table overflow, serial number display
+   ENHANCED: Added flash effects for scan feedback
    ========================================================================== */
 
 :root {
@@ -556,11 +557,34 @@ input[type="radio"]:checked + .control__box { background: var(--black); }
   font-weight: var(--weight-semibold);
 }
 
+/* CRITICAL FIX: Enhanced Scan Overlay with Flash Effects */
 .scan-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 10;
+  transition: all 0.3s ease-in-out;
+}
+
+/* CRITICAL FIX: Flash Effect Animations */
+@keyframes flashSuccess {
+  0% { background: rgba(34, 197, 94, 0); }
+  50% { background: rgba(34, 197, 94, 0.3); }
+  100% { background: rgba(34, 197, 94, 0); }
+}
+
+@keyframes flashError {
+  0% { background: rgba(239, 68, 68, 0); }
+  50% { background: rgba(239, 68, 68, 0.3); }
+  100% { background: rgba(239, 68, 68, 0); }
+}
+
+.scan-overlay.flash-success {
+  animation: flashSuccess 0.6s ease-in-out;
+}
+
+.scan-overlay.flash-error {
+  animation: flashError 0.6s ease-in-out;
 }
 
 /* CRITICAL FIX: Enhanced Serial Number Overlay */
