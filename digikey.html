@@ -15,7 +15,7 @@
                 <a href="index.html" class="back-link">Back to Tools</a>
             </div>
         </nav>
-        
+
         <header class="page-header">
             <div>
                 <h1 class="page-header__title">Digi-Key MPN Analyzer</h1>
@@ -30,7 +30,7 @@
 
         <section class="mb-48">
             <h2 class="mb-16">Credentials</h2>
-            
+
             <div class="grid-12 gap-16 mb-16">
                 <div class="col-span-6">
                     <div class="form__group">
@@ -45,7 +45,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="grid-12 gap-16 mb-16">
                 <div class="col-span-6">
                     <div class="form__group">
@@ -63,7 +63,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="form__group mb-16">
                 <label class="label">Locale</label>
                 <select id="locale" class="select">
@@ -74,36 +74,36 @@
                     <option value="JP/JPY">JP / JPY</option>
                 </select>
             </div>
-            
+
             <div class="button-group mb-16">
                 <button id="addCred" class="button button--primary">Add</button>
                 <button id="authAll" class="button button--ghost">Authenticate All</button>
                 <button id="clearCreds" class="button button--ghost text-error">Clear All</button>
             </div>
-            
+
             <div id="credList" class="mt-16"></div>
         </section>
 
         <section class="mb-48">
             <h2 class="mb-16">Processing</h2>
-            
+
             <div class="alert alert--info mb-16">
                 <div class="alert__msg">
                     Parallel processing distributes requests across multiple authenticated credentials to maximize throughput while respecting API rate limits. Authentication happens automatically when needed.
                 </div>
             </div>
-            
+
             <div class="form__group mb-16">
                 <label class="label">MPNs (one per line)</label>
                 <textarea id="mpnInput" placeholder="ECA-1VHG102&#10;STM32F103C8T6&#10;LM358P" class="textarea"></textarea>
             </div>
-            
+
             <div class="form__group mb-16">
                 <label class="label">Concurrency per Credential</label>
                 <input type="number" id="concurrency" value="3" min="1" max="10" class="input">
                 <div class="form__help">Recommended: 2-5</div>
             </div>
-            
+
             <div id="progress" class="card mb-16 hidden">
                 <div class="card__header">
                     <h3 class="card__title">Processing Progress</h3>
@@ -141,7 +141,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="button-group">
                 <button id="process" class="button button--primary">Process</button>
                 <button id="export" class="button button--ghost" disabled>Export CSV</button>
@@ -205,7 +205,7 @@
         $('log').scrollTop = $('log').scrollHeight;
     };
     const uid = () => Math.random().toString(36).substr(2, 9);
-    
+
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     // Credential Manager
@@ -220,7 +220,7 @@
                 log('Cannot add credential: Missing Client ID or Secret', 'error');
                 return null;
             }
-            
+
             const cred = {
                 id: uid(),
                 clientId: clientId.trim(),
@@ -356,7 +356,7 @@
                                       active ? 'Active' : 'Inactive';
                     const statusClass = c.status === 'error' ? 'badge--error' : 
                                        active ? 'badge--success' : 'badge--neutral';
-                    
+
                     return `
                         <div class="cred">
                             <div class="cred__dot cred__dot--${active ? 'ok' : c.status === 'error' ? 'err' : 'warn'}"></div>
@@ -379,7 +379,7 @@
             $('workerCount').textContent = this.active().length;
         }
     }
-    
+
     // NEW: helper to normalize HTSUS values
     function cleanHTSUS(code) {
         if (!code) return '';
@@ -393,15 +393,15 @@
     // Authentication with retry logic
     async function authenticate(cred, retryCount = 0) {
         const maxRetries = CONFIG.MAX_RETRIES;
-        
+
         try {
             const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
-            
+
             log(`Authenticating ${cred.label}...`, 'info');
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-            
+
             const res = await fetch(cfg.TOKEN_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -421,7 +421,7 @@
             }
 
             const data = await res.json();
-            
+
             if (!data.access_token || !data.expires_in) {
                 throw new Error('Invalid token response: Missing access_token or expires_in');
             }
@@ -429,10 +429,10 @@
             cm.setToken(cred.id, data.access_token, data.expires_in);
             log(`✓ ${cred.label} authenticated successfully (expires in ${Math.floor(data.expires_in/60)}m)`, 'success');
             return true;
-            
+
         } catch (e) {
             const errorMsg = e.name === 'AbortError' ? 'Request timeout' : e.message;
-            
+
             if (retryCount < maxRetries) {
                 log(`${cred.label} auth failed (attempt ${retryCount + 1}/${maxRetries + 1}): ${errorMsg}. Retrying...`, 'warning');
                 await sleep(CONFIG.AUTH_RETRY_DELAY * (retryCount + 1));
@@ -448,7 +448,7 @@
     // Auto-authenticate credentials that need auth
     async function autoAuthenticate(showStatus = true) {
         const needAuth = cm.needsAuth();
-        
+
         if (needAuth.length === 0) {
             return true;
         }
@@ -459,7 +459,7 @@
         }
 
         state.isAuthenticating = true;
-        
+
         if (showStatus) {
             $('authStatus').style.display = 'block';
         }
@@ -475,14 +475,14 @@
         }
 
         state.isAuthenticating = false;
-        
+
         if (showStatus) {
             $('authStatus').style.display = 'none';
         }
 
         const msg = `Auto-auth complete: ${successCount}/${needAuth.length} successful`;
         log(msg, successCount > 0 ? 'success' : 'error');
-        
+
         return successCount > 0;
     }
 
@@ -506,7 +506,7 @@
 
         const msg = `Authentication complete: ${success}/${cm.count()} successful`;
         log(msg, success > 0 ? 'success' : 'error');
-        
+
         btn.disabled = false;
         btn.textContent = 'Authenticate All';
         $('authStatus').style.display = 'none';
@@ -535,10 +535,10 @@
                 return await fn();
             } catch (e) {
                 if (i === retries) throw e;
-                
+
                 // Don't retry on 404 or 400
                 if (e.message.includes('404') || e.message.includes('400')) throw e;
-                
+
                 log(`API call failed (attempt ${i + 1}/${retries + 1}): ${e.message}. Retrying...`, 'warning');
                 await sleep(CONFIG.RETRY_DELAY * (i + 1));
             }
@@ -549,22 +549,22 @@
         return apiCallWithRetry(async () => {
             const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
             const url = `${cfg.BASE_URL}/products/v4/search/${encodeURIComponent(mpn)}/productdetails`;
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
-            
+
             const res = await fetch(url, { 
                 headers: getHeaders(cred),
                 signal: controller.signal
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (!res.ok) {
                 const errorText = await res.text().catch(() => '');
                 throw new Error(`API ${res.status}: ${errorText || res.statusText}`);
             }
-            
+
             cm.markUsed(cred.id);
             return res.json();
         });
@@ -574,10 +574,10 @@
         return apiCallWithRetry(async () => {
             const cfg = cred.environment === 'sandbox' ? CONFIG.SANDBOX : CONFIG.PRODUCTION;
             const url = `${cfg.BASE_URL}/products/v4/search/keyword`;
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
-            
+
             const res = await fetch(url, {
                 method: 'POST',
                 headers: getHeaders(cred),
@@ -590,14 +590,14 @@
                 }),
                 signal: controller.signal
             });
-            
+
             clearTimeout(timeoutId);
-            
+
             if (!res.ok) {
                 const errorText = await res.text().catch(() => '');
                 throw new Error(`API ${res.status}: ${errorText || res.statusText}`);
             }
-            
+
             cm.markUsed(cred.id);
             return res.json();
         });
@@ -647,7 +647,7 @@
                 aliases: '',
                 remarks: 'Empty MPN',
                 htsus: '',
-                originalIndex: originalIndex // FIXED: Add original index
+                originalIndex: originalIndex
             };
         }
 
@@ -681,7 +681,7 @@
                         aliases: Array.isArray(p.OtherNames) ? p.OtherNames.join(', ') : '',
                         remarks: `Direct match via ${cred.label}`,
                         htsus: cleanHTSUS(p.Classifications?.HtsusCode),
-                        originalIndex: originalIndex // FIXED: Add original index
+                        originalIndex: originalIndex
                     };
                 }
             } catch (e) {
@@ -738,7 +738,7 @@
                     aliases: Array.isArray(match.OtherNames) ? match.OtherNames.join(', ') : '',
                     remarks: `${matchType} match via ${cred.label}`,
                     htsus: cleanHTSUS(match.Classifications?.HtsusCode),
-                    originalIndex: originalIndex // FIXED: Add original index
+                    originalIndex: originalIndex
                 };
             }
 
@@ -755,13 +755,13 @@
                 aliases: '',
                 remarks: `Not found (searched ${products.length} results) via ${cred.label}`,
                 htsus: '',
-                originalIndex: originalIndex // FIXED: Add original index
+                originalIndex: originalIndex
             };
 
         } catch (e) {
             const errorMsg = e.name === 'AbortError' ? 'Request timeout' : e.message;
             log(`Error processing ${cleanMpn}: ${errorMsg}`, 'error');
-            
+
             return {
                 status: 'error',
                 mpn: cleanMpn,
@@ -775,20 +775,20 @@
                 aliases: '',
                 remarks: `Error: ${errorMsg}`,
                 htsus: '',
-                originalIndex: originalIndex // FIXED: Add original index
+                originalIndex: originalIndex
             };
         }
     }
 
-    // FIXED: Parallel processor with order preservation
+    // Parallel processor with order preservation
     class ParallelProcessor {
         constructor(mpns, creds, concurrency) {
-            this.originalMpns = [...mpns]; // FIXED: Keep original order reference
-            this.mpnWithIndex = mpns.map((mpn, index) => ({ mpn, index })); // FIXED: Add index tracking
+            this.originalMpns = [...mpns];
+            this.mpnWithIndex = mpns.map((mpn, index) => ({ mpn, index }));
             this.creds = creds;
             this.concurrency = concurrency;
-            this.queue = [...this.mpnWithIndex]; // FIXED: Use indexed items
-            this.results = new Array(mpns.length); // FIXED: Pre-allocate results array
+            this.queue = [...this.mpnWithIndex];
+            this.results = new Array(mpns.length);
             this.processing = new Set();
             this.failed = new Set();
         }
@@ -804,9 +804,9 @@
                     workers.push(this.worker(cred, onProgress));
                 }
             }
-            
+
             await Promise.all(workers);
-            return this.results.filter(r => r != null); // FIXED: Filter out null slots
+            return this.results.filter(r => r != null);
         }
 
         async worker(cred, onProgress) {
@@ -817,13 +817,13 @@
                 await sleep(CONFIG.MIN_DELAY);
 
                 try {
-                    const result = await processMPN(item.mpn, cred, item.index); // FIXED: Pass original index
-                    this.results[item.index] = result; // FIXED: Store in original position
+                    const result = await processMPN(item.mpn, cred, item.index);
+                    this.results[item.index] = result;
                     if (onProgress) onProgress(result);
                 } catch (e) {
                     log(`Worker error for ${item.mpn}: ${e.message}`, 'error');
                     this.failed.add(item.mpn);
-                    
+
                     // Return error result
                     const errorResult = {
                         status: 'error',
@@ -838,9 +838,9 @@
                         aliases: '',
                         remarks: `Worker error: ${e.message}`,
                         htsus: '',
-                        originalIndex: item.index // FIXED: Add original index
+                        originalIndex: item.index
                     };
-                    this.results[item.index] = errorResult; // FIXED: Store in original position
+                    this.results[item.index] = errorResult;
                     if (onProgress) onProgress(errorResult);
                 } finally {
                     this.processing.delete(item.mpn);
@@ -872,7 +872,7 @@
         const mpns = text.split('\n')
             .map(m => m.trim())
             .filter(m => m && m.length > 0);
-            
+
         if (!mpns.length) {
             alert('No valid MPNs found. Please enter at least one MPN.');
             return;
@@ -887,7 +887,7 @@
         // Auto-authenticate if needed
         log('Checking authentication status...', 'info');
         const authSuccess = await autoAuthenticate(true);
-        
+
         const active = cm.active();
         if (active.length === 0) {
             alert('No credentials are currently authenticated. Please check your credentials and try again.');
@@ -895,7 +895,7 @@
         }
 
         const concurrency = parseInt($('concurrency').value) || 3;
-        
+
         if (concurrency < 1 || concurrency > 10) {
             alert('Concurrency must be between 1 and 10.');
             return;
@@ -919,11 +919,11 @@
             log(`Starting batch process: ${mpns.length} MPN(s) with ${active.length} credential(s), concurrency: ${concurrency}`, 'success');
 
             const processor = new ParallelProcessor(mpns, active, concurrency);
-            const orderedResults = new Array(mpns.length); // FIXED: Pre-allocate ordered results
+            const orderedResults = new Array(mpns.length);
 
             const onProgress = (result) => {
-                orderedResults[result.originalIndex] = result; // FIXED: Store in original order
-                
+                orderedResults[result.originalIndex] = result;
+
                 state.stats.processed++;
                 if (result.status === 'success') state.stats.success++;
                 else if (result.status === 'warning') state.stats.warning++;
@@ -933,13 +933,13 @@
             };
 
             await processor.process(onProgress);
-            
-            // FIXED: Store results in their original order
+
+            // Store results in their original order
             state.results = orderedResults.filter(r => r != null);
-            
-            // FIXED: Display results in original order
+
+            // Display results in original order
             displayOrderedResults();
-            
+
             const elapsed = ((Date.now() - state.stats.startTime) / 1000).toFixed(1);
             log(`✓ Batch complete: ${mpns.length} processed in ${elapsed}s (${state.stats.success} success, ${state.stats.warning} warning, ${state.stats.error} error)`, 'success');
 
@@ -985,12 +985,17 @@
         return div.innerHTML;
     }
 
-    // FIXED: Display results in original order
+    // FIXED: Display results in original order - DOM timing issue resolved
     function displayOrderedResults() {
-        let table = $('resultsTable');
-        
-        // Clear existing table
-        table.innerHTML = `
+        const table = $('resultsTable');
+
+        if (!state.results || state.results.length === 0) {
+            log('No results to display', 'warning');
+            return;
+        }
+
+        // Create table structure
+        const tableHTML = `
             <table class="results-table">
                 <thead>
                     <tr>
@@ -1008,24 +1013,40 @@
                         <th>HTSUS</th>
                     </tr>
                 </thead>
-                <tbody id="tbody"></tbody>
+                <tbody></tbody>
             </table>
         `;
-        
+
+        // Set table HTML and show it
+        table.innerHTML = tableHTML;
         table.classList.remove('hidden');
-        const tbody = $('tbody');
-        
-        // FIXED: Add all results in their original order
-        state.results.forEach(r => {
+
+        // CRITICAL FIX: Use querySelector to find tbody within the table
+        const tbody = table.querySelector('tbody');
+
+        if (!tbody) {
+            log('Error: Could not find tbody element in table', 'error');
+            return;
+        }
+
+        log(`Displaying ${state.results.length} results in table`, 'success');
+
+        // Add all results in their original order
+        state.results.forEach((r, index) => {
+            if (!r) {
+                log(`Warning: Missing result at index ${index}`, 'warning');
+                return;
+            }
+
             const row = tbody.insertRow();
-            
+
             const datasheetCell = r.datasheet 
                 ? `<a href="${escapeHtml(r.datasheet)}" target="_blank" rel="noopener" class="link">View</a>`
                 : '';
-            
+
             const statusClass = r.status === 'success' ? 'success' : r.status === 'warning' ? 'warning' : 'error';
             const htsus = cleanHTSUS(r.htsus || '');
-            
+
             row.innerHTML = `
                 <td class="status ${statusClass}">${escapeHtml(r.status)}</td>
                 <td class="mono">${escapeHtml(r.mpn)}</td>
@@ -1041,16 +1062,16 @@
                 <td class="mono">${escapeHtml(htsus)}</td>
             `;
         });
-    }
 
-    // REMOVED: addResult function - no longer needed as we display all at once in order
+        log(`Table generation complete: ${state.results.length} rows added`, 'success');
+    }
 
     function clearResults() {
         if (state.results.length === 0) {
             log('No results to clear', 'warning');
             return;
         }
-        
+
         state.results = [];
         state.stats = { processed: 0, success: 0, warning: 0, error: 0, startTime: 0 };
         $('resultsTable').innerHTML = '';
@@ -1070,8 +1091,8 @@
         try {
             const headers = ['Status', 'MPN', 'Description', 'Detailed', 'Category', 'Manufacturer', 'Package', 'Mounting', 'Datasheet', 'Aliases', 'Remarks','HTSUS'];
             const escape = str => `"${String(str).replace(/"/g, '""')}"`;
-            
-            // FIXED: Export results in their original order (state.results is already ordered)
+
+            // Export results in their original order (state.results is already ordered)
             const rows = state.results.map(r => [
                 escape(r.status),
                 escape(r.mpn),
@@ -1126,7 +1147,7 @@
     };
 
     $('authAll').onclick = authenticateAll;
-    
+
     $('clearCreds').onclick = () => {
         if (state.credentials.length === 0) {
             alert('No credentials to clear.');
@@ -1136,7 +1157,7 @@
             cm.clear();
         }
     };
-    
+
     $('process').onclick = processBulk;
     $('export').onclick = exportCSV;
     $('clear').onclick = clearResults;
