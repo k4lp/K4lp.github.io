@@ -405,7 +405,7 @@ class ExcelProcessor {
     }
     
     /**
-     * Get output column configurations with proper validation
+     * IMPROVED - Get output column configurations with better validation
      * @private
      * @returns {Object} Column validation result
      */
@@ -429,11 +429,21 @@ class ExcelProcessor {
             const api = apiSelect?.value || '';
             const field = fieldSelect?.value || '';
             
+            // Check if this is a completely empty column (no interaction)
+            const hasAnyValue = name || api || field;
+            
+            if (!hasAnyValue) {
+                // Completely empty column - ignore it (user hasn't started configuring)
+                ExcelUtils.log('INFO', `Output column ${index + 1} is empty - ignoring`);
+                return;
+            }
+            
             // Check if column configuration is complete
             if (name && api && field) {
                 valid.push({ name, api, field });
                 ExcelUtils.log('INFO', `Output column ${index + 1} configured: ${name} (${api}.${field})`);
             } else {
+                // User started configuring but didn't complete it
                 incomplete++;
                 ExcelUtils.log('WARN', `Output column ${index + 1} incomplete: name='${name}', api='${api}', field='${field}'`);
             }
