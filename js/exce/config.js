@@ -65,6 +65,13 @@ window.ExcelProcessorConfig = {
         PREVIEW_SECTION: 'previewSection',
         SHEET_PREVIEW: 'sheetPreview',
         
+        // Row Selection
+        HEADER_ROW: 'headerRow',
+        START_ROW: 'startRow',
+        END_ROW: 'endRow',
+        ROW_RANGE_INFO: 'rowRangeInfo',
+        ROW_RANGE_MESSAGE: 'rowRangeMessage',
+        
         // Column Mapping
         MAPPING_SECTION: 'mappingSection',
         MPN_COLUMN: 'mpnColumn',
@@ -146,7 +153,9 @@ window.ExcelProcessorConfig = {
     // Default Values
     DEFAULTS: {
         DIGIKEY_ENVIRONMENT: 'production',
-        DIGIKEY_LOCALE: 'US/USD'
+        DIGIKEY_LOCALE: 'US/USD',
+        HEADER_ROW: 1,
+        START_ROW: 2
     }
 };
 
