@@ -125,10 +125,10 @@ window.ExcelProcessorConfig = {
         'htsus_stripped': 'HTSUS Stripped'
     },
 
-    // File Processing
+    // File Processing - FIXED: Remove dots from extensions
     EXCEL: {
         MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
-        SUPPORTED_FORMATS: ['.xlsx', '.xls'],
+        SUPPORTED_FORMATS: ['xlsx', 'xls'], // FIXED: No dots to match getExtension() output
         MAX_PREVIEW_ROWS: 20,
         CHUNK_SIZE: 100 // Process in chunks for progress
     },
