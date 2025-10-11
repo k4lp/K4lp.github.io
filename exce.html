@@ -178,7 +178,42 @@
             
             <div class="alert alert--info mb-16">
                 <div class="alert__msg">
-                    Select columns containing MPN, Manufacturer, and Quantity. Then add output columns for API data.
+                    Select columns containing MPN, Manufacturer, and Quantity. Define row range to process, then add output columns for API data.
+                </div>
+            </div>
+            
+            <!-- Row Selection -->
+            <div class="card mb-24">
+                <div class="card__header">
+                    <h3 class="card__title">Row Range Selection</h3>
+                </div>
+                
+                <div class="grid-12 gap-16">
+                    <div class="col-span-4">
+                        <div class="form__group">
+                            <label class="label">Header Row</label>
+                            <input type="number" id="headerRow" min="1" value="1" class="input">
+                            <div class="form__help">Row number containing column headers</div>
+                        </div>
+                    </div>
+                    <div class="col-span-4">
+                        <div class="form__group">
+                            <label class="label">Start Row</label>
+                            <input type="number" id="startRow" min="1" value="2" class="input">
+                            <div class="form__help">First data row to process</div>
+                        </div>
+                    </div>
+                    <div class="col-span-4">
+                        <div class="form__group">
+                            <label class="label">End Row</label>
+                            <input type="number" id="endRow" min="1" class="input" placeholder="Leave empty for all">
+                            <div class="form__help">Last row to process (blank = all)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="rowRangeInfo" class="alert alert--info mt-16" style="display: none;">
+                    <div class="alert__msg" id="rowRangeMessage"></div>
                 </div>
             </div>
             
