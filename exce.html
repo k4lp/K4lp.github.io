@@ -25,7 +25,7 @@
             </div>
             <div class="page-header__meta">
                 <div class="meta">APIs: <span id="apiCount">0</span></div>
-                <div class="meta">Status: <span id="systemStatus">Ready</span></div>
+                <div class="meta">Status: <span id="systemStatus">Initializing...</span></div>
                 <div id="processingStatus" class="meta text-warning" style="display: none;">🔄 Processing...</div>
             </div>
         </header>
@@ -325,17 +325,19 @@
         <!-- Log Section -->
         <section class="mb-48">
             <h2 class="mb-16">Activity Log</h2>
-            <div id="activityLog" class="log">System initialized - Ready to process Excel files</div>
+            <div id="activityLog" class="log">System initializing...</div>
         </section>
     </div>
 
-    <!-- JavaScript Modules -->
-    <script src="js/exce/config.js"></script>
-    <script src="js/exce/utils.js"></script>
-    <script src="js/exce/credentials-manager.js"></script>
-    <script src="js/exce/excel-processor.js"></script>
-    <script src="js/exce/api-client.js"></script>
-    <script src="js/exce/export-handler.js"></script>
-    <script src="js/exce/main.js"></script>
+    <!-- NEW MODULAR ARCHITECTURE -->
+    <!-- Core Modules (Load First) -->
+    <script src="js/exce/core/EventBus.js"></script>
+    <script src="js/exce/core/Logger.js"></script>
+    
+    <!-- Services -->
+    <script src="js/exce/services/FileService.js"></script>
+    
+    <!-- Main Application (Load Last) -->
+    <script src="js/exce/Application.js"></script>
 </body>
 </html>
