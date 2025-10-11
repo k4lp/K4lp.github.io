@@ -1,28 +1,29 @@
 /**
- * Excel API Processor - Excel File Processing
+ * Excel API Processor - Excel Processing Module
  * Alica Technologies
  */
 
 window.ExcelProcessorExcel = {
     // Internal state
     _workbook: null,
-    _originalWorkbook: null,
     _currentSheet: null,
     _sheetData: null,
-    _sourceColumns: {
-        mpn: null,
-        manufacturer: null,
-        quantity: null
-    },
-    _outputColumns: [],
+    _headers: [],
+    _outputColumnConfig: [],
     _processedData: null,
     _isProcessing: false,
+    _isInitialized: false,
 
     /**
      * Initialize Excel processor
      */
     init() {
+        if (this._isInitialized) {
+            return;
+        }
+
         this._bindEvents();
+        this._isInitialized = true;
         window.ExcelProcessorUtils.log.info('Excel processor initialized');
     },
 
@@ -30,32 +31,46 @@ window.ExcelProcessorExcel = {
      * Bind event listeners
      */
     _bindEvents() {
-        // File upload
-        const fileInput = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.EXCEL_FILE);
+        // File input change
+        const fileInput = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.EXCEL_FILE);
         if (fileInput) {
-            fileInput.addEventListener('change', this._handleFileSelect.bind(this));
+            fileInput.addEventListener('change', (e) => this._handleFileSelect(e));
         }
 
         // Sheet selection
-        const sheetSelect = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECT);
+        const sheetSelect = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECT);
         if (sheetSelect) {
-            sheetSelect.addEventListener('change', this._handleSheetSelect.bind(this));
+            sheetSelect.addEventListener('change', (e) => this._handleSheetSelect(e));
         }
 
-        // Column mapping
-        const addColumnBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.ADD_OUTPUT_COLUMN);
+        // Row selection inputs
+        const headerRow = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW);
+        const startRow = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.START_ROW);
+        const endRow = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.END_ROW);
+
+        [headerRow, startRow, endRow].forEach(input => {
+            if (input) {
+                input.addEventListener('change', () => this._updateRowRangeInfo());
+                input.addEventListener('input', () => this._updateRowRangeInfo());
+            }
+        });
+
+        // Add output column button
+        const addColumnBtn = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.ADD_OUTPUT_COLUMN);
         if (addColumnBtn) {
-            addColumnBtn.addEventListener('click', this._addOutputColumn.bind(this));
+            addColumnBtn.addEventListener('click', () => this._addOutputColumn());
         }
 
-        const processBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.PROCESS_DATA);
+        // Process data button
+        const processBtn = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.PROCESS_DATA);
         if (processBtn) {
-            processBtn.addEventListener('click', this._processData.bind(this));
+            processBtn.addEventListener('click', () => this._processData());
         }
 
-        const clearMappingBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.CLEAR_MAPPING);
-        if (clearMappingBtn) {
-            clearMappingBtn.addEventListener('click', this._clearMapping.bind(this));
+        // Clear mapping button
+        const clearBtn = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.CLEAR_MAPPING);
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this._clearMapping());
         }
     },
 
@@ -64,123 +79,115 @@ window.ExcelProcessorExcel = {
      */
     async _handleFileSelect(event) {
         const file = event.target.files[0];
-        if (!file) return;
-
-        // Validate file
-        if (!this._validateFile(file)) {
+        
+        if (!file) {
             return;
         }
 
-        if (this._isProcessing) {
-            window.ExcelProcessorUtils.log.warn('File processing already in progress');
+        // Validate file type
+        if (!window.ExcelProcessorUtils.file.isTypeSupported(
+            file.name, 
+            window.ExcelProcessorConfig.EXCEL.SUPPORTED_FORMATS
+        )) {
+            alert(window.ExcelProcessorConfig.MESSAGES.INVALID_FILE_TYPE);
+            event.target.value = '';
             return;
         }
 
-        this._isProcessing = true;
-        window.ExcelProcessorUtils.status.showProcessing(true);
+        // Validate file size
+        if (!window.ExcelProcessorUtils.file.isValidSize(
+            file.size, 
+            window.ExcelProcessorConfig.EXCEL.MAX_FILE_SIZE
+        )) {
+            alert(window.ExcelProcessorConfig.MESSAGES.FILE_TOO_LARGE);
+            event.target.value = '';
+            return;
+        }
 
         try {
-            window.ExcelProcessorUtils.status.setSystemStatus('Loading file...');
-
-            // Read file
-            const data = await this._readFile(file);
-
-            // Parse Excel
-            this._workbook = XLSX.read(data, { type: 'binary' });
-            this._originalWorkbook = XLSX.read(data, { type: 'binary' }); // Keep original for export
-
-            if (!this._workbook || !this._workbook.SheetNames || this._workbook.SheetNames.length === 0) {
-                throw new Error('No sheets found in Excel file');
-            }
-
-            // Show file info
-            this._showFileInfo(file);
-
-            // Populate sheet selector
-            this._populateSheetSelector();
-
-            window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECTION);
-            window.ExcelProcessorUtils.status.setSystemStatus('File loaded');
-            window.ExcelProcessorUtils.log.info('Excel file loaded successfully:', file.name);
-
+            window.ExcelProcessorUtils.log.info(`Loading file: ${file.name}`);
+            await this._loadExcelFile(file);
         } catch (error) {
-            window.ExcelProcessorUtils.log.error('File loading error:', error.message);
-            alert('Error loading Excel file: ' + error.message);
-            window.ExcelProcessorUtils.status.setSystemStatus('Error');
-        } finally {
-            this._isProcessing = false;
-            window.ExcelProcessorUtils.status.showProcessing(false);
+            window.ExcelProcessorUtils.log.error('Failed to load Excel file:', error.message);
+            alert('Failed to load Excel file: ' + error.message);
         }
     },
 
     /**
-     * Validate file
+     * Load Excel file
      */
-    _validateFile(file) {
-        // Check file type
-        if (!window.ExcelProcessorUtils.file.isTypeSupported(file.name, window.ExcelProcessorConfig.EXCEL.SUPPORTED_FORMATS)) {
-            alert(window.ExcelProcessorConfig.MESSAGES.INVALID_FILE_TYPE);
-            return false;
-        }
-
-        // Check file size
-        if (!window.ExcelProcessorUtils.file.isValidSize(file.size, window.ExcelProcessorConfig.EXCEL.MAX_FILE_SIZE)) {
-            alert(window.ExcelProcessorConfig.MESSAGES.FILE_TOO_LARGE);
-            return false;
-        }
-
-        return true;
-    },
-
-    /**
-     * Read file as binary string
-     */
-    _readFile(file) {
+    async _loadExcelFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsBinaryString(file);
+
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    this._workbook = XLSX.read(data, { type: 'array' });
+
+                    // Display file info
+                    this._displayFileInfo(file);
+
+                    // Populate sheet selection
+                    this._populateSheetSelection();
+
+                    window.ExcelProcessorUtils.log.info('Excel file loaded successfully');
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            };
+
+            reader.onerror = () => reject(new Error('File reading failed'));
+            reader.readAsArrayBuffer(file);
         });
     },
 
     /**
-     * Show file information
+     * Display file information
      */
-    _showFileInfo(file) {
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.FILE_NAME, file.name);
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.FILE_SIZE, window.ExcelProcessorUtils.file.formatSize(file.size));
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.SHEET_COUNT, this._workbook.SheetNames.length);
-        window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.FILE_INFO);
+    _displayFileInfo(file) {
+        const fileInfo = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.FILE_INFO);
+        
+        window.ExcelProcessorUtils.dom.setText(
+            window.ExcelProcessorConfig.ELEMENTS.FILE_NAME, 
+            file.name
+        );
+        window.ExcelProcessorUtils.dom.setText(
+            window.ExcelProcessorConfig.ELEMENTS.FILE_SIZE, 
+            window.ExcelProcessorUtils.file.formatSize(file.size)
+        );
+        window.ExcelProcessorUtils.dom.setText(
+            window.ExcelProcessorConfig.ELEMENTS.SHEET_COUNT, 
+            this._workbook.SheetNames.length
+        );
+
+        window.ExcelProcessorUtils.dom.show(fileInfo);
+        window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECTION);
     },
 
     /**
-     * Populate sheet selector
+     * Populate sheet selection dropdown
      */
-    _populateSheetSelector() {
-        const sheetSelect = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECT);
+    _populateSheetSelection() {
+        const sheetSelect = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECT);
         
-        // Clear existing options
+        if (!sheetSelect) return;
+
+        // Clear existing options except first
         sheetSelect.innerHTML = '<option value="">Choose a sheet...</option>';
 
-        // Add sheet options
-        this._workbook.SheetNames.forEach((sheetName) => {
+        // Add sheet names
+        this._workbook.SheetNames.forEach((name, index) => {
             const option = document.createElement('option');
-            option.value = sheetName;
-            
-            // Get sheet info
-            const sheet = this._workbook.Sheets[sheetName];
-            const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-            const rowCount = range ? (range.e.r - range.s.r + 1) : 0;
-            const colCount = range ? (range.e.c - range.s.c + 1) : 0;
-            
-            option.textContent = `${sheetName} (${rowCount} rows, ${colCount} cols)`;
+            option.value = index;
+            option.textContent = name;
             sheetSelect.appendChild(option);
         });
-        
+
         // Auto-select first sheet if only one exists
         if (this._workbook.SheetNames.length === 1) {
-            sheetSelect.value = this._workbook.SheetNames[0];
+            sheetSelect.value = '0';
             sheetSelect.dispatchEvent(new Event('change'));
         }
     },
@@ -189,620 +196,533 @@ window.ExcelProcessorExcel = {
      * Handle sheet selection
      */
     _handleSheetSelect(event) {
-        const sheetName = event.target.value;
-        if (!sheetName) {
-            this._hideDownstreamSections();
+        const sheetIndex = parseInt(event.target.value);
+        
+        if (isNaN(sheetIndex) || sheetIndex < 0) {
+            window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.PREVIEW_SECTION);
+            window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.MAPPING_SECTION);
             return;
         }
 
-        try {
-            window.ExcelProcessorUtils.status.setSystemStatus('Processing sheet...');
-            
-            // Get selected sheet
-            this._currentSheet = this._workbook.Sheets[sheetName];
+        const sheetName = this._workbook.SheetNames[sheetIndex];
+        this._currentSheet = this._workbook.Sheets[sheetName];
 
-            if (!this._currentSheet) {
-                throw new Error('Sheet not found: ' + sheetName);
-            }
-
-            // Convert to array format
-            this._sheetData = XLSX.utils.sheet_to_json(this._currentSheet, {
-                header: 1, // Array of arrays
-                raw: false, // Keep as strings
-                defval: '', // Default for empty cells
-                blankrows: true
-            });
-
-            if (!this._sheetData || this._sheetData.length === 0) {
-                throw new Error('Sheet appears to be empty');
-            }
-
-            // Clean up empty rows at the end
-            this._cleanSheetData();
-
-            // Show preview
-            this._showSheetPreview();
-
-            // Setup column mapping
-            this._setupColumnMapping();
-
-            window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.PREVIEW_SECTION);
-            window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.MAPPING_SECTION);
-            
-            window.ExcelProcessorUtils.status.setSystemStatus('Sheet ready');
-            window.ExcelProcessorUtils.log.info('Sheet processed:', sheetName, 'Rows:', this._sheetData.length);
-
-        } catch (error) {
-            window.ExcelProcessorUtils.log.error('Sheet processing error:', error.message);
-            alert('Error processing sheet: ' + error.message);
-            window.ExcelProcessorUtils.status.setSystemStatus('Error');
-        }
-    },
-
-    /**
-     * Clean sheet data by removing empty rows
-     */
-    _cleanSheetData() {
-        while (this._sheetData.length > 0) {
-            const lastRow = this._sheetData[this._sheetData.length - 1];
-            const hasData = lastRow && lastRow.some(cell => cell && cell.toString().trim() !== '');
-            if (hasData) break;
-            this._sheetData.pop();
-        }
-    },
-
-    /**
-     * Hide downstream sections
-     */
-    _hideDownstreamSections() {
-        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.PREVIEW_SECTION);
-        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.MAPPING_SECTION);
-        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_SECTION);
-        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.EXPORT_SECTION);
-    },
-
-    /**
-     * Show sheet preview
-     */
-    _showSheetPreview() {
-        const maxRows = window.ExcelProcessorConfig.EXCEL.MAX_PREVIEW_ROWS;
-        const previewData = this._sheetData.slice(0, maxRows);
-        const table = this._createPreviewTable(previewData);
-
-        const container = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.SHEET_PREVIEW);
-        container.innerHTML = '';
-        container.appendChild(table);
-    },
-
-    /**
-     * Create preview table
-     */
-    _createPreviewTable(data) {
-        const table = document.createElement('table');
-        table.className = 'results-table';
-
-        // Header
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        
-        // Row number header
-        const rowHeader = document.createElement('th');
-        rowHeader.textContent = '#';
-        rowHeader.style.minWidth = '40px';
-        headerRow.appendChild(rowHeader);
-
-        // Column headers
-        const maxCols = Math.max(...data.map(r => r ? r.length : 0));
-        for (let i = 0; i < maxCols; i++) {
-            const th = document.createElement('th');
-            th.textContent = window.ExcelProcessorUtils.excel.numToCol(i + 1);
-            th.style.minWidth = '80px';
-            headerRow.appendChild(th);
-        }
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-
-        // Body
-        const tbody = document.createElement('tbody');
-        data.forEach((row, rowIndex) => {
-            const tr = document.createElement('tr');
-            
-            // Row number
-            const rowNumCell = document.createElement('td');
-            rowNumCell.textContent = rowIndex + 1;
-            rowNumCell.style.fontWeight = 'bold';
-            tr.appendChild(rowNumCell);
-
-            // Data columns
-            for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-                const td = document.createElement('td');
-                const cellValue = (row && row[colIndex]) ? String(row[colIndex]) : '';
-                const displayValue = window.ExcelProcessorUtils.string.truncate(cellValue, 30);
-                
-                td.textContent = displayValue;
-                td.title = cellValue;
-                
-                // Highlight header row
-                if (rowIndex === 0) {
-                    td.style.fontWeight = 'bold';
-                    td.style.backgroundColor = '#f0f9ff';
-                }
-                
-                tr.appendChild(td);
-            }
-            tbody.appendChild(tr);
+        // Convert sheet to JSON
+        this._sheetData = XLSX.utils.sheet_to_json(this._currentSheet, { 
+            header: 1,
+            defval: '',
+            blankrows: true
         });
-        table.appendChild(tbody);
 
-        return table;
+        window.ExcelProcessorUtils.log.info(`Sheet selected: ${sheetName} (${this._sheetData.length} rows)`);
+
+        // Display preview
+        this._displaySheetPreview();
+
+        // Populate column dropdowns
+        this._populateColumnDropdowns();
+
+        // Show mapping section
+        window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.MAPPING_SECTION);
+
+        // Initialize row range info
+        this._updateRowRangeInfo();
     },
 
     /**
-     * Setup column mapping interface
+     * Display sheet preview
      */
-    _setupColumnMapping() {
-        const maxCols = Math.max(...this._sheetData.map(r => r ? r.length : 0));
+    _displaySheetPreview() {
+        const previewDiv = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.SHEET_PREVIEW);
         
-        // Populate source column selectors
-        this._populateColumnSelector(window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN, maxCols);
-        this._populateColumnSelector(window.ExcelProcessorConfig.ELEMENTS.MANUFACTURER_COLUMN, maxCols);
-        this._populateColumnSelector(window.ExcelProcessorConfig.ELEMENTS.QUANTITY_COLUMN, maxCols);
-        
-        // Clear existing output columns
-        this._outputColumns = [];
-        this._renderOutputColumns();
-    },
+        if (!previewDiv) return;
 
-    /**
-     * Populate column selector dropdown
-     */
-    _populateColumnSelector(elementId, maxCols) {
-        const select = window.ExcelProcessorUtils.dom.get(elementId);
-        if (!select) return;
+        const maxRows = Math.min(
+            this._sheetData.length, 
+            window.ExcelProcessorConfig.EXCEL.MAX_PREVIEW_ROWS
+        );
+
+        let html = '<table class="table">';
         
-        select.innerHTML = '<option value="">Select column...</option>';
+        // Add table header
+        html += '<thead><tr>';
+        html += '<th>#</th>'; // Row number column
         
+        const maxCols = Math.max(...this._sheetData.slice(0, maxRows).map(row => row.length));
         for (let i = 0; i < maxCols; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            
-            const colLetter = window.ExcelProcessorUtils.excel.numToCol(i + 1);
-            const headerValue = (this._sheetData[0] && this._sheetData[0][i]) ? 
-                String(this._sheetData[0][i]).substring(0, 20) : '';
-            
-            option.textContent = headerValue ? 
-                `${colLetter} - ${headerValue}` : 
-                `${colLetter}`;
-            
-            select.appendChild(option);
+            html += `<th>${window.ExcelProcessorUtils.excel.numToCol(i + 1)}</th>`;
         }
+        html += '</tr></thead>';
+
+        // Add table body
+        html += '<tbody>';
+        for (let i = 0; i < maxRows; i++) {
+            const row = this._sheetData[i] || [];
+            html += `<tr><td class="text-xs text-muted">${i + 1}</td>`;
+            
+            for (let j = 0; j < maxCols; j++) {
+                const cellValue = row[j] !== undefined ? row[j] : '';
+                const truncated = window.ExcelProcessorUtils.string.truncate(String(cellValue), 30);
+                html += `<td>${window.ExcelProcessorUtils.string.sanitize(truncated)}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody>';
+        html += '</table>';
+
+        if (this._sheetData.length > maxRows) {
+            html += `<div class="mt-8 text-xs text-muted">Showing ${maxRows} of ${this._sheetData.length} rows</div>`;
+        }
+
+        previewDiv.innerHTML = html;
+        window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.PREVIEW_SECTION);
     },
 
     /**
-     * Add output column
+     * Populate column dropdowns
+     */
+    _populateColumnDropdowns() {
+        const headerRowNum = parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW)?.value || 1);
+        const headerRowIndex = headerRowNum - 1;
+
+        if (headerRowIndex < 0 || headerRowIndex >= this._sheetData.length) {
+            window.ExcelProcessorUtils.log.error('Invalid header row number');
+            return;
+        }
+
+        this._headers = this._sheetData[headerRowIndex] || [];
+
+        const dropdowns = [
+            window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN,
+            window.ExcelProcessorConfig.ELEMENTS.MANUFACTURER_COLUMN,
+            window.ExcelProcessorConfig.ELEMENTS.QUANTITY_COLUMN
+        ];
+
+        dropdowns.forEach(elementId => {
+            const dropdown = document.getElementById(elementId);
+            if (!dropdown) return;
+
+            dropdown.innerHTML = '<option value="">Select column...</option>';
+
+            this._headers.forEach((header, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${window.ExcelProcessorUtils.excel.numToCol(index + 1)} - ${header}`;
+                dropdown.appendChild(option);
+            });
+        });
+    },
+
+    /**
+     * Update row range information
+     */
+    _updateRowRangeInfo() {
+        const headerRow = parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW)?.value || 1);
+        const startRow = parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.START_ROW)?.value || 2);
+        const endRowValue = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.END_ROW)?.value;
+        const endRow = endRowValue ? parseInt(endRowValue) : this._sheetData?.length || 0;
+
+        const infoDiv = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.ROW_RANGE_INFO);
+        const messageDiv = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.ROW_RANGE_MESSAGE);
+
+        if (!infoDiv || !messageDiv || !this._sheetData) return;
+
+        // Validate ranges
+        let message = '';
+        let isValid = true;
+
+        if (headerRow < 1 || headerRow > this._sheetData.length) {
+            message = `Invalid header row. Must be between 1 and ${this._sheetData.length}`;
+            isValid = false;
+        } else if (startRow <= headerRow) {
+            message = 'Start row must be after header row';
+            isValid = false;
+        } else if (endRow < startRow) {
+            message = 'End row must be greater than or equal to start row';
+            isValid = false;
+        } else if (endRow > this._sheetData.length) {
+            message = `End row exceeds sheet length (${this._sheetData.length} rows)`;
+            isValid = false;
+        } else {
+            const rowCount = endRow - startRow + 1;
+            message = `Will process ${rowCount} row${rowCount !== 1 ? 's' : ''} (Row ${startRow} to ${endRow})`;
+        }
+
+        messageDiv.textContent = message;
+        infoDiv.className = isValid ? 'alert alert--info mt-16' : 'alert alert--error mt-16';
+        window.ExcelProcessorUtils.dom.show(infoDiv);
+
+        return isValid;
+    },
+
+    /**
+     * Add output column configuration
      */
     _addOutputColumn() {
-        const columnId = Date.now().toString();
-        
-        this._outputColumns.push({
-            id: columnId,
-            api: '',
-            field: '',
-            title: `Output Column ${this._outputColumns.length + 1}`
-        });
-        
-        this._renderOutputColumns();
-    },
-
-    /**
-     * Render output columns interface
-     */
-    _renderOutputColumns() {
-        const container = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.OUTPUT_COLUMNS);
+        const container = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.OUTPUT_COLUMNS);
         if (!container) return;
-        
-        container.innerHTML = '';
-        
-        this._outputColumns.forEach((column, index) => {
-            const columnDiv = this._createOutputColumnElement(column, index);
-            container.appendChild(columnDiv);
-        });
-    },
 
-    /**
-     * Create output column element
-     */
-    _createOutputColumnElement(column, index) {
-        const div = document.createElement('div');
-        div.className = 'card p-16';
-        div.innerHTML = `
-            <div class="grid-12 gap-16 items-end">
+        const index = this._outputColumnConfig.length;
+        const columnDiv = document.createElement('div');
+        columnDiv.className = 'card p-16 mb-16';
+        columnDiv.dataset.index = index;
+
+        columnDiv.innerHTML = `
+            <div class="grid-12 gap-16 mb-16">
+                <div class="col-span-4">
+                    <div class="form__group">
+                        <label class="label">Column Name</label>
+                        <input type="text" class="input output-column-name" placeholder="e.g., Unit Price">
+                    </div>
+                </div>
                 <div class="col-span-3">
-                    <label class="label">API Service</label>
-                    <select class="select" data-column-id="${column.id}" data-field="api">
-                        <option value="">Select API...</option>
-                        <option value="digikey" ${column.api === 'digikey' ? 'selected' : ''}>Digikey</option>
-                        <option value="mouser" ${column.api === 'mouser' ? 'selected' : ''}>Mouser</option>
-                    </select>
+                    <div class="form__group">
+                        <label class="label">API Source</label>
+                        <select class="select output-api-source">
+                            <option value="">Select API...</option>
+                            <option value="digikey">Digikey</option>
+                            <option value="mouser">Mouser</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="col-span-4">
-                    <label class="label">Data Field</label>
-                    <select class="select" data-column-id="${column.id}" data-field="field">
-                        <option value="">Select field...</option>
-                        ${this._getFieldOptions(column.api, column.field)}
-                    </select>
+                    <div class="form__group">
+                        <label class="label">Data Field</label>
+                        <select class="select output-data-field" disabled>
+                            <option value="">Select field...</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-span-3">
-                    <label class="label">Column Title</label>
-                    <input type="text" class="input" data-column-id="${column.id}" data-field="title" value="${column.title}">
-                </div>
-                <div class="col-span-2">
-                    <button class="button button--ghost text-error" onclick="window.ExcelProcessorExcel._removeOutputColumn('${column.id}')">Remove</button>
+                <div class="col-span-1 flex items-end">
+                    <button class="button button--ghost button--sm text-error w-full remove-output-column" data-index="${index}">×</button>
                 </div>
             </div>
         `;
-        
-        // Bind change events
-        const selects = div.querySelectorAll('select, input');
-        selects.forEach(element => {
-            element.addEventListener('change', this._handleOutputColumnChange.bind(this));
-            element.addEventListener('input', this._handleOutputColumnChange.bind(this));
+
+        container.appendChild(columnDiv);
+
+        // Bind events for this column
+        const apiSelect = columnDiv.querySelector('.output-api-source');
+        const fieldSelect = columnDiv.querySelector('.output-data-field');
+        const removeBtn = columnDiv.querySelector('.remove-output-column');
+
+        apiSelect.addEventListener('change', (e) => {
+            this._updateFieldOptions(fieldSelect, e.target.value);
         });
-        
-        return div;
+
+        removeBtn.addEventListener('click', () => {
+            this._removeOutputColumn(index);
+        });
+
+        this._outputColumnConfig.push({
+            element: columnDiv,
+            index: index
+        });
+
+        window.ExcelProcessorUtils.log.info('Output column added');
     },
 
     /**
-     * Get field options HTML
+     * Update field options based on API selection
      */
-    _getFieldOptions(api, selectedField) {
+    _updateFieldOptions(fieldSelect, api) {
+        fieldSelect.innerHTML = '<option value="">Select field...</option>';
+        
+        if (!api) {
+            fieldSelect.disabled = true;
+            return;
+        }
+
+        fieldSelect.disabled = false;
+
         const fields = api === 'digikey' ? 
             window.ExcelProcessorConfig.DIGIKEY_FIELDS : 
-            api === 'mouser' ? 
-            window.ExcelProcessorConfig.MOUSER_FIELDS : 
-            {};
-        
-        return Object.entries(fields).map(([key, label]) => 
-            `<option value="${key}" ${selectedField === key ? 'selected' : ''}>${label}</option>`
-        ).join('');
-    },
+            window.ExcelProcessorConfig.MOUSER_FIELDS;
 
-    /**
-     * Handle output column changes
-     */
-    _handleOutputColumnChange(event) {
-        const element = event.target;
-        const columnId = element.getAttribute('data-column-id');
-        const field = element.getAttribute('data-field');
-        const value = element.value;
-        
-        const column = this._outputColumns.find(c => c.id === columnId);
-        if (column) {
-            column[field] = value;
-            
-            // If API changed, update field options
-            if (field === 'api') {
-                column.field = ''; // Reset field selection
-                this._renderOutputColumns(); // Re-render to update field options
-            }
-        }
+        Object.entries(fields).forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            fieldSelect.appendChild(option);
+        });
     },
 
     /**
      * Remove output column
      */
-    _removeOutputColumn(columnId) {
-        this._outputColumns = this._outputColumns.filter(c => c.id !== columnId);
-        this._renderOutputColumns();
-    },
-
-    /**
-     * Process data with API calls
-     */
-    async _processData() {
-        // Validate configuration
-        if (!this._validateProcessingConfig()) {
-            return;
+    _removeOutputColumn(index) {
+        const config = this._outputColumnConfig.find(c => c.index === index);
+        if (config && config.element) {
+            config.element.remove();
+            this._outputColumnConfig = this._outputColumnConfig.filter(c => c.index !== index);
+            window.ExcelProcessorUtils.log.info('Output column removed');
         }
-
-        try {
-            this._isProcessing = true;
-            window.ExcelProcessorUtils.status.showProcessing(true);
-            window.ExcelProcessorUtils.status.setSystemStatus('Processing data...');
-            
-            // Show progress section
-            window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_SECTION);
-            
-            // Get source columns
-            this._sourceColumns.mpn = parseInt(window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN));
-            this._sourceColumns.manufacturer = parseInt(window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.MANUFACTURER_COLUMN));
-            this._sourceColumns.quantity = parseInt(window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.QUANTITY_COLUMN));
-            
-            // Process data
-            this._processedData = await this._processWithApis();
-            
-            // Show export section
-            window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.EXPORT_SECTION);
-            
-            window.ExcelProcessorUtils.status.setSystemStatus('Processing complete');
-            window.ExcelProcessorUtils.log.info('Data processing completed successfully');
-            
-        } catch (error) {
-            window.ExcelProcessorUtils.log.error('Processing error:', error.message);
-            alert('Processing failed: ' + error.message);
-            window.ExcelProcessorUtils.status.setSystemStatus('Error');
-        } finally {
-            this._isProcessing = false;
-            window.ExcelProcessorUtils.status.showProcessing(false);
-        }
-    },
-
-    /**
-     * Validate processing configuration
-     */
-    _validateProcessingConfig() {
-        // Check API credentials
-        if (!window.ExcelProcessorCredentials.hasActiveApis()) {
-            alert(window.ExcelProcessorConfig.MESSAGES.NO_CREDENTIALS);
-            return false;
-        }
-
-        // Check source columns
-        const mpnCol = window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN);
-        if (!mpnCol) {
-            alert('Please select MPN column');
-            return false;
-        }
-
-        // Check output columns
-        const validOutputs = this._outputColumns.filter(c => c.api && c.field);
-        if (validOutputs.length === 0) {
-            alert('Please add at least one output column');
-            return false;
-        }
-
-        return true;
-    },
-
-    /**
-     * Process data with API calls
-     */
-    async _processWithApis() {
-        const dataRows = this._sheetData.slice(1); // Skip header row
-        const results = [];
-        const stats = { processed: 0, success: 0, error: 0, startTime: Date.now() };
-        
-        // Update progress display
-        this._updateProgress(0, dataRows.length, stats);
-        
-        // Process in chunks
-        const chunkSize = window.ExcelProcessorConfig.EXCEL.CHUNK_SIZE;
-        
-        for (let i = 0; i < dataRows.length; i += chunkSize) {
-            const chunk = dataRows.slice(i, Math.min(i + chunkSize, dataRows.length));
-            const chunkPromises = chunk.map((row, index) => 
-                this._processRow(row, i + index + 1) // +1 for header row
-            );
-            
-            const chunkResults = await Promise.allSettled(chunkPromises);
-            
-            chunkResults.forEach((result, index) => {
-                stats.processed++;
-                
-                if (result.status === 'fulfilled') {
-                    stats.success++;
-                    results.push(result.value);
-                } else {
-                    stats.error++;
-                    window.ExcelProcessorUtils.log.error(`Row ${i + index + 2} failed:`, result.reason);
-                    // Add error row
-                    results.push({
-                        rowIndex: i + index + 1,
-                        data: chunk[index],
-                        apiData: {},
-                        error: result.reason.message
-                    });
-                }
-                
-                this._updateProgress(stats.processed, dataRows.length, stats);
-            });
-            
-            // Small delay between chunks to prevent overwhelming APIs
-            if (i + chunkSize < dataRows.length) {
-                await window.ExcelProcessorUtils.api.sleep(window.ExcelProcessorConfig.PROCESSING.REQUEST_DELAY);
-            }
-        }
-        
-        return results;
-    },
-
-    /**
-     * Process single row with API calls
-     */
-    async _processRow(row, rowIndex) {
-        const mpn = row[this._sourceColumns.mpn] || '';
-        const manufacturer = row[this._sourceColumns.manufacturer] || '';
-        const quantity = row[this._sourceColumns.quantity] || '';
-        
-        if (!mpn.trim()) {
-            throw new Error('Empty MPN');
-        }
-        
-        const apiData = {};
-        
-        // Group output columns by API
-        const digikeyColumns = this._outputColumns.filter(c => c.api === 'digikey');
-        const mouserColumns = this._outputColumns.filter(c => c.api === 'mouser');
-        
-        // Process Digikey columns
-        if (digikeyColumns.length > 0 && window.ExcelProcessorCredentials.isDigikeyActive()) {
-            try {
-                const digikeyData = await window.ExcelProcessorApiClient.fetchDigikeyData(mpn, manufacturer);
-                digikeyColumns.forEach(column => {
-                    apiData[column.id] = this._extractFieldValue(digikeyData, column.field);
-                });
-            } catch (error) {
-                window.ExcelProcessorUtils.log.warn(`Digikey API failed for ${mpn}:`, error.message);
-                // Set empty values for failed Digikey columns
-                digikeyColumns.forEach(column => {
-                    apiData[column.id] = '';
-                });
-            }
-        }
-        
-        // Process Mouser columns
-        if (mouserColumns.length > 0 && window.ExcelProcessorCredentials.isMouserActive()) {
-            try {
-                const mouserData = await window.ExcelProcessorApiClient.fetchMouserData(mpn, manufacturer);
-                mouserColumns.forEach(column => {
-                    apiData[column.id] = this._extractFieldValue(mouserData, column.field);
-                });
-            } catch (error) {
-                window.ExcelProcessorUtils.log.warn(`Mouser API failed for ${mpn}:`, error.message);
-                // Set empty values for failed Mouser columns
-                mouserColumns.forEach(column => {
-                    apiData[column.id] = '';
-                });
-            }
-        }
-        
-        return {
-            rowIndex,
-            data: row,
-            apiData
-        };
-    },
-
-    /**
-     * Extract field value from API response
-     */
-    _extractFieldValue(apiResponse, field) {
-        if (!apiResponse) return '';
-        
-        switch (field) {
-            case 'unit_price':
-                return apiResponse.unitPrice || '';
-            case 'manufacturer':
-                return apiResponse.manufacturer || '';
-            case 'detailed_description':
-                return apiResponse.detailedDescription || '';
-            case 'datasheet':
-                return apiResponse.datasheet || '';
-            case 'stock_available':
-                return apiResponse.stockAvailable || '';
-            case 'package_case':
-                return apiResponse.packageCase || '';
-            case 'htsus_number':
-                return apiResponse.htsusNumber || '';
-            case 'htsus_stripped':
-                return window.ExcelProcessorConfig.cleanHTSUS(apiResponse.htsusNumber) || '';
-            default:
-                return '';
-        }
-    },
-
-    /**
-     * Update progress display
-     */
-    _updateProgress(current, total, stats) {
-        const percent = Math.round((current / total) * 100);
-        
-        // Update progress bar
-        const progressBar = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_BAR);
-        if (progressBar) {
-            progressBar.style.width = percent + '%';
-        }
-        
-        // Update progress text
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_TEXT, 
-            `${current} / ${total} (${percent}%)`);
-        
-        // Update stats
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.STAT_PROCESSED, current);
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.STAT_SUCCESS, stats.success);
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.STAT_ERROR, stats.error);
-        
-        // Calculate rate
-        const elapsed = (Date.now() - stats.startTime) / 1000;
-        const rate = current / elapsed;
-        window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.STAT_RATE, 
-            isFinite(rate) ? rate.toFixed(1) + '/s' : '0/s');
     },
 
     /**
      * Clear mapping configuration
      */
     _clearMapping() {
-        if (confirm('Clear all column mapping? This will reset the mapping configuration.')) {
-            // Clear source columns
-            window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN, '');
-            window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.MANUFACTURER_COLUMN, '');
-            window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.QUANTITY_COLUMN, '');
-            
-            // Clear output columns
-            this._outputColumns = [];
-            this._renderOutputColumns();
-            
-            window.ExcelProcessorUtils.log.info('Column mapping cleared');
+        if (!confirm('Clear all mapping configuration?')) {
+            return;
+        }
+
+        // Clear column selections
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN).value = '';
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.MANUFACTURER_COLUMN).value = '';
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.QUANTITY_COLUMN).value = '';
+
+        // Clear output columns
+        this._outputColumnConfig.forEach(config => {
+            if (config.element) {
+                config.element.remove();
+            }
+        });
+        this._outputColumnConfig = [];
+
+        window.ExcelProcessorUtils.log.info('Mapping cleared');
+    },
+
+    /**
+     * Process data with API calls
+     */
+    async _processData() {
+        if (this._isProcessing) {
+            alert('Processing already in progress');
+            return;
+        }
+
+        // Validate credentials
+        if (!window.ExcelProcessorCredentials.hasActiveApis()) {
+            alert(window.ExcelProcessorConfig.MESSAGES.NO_CREDENTIALS);
+            return;
+        }
+
+        // Validate mapping
+        const validation = this._validateMapping();
+        if (!validation.valid) {
+            alert('Invalid mapping:\n' + validation.errors.join('\n'));
+            return;
+        }
+
+        // Validate row range
+        if (!this._updateRowRangeInfo()) {
+            alert('Invalid row range configuration');
+            return;
+        }
+
+        try {
+            this._isProcessing = true;
+            window.ExcelProcessorUtils.status.showProcessing(true);
+            window.ExcelProcessorUtils.status.setSystemStatus('Processing');
+
+            await this._executeProcessing(validation.config);
+
+            window.ExcelProcessorUtils.status.showProcessing(false);
+            window.ExcelProcessorUtils.status.setSystemStatus('Complete');
+            window.ExcelProcessorUtils.log.info(window.ExcelProcessorConfig.MESSAGES.PROCESSING_COMPLETE);
+
+        } catch (error) {
+            window.ExcelProcessorUtils.log.error('Processing failed:', error.message);
+            alert('Processing failed: ' + error.message);
+            window.ExcelProcessorUtils.status.showProcessing(false);
+            window.ExcelProcessorUtils.status.setSystemStatus('Error');
+        } finally {
+            this._isProcessing = false;
         }
     },
 
     /**
-     * Get processed data for export
+     * Validate mapping configuration
+     */
+    _validateMapping() {
+        const errors = [];
+        const mpnCol = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN).value;
+        const mfgCol = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.MANUFACTURER_COLUMN).value;
+        const qtyCol = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.QUANTITY_COLUMN).value;
+
+        if (!mpnCol) errors.push('MPN column is required');
+
+        // Get output column configurations
+        const outputColumns = [];
+        const container = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.OUTPUT_COLUMNS);
+        
+        if (container) {
+            const columnDivs = container.querySelectorAll('[data-index]');
+            columnDivs.forEach(div => {
+                const name = div.querySelector('.output-column-name')?.value.trim();
+                const api = div.querySelector('.output-api-source')?.value;
+                const field = div.querySelector('.output-data-field')?.value;
+
+                if (!name || !api || !field) {
+                    errors.push('All output columns must be fully configured');
+                    return;
+                }
+
+                outputColumns.push({ name, api, field });
+            });
+        }
+
+        if (outputColumns.length === 0) {
+            errors.push('At least one output column is required');
+        }
+
+        return {
+            valid: errors.length === 0,
+            errors,
+            config: {
+                mpnColumn: parseInt(mpnCol),
+                manufacturerColumn: mfgCol ? parseInt(mfgCol) : null,
+                quantityColumn: qtyCol ? parseInt(qtyCol) : null,
+                outputColumns
+            }
+        };
+    },
+
+    /**
+     * Execute processing
+     */
+    async _executeProcessing(config) {
+        // Get row range
+        const headerRow = parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW).value);
+        const startRow = parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.START_ROW).value);
+        const endRowValue = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.END_ROW).value;
+        const endRow = endRowValue ? parseInt(endRowValue) : this._sheetData.length;
+
+        // Show progress section
+        window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_SECTION);
+
+        // Initialize progress tracking
+        const totalRows = endRow - startRow + 1;
+        let processed = 0;
+        let success = 0;
+        let errors = 0;
+        const startTime = Date.now();
+
+        // Process each row
+        for (let rowIndex = startRow - 1; rowIndex < endRow; rowIndex++) {
+            const row = this._sheetData[rowIndex];
+            if (!row) continue;
+
+            const mpn = row[config.mpnColumn];
+            const manufacturer = config.manufacturerColumn !== null ? row[config.manufacturerColumn] : '';
+
+            if (!mpn) {
+                errors++;
+                processed++;
+                this._updateProgress(processed, totalRows, success, errors, startTime);
+                continue;
+            }
+
+            // Process each output column
+            for (const outputCol of config.outputColumns) {
+                try {
+                    let apiData;
+                    if (outputCol.api === 'digikey') {
+                        apiData = await window.ExcelProcessorApiClient.fetchDigikeyData(mpn, manufacturer);
+                    } else {
+                        apiData = await window.ExcelProcessorApiClient.fetchMouserData(mpn, manufacturer);
+                    }
+
+                    // Store the result
+                    let value = apiData[outputCol.field] || '';
+                    
+                    // Special handling for HTSUS stripped
+                    if (outputCol.field === 'htsus_stripped') {
+                        value = window.ExcelProcessorConfig.cleanHTSUS(apiData.htsus_number || '');
+                    }
+
+                    // Add column if it doesn't exist
+                    const colIndex = this._headers.indexOf(outputCol.name);
+                    if (colIndex === -1) {
+                        this._headers.push(outputCol.name);
+                        this._sheetData[headerRow - 1].push(outputCol.name);
+                    }
+
+                    // Set the value
+                    const targetCol = this._headers.indexOf(outputCol.name);
+                    if (!this._sheetData[rowIndex]) {
+                        this._sheetData[rowIndex] = [];
+                    }
+                    this._sheetData[rowIndex][targetCol] = value;
+
+                    success++;
+                } catch (error) {
+                    window.ExcelProcessorUtils.log.error(`API error for ${mpn}:`, error.message);
+                    errors++;
+                }
+            }
+
+            processed++;
+            this._updateProgress(processed, totalRows, success, errors, startTime);
+
+            // Rate limiting delay
+            await window.ExcelProcessorUtils.api.sleep(window.ExcelProcessorConfig.PROCESSING.REQUEST_DELAY);
+        }
+
+        // Store processed data for export
+        this._processedData = {
+            sheetData: this._sheetData,
+            sheetName: this._workbook.SheetNames[parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECT).value)]
+        };
+
+        // Show export section
+        window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.EXPORT_SECTION);
+    },
+
+    /**
+     * Update progress display
+     */
+    _updateProgress(processed, total, success, errors, startTime) {
+        const percent = Math.round((processed / total) * 100);
+        const elapsed = (Date.now() - startTime) / 1000;
+        const rate = processed / elapsed;
+
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_TEXT).textContent = 
+            `Processing row ${processed} of ${total}...`;
+        
+        const progressBar = document.getElementById(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_BAR);
+        if (progressBar) {
+            progressBar.style.width = percent + '%';
+        }
+
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.STAT_PROCESSED).textContent = processed;
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.STAT_SUCCESS).textContent = success;
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.STAT_ERROR).textContent = errors;
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.STAT_RATE).textContent = rate.toFixed(1) + '/s';
+    },
+
+    /**
+     * Get processed data
      */
     getProcessedData() {
         return this._processedData;
     },
 
     /**
-     * Get original workbook for export
-     */
-    getOriginalWorkbook() {
-        return this._originalWorkbook;
-    },
-
-    /**
-     * Get current sheet data with headers
-     */
-    getSheetDataWithHeaders() {
-        return this._sheetData;
-    },
-
-    /**
-     * Get output columns configuration
-     */
-    getOutputColumns() {
-        return this._outputColumns;
-    },
-
-    /**
-     * Reset processor state
+     * Reset processor
      */
     reset() {
         this._workbook = null;
-        this._originalWorkbook = null;
         this._currentSheet = null;
         this._sheetData = null;
-        this._sourceColumns = { mpn: null, manufacturer: null, quantity: null };
-        this._outputColumns = [];
+        this._headers = [];
+        this._outputColumnConfig = [];
         this._processedData = null;
         this._isProcessing = false;
-        
+
         // Reset UI
-        const fileInput = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.EXCEL_FILE);
-        if (fileInput) fileInput.value = '';
-        
+        document.getElementById(window.ExcelProcessorConfig.ELEMENTS.EXCEL_FILE).value = '';
         window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.FILE_INFO);
         window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.SHEET_SELECTION);
-        this._hideDownstreamSections();
-        
-        window.ExcelProcessorUtils.status.setSystemStatus('Ready');
-        window.ExcelProcessorUtils.log.info('Excel processor reset');
+        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.PREVIEW_SECTION);
+        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.MAPPING_SECTION);
+        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.PROGRESS_SECTION);
+        window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.EXPORT_SECTION);
+
+        window.ExcelProcessorUtils.log.info('Processor reset');
     }
 };
-
-// Make removeOutputColumn available globally for onclick handlers
-window.ExcelProcessorExcel._removeOutputColumn = window.ExcelProcessorExcel._removeOutputColumn.bind(window.ExcelProcessorExcel);
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
