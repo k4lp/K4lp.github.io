@@ -329,11 +329,13 @@
         </section>
     </div>
 
-    <!-- CLEAN MODULAR ARCHITECTURE -->
-    <!-- Load in proper dependency order -->
-    <script src="js/exce/Utils.js"></script>
-    <script src="js/exce/FileHandler.js"></script>
-    <script src="js/exce/UIController.js"></script>
-    <script src="js/exce/ExcelProcessor.js"></script>
+    <!-- MODULAR ARCHITECTURE - CORRECT LOADING ORDER -->
+    <script src="js/exce/config.js"></script>
+    <script src="js/exce/utils.js"></script>
+    <script src="js/exce/credentials-manager.js"></script>
+    <script src="js/exce/api-client.js"></script>
+    <script src="js/exce/excel-processor.js"></script>
+    <script src="js/exce/export-handler.js"></script>
+    <script src="js/exce/main.js"></script>
 </body>
 </html>
