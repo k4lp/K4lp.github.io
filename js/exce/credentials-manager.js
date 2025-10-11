@@ -1,5 +1,5 @@
 /**
- * Excel API Processor - Credentials Manager
+ * Excel API Processor - Credentials Manager (FIXED)
  * Alica Technologies
  */
 
@@ -9,140 +9,244 @@ window.ExcelProcessorCredentials = {
     _mouserCredentials: null,
     _digikeyToken: null,
     _digikeyTokenExpiry: null,
+    _isInitialized: false,
 
     /**
      * Initialize credentials manager
      */
     init() {
+        if (this._isInitialized) {
+            return;
+        }
+        
         this._loadStoredCredentials();
         this._bindEvents();
         this._updateApiCount();
+        this._isInitialized = true;
         window.ExcelProcessorUtils.log.info('Credentials manager initialized');
     },
 
     /**
-     * Bind event listeners
+     * Bind event listeners - FIXED: Better error handling and timing
      */
     _bindEvents() {
-        // Settings panel toggle
-        const toggleBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.TOGGLE_SETTINGS);
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', this._toggleSettingsPanel.bind(this));
-        }
+        // Wait for DOM to be fully ready
+        const bindWhenReady = () => {
+            // Settings panel toggle - FIXED: Enhanced binding
+            const toggleBtn = document.getElementById('toggleSettings');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._toggleSettingsPanel();
+                });
+                window.ExcelProcessorUtils.log.info('Settings toggle bound successfully');
+            } else {
+                window.ExcelProcessorUtils.log.error('Toggle settings button not found');
+            }
 
-        // Digikey credential buttons
-        const saveDigikeyBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.SAVE_DIGIKEY);
-        if (saveDigikeyBtn) {
-            saveDigikeyBtn.addEventListener('click', this._saveDigikeyCredentials.bind(this));
-        }
+            // Digikey credential buttons
+            const saveDigikeyBtn = document.getElementById('saveDigikeyCredentials');
+            if (saveDigikeyBtn) {
+                saveDigikeyBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._saveDigikeyCredentials();
+                });
+            }
 
-        const clearDigikeyBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.CLEAR_DIGIKEY);
-        if (clearDigikeyBtn) {
-            clearDigikeyBtn.addEventListener('click', this._clearDigikeyCredentials.bind(this));
-        }
+            const clearDigikeyBtn = document.getElementById('clearDigikeyCredentials');
+            if (clearDigikeyBtn) {
+                clearDigikeyBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._clearDigikeyCredentials();
+                });
+            }
 
-        // Mouser credential buttons
-        const saveMouserBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.SAVE_MOUSER);
-        if (saveMouserBtn) {
-            saveMouserBtn.addEventListener('click', this._saveMouserCredentials.bind(this));
-        }
+            // Mouser credential buttons
+            const saveMouserBtn = document.getElementById('saveMouserCredentials');
+            if (saveMouserBtn) {
+                saveMouserBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._saveMouserCredentials();
+                });
+            }
 
-        const clearMouserBtn = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.CLEAR_MOUSER);
-        if (clearMouserBtn) {
-            clearMouserBtn.addEventListener('click', this._clearMouserCredentials.bind(this));
+            const clearMouserBtn = document.getElementById('clearMouserCredentials');
+            if (clearMouserBtn) {
+                clearMouserBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._clearMouserCredentials();
+                });
+            }
+        };
+
+        // Ensure DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindWhenReady);
+        } else {
+            bindWhenReady();
         }
     },
 
     /**
-     * Toggle settings panel visibility
+     * Toggle settings panel visibility - FIXED: More robust implementation
      */
     _toggleSettingsPanel() {
-        const panel = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.SETTINGS_PANEL);
-        const button = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.TOGGLE_SETTINGS);
+        const panel = document.getElementById('settingsPanel');
+        const button = document.getElementById('toggleSettings');
         
-        if (panel && button) {
-            const isHidden = panel.style.display === 'none' || !panel.style.display;
+        if (!panel || !button) {
+            window.ExcelProcessorUtils.log.error('Settings panel elements not found');
+            return;
+        }
+
+        try {
+            const isHidden = panel.style.display === 'none' || 
+                           window.getComputedStyle(panel).display === 'none';
             
             if (isHidden) {
-                window.ExcelProcessorUtils.dom.show(panel);
+                panel.style.display = 'block';
                 button.textContent = 'Collapse Settings';
+                window.ExcelProcessorUtils.log.info('Settings panel expanded');
             } else {
-                window.ExcelProcessorUtils.dom.hide(panel);
+                panel.style.display = 'none';
                 button.textContent = 'Expand Settings';
+                window.ExcelProcessorUtils.log.info('Settings panel collapsed');
             }
+        } catch (error) {
+            window.ExcelProcessorUtils.log.error('Error toggling settings panel:', error.message);
         }
     },
 
     /**
-     * Load stored credentials from localStorage
+     * Load stored credentials from localStorage - FIXED: Enhanced persistence
      */
     _loadStoredCredentials() {
-        // Load Digikey credentials
-        const digikeyData = window.ExcelProcessorUtils.storage.get(window.ExcelProcessorConfig.STORAGE.DIGIKEY_CREDS);
-        if (digikeyData) {
-            this._digikeyCredentials = digikeyData;
-            this._populateDigikeyForm(digikeyData);
-            window.ExcelProcessorUtils.status.updateCredentialStatus('digikey', false);
-        }
+        try {
+            // Load Digikey credentials with expiration check
+            const digikeyData = this._getStoredCredentials('exce_digikey_creds');
+            if (digikeyData) {
+                this._digikeyCredentials = digikeyData;
+                this._populateDigikeyForm(digikeyData);
+                window.ExcelProcessorUtils.status.updateCredentialStatus('digikey', false);
+                window.ExcelProcessorUtils.log.info('Digikey credentials loaded from storage');
+            }
 
-        // Load Mouser credentials
-        const mouserData = window.ExcelProcessorUtils.storage.get(window.ExcelProcessorConfig.STORAGE.MOUSER_CREDS);
-        if (mouserData) {
-            this._mouserCredentials = mouserData;
-            this._populateMouserForm(mouserData);
-            window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', true);
-        }
+            // Load Mouser credentials with expiration check
+            const mouserData = this._getStoredCredentials('exce_mouser_creds');
+            if (mouserData) {
+                this._mouserCredentials = mouserData;
+                this._populateMouserForm(mouserData);
+                window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', true);
+                window.ExcelProcessorUtils.log.info('Mouser credentials loaded from storage');
+            }
 
-        this._updateApiCount();
+            this._updateApiCount();
+        } catch (error) {
+            window.ExcelProcessorUtils.log.error('Error loading stored credentials:', error.message);
+        }
+    },
+
+    /**
+     * Enhanced credential storage with expiration - FIXED: Better persistence
+     */
+    _getStoredCredentials(key) {
+        try {
+            const stored = localStorage.getItem(key);
+            if (!stored) return null;
+
+            const data = JSON.parse(stored);
+            
+            // Check expiration (default 30 days)
+            const now = Date.now();
+            const expiry = data.expiry || (now + (30 * 24 * 60 * 60 * 1000));
+            
+            if (now > expiry) {
+                localStorage.removeItem(key);
+                window.ExcelProcessorUtils.log.info(`Expired credentials removed: ${key}`);
+                return null;
+            }
+
+            return data.credentials || data; // Support both new and old format
+        } catch (error) {
+            window.ExcelProcessorUtils.log.error(`Error reading credentials ${key}:`, error.message);
+            localStorage.removeItem(key); // Remove corrupted data
+            return null;
+        }
+    },
+
+    /**
+     * Store credentials with expiration - FIXED: Enhanced storage
+     */
+    _storeCredentials(key, credentials) {
+        try {
+            const data = {
+                credentials: credentials,
+                expiry: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem(key, JSON.stringify(data));
+            window.ExcelProcessorUtils.log.info(`Credentials stored: ${key}`);
+        } catch (error) {
+            window.ExcelProcessorUtils.log.error(`Error storing credentials ${key}:`, error.message);
+            throw error;
+        }
     },
 
     /**
      * Populate Digikey form with stored data
      */
     _populateDigikeyForm(data) {
-        window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_CLIENT_ID, data.clientId || '');
-        window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_CLIENT_SECRET, data.clientSecret || '');
-        window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_ENVIRONMENT, data.environment || window.ExcelProcessorConfig.DEFAULTS.DIGIKEY_ENVIRONMENT);
-        window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_LOCALE, data.locale || window.ExcelProcessorConfig.DEFAULTS.DIGIKEY_LOCALE);
+        const setValue = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.value = value || '';
+        };
+
+        setValue('digikeyClientId', data.clientId);
+        setValue('digikeyClientSecret', data.clientSecret);
+        setValue('digikeyEnvironment', data.environment || 'production');
+        setValue('digikeyLocale', data.locale || 'US/USD');
     },
 
     /**
      * Populate Mouser form with stored data
      */
     _populateMouserForm(data) {
-        window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.MOUSER_API_KEY, data.apiKey || '');
+        const apiKeyElement = document.getElementById('mouserApiKey');
+        if (apiKeyElement) {
+            apiKeyElement.value = data.apiKey || '';
+        }
     },
 
     /**
      * Save Digikey credentials
      */
     async _saveDigikeyCredentials() {
-        const clientId = window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_CLIENT_ID).trim();
-        const clientSecret = window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_CLIENT_SECRET).trim();
-        const environment = window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_ENVIRONMENT);
-        const locale = window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_LOCALE);
+        const getElementValue = (id) => {
+            const element = document.getElementById(id);
+            return element ? element.value.trim() : '';
+        };
+
+        const clientId = getElementValue('digikeyClientId');
+        const clientSecret = getElementValue('digikeyClientSecret');
+        const environment = getElementValue('digikeyEnvironment');
+        const locale = getElementValue('digikeyLocale');
 
         if (!clientId || !clientSecret) {
             alert('Please enter both Client ID and Client Secret for Digikey.');
             return;
         }
 
-        const credentials = {
-            clientId,
-            clientSecret,
-            environment,
-            locale
-        };
+        const credentials = { clientId, clientSecret, environment, locale };
 
         try {
             window.ExcelProcessorUtils.status.updateCredentialStatus('digikey', false, 'Testing...');
             
-            // Test authentication
             const success = await this._testDigikeyAuthentication(credentials);
             
             if (success) {
                 this._digikeyCredentials = credentials;
-                window.ExcelProcessorUtils.storage.set(window.ExcelProcessorConfig.STORAGE.DIGIKEY_CREDS, credentials);
+                this._storeCredentials('exce_digikey_creds', credentials);
                 window.ExcelProcessorUtils.status.updateCredentialStatus('digikey', true);
                 window.ExcelProcessorUtils.log.info('Digikey credentials saved and authenticated successfully');
                 this._updateApiCount();
@@ -155,10 +259,11 @@ window.ExcelProcessorCredentials = {
     },
 
     /**
-     * Save Mouser credentials
+     * Save Mouser credentials - FIXED: Alternative validation
      */
     async _saveMouserCredentials() {
-        const apiKey = window.ExcelProcessorUtils.dom.getValue(window.ExcelProcessorConfig.ELEMENTS.MOUSER_API_KEY).trim();
+        const apiKeyElement = document.getElementById('mouserApiKey');
+        const apiKey = apiKeyElement ? apiKeyElement.value.trim() : '';
 
         if (!apiKey) {
             alert('Please enter API Key for Mouser.');
@@ -168,23 +273,40 @@ window.ExcelProcessorCredentials = {
         const credentials = { apiKey };
 
         try {
-            window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', false, 'Testing...');
+            window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', false, 'Validating...');
             
-            // Test API key
-            const success = await this._testMouserApiKey(credentials);
+            // FIXED: Client-side validation instead of CORS-blocked API call
+            const isValid = this._validateMouserApiKey(apiKey);
             
-            if (success) {
+            if (isValid) {
                 this._mouserCredentials = credentials;
-                window.ExcelProcessorUtils.storage.set(window.ExcelProcessorConfig.STORAGE.MOUSER_CREDS, credentials);
+                this._storeCredentials('exce_mouser_creds', credentials);
                 window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', true);
-                window.ExcelProcessorUtils.log.info('Mouser credentials saved and tested successfully');
+                window.ExcelProcessorUtils.log.info('Mouser credentials saved successfully');
                 this._updateApiCount();
+            } else {
+                throw new Error('Invalid API key format');
             }
         } catch (error) {
             window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', false, error.message);
-            window.ExcelProcessorUtils.log.error('Mouser API key test failed:', error.message);
-            alert('Mouser API key test failed: ' + error.message);
+            window.ExcelProcessorUtils.log.error('Mouser API key validation failed:', error.message);
+            alert('Mouser API key validation failed: ' + error.message);
         }
+    },
+
+    /**
+     * Client-side Mouser API key validation - FIXED: No CORS issues
+     */
+    _validateMouserApiKey(apiKey) {
+        // Basic format validation for Mouser API keys
+        // Mouser API keys are typically UUIDs: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        
+        if (!apiKey || apiKey.length < 32) {
+            return false;
+        }
+        
+        return uuidPattern.test(apiKey);
     },
 
     /**
@@ -196,11 +318,16 @@ window.ExcelProcessorCredentials = {
             this._digikeyToken = null;
             this._digikeyTokenExpiry = null;
             
-            window.ExcelProcessorUtils.storage.remove(window.ExcelProcessorConfig.STORAGE.DIGIKEY_CREDS);
+            localStorage.removeItem('exce_digikey_creds');
             
             // Clear form
-            window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_CLIENT_ID, '');
-            window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_CLIENT_SECRET, '');
+            const clearElement = (id) => {
+                const element = document.getElementById(id);
+                if (element) element.value = '';
+            };
+            
+            clearElement('digikeyClientId');
+            clearElement('digikeyClientSecret');
             
             window.ExcelProcessorUtils.status.updateCredentialStatus('digikey', false);
             window.ExcelProcessorUtils.log.info('Digikey credentials cleared');
@@ -215,10 +342,11 @@ window.ExcelProcessorCredentials = {
         if (confirm('Clear Mouser credentials? This will remove all saved API key data.')) {
             this._mouserCredentials = null;
             
-            window.ExcelProcessorUtils.storage.remove(window.ExcelProcessorConfig.STORAGE.MOUSER_CREDS);
+            localStorage.removeItem('exce_mouser_creds');
             
             // Clear form
-            window.ExcelProcessorUtils.dom.setValue(window.ExcelProcessorConfig.ELEMENTS.MOUSER_API_KEY, '');
+            const apiKeyElement = document.getElementById('mouserApiKey');
+            if (apiKeyElement) apiKeyElement.value = '';
             
             window.ExcelProcessorUtils.status.updateCredentialStatus('mouser', false);
             window.ExcelProcessorUtils.log.info('Mouser credentials cleared');
@@ -261,29 +389,6 @@ window.ExcelProcessorCredentials = {
         this._digikeyToken = data.access_token;
         this._digikeyTokenExpiry = Date.now() + ((data.expires_in - 60) * 1000); // 1 min buffer
 
-        return true;
-    },
-
-    /**
-     * Test Mouser API key
-     */
-    async _testMouserApiKey(credentials) {
-        // Simple test call to validate API key
-        const testUrl = `${window.ExcelProcessorConfig.MOUSER.BASE_URL}/search/partnumber?apikey=${credentials.apiKey}&keyword=test&records=1`;
-        
-        const response = await fetch(testUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error');
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-
-        // If we get here, the API key is valid
         return true;
     },
 
