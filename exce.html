@@ -329,13 +329,102 @@
         </section>
     </div>
 
-    <!-- MODULAR ARCHITECTURE - CORRECT LOADING ORDER -->
-    <script src="js/exce/config.js"></script>
-    <script src="js/exce/utils.js"></script>
-    <script src="js/exce/credentials-manager.js"></script>
-    <script src="js/exce/api-client.js"></script>
-    <script src="js/exce/excel-processor.js"></script>
-    <script src="js/exce/export-handler.js"></script>
-    <script src="js/exce/main.js"></script>
+    <!-- PRODUCTION MODULAR ARCHITECTURE - CORRECT LOADING ORDER -->
+    <!-- Load the complete modular system instead of wrong files -->
+    <script src="js/exce/Utils.js"></script>
+    <script src="js/exce/FileHandler.js"></script>
+    <script src="js/exce/UIController.js"></script>
+    <script src="js/exce/ExcelProcessor.js"></script>
+    <script src="js/exce/Application.js"></script>
+    
+    <!-- Settings panel toggle functionality -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('toggleSettings');
+            const settingsPanel = document.getElementById('settingsPanel');
+            
+            if (toggleBtn && settingsPanel) {
+                toggleBtn.addEventListener('click', function() {
+                    if (settingsPanel.style.display === 'none') {
+                        settingsPanel.style.display = 'block';
+                        toggleBtn.textContent = 'Collapse Settings';
+                    } else {
+                        settingsPanel.style.display = 'none';
+                        toggleBtn.textContent = 'Expand Settings';
+                    }
+                });
+            }
+            
+            // Simple credential storage for Digikey
+            const saveDigikeyBtn = document.getElementById('saveDigikeyCredentials');
+            if (saveDigikeyBtn) {
+                saveDigikeyBtn.addEventListener('click', function() {
+                    const clientId = document.getElementById('digikeyClientId').value;
+                    const clientSecret = document.getElementById('digikeyClientSecret').value;
+                    
+                    if (clientId && clientSecret) {
+                        localStorage.setItem('digikey_client_id', clientId);
+                        localStorage.setItem('digikey_client_secret', clientSecret);
+                        localStorage.setItem('digikey_environment', document.getElementById('digikeyEnvironment').value);
+                        localStorage.setItem('digikey_locale', document.getElementById('digikeyLocale').value);
+                        
+                        const status = document.getElementById('digikeyStatus');
+                        status.innerHTML = '<div class="status-dot status-dot--active"></div><span>Active</span>';
+                        
+                        ExcelUtils.showSuccess('Digikey credentials saved successfully');
+                    } else {
+                        ExcelUtils.showError('Please enter both Client ID and Client Secret');
+                    }
+                });
+            }
+            
+            // Simple credential storage for Mouser  
+            const saveMouserBtn = document.getElementById('saveMouserCredentials');
+            if (saveMouserBtn) {
+                saveMouserBtn.addEventListener('click', function() {
+                    const apiKey = document.getElementById('mouserApiKey').value;
+                    
+                    if (apiKey) {
+                        localStorage.setItem('mouser_api_key', apiKey);
+                        
+                        const status = document.getElementById('mouserStatus');
+                        status.innerHTML = '<div class="status-dot status-dot--active"></div><span>Active</span>';
+                        
+                        ExcelUtils.showSuccess('Mouser credentials saved successfully');
+                    } else {
+                        ExcelUtils.showError('Please enter API Key');
+                    }
+                });
+            }
+            
+            // Load saved credentials on page load
+            const digikeyClientId = localStorage.getItem('digikey_client_id');
+            const mouserApiKey = localStorage.getItem('mouser_api_key');
+            
+            if (digikeyClientId) {
+                document.getElementById('digikeyClientId').value = digikeyClientId;
+                document.getElementById('digikeyClientSecret').value = localStorage.getItem('digikey_client_secret') || '';
+                document.getElementById('digikeyEnvironment').value = localStorage.getItem('digikey_environment') || 'production';
+                document.getElementById('digikeyLocale').value = localStorage.getItem('digikey_locale') || 'US/USD';
+                
+                const status = document.getElementById('digikeyStatus');
+                status.innerHTML = '<div class="status-dot status-dot--active"></div><span>Active</span>';
+            }
+            
+            if (mouserApiKey) {
+                document.getElementById('mouserApiKey').value = mouserApiKey;
+                
+                const status = document.getElementById('mouserStatus');
+                status.innerHTML = '<div class="status-dot status-dot--active"></div><span>Active</span>';
+            }
+            
+            // Update API count
+            const apiCount = document.getElementById('apiCount');
+            let count = 0;
+            if (digikeyClientId) count++;
+            if (mouserApiKey) count++;
+            if (apiCount) apiCount.textContent = count;
+        });
+    </script>
 </body>
 </html>
