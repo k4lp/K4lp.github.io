@@ -96,6 +96,15 @@ window.ExcelProcessorUtils = {
             return false;
         },
 
+        setText(elementId, text) {
+            const element = this.get(elementId);
+            if (element) {
+                element.textContent = text;
+                return true;
+            }
+            return false;
+        },
+
         show(elementOrId) {
             const element = typeof elementOrId === 'string' ? 
                            this.get(elementOrId) : elementOrId;
@@ -340,7 +349,7 @@ window.ExcelProcessorUtils = {
         }
     },
 
-    // File utilities
+    // File utilities - FIXED with missing methods
     file: {
         formatSize(bytes) {
             if (bytes === 0) return '0 B';
@@ -361,6 +370,103 @@ window.ExcelProcessorUtils = {
         isExcelFile(filename) {
             const ext = this.getExtension(filename).toLowerCase();
             return ['xlsx', 'xls'].includes(ext);
+        },
+
+        // FIXED: Add missing isTypeSupported method
+        isTypeSupported(filename, supportedFormats) {
+            const ext = this.getExtension(filename).toLowerCase();
+            return supportedFormats.includes(ext);
+        },
+
+        // FIXED: Add missing isValidSize method
+        isValidSize(fileSize, maxSize) {
+            return fileSize <= maxSize;
+        }
+    },
+
+    // String utilities - FIXED with missing methods
+    string: {
+        truncate(str, length = 50, suffix = '...') {
+            if (str.length <= length) return str;
+            return str.substring(0, length) + suffix;
+        },
+
+        sanitize(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        },
+
+        capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        },
+
+        camelCase(str) {
+            return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
+                return index === 0 ? word.toLowerCase() : word.toUpperCase();
+            }).replace(/\s+/g, '');
+        }
+    },
+
+    // Excel utilities - FIXED with missing methods
+    excel: {
+        // Convert column number to Excel column letter (1 = A, 26 = Z, 27 = AA)
+        numToCol(num) {
+            let result = '';
+            while (num > 0) {
+                num--;
+                result = String.fromCharCode((num % 26) + 65) + result;
+                num = Math.floor(num / 26);
+            }
+            return result;
+        },
+
+        // Convert Excel column letter to number (A = 1, Z = 26, AA = 27)
+        colToNum(col) {
+            let result = 0;
+            for (let i = 0; i < col.length; i++) {
+                result = result * 26 + (col.charCodeAt(i) - 64);
+            }
+            return result;
+        },
+
+        // Get cell reference (e.g., A1, B2, etc.)
+        getCellRef(row, col) {
+            return this.numToCol(col) + row;
+        }
+    },
+
+    // API utilities - FIXED with missing methods
+    api: {
+        // Sleep function for rate limiting
+        sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        },
+
+        // Extract error message from API response
+        extractErrorMessage(error) {
+            if (typeof error === 'string') return error;
+            if (error.message) return error.message;
+            if (error.error) return error.error;
+            if (error.detail) return error.detail;
+            return 'Unknown API error';
+        },
+
+        // Rate limiter for API calls
+        createRateLimiter(requestsPerSecond = 10) {
+            const interval = 1000 / requestsPerSecond;
+            let lastCall = 0;
+
+            return async function() {
+                const now = Date.now();
+                const timeSinceLastCall = now - lastCall;
+                
+                if (timeSinceLastCall < interval) {
+                    await this.sleep(interval - timeSinceLastCall);
+                }
+                
+                lastCall = Date.now();
+            }.bind(this);
         }
     },
 
