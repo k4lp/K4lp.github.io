@@ -329,15 +329,11 @@
         </section>
     </div>
 
-    <!-- NEW MODULAR ARCHITECTURE -->
-    <!-- Core Modules (Load First) -->
-    <script src="js/exce/core/EventBus.js"></script>
-    <script src="js/exce/core/Logger.js"></script>
-    
-    <!-- Services -->
-    <script src="js/exce/services/FileService.js"></script>
-    
-    <!-- Main Application (Load Last) -->
-    <script src="js/exce/Application.js"></script>
+    <!-- CLEAN MODULAR ARCHITECTURE -->
+    <!-- Load in proper dependency order -->
+    <script src="js/exce/Utils.js"></script>
+    <script src="js/exce/FileHandler.js"></script>
+    <script src="js/exce/UIController.js"></script>
+    <script src="js/exce/ExcelProcessor.js"></script>
 </body>
 </html>
