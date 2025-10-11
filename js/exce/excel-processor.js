@@ -50,8 +50,20 @@ window.ExcelProcessorExcel = {
 
         [headerRow, startRow, endRow].forEach(input => {
             if (input) {
-                input.addEventListener('change', () => this._updateRowRangeInfo());
-                input.addEventListener('input', () => this._updateRowRangeInfo());
+                input.addEventListener('change', () => {
+                    this._updateRowRangeInfo();
+                    // FIXED: Auto-update column dropdowns when header row changes
+                    if (input.id === window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW && this._sheetData) {
+                        this._populateColumnDropdowns();
+                    }
+                });
+                input.addEventListener('input', () => {
+                    this._updateRowRangeInfo();
+                    // FIXED: Also update on input event for real-time feedback
+                    if (input.id === window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW && this._sheetData) {
+                        this._populateColumnDropdowns();
+                    }
+                });
             }
         });
 
@@ -279,18 +291,19 @@ window.ExcelProcessorExcel = {
     },
 
     /**
-     * Populate column dropdowns
+     * Populate column dropdowns - FIXED with validation and logging
      */
     _populateColumnDropdowns() {
         const headerRowNum = parseInt(document.getElementById(window.ExcelProcessorConfig.ELEMENTS.HEADER_ROW)?.value || 1);
         const headerRowIndex = headerRowNum - 1;
 
         if (headerRowIndex < 0 || headerRowIndex >= this._sheetData.length) {
-            window.ExcelProcessorUtils.log.error('Invalid header row number');
+            window.ExcelProcessorUtils.log.error(`Invalid header row number: ${headerRowNum}`);
             return;
         }
 
         this._headers = this._sheetData[headerRowIndex] || [];
+        window.ExcelProcessorUtils.log.info(`Updating column dropdowns for header row ${headerRowNum} (${this._headers.length} columns)`);
 
         const dropdowns = [
             window.ExcelProcessorConfig.ELEMENTS.MPN_COLUMN,
@@ -300,8 +313,14 @@ window.ExcelProcessorExcel = {
 
         dropdowns.forEach(elementId => {
             const dropdown = document.getElementById(elementId);
-            if (!dropdown) return;
+            if (!dropdown) {
+                window.ExcelProcessorUtils.log.warn(`Dropdown not found: ${elementId}`);
+                return;
+            }
 
+            // Store current selection
+            const currentValue = dropdown.value;
+            
             dropdown.innerHTML = '<option value="">Select column...</option>';
 
             this._headers.forEach((header, index) => {
@@ -310,6 +329,11 @@ window.ExcelProcessorExcel = {
                 option.textContent = `${window.ExcelProcessorUtils.excel.numToCol(index + 1)} - ${header}`;
                 dropdown.appendChild(option);
             });
+
+            // Restore selection if still valid
+            if (currentValue && currentValue < this._headers.length) {
+                dropdown.value = currentValue;
+            }
         });
     },
 
