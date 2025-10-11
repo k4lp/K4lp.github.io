@@ -1,207 +1,382 @@
 /**
- * Excel API Processor - Utilities
+ * Excel API Processor - Enhanced Utils (FIXED)
  * Alica Technologies
  */
 
 window.ExcelProcessorUtils = {
-    // DOM manipulation utilities
-    dom: {
-        get: (id) => document.getElementById(id),
-        show: (elementOrId) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.style.display = 'block';
+    // Enhanced logging with levels
+    log: {
+        _logLevel: 'info', // debug, info, warn, error
+        _logHistory: [],
+        _maxHistory: 100,
+
+        _log(level, message, ...args) {
+            const timestamp = new Date().toISOString();
+            const logEntry = {
+                timestamp,
+                level,
+                message: typeof message === 'string' ? message : JSON.stringify(message),
+                args: args.length > 0 ? args : undefined
+            };
+
+            // Add to history
+            this._logHistory.push(logEntry);
+            if (this._logHistory.length > this._maxHistory) {
+                this._logHistory.shift();
+            }
+
+            // Console output with styling
+            const styles = {
+                debug: 'color: #666; font-size: 11px;',
+                info: 'color: #2563eb; font-weight: 500;',
+                warn: 'color: #d97706; font-weight: 500;',
+                error: 'color: #dc2626; font-weight: bold;'
+            };
+
+            console.log(
+                `%c[EXCE ${level.toUpperCase()}] ${logEntry.message}`,
+                styles[level] || '',
+                ...args
+            );
+
+            // Update activity log in UI
+            this._updateActivityLog(logEntry);
         },
-        hide: (elementOrId) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.style.display = 'none';
-        },
-        toggle: (elementOrId) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) {
-                el.style.display = el.style.display === 'none' ? 'block' : 'none';
+
+        _updateActivityLog(logEntry) {
+            const logElement = document.getElementById('activityLog');
+            if (!logElement) return;
+
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-item--${logEntry.level}`;
+            logItem.innerHTML = `
+                <span class="log-time">${new Date(logEntry.timestamp).toLocaleTimeString()}</span>
+                <span class="log-message">${logEntry.message}</span>
+            `;
+
+            logElement.insertBefore(logItem, logElement.firstChild);
+
+            // Keep only last 20 entries visible
+            const items = logElement.querySelectorAll('.log-item');
+            if (items.length > 20) {
+                items[items.length - 1].remove();
             }
         },
-        setText: (elementOrId, text) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.textContent = text;
+
+        debug(message, ...args) { this._log('debug', message, ...args); },
+        info(message, ...args) { this._log('info', message, ...args); },
+        warn(message, ...args) { this._log('warn', message, ...args); },
+        error(message, ...args) { this._log('error', message, ...args); },
+
+        getHistory() { return [...this._logHistory]; },
+        setLevel(level) { this._logLevel = level; }
+    },
+
+    // Enhanced DOM utilities
+    dom: {
+        get(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                window.ExcelProcessorUtils.log.debug(`Element not found: ${elementId}`);
+            }
+            return element;
         },
-        setHtml: (elementOrId, html) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.innerHTML = html;
+
+        getValue(elementId) {
+            const element = this.get(elementId);
+            return element ? element.value : '';
         },
-        getValue: (elementOrId) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            return el ? el.value : '';
+
+        setValue(elementId, value) {
+            const element = this.get(elementId);
+            if (element) {
+                element.value = value;
+                return true;
+            }
+            return false;
         },
-        setValue: (elementOrId, value) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.value = value;
+
+        show(elementOrId) {
+            const element = typeof elementOrId === 'string' ? 
+                           this.get(elementOrId) : elementOrId;
+            if (element) {
+                element.style.display = 'block';
+                return true;
+            }
+            return false;
         },
-        addClass: (elementOrId, className) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.classList.add(className);
+
+        hide(elementOrId) {
+            const element = typeof elementOrId === 'string' ? 
+                           this.get(elementOrId) : elementOrId;
+            if (element) {
+                element.style.display = 'none';
+                return true;
+            }
+            return false;
         },
-        removeClass: (elementOrId, className) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            if (el) el.classList.remove(className);
+
+        toggle(elementOrId) {
+            const element = typeof elementOrId === 'string' ? 
+                           this.get(elementOrId) : elementOrId;
+            if (element) {
+                const isHidden = element.style.display === 'none' || 
+                               window.getComputedStyle(element).display === 'none';
+                element.style.display = isHidden ? 'block' : 'none';
+                return !isHidden;
+            }
+            return false;
         },
-        hasClass: (elementOrId, className) => {
-            const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
-            return el ? el.classList.contains(className) : false;
+
+        addClass(elementOrId, className) {
+            const element = typeof elementOrId === 'string' ? 
+                           this.get(elementOrId) : elementOrId;
+            if (element && className) {
+                element.classList.add(className);
+                return true;
+            }
+            return false;
+        },
+
+        removeClass(elementOrId, className) {
+            const element = typeof elementOrId === 'string' ? 
+                           this.get(elementOrId) : elementOrId;
+            if (element && className) {
+                element.classList.remove(className);
+                return true;
+            }
+            return false;
+        },
+
+        hasClass(elementOrId, className) {
+            const element = typeof elementOrId === 'string' ? 
+                           this.get(elementOrId) : elementOrId;
+            return element && className ? element.classList.contains(className) : false;
         }
     },
 
-    // String utilities
-    string: {
-        truncate: (str, length = 50) => {
-            if (!str) return '';
-            return str.length > length ? str.substring(0, length) + '...' : str;
+    // Enhanced storage utilities with error handling
+    storage: {
+        get(key) {
+            try {
+                const value = localStorage.getItem(key);
+                return value ? JSON.parse(value) : null;
+            } catch (error) {
+                window.ExcelProcessorUtils.log.error(`Storage get error for key ${key}:`, error.message);
+                return null;
+            }
         },
-        capitalize: (str) => {
-            if (!str) return '';
-            return str.charAt(0).toUpperCase() + str.slice(1);
+
+        set(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (error) {
+                window.ExcelProcessorUtils.log.error(`Storage set error for key ${key}:`, error.message);
+                return false;
+            }
         },
-        sanitize: (str) => {
-            if (!str) return '';
-            return String(str).replace(/[<>"'&]/g, '');
+
+        remove(key) {
+            try {
+                localStorage.removeItem(key);
+                return true;
+            } catch (error) {
+                window.ExcelProcessorUtils.log.error(`Storage remove error for key ${key}:`, error.message);
+                return false;
+            }
         },
-        isEmail: (str) => {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(str);
+
+        clear() {
+            try {
+                localStorage.clear();
+                return true;
+            } catch (error) {
+                window.ExcelProcessorUtils.log.error('Storage clear error:', error.message);
+                return false;
+            }
+        },
+
+        getSize() {
+            try {
+                const total = JSON.stringify(localStorage).length;
+                return { 
+                    total, 
+                    formatted: this._formatBytes(total * 2) // Approximate UTF-16 encoding
+                };
+            } catch (error) {
+                return { total: 0, formatted: '0 B' };
+            }
+        },
+
+        _formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    },
+
+    // Enhanced status management with API state visualization - FIXED
+    status: {
+        setApiCount(count) {
+            const element = window.ExcelProcessorUtils.dom.get('apiCount');
+            if (element) {
+                element.textContent = count;
+                element.className = count > 0 ? 'meta text-success' : 'meta';
+            }
+        },
+
+        setSystemStatus(status) {
+            const element = window.ExcelProcessorUtils.dom.get('systemStatus');
+            if (element) {
+                element.textContent = status;
+                
+                // Add appropriate styling based on status
+                element.className = 'meta';
+                if (status.toLowerCase().includes('error')) {
+                    element.classList.add('text-error');
+                } else if (status.toLowerCase().includes('ready')) {
+                    element.classList.add('text-success');
+                } else if (status.toLowerCase().includes('processing')) {
+                    element.classList.add('text-warning');
+                }
+            }
+        },
+
+        // FIXED: Enhanced API state management with proper visual feedback
+        updateCredentialStatus(apiType, isActive, message = null) {
+            const statusId = `${apiType}Status`;
+            const statusElement = window.ExcelProcessorUtils.dom.get(statusId);
+            
+            if (!statusElement) {
+                window.ExcelProcessorUtils.log.warn(`Status element not found: ${statusId}`);
+                return;
+            }
+
+            const dotElement = statusElement.querySelector('.status-dot');
+            const textElement = statusElement.querySelector('span');
+            
+            if (!dotElement || !textElement) {
+                window.ExcelProcessorUtils.log.warn(`Status sub-elements not found for: ${statusId}`);
+                return;
+            }
+
+            // Clear existing classes
+            dotElement.className = 'status-dot';
+            
+            if (message) {
+                // Show custom message (e.g., "Testing...", "Connecting...")
+                textElement.textContent = message;
+                dotElement.classList.add('status-dot--warning');
+                window.ExcelProcessorUtils.log.info(`${apiType} status: ${message}`);
+            } else if (isActive) {
+                // Active/Connected state
+                textElement.textContent = 'Active';
+                dotElement.classList.add('status-dot--active');
+                window.ExcelProcessorUtils.log.info(`${apiType} is now active`);
+            } else {
+                // Inactive state
+                textElement.textContent = 'Inactive';
+                dotElement.classList.add('status-dot--inactive');
+                window.ExcelProcessorUtils.log.info(`${apiType} is inactive`);
+            }
+
+            // Add API-specific status classes for additional styling
+            statusElement.setAttribute('data-status', isActive ? 'active' : 'inactive');
+            statusElement.setAttribute('data-api', apiType);
+        },
+
+        // Show/hide processing indicator
+        showProcessing(show = true, message = 'Processing...') {
+            const element = window.ExcelProcessorUtils.dom.get('processingStatus');
+            if (element) {
+                if (show) {
+                    element.textContent = `🔄 ${message}`;
+                    window.ExcelProcessorUtils.dom.show(element);
+                } else {
+                    window.ExcelProcessorUtils.dom.hide(element);
+                }
+            }
+        },
+
+        // Get comprehensive status overview
+        getStatusOverview() {
+            return {
+                system: window.ExcelProcessorUtils.dom.get('systemStatus')?.textContent || 'Unknown',
+                apiCount: parseInt(window.ExcelProcessorUtils.dom.get('apiCount')?.textContent || '0'),
+                processing: window.ExcelProcessorUtils.dom.get('processingStatus')?.style.display !== 'none',
+                digikey: this._getApiStatus('digikey'),
+                mouser: this._getApiStatus('mouser')
+            };
+        },
+
+        _getApiStatus(apiType) {
+            const statusElement = window.ExcelProcessorUtils.dom.get(`${apiType}Status`);
+            if (!statusElement) return 'unknown';
+            
+            const textElement = statusElement.querySelector('span');
+            return textElement ? textElement.textContent.toLowerCase() : 'unknown';
+        }
+    },
+
+    // DateTime utilities
+    datetime: {
+        getTimestamp() {
+            return new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+        },
+
+        formatDate(date = new Date()) {
+            return date.toLocaleDateString();
+        },
+
+        formatTime(date = new Date()) {
+            return date.toLocaleTimeString();
+        },
+
+        formatDateTime(date = new Date()) {
+            return date.toLocaleString();
         }
     },
 
     // File utilities
     file: {
-        formatSize: (bytes) => {
-            if (bytes === 0) return '0 Bytes';
+        formatSize(bytes) {
+            if (bytes === 0) return '0 B';
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const sizes = ['B', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         },
-        getExtension: (filename) => {
-            return '.' + filename.split('.').pop().toLowerCase();
+
+        getExtension(filename) {
+            return filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2);
         },
-        isTypeSupported: (filename, supportedTypes) => {
-            const ext = window.ExcelProcessorUtils.file.getExtension(filename);
-            return supportedTypes.includes(ext);
+
+        getBaseName(filename) {
+            return filename.replace(/\.[^/.]+$/, '');
         },
-        isValidSize: (size, maxSize) => {
-            return size <= maxSize;
+
+        isExcelFile(filename) {
+            const ext = this.getExtension(filename).toLowerCase();
+            return ['xlsx', 'xls'].includes(ext);
         }
     },
 
-    // Excel utilities
-    excel: {
-        numToCol: (num) => {
-            let result = '';
-            while (num > 0) {
-                num--;
-                result = String.fromCharCode(65 + (num % 26)) + result;
-                num = Math.floor(num / 26);
-            }
-            return result;
-        },
-        colToNum: (col) => {
-            let result = 0;
-            for (let i = 0; i < col.length; i++) {
-                result = result * 26 + (col.charCodeAt(i) - 64);
-            }
-            return result;
-        },
-        getCellAddress: (row, col) => {
-            return window.ExcelProcessorUtils.excel.numToCol(col + 1) + (row + 1);
-        }
-    },
-
-    // Date/Time utilities
-    datetime: {
-        formatTime: (date = new Date()) => {
-            return date.toLocaleTimeString('en-US', { 
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        },
-        formatDateTime: (date = new Date()) => {
-            return date.toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        },
-        getTimestamp: () => {
-            return new Date().toISOString().replace(/[:.]/g, '-').substr(0, 19);
-        }
-    },
-
-    // Logging utilities
-    log: {
-        info: (message, ...args) => {
-            console.log(`[EXCE INFO] ${message}`, ...args);
-            window.ExcelProcessorUtils.log._addToActivityLog('info', message);
-        },
-        warn: (message, ...args) => {
-            console.warn(`[EXCE WARN] ${message}`, ...args);
-            window.ExcelProcessorUtils.log._addToActivityLog('warning', message);
-        },
-        error: (message, ...args) => {
-            console.error(`[EXCE ERROR] ${message}`, ...args);
-            window.ExcelProcessorUtils.log._addToActivityLog('error', message);
-        },
-        debug: (message, ...args) => {
-            if (window.ExcelProcessorConfig?.DEBUG) {
-                console.log(`[EXCE DEBUG] ${message}`, ...args);
-            }
-        },
-        _addToActivityLog: (type, message) => {
-            const logEl = window.ExcelProcessorUtils.dom.get(window.ExcelProcessorConfig.ELEMENTS.ACTIVITY_LOG);
-            if (logEl) {
-                const time = window.ExcelProcessorUtils.datetime.formatTime();
-                const prefix = type === 'error' ? '✗' : type === 'warning' ? '⚠' : '•';
-                const newLine = `\n[${time}] ${prefix} ${message}`;
-                logEl.textContent += newLine;
-                logEl.scrollTop = logEl.scrollHeight;
-            }
-        }
-    },
-
-    // API utilities
-    api: {
-        sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
-        
-        makeRequest: async (url, options = {}) => {
-            const defaultOptions = {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                timeout: window.ExcelProcessorConfig.PROCESSING.TIMEOUT
-            };
-
-            const finalOptions = { ...defaultOptions, ...options };
-            
+    // Network utilities for API calls
+    network: {
+        async fetchWithTimeout(url, options = {}, timeout = 30000) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), finalOptions.timeout);
-            
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
             try {
                 const response = await fetch(url, {
-                    ...finalOptions,
+                    ...options,
                     signal: controller.signal
                 });
-                
                 clearTimeout(timeoutId);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                return await response.json();
+                return response;
             } catch (error) {
                 clearTimeout(timeoutId);
                 if (error.name === 'AbortError') {
@@ -211,124 +386,81 @@ window.ExcelProcessorUtils = {
             }
         },
 
-        retryRequest: async (requestFn, maxRetries = 3, delay = 1000) => {
+        async retryFetch(url, options = {}, maxRetries = 3, delay = 1000) {
+            let lastError;
+            
             for (let i = 0; i <= maxRetries; i++) {
                 try {
-                    return await requestFn();
+                    const response = await this.fetchWithTimeout(url, options);
+                    return response;
                 } catch (error) {
-                    if (i === maxRetries) throw error;
-                    
-                    window.ExcelProcessorUtils.log.warn(`Request failed (attempt ${i + 1}/${maxRetries + 1}), retrying...`);
-                    await window.ExcelProcessorUtils.api.sleep(delay * (i + 1));
+                    lastError = error;
+                    if (i < maxRetries) {
+                        window.ExcelProcessorUtils.log.warn(`Request failed, retrying in ${delay}ms... (${i + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff
+                    }
                 }
             }
-        }
-    },
-
-    // Storage utilities
-    storage: {
-        set: (key, value) => {
-            try {
-                localStorage.setItem(key, JSON.stringify(value));
-                return true;
-            } catch (error) {
-                window.ExcelProcessorUtils.log.error('Storage set failed:', error.message);
-                return false;
-            }
-        },
-        get: (key, defaultValue = null) => {
-            try {
-                const item = localStorage.getItem(key);
-                return item ? JSON.parse(item) : defaultValue;
-            } catch (error) {
-                window.ExcelProcessorUtils.log.error('Storage get failed:', error.message);
-                return defaultValue;
-            }
-        },
-        remove: (key) => {
-            try {
-                localStorage.removeItem(key);
-                return true;
-            } catch (error) {
-                window.ExcelProcessorUtils.log.error('Storage remove failed:', error.message);
-                return false;
-            }
-        },
-        clear: () => {
-            try {
-                localStorage.clear();
-                return true;
-            } catch (error) {
-                window.ExcelProcessorUtils.log.error('Storage clear failed:', error.message);
-                return false;
-            }
+            
+            throw lastError;
         }
     },
 
     // Validation utilities
     validation: {
-        isRequired: (value) => {
-            return value !== null && value !== undefined && String(value).trim() !== '';
+        isValidEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
         },
-        isNumber: (value) => {
-            return !isNaN(parseFloat(value)) && isFinite(value);
+
+        isValidUrl(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch {
+                return false;
+            }
         },
-        isInteger: (value) => {
-            return Number.isInteger(Number(value));
+
+        isNumber(value) {
+            return !isNaN(value) && isFinite(value);
         },
-        isInRange: (value, min, max) => {
-            const num = Number(value);
-            return num >= min && num <= max;
+
+        isEmpty(value) {
+            return value === null || value === undefined || 
+                   (typeof value === 'string' && value.trim() === '') ||
+                   (Array.isArray(value) && value.length === 0) ||
+                   (typeof value === 'object' && Object.keys(value).length === 0);
         }
     },
 
-    // Status management
-    status: {
-        setApiCount: (count) => {
-            window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.API_COUNT, count);
+    // Performance monitoring
+    performance: {
+        _marks: {},
+
+        mark(name) {
+            this._marks[name] = performance.now();
         },
-        setSystemStatus: (status) => {
-            window.ExcelProcessorUtils.dom.setText(window.ExcelProcessorConfig.ELEMENTS.SYSTEM_STATUS, status);
-        },
-        showProcessing: (show = true) => {
-            if (show) {
-                window.ExcelProcessorUtils.dom.show(window.ExcelProcessorConfig.ELEMENTS.PROCESSING_STATUS);
-            } else {
-                window.ExcelProcessorUtils.dom.hide(window.ExcelProcessorConfig.ELEMENTS.PROCESSING_STATUS);
+
+        measure(name, startMark) {
+            if (!this._marks[startMark]) {
+                window.ExcelProcessorUtils.log.warn(`Start mark not found: ${startMark}`);
+                return 0;
             }
-        },
-        updateCredentialStatus: (type, isActive, message = '') => {
-            const elementId = type === 'digikey' ? 
-                window.ExcelProcessorConfig.ELEMENTS.DIGIKEY_STATUS : 
-                window.ExcelProcessorConfig.ELEMENTS.MOUSER_STATUS;
             
-            const statusEl = window.ExcelProcessorUtils.dom.get(elementId);
-            if (statusEl) {
-                const dotEl = statusEl.querySelector('.status-dot');
-                const textEl = statusEl.querySelector('span');
-                
-                if (dotEl && textEl) {
-                    // Remove all status classes
-                    dotEl.classList.remove('status-dot--inactive', 'status-dot--success', 'status-dot--error');
-                    
-                    if (isActive) {
-                        dotEl.classList.add('status-dot--success');
-                        textEl.textContent = 'Active';
-                    } else if (message) {
-                        dotEl.classList.add('status-dot--error');
-                        textEl.textContent = 'Error';
-                        textEl.title = message;
-                    } else {
-                        dotEl.classList.add('status-dot--inactive');
-                        textEl.textContent = 'Inactive';
-                    }
-                }
-            }
+            const duration = performance.now() - this._marks[startMark];
+            window.ExcelProcessorUtils.log.debug(`${name}: ${duration.toFixed(2)}ms`);
+            return duration;
         }
     }
 };
 
-// Export for module use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = window.ExcelProcessorUtils;
+// Initialize utilities when DOM is loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.ExcelProcessorUtils.log.info('Enhanced utilities initialized');
+    });
+} else {
+    window.ExcelProcessorUtils.log.info('Enhanced utilities initialized');
 }
