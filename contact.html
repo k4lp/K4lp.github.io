@@ -3,33 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - K4LP Engineering Tools</title>
+    <title>Contact - K4LP Engineering Tools</title>
     <link rel="stylesheet" href="css/site.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <div class="nav-brand-logo"></div>
-                <a href="index.html" class="nav-brand-link">K4LP</a>
-            </div>
-            <div class="nav-menu">
-                <a href="index.html" class="nav-link">Tools</a>
-                <a href="contact.html" class="nav-link active">About</a>
-            </div>
-            <div class="nav-actions">
-                <button id="settings-btn" class="settings-btn" aria-label="Settings">Settings</button>
-            </div>
-        </div>
-    </nav>
+    <!-- Navigation will be inserted by JavaScript -->
 
     <main class="main-content">
         <div class="container">
             <header class="page-header">
-                <h1>About</h1>
+                <h1>Contact</h1>
                 <p>Engineering tools for PCB assembly and component management</p>
             </header>
 
@@ -95,7 +78,7 @@
                             </div>
                             <div class="spec-item">
                                 <span class="spec-label">Typography:</span>
-                                <span class="spec-value">JetBrains Mono + Geist Mono</span>
+                                <span class="spec-value">System Monospace Fonts</span>
                             </div>
                             <div class="spec-item">
                                 <span class="spec-label">Browser Support:</span>
@@ -176,28 +159,12 @@
         </div>
     </footer>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Settings</h3>
-                <button id="close-settings" class="close-btn">Close</button>
-            </div>
-            <form id="settings-form" class="modal-body">
-                <div id="settings-content">
-                    <!-- Settings content will be loaded dynamically -->
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Settings Modal will be inserted by JavaScript -->
 
     <!-- Scripts -->
-    <script src="js/common/utils.js"></script>
     <script src="js/common/storage.js"></script>
-    <script src="js/common/api.js"></script>
-    <script src="js/core/navigation.js"></script>
-    <script src="js/pages/settings/settings.js"></script>
+    <script src="js/shared/navigation-html.js"></script>
+    <script src="js/shared/navigation.js"></script>
     <script src="js/pages/contact/contact.js"></script>
 </body>
 </html>
