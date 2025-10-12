@@ -1,170 +1,198 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PCB Assembly Tools - Home</title>
-    <link rel="stylesheet" href="site.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>PCB & BOM Toolkit — Index</title>
+  <link rel="stylesheet" href="css/site.css" />
+  <link rel="icon" href="data:,">
 </head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <a href="index.html" class="navbar-logo">PCB Assembly Tools</a>
-        <div class="navbar-controls">
-            <button class="navbar-settings-btn" id="settingsBtn" aria-label="Settings">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </button>
-        </div>
+<body class="page page--index">
+
+  <!-- Navbar (brand -> index.html only; settings button opens drawer) -->
+  <header class="navbar" role="banner">
+    <div class="navbar__brand">
+      <a href="index.html" aria-label="Home">PCB &amp; BOM Toolkit</a>
+    </div>
+    <nav class="navbar__links" aria-label="Primary">
+      <!-- Intentionally no other page links per spec (references index.html only) -->
+      <button class="navbar__settings-btn" type="button" data-action="open-settings" aria-haspopup="dialog" aria-controls="settings" aria-label="Open Settings">
+        <span class="icon icon--gear" aria-hidden="true"></span>
+        <span class="label">Settings</span>
+      </button>
     </nav>
+  </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <section class="section">
-                <h1 class="section-title">Engineering Tools</h1>
-                <p class="mb-6">Professional tools for PCB assembly engineers, component sourcing specialists, and BOM management. All tools integrate with Digikey and Mouser APIs for real-time component data.</p>
-                
-                <div class="grid grid-cols-3 grid-gap-md">
-                    <!-- Tool Card 1: BOM Processor -->
-                    <a href="bom-processor.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">BOM Processor</h3>
-                            <p class="tool-card-description">Upload Excel BOM files, map columns, and automatically fetch component data from Digikey and Mouser. Supports batch processing and multi-sheet workbooks.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Excel</span>
-                                <span class="tool-card-tag">BOM</span>
-                                <span class="tool-card-tag">API</span>
-                                <span class="tool-card-tag">Batch</span>
-                            </div>
-                        </div>
-                    </a>
+  <noscript>
+    <div class="container section">
+      <div class="alert alert--warn">This app requires JavaScript. Please enable it to use the tools.</div>
+    </div>
+  </noscript>
 
-                    <!-- Tool Card 2: Component Scanner -->
-                    <a href="component-scanner.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">Component Scanner</h3>
-                            <p class="tool-card-description">Scan component barcodes and QR codes using your device camera. Instantly retrieve specifications, datasheets, and pricing from supplier APIs.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">QR Code</span>
-                                <span class="tool-card-tag">Barcode</span>
-                                <span class="tool-card-tag">Camera</span>
-                                <span class="tool-card-tag">Lookup</span>
-                            </div>
-                        </div>
-                    </a>
+  <main id="content" class="content" role="main">
+    <!-- Hero -->
+    <header class="hero">
+      <div class="container">
+        <h1>BOM, QR/Barcode &amp; Catalog Utilities</h1>
+        <p class="hero__lead">
+          Swiss-minimal, monochrome tools for PCB assembly engineers: Excel/BOM parsing, Digi-Key &amp; Mouser lookups, QR/Barcode scan &amp; generate, and more.
+          Everything runs client-side; API credentials are stored locally in your browser.
+        </p>
+      </div>
+    </header>
 
-                    <!-- Tool Card 3: Part Matcher -->
-                    <a href="part-matcher.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">Part Matcher</h3>
-                            <p class="tool-card-description">Find alternate components based on specifications. Compare parameters, pricing, and availability across multiple suppliers to optimize your BOM.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Alternates</span>
-                                <span class="tool-card-tag">Compare</span>
-                                <span class="tool-card-tag">Optimization</span>
-                            </div>
-                        </div>
-                    </a>
+    <!-- Tools -->
+    <section class="section" id="tools" aria-labelledby="tools-title">
+      <div class="container">
+        <h2 class="section-title" id="tools-title">Tools</h2>
 
-                    <!-- Tool Card 4: Inventory Manager -->
-                    <a href="inventory-manager.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">Inventory Manager</h3>
-                            <p class="tool-card-description">Track component inventory with real-time stock levels. Scan components in and out, set reorder points, and generate purchase orders automatically.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Inventory</span>
-                                <span class="tool-card-tag">Stock</span>
-                                <span class="tool-card-tag">Tracking</span>
-                            </div>
-                        </div>
-                    </a>
+        <div class="tools-grid">
+          <!-- BOM / Excel Mapper -->
+          <article class="card">
+            <h3 class="card__title">Excel BOM Mapper</h3>
+            <p class="card__meta">Load spreadsheets, preview sheets, and map columns for part number, manufacturer, quantity, and reference designators.</p>
+            <div class="tags">
+              <span class="tag">excel</span>
+              <span class="tag">bom</span>
+              <span class="tag">mapping</span>
+            </div>
+            <div class="cluster right">
+              <a class="btn btn--primary" href="excel-mapper.html" aria-label="Open Excel BOM Mapper">Open</a>
+            </div>
+          </article>
 
-                    <!-- Tool Card 5: Price Analyzer -->
-                    <a href="price-analyzer.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">Price Analyzer</h3>
-                            <p class="tool-card-description">Compare component pricing across Digikey and Mouser for different quantities. Analyze cost breakpoints and optimize order quantities for best pricing.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Pricing</span>
-                                <span class="tool-card-tag">Analysis</span>
-                                <span class="tool-card-tag">Cost</span>
-                            </div>
-                        </div>
-                    </a>
+          <!-- Digi-Key Search -->
+          <article class="card">
+            <h3 class="card__title">Digi-Key Lookup</h3>
+            <p class="card__meta">Query Digi-Key for live part data and availability from your mapped PNs. Uses your local API key from Settings.</p>
+            <div class="tags">
+              <span class="tag">digikey</span>
+              <span class="tag">api</span>
+              <span class="tag">availability</span>
+            </div>
+            <div class="cluster right">
+              <a class="btn btn--primary" href="digikey.html" aria-label="Open Digi-Key Lookup">Open</a>
+            </div>
+          </article>
 
-                    <!-- Tool Card 6: Datasheet Library -->
-                    <a href="datasheet-library.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">Datasheet Library</h3>
-                            <p class="tool-card-description">Organize and manage component datasheets. Automatically download and categorize PDFs from supplier APIs with full-text search capabilities.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Datasheets</span>
-                                <span class="tool-card-tag">Library</span>
-                                <span class="tool-card-tag">Search</span>
-                            </div>
-                        </div>
-                    </a>
+          <!-- Mouser Search -->
+          <article class="card">
+            <h3 class="card__title">Mouser Lookup</h3>
+            <p class="card__meta">Query Mouser for alternates, lifecycle, and stock; map results back to your BOM rows.</p>
+            <div class="tags">
+              <span class="tag">mouser</span>
+              <span class="tag">api</span>
+              <span class="tag">alternates</span>
+            </div>
+            <div class="cluster right">
+              <a class="btn btn--primary" href="mouser.html" aria-label="Open Mouser Lookup">Open</a>
+            </div>
+          </article>
 
-                    <!-- Tool Card 7: PCB Spec Manager -->
-                    <a href="pcb-spec-manager.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">PCB Spec Manager</h3>
-                            <p class="tool-card-description">Manage PCB specifications including layer count, material, finish, and tolerances. Generate specification sheets and track revisions.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">PCB</span>
-                                <span class="tool-card-tag">Specifications</span>
-                                <span class="tool-card-tag">Revision</span>
-                            </div>
-                        </div>
-                    </a>
+          <!-- QR / Barcode Scanner -->
+          <article class="card">
+            <h3 class="card__title">QR / Barcode Scanner</h3>
+            <p class="card__meta">Camera scanner with HUD overlays; adjust scanner parameters and see decoded values live.</p>
+            <div class="tags">
+              <span class="tag">qr</span>
+              <span class="tag">barcode</span>
+              <span class="tag">camera</span>
+            </div>
+            <div class="cluster right">
+              <a class="btn btn--primary" href="scanner.html" aria-label="Open QR / Barcode Scanner">Open</a>
+            </div>
+          </article>
 
-                    <!-- Tool Card 8: Supplier Comparison -->
-                    <a href="supplier-comparison.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">Supplier Comparison</h3>
-                            <p class="tool-card-description">Side-by-side comparison of component availability, lead times, and pricing between Digikey and Mouser. Export comparison reports to Excel.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Supplier</span>
-                                <span class="tool-card-tag">Comparison</span>
-                                <span class="tool-card-tag">Report</span>
-                            </div>
-                        </div>
-                    </a>
+          <!-- QR / Barcode Generator -->
+          <article class="card">
+            <h3 class="card__title">QR / Barcode Generator</h3>
+            <p class="card__meta">Generate labels from BOM fields or free text; print-ready, monochrome outputs.</p>
+            <div class="tags">
+              <span class="tag">qr</span>
+              <span class="tag">barcode</span>
+              <span class="tag">labels</span>
+            </div>
+            <div class="cluster right">
+              <a class="btn btn--primary" href="codes.html" aria-label="Open QR / Barcode Generator">Open</a>
+            </div>
+          </article>
 
-                    <!-- Tool Card 9: BOM Validator -->
-                    <a href="bom-validator.html" class="tool-card">
-                        <div>
-                            <h3 class="tool-card-title">BOM Validator</h3>
-                            <p class="tool-card-description">Validate BOM completeness, check for obsolete parts, and verify component availability before ordering. Generate validation reports with recommendations.</p>
-                            <div class="tool-card-tags">
-                                <span class="tool-card-tag">Validation</span>
-                                <span class="tool-card-tag">Obsolescence</span>
-                                <span class="tool-card-tag">Audit</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </section>
+          <!-- Contact -->
+          <article class="card">
+            <h3 class="card__title">Contact &amp; About</h3>
+            <p class="card__meta">Project details, scope, and how to reach us.</p>
+            <div class="tags">
+              <span class="tag">about</span>
+              <span class="tag">contact</span>
+            </div>
+            <div class="cluster right">
+              <a class="btn btn--secondary" href="contact.html" aria-label="Open Contact page">Open</a>
+            </div>
+          </article>
         </div>
-    </main>
+      </div>
+    </section>
+  </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <p class="footer-copyright">&copy; Kalp Pariya - 2025</p>
+  <!-- Settings Drawer (shared across all pages) -->
+  <div class="settings" id="settings" data-open="false" aria-hidden="true">
+    <div class="settings__backdrop" data-action="close-settings" aria-hidden="true"></div>
+    <aside class="settings__panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <header class="settings__header">
+        <h2 class="settings__title" id="settings-title">API Credentials</h2>
+        <button class="btn btn--icon" type="button" data-action="close-settings" aria-label="Close settings">✕</button>
+      </header>
+
+      <div class="settings__content">
+        <!-- Digi-Key -->
+        <div class="settings__row">
+          <div class="field">
+            <label for="dk-api-key">Digi-Key API Key</label>
+            <input id="dk-api-key" type="password" inputmode="text" autocomplete="off" placeholder="• • • • • • • •">
+            <small class="hint">Stored in your browser (no expiry).</small>
+          </div>
+          <span class="status-badge" id="dk-status" data-status="inactive" aria-live="polite">
+            <span class="dot"></span>Inactive
+          </span>
         </div>
-    </footer>
 
-    <!-- API Settings Modal (Include from separate file) -->
-    <div id="settingsModalContainer"></div>
+        <!-- Mouser -->
+        <div class="settings__row">
+          <div class="field">
+            <label for="mouser-api-key">Mouser API Key</label>
+            <input id="mouser-api-key" type="password" inputmode="text" autocomplete="off" placeholder="• • • • • • • •">
+            <small class="hint">Stored in your browser (no expiry).</small>
+          </div>
+          <span class="status-badge" id="mouser-status" data-status="inactive" aria-live="polite">
+            <span class="dot"></span>Inactive
+          </span>
+        </div>
+      </div>
 
-    <!-- Scripts -->
-    <script src="js/common/storage.js"></script>
-    <script src="js/common/api-manager.js"></script>
-    <script src="js/common/modal.js"></script>
-    <script src="js/index/main.js"></script>
+      <footer class="settings__footer">
+        <button class="btn btn--secondary" type="button" data-action="clear-keys">Clear</button>
+        <div class="cluster right">
+          <button class="btn btn--ghost" type="button" data-action="test-apis">Test</button>
+          <button class="btn btn--primary" type="button" data-action="save-keys">Save</button>
+        </div>
+      </footer>
+    </aside>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer__wrap container">
+      <div>Built for PCB assembly &amp; BOM processing.</div>
+      <div class="footer__copy">&copy; Kalp Pariya — 2025</div>
+    </div>
+  </footer>
+
+  <!-- Scripts (modular; no inline JS) -->
+  <script type="module" src="js/common/dom.js"></script>
+  <script type="module" src="js/common/storage.js"></script>
+  <script type="module" src="js/common/settings.js"></script>
+  <script type="module" src="js/common/ui.js"></script>
+  <script type="module" src="js/index/main.js"></script>
 </body>
 </html>

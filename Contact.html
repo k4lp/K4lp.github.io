@@ -1,141 +1,164 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact - PCB Assembly Tools</title>
-    <link rel="stylesheet" href="site.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>PCB & BOM Toolkit — Contact</title>
+  <link rel="stylesheet" href="css/site.css" />
+  <link rel="icon" href="data:,">
 </head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <a href="index.html" class="navbar-logo">PCB Assembly Tools</a>
-        <div class="navbar-controls">
-            <button class="navbar-settings-btn" id="settingsBtn" aria-label="Settings">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </button>
-        </div>
+<body class="page page--contact">
+
+  <!-- Navbar (brand -> index.html only) -->
+  <header class="navbar" role="banner">
+    <div class="navbar__brand">
+      <a href="index.html" aria-label="Home">PCB &amp; BOM Toolkit</a>
+    </div>
+    <nav class="navbar__links" aria-label="Primary">
+      <button class="navbar__settings-btn" type="button" data-action="open-settings" aria-haspopup="dialog" aria-controls="settings" aria-label="Open Settings">
+        <span class="icon icon--gear" aria-hidden="true"></span>
+        <span class="label">Settings</span>
+      </button>
     </nav>
+  </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <section class="section contact-section">
-                <h1 class="section-title">About This Project</h1>
-                
-                <div class="contact-info mb-8">
-                    <h2 class="mb-4">Project Overview</h2>
-                    <p class="mb-4">PCB Assembly Tools is a comprehensive suite of client-side web applications designed specifically for electronics engineers, PCB assembly specialists, and component procurement professionals. All tools are built with privacy and performance in mind, running entirely in your browser without requiring any server infrastructure.</p>
-                    
-                    <p class="mb-4">This project integrates seamlessly with industry-leading supplier APIs including Digikey and Mouser, providing real-time access to component data, specifications, pricing, and availability. All API credentials and user data are stored locally in your browser using modern client-side storage technologies, ensuring your information never leaves your device.</p>
+  <main id="content" class="content" role="main">
+    <!-- Hero -->
+    <header class="hero">
+      <div class="container">
+        <h1>Contact &amp; About</h1>
+        <p class="hero__lead">Minimal tools for electronics engineers focused on PCB assembly and component BOM processing.</p>
+      </div>
+    </header>
 
-                    <h3 class="mt-8 mb-4">Key Features</h3>
-                    <ul class="mb-4" style="list-style: disc; margin-left: 1.5rem; line-height: 1.8;">
-                        <li>Excel-based BOM processing with intelligent column mapping</li>
-                        <li>Real-time component scanning using QR codes and barcodes</li>
-                        <li>Automated part matching and alternate component suggestions</li>
-                        <li>Multi-supplier price comparison and optimization</li>
-                        <li>Inventory tracking with stock alerts and reorder automation</li>
-                        <li>Client-side data storage with no server dependencies</li>
-                        <li>Offline-capable with cached component data</li>
-                        <li>Professional-grade reporting and export capabilities</li>
-                    </ul>
+    <section class="section">
+      <div class="container">
+        <div class="grid cols-2">
+          <!-- Project Info -->
+          <div class="contact contact__card">
+            <div class="contact__row">
+              <div class="contact__label">Project</div>
+              <div class="contact__value">PCB &amp; BOM Toolkit (client-side utilities, no server)</div>
+            </div>
+            <div class="contact__row">
+              <div class="contact__label">Scope</div>
+              <div class="contact__value">
+                Excel/BOM preview &amp; mapping, Digi-Key &amp; Mouser API lookups, QR/Barcode scan &amp; generate, label printing, and engineering-grade table tooling.
+              </div>
+            </div>
+            <div class="contact__row">
+              <div class="contact__label">Audience</div>
+              <div class="contact__value">Electronics engineers, PCB assembly teams, and component sourcing specialists.</div>
+            </div>
+            <div class="contact__row">
+              <div class="contact__label">Status</div>
+              <div class="contact__value">
+                <span class="badge"><span class="dot"></span> alpha</span>
+              </div>
+            </div>
+          </div>
 
-                    <h3 class="mt-8 mb-4">Technology Stack</h3>
-                    <p class="mb-4">Built using pure HTML5, CSS3, and vanilla JavaScript with a modular architecture. The project follows Swiss minimalist design principles with a monochrome aesthetic using the Geist font family. All code is organized for maximum reusability and maintainability.</p>
+          <!-- Contact Form (no backend; placeholder only) -->
+          <div class="contact">
+            <div class="contact__card">
+              <h2 class="mb-4" style="display:none;">Contact Form</h2><!-- hidden heading to preserve layout; style removed by CSS default -->
+              <form class="form" id="contact-form" novalidate>
+                <div class="field">
+                  <label for="contact-email">Email Address</label>
+                  <input id="contact-email" name="email" type="email" placeholder="email@domain.tld" autocomplete="email" required>
+                  <small class="help">We’ll use this only to reply.</small>
                 </div>
-
-                <div class="divider"></div>
-
-                <div class="contact-info mt-8">
-                    <h2 class="mb-4">Get In Touch</h2>
-                    
-                    <div class="contact-info-item">
-                        <span class="contact-info-label">Developer</span>
-                        <span class="contact-info-value">Kalp Pariya</span>
-                    </div>
-
-                    <div class="contact-info-item">
-                        <span class="contact-info-label">Email</span>
-                        <span class="contact-info-value">
-                            <a href="mailto:contact@example.com">contact@example.com</a>
-                        </span>
-                    </div>
-
-                    <div class="contact-info-item">
-                        <span class="contact-info-label">GitHub Repository</span>
-                        <span class="contact-info-value">
-                            <a href="https://github.com/k4lp/pcb-assembly-tools" target="_blank" rel="noopener noreferrer">github.com/k4lp/pcb-assembly-tools</a>
-                        </span>
-                    </div>
-
-                    <div class="contact-info-item">
-                        <span class="contact-info-label">Project Website</span>
-                        <span class="contact-info-value">
-                            <a href="https://k4lp.github.io" target="_blank" rel="noopener noreferrer">k4lp.github.io</a>
-                        </span>
-                    </div>
-
-                    <div class="contact-info-item">
-                        <span class="contact-info-label">Version</span>
-                        <span class="contact-info-value font-mono">1.0.0</span>
-                    </div>
-
-                    <div class="contact-info-item">
-                        <span class="contact-info-label">Last Updated</span>
-                        <span class="contact-info-value">October 2025</span>
-                    </div>
+                <div class="field">
+                  <label for="contact-message">Message</label>
+                  <textarea id="contact-message" name="message" placeholder="Your message..." rows="6" required></textarea>
                 </div>
-
-                <div class="divider"></div>
-
-                <div class="contact-info mt-8">
-                    <h2 class="mb-4">API Integration</h2>
-                    <p class="mb-4">This project utilizes official APIs from major electronic component distributors. To use the full functionality of these tools, you'll need to register for API access:</p>
-                    
-                    <div class="mb-6">
-                        <h3 class="font-semibold mb-2">Digikey API</h3>
-                        <p class="text-sm text-gray mb-2">OAuth 2.0 authentication with client ID and client secret. Supports product search, ordering, and barcode lookup.</p>
-                        <a href="https://developer.digikey.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">Register for Digikey API</a>
-                    </div>
-
-                    <div class="mb-6">
-                        <h3 class="font-semibold mb-2">Mouser API</h3>
-                        <p class="text-sm text-gray mb-2">Simple API key authentication. Separate keys for search and cart/order operations.</p>
-                        <a href="https://www.mouser.com/api-hub/" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">Register for Mouser API</a>
-                    </div>
-
-                    <p class="text-sm text-gray">Once registered, configure your API credentials in the settings panel (gear icon in the navigation bar). All credentials are stored locally in your browser and never transmitted to any third-party servers.</p>
+                <div class="cluster right">
+                  <button class="btn btn--secondary" type="reset">Clear</button>
+                  <button class="btn btn--primary" type="submit" data-action="contact-submit">Send</button>
                 </div>
-
-                <div class="divider"></div>
-
-                <div class="contact-info mt-8">
-                    <h2 class="mb-4">License & Attribution</h2>
-                    <p class="mb-4">This project is open source and available under the MIT License. Contributions, bug reports, and feature requests are welcome on the GitHub repository.</p>
-                    <p class="text-sm text-gray">Digikey and Mouser are registered trademarks of their respective companies. This project is not officially affiliated with or endorsed by these organizations.</p>
-                </div>
-            </section>
+                <p class="help mt-2">Note: This is a client-side placeholder. Hook your own endpoint in <code class="cell-code">/js/contact/main.js</code>.</p>
+              </form>
+            </div>
+          </div>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <p class="footer-copyright">&copy; Kalp Pariya - 2025</p>
+        <!-- Quick Links -->
+        <div class="section">
+          <div class="grid cols-3">
+            <a class="card" href="index.html#tools" aria-label="Back to Tools">
+              <span class="card__title">Back to Tools</span>
+              <p class="card__meta">Explore all available utilities</p>
+            </a>
+            <a class="card" href="excel-mapper.html" aria-label="Open Excel BOM Mapper">
+              <span class="card__title">Excel BOM Mapper</span>
+              <p class="card__meta">Preview &amp; map BOM columns</p>
+            </a>
+            <a class="card" href="scanner.html" aria-label="Open QR / Barcode Scanner">
+              <span class="card__title">QR / Barcode Scanner</span>
+              <p class="card__meta">HUD overlay, adjustable params</p>
+            </a>
+          </div>
         </div>
-    </footer>
+      </div>
+    </section>
+  </main>
 
-    <!-- API Settings Modal (Include from separate file) -->
-    <div id="settingsModalContainer"></div>
+  <!-- Settings Drawer (shared) -->
+  <div class="settings" id="settings" data-open="false" aria-hidden="true">
+    <div class="settings__backdrop" data-action="close-settings" aria-hidden="true"></div>
+    <aside class="settings__panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <header class="settings__header">
+        <h2 class="settings__title" id="settings-title">API Credentials</h2>
+        <button class="btn btn--icon" type="button" data-action="close-settings" aria-label="Close settings">✕</button>
+      </header>
 
-    <!-- Scripts -->
-    <script src="js/common/storage.js"></script>
-    <script src="js/common/api-manager.js"></script>
-    <script src="js/common/modal.js"></script>
-    <script src="js/contact/main.js"></script>
+      <div class="settings__content">
+        <div class="settings__row">
+          <div class="field">
+            <label for="dk-api-key">Digi-Key API Key</label>
+            <input id="dk-api-key" type="password" inputmode="text" autocomplete="off" placeholder="• • • • • • • •">
+            <small class="hint">Stored in your browser (no expiry).</small>
+          </div>
+          <span class="status-badge" id="dk-status" data-status="inactive" aria-live="polite">
+            <span class="dot"></span>Inactive
+          </span>
+        </div>
+        <div class="settings__row">
+          <div class="field">
+            <label for="mouser-api-key">Mouser API Key</label>
+            <input id="mouser-api-key" type="password" inputmode="text" autocomplete="off" placeholder="• • • • • • • •">
+            <small class="hint">Stored in your browser (no expiry).</small>
+          </div>
+          <span class="status-badge" id="mouser-status" data-status="inactive" aria-live="polite">
+            <span class="dot"></span>Inactive
+          </span>
+        </div>
+      </div>
+
+      <footer class="settings__footer">
+        <button class="btn btn--secondary" type="button" data-action="clear-keys">Clear</button>
+        <div class="cluster right">
+          <button class="btn btn--ghost" type="button" data-action="test-apis">Test</button>
+          <button class="btn btn--primary" type="button" data-action="save-keys">Save</button>
+        </div>
+      </footer>
+    </aside>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer__wrap container">
+      <div>Built for PCB assembly &amp; BOM processing.</div>
+      <div class="footer__copy">&copy; Kalp Pariya — 2025</div>
+    </div>
+  </footer>
+
+  <!-- Scripts (modular; no inline JS) -->
+  <script type="module" src="js/common/dom.js"></script>
+  <script type="module" src="js/common/storage.js"></script>
+  <script type="module" src="js/common/settings.js"></script>
+  <script type="module" src="js/common/ui.js"></script>
+  <script type="module" src="js/contact/main.js"></script>
 </body>
 </html>
