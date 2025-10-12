@@ -1,15 +1,15 @@
 /**
  * Enhanced API Management for Digikey v4 and Mouser
- * Handles OAuth 2.0 authentication, requests, response processing, and caching
+ * Handles OAuth 2.0 Client Credentials authentication, requests, response processing, and caching
  * Part of K4LP Engineering Tools - Swiss Minimalist Design
- * @version 2.1.0 - Updated for Digikey API v4
+ * @version 2.2.0 - Updated with corrected Digikey OAuth flow
  */
 
 class ApiManager {
     constructor() {
-        this.version = '2.1.0';
+        this.version = '2.2.0';
         
-        // API Endpoints - Updated for Digikey v4
+        // API Endpoints - Updated for Digikey v4 with corrected OAuth
         this.endpoints = {
             digikey: {
                 // Production endpoints
@@ -146,7 +146,7 @@ class ApiManager {
             await this.validateStoredTokens();
             this.setupPeriodicTasks();
             
-            console.log('✓ K4LP API Manager v2.1.0 (Digikey v4) initialized');
+            console.log('✓ K4LP API Manager v2.2.0 (Digikey v4 + Fixed OAuth) initialized');
         } catch (error) {
             console.error('API Manager initialization failed:', error);
             this.logError('initialization', error);
@@ -178,7 +178,7 @@ class ApiManager {
      * Validate stored authentication tokens
      */
     async validateStoredTokens() {
-        // Check Digikey token validity (tokens expire in 10 minutes)
+        // Check Digikey token validity (2-legged tokens expire in 10 minutes)
         if (this.tokens.digikey) {
             if (Date.now() >= this.tokens.digikey.expires_at) {
                 console.log('Digikey token expired, will re-authenticate on next request');
@@ -239,6 +239,7 @@ class ApiManager {
 
     /**
      * Authenticate with Digikey API using OAuth 2.0 Client Credentials flow (2-legged)
+     * Corrected implementation based on official Digikey documentation
      */
     async authenticateDigikey(clientId, clientSecret, updateStorage = true, useSandbox = null) {
         this.setStatus('digikey', 'connecting');
@@ -249,6 +250,7 @@ class ApiManager {
         
         try {
             // Prepare request data for OAuth 2.0 Client Credentials flow
+            // Using application/x-www-form-urlencoded as required by Digikey
             const requestBody = new URLSearchParams({
                 'client_id': clientId,
                 'client_secret': clientSecret,
@@ -265,17 +267,24 @@ class ApiManager {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
+                let errorText;
+                try {
+                    const errorJson = await response.json();
+                    errorText = errorJson.error_description || errorJson.error || response.statusText;
+                } catch {
+                    errorText = await response.text() || response.statusText;
+                }
                 throw new Error(`Digikey authentication failed: ${response.status} - ${errorText}`);
             }
 
             const tokenData = await response.json();
             
+            // Digikey 2-legged OAuth returns access_token with 10-minute (600 seconds) expiry
             this.tokens.digikey = {
                 access_token: tokenData.access_token,
                 token_type: tokenData.token_type || 'Bearer',
-                expires_in: tokenData.expires_in, // Usually 600 seconds (10 minutes)
-                expires_at: Date.now() + (tokenData.expires_in * 1000),
+                expires_in: tokenData.expires_in, // Usually 600 seconds (10 minutes) for 2-legged
+                expires_at: Date.now() + ((tokenData.expires_in - 30) * 1000), // Subtract 30 seconds for safety
                 client_id: clientId,
                 sandbox: sandbox,
                 obtained_at: Date.now()
@@ -404,7 +413,7 @@ class ApiManager {
             throw new Error(`${provider} not authenticated`);
         }
 
-        // Check if Digikey token needs refresh
+        // Check if Digikey token needs refresh (expires in 10 minutes for 2-legged OAuth)
         if (provider === 'digikey' && this.tokens.digikey.expires_at <= Date.now()) {
             console.log('Digikey token expired, refreshing...');
             const success = await this.authenticateDigikey(
@@ -439,7 +448,14 @@ class ApiManager {
             const response = await this.makeRawRequestWithRetry(url, requestOptions);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let errorText;
+                try {
+                    const errorJson = await response.json();
+                    errorText = errorJson.message || errorJson.error_description || errorJson.error || response.statusText;
+                } catch {
+                    errorText = await response.text() || response.statusText;
+                }
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
             const data = await response.json();
@@ -518,7 +534,7 @@ class ApiManager {
             method: options.method || 'GET',
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'K4LP-Engineering-Tools/2.1.0',
+                'User-Agent': 'K4LP-Engineering-Tools/2.2.0',
                 ...options.headers
             }
         };
@@ -1180,14 +1196,6 @@ class ApiManager {
     }
 
     // Legacy compatibility methods
-    async testDigikeyConnection() {
-        return await this.testDigikeyConnection();
-    }
-
-    async testMouserConnection() {
-        return await this.testMouserConnection();
-    }
-
     getApiStatuses() {
         return {
             digikey: this.status.digikey,
@@ -1208,4 +1216,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = ApiManager;
 }
 
-console.log('✓ K4LP API Manager v2.1.0 (Digikey API v4) initialized');
+console.log('✓ K4LP API Manager v2.2.0 (Digikey API v4 + Fixed OAuth) initialized');
