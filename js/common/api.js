@@ -1,25 +1,38 @@
 /**
- * Enhanced API Management for Digikey and Mouser
- * Handles authentication, requests, response processing, and caching
+ * Enhanced API Management for Digikey v4 and Mouser
+ * Handles OAuth 2.0 authentication, requests, response processing, and caching
  * Part of K4LP Engineering Tools - Swiss Minimalist Design
- * @version 2.0.0
+ * @version 2.1.0 - Updated for Digikey API v4
  */
 
 class ApiManager {
     constructor() {
-        this.version = '2.0.0';
+        this.version = '2.1.0';
         
-        // API Endpoints
+        // API Endpoints - Updated for Digikey v4
         this.endpoints = {
             digikey: {
+                // Production endpoints
                 base: 'https://api.digikey.com',
                 auth: 'https://api.digikey.com/v1/oauth2/token',
-                search: '/Search/v3/Products/Keyword',
-                product: '/Search/v3/Products',
-                categories: '/Search/v3/Categories',
-                manufacturers: '/Search/v3/Manufacturers',
-                productDetails: '/Search/v3/Products/ProductDetails',
-                suggestions: '/Search/v3/Products/Suggestions'
+                // Product Information V4 endpoints
+                keywordSearch: '/products/v4/search/keyword',
+                productDetails: '/products/v4/search/{partNumber}/productdetails',
+                manufacturers: '/products/v4/manufacturers',
+                categories: '/products/v4/categories',
+                categoriesById: '/products/v4/categories/{categoryId}',
+                digiReelPricing: '/products/v4/search/{partNumber}/digireepricing',
+                recommendedProducts: '/products/v4/search/{partNumber}/recommendedproducts',
+                substitutions: '/products/v4/search/{partNumber}/substitutions',
+                associations: '/products/v4/search/{partNumber}/associations',
+                packageTypeByQuantity: '/products/v4/search/{partNumber}/packagetypes/{quantity}',
+                media: '/products/v4/search/{partNumber}/media',
+                productPricing: '/products/v4/search/{partNumber}/productpricing',
+                alternatePackaging: '/products/v4/search/{partNumber}/alternatepackaging',
+                pricingOptionsByQuantity: '/products/v4/search/{partNumber}/pricingoptions/{quantity}',
+                // Sandbox endpoints (for testing)
+                sandboxBase: 'https://sandbox-api.digikey.com',
+                sandboxAuth: 'https://sandbox-api.digikey.com/v1/oauth2/token'
             },
             mouser: {
                 base: 'https://api.mouser.com',
@@ -30,6 +43,14 @@ class ApiManager {
             }
         };
 
+        // Environment configuration
+        this.environment = {
+            useSandbox: false, // Set to true for testing with sandbox
+            digikeyClientId: null,
+            digikeyClientSecret: null,
+            mouserApiKey: null
+        };
+
         // Request configuration
         this.requestConfig = {
             timeout: 30000, // 30 seconds
@@ -38,21 +59,27 @@ class ApiManager {
             maxConcurrentRequests: 5
         };
 
-        // Rate limiting
+        // Rate limiting (based on Digikey documentation)
         this.rateLimits = {
             digikey: {
+                requestsPerSecond: 10,
                 requestsPerMinute: 1000,
                 requestsPerDay: 25000,
+                currentSecond: 0,
                 currentMinute: 0,
                 currentDay: 0,
+                secondReset: null,
                 minuteReset: null,
                 dayReset: null
             },
             mouser: {
+                requestsPerSecond: 10,
                 requestsPerMinute: 1000,
                 requestsPerDay: 25000,
+                currentSecond: 0,
                 currentMinute: 0,
                 currentDay: 0,
+                secondReset: null,
                 minuteReset: null,
                 dayReset: null
             }
@@ -66,7 +93,7 @@ class ApiManager {
 
         // Authentication tokens
         this.tokens = {
-            digikey: null,
+            digikey: null, // Will store access_token, token_type, expires_in, expires_at
             mouser: null
         };
 
@@ -94,7 +121,8 @@ class ApiManager {
                 successfulRequests: 0,
                 failedRequests: 0,
                 avgResponseTime: 0,
-                lastRequestTime: null
+                lastRequestTime: null,
+                tokenRefreshCount: 0
             },
             mouser: {
                 totalRequests: 0,
@@ -118,7 +146,7 @@ class ApiManager {
             await this.validateStoredTokens();
             this.setupPeriodicTasks();
             
-            console.log('✓ K4LP API Manager v2.0.0 initialized');
+            console.log('✓ K4LP API Manager v2.1.0 (Digikey v4) initialized');
         } catch (error) {
             console.error('API Manager initialization failed:', error);
             this.logError('initialization', error);
@@ -150,7 +178,7 @@ class ApiManager {
      * Validate stored authentication tokens
      */
     async validateStoredTokens() {
-        // Check Digikey token validity
+        // Check Digikey token validity (tokens expire in 10 minutes)
         if (this.tokens.digikey) {
             if (Date.now() >= this.tokens.digikey.expires_at) {
                 console.log('Digikey token expired, will re-authenticate on next request');
@@ -183,6 +211,11 @@ class ApiManager {
      * Setup periodic maintenance tasks
      */
     setupPeriodicTasks() {
+        // Reset rate limits every second
+        setInterval(() => {
+            this.resetSecondRateLimits();
+        }, 1000);
+
         // Reset rate limits every minute
         setInterval(() => {
             this.resetMinuteRateLimits();
@@ -205,27 +238,35 @@ class ApiManager {
     }
 
     /**
-     * Authenticate with Digikey API using OAuth2 client credentials flow
+     * Authenticate with Digikey API using OAuth 2.0 Client Credentials flow (2-legged)
      */
-    async authenticateDigikey(clientId, clientSecret, updateStorage = true) {
+    async authenticateDigikey(clientId, clientSecret, updateStorage = true, useSandbox = null) {
         this.setStatus('digikey', 'connecting');
         
+        // Use provided sandbox preference or default from config
+        const sandbox = useSandbox !== null ? useSandbox : this.environment.useSandbox;
+        const authEndpoint = sandbox ? this.endpoints.digikey.sandboxAuth : this.endpoints.digikey.auth;
+        
         try {
-            const credentials = btoa(`${clientId}:${clientSecret}`);
+            // Prepare request data for OAuth 2.0 Client Credentials flow
+            const requestBody = new URLSearchParams({
+                'client_id': clientId,
+                'client_secret': clientSecret,
+                'grant_type': 'client_credentials'
+            });
             
-            const response = await this.makeRawRequest(this.endpoints.digikey.auth, {
+            const response = await this.makeRawRequest(authEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'Authorization': `Basic ${credentials}`,
-                    'X-DIGIKEY-Client-Id': clientId
+                    'Accept': 'application/json'
                 },
-                body: 'grant_type=client_credentials'
+                body: requestBody.toString()
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
+                throw new Error(`Digikey authentication failed: ${response.status} - ${errorText}`);
             }
 
             const tokenData = await response.json();
@@ -233,19 +274,30 @@ class ApiManager {
             this.tokens.digikey = {
                 access_token: tokenData.access_token,
                 token_type: tokenData.token_type || 'Bearer',
-                expires_in: tokenData.expires_in,
+                expires_in: tokenData.expires_in, // Usually 600 seconds (10 minutes)
                 expires_at: Date.now() + (tokenData.expires_in * 1000),
-                client_id: clientId
+                client_id: clientId,
+                sandbox: sandbox,
+                obtained_at: Date.now()
             };
+
+            // Store environment configuration
+            this.environment.digikeyClientId = clientId;
+            this.environment.digikeyClientSecret = clientSecret;
+            this.environment.useSandbox = sandbox;
 
             // Save credentials and tokens to storage
             if (updateStorage && window.storage) {
                 window.storage.saveDigikeyCredentials(clientId, clientSecret);
                 window.storage.setItem('digikey_tokens', this.tokens.digikey);
+                window.storage.setItem('digikey_environment', { useSandbox: sandbox });
             }
 
             this.setStatus('digikey', 'active');
-            console.log('✓ Digikey authentication successful');
+            this.metrics.digikey.tokenRefreshCount++;
+            
+            const envLabel = sandbox ? 'Sandbox' : 'Production';
+            console.log(`✓ Digikey ${envLabel} authentication successful (expires in ${tokenData.expires_in}s)`);
             return true;
 
         } catch (error) {
@@ -264,6 +316,8 @@ class ApiManager {
             api_key: apiKey,
             configured_at: Date.now()
         };
+
+        this.environment.mouserApiKey = apiKey;
 
         if (updateStorage && window.storage) {
             window.storage.saveMouserCredentials(apiKey);
@@ -285,8 +339,8 @@ class ApiManager {
         try {
             this.setStatus('digikey', 'connecting');
             
-            // Simple test request to categories endpoint
-            const response = await this.makeDigikeyRequest('/Search/v3/Categories', {
+            // Simple test request to manufacturers endpoint
+            const response = await this.makeDigikeyRequest('/products/v4/manufacturers', {
                 method: 'GET'
             });
 
@@ -350,6 +404,20 @@ class ApiManager {
             throw new Error(`${provider} not authenticated`);
         }
 
+        // Check if Digikey token needs refresh
+        if (provider === 'digikey' && this.tokens.digikey.expires_at <= Date.now()) {
+            console.log('Digikey token expired, refreshing...');
+            const success = await this.authenticateDigikey(
+                this.environment.digikeyClientId,
+                this.environment.digikeyClientSecret,
+                true,
+                this.environment.useSandbox
+            );
+            if (!success) {
+                throw new Error('Failed to refresh Digikey token');
+            }
+        }
+
         // Check rate limits
         if (this.isRateLimited(provider)) {
             throw new Error(`${provider} API rate limit exceeded`);
@@ -400,8 +468,22 @@ class ApiManager {
      * Build complete URL for API request
      */
     buildUrl(provider, endpoint, params = {}) {
-        const baseUrl = this.endpoints[provider].base;
+        let baseUrl;
+        
+        if (provider === 'digikey') {
+            baseUrl = this.environment.useSandbox ? 
+                this.endpoints.digikey.sandboxBase : 
+                this.endpoints.digikey.base;
+        } else {
+            baseUrl = this.endpoints[provider].base;
+        }
+        
         let url = baseUrl + endpoint;
+        
+        // Replace URL parameters (e.g., {partNumber})
+        Object.entries(params).forEach(([key, value]) => {
+            url = url.replace(`{${key}}`, encodeURIComponent(value));
+        });
         
         // Add query parameters for Mouser (includes API key)
         if (provider === 'mouser') {
@@ -410,9 +492,19 @@ class ApiManager {
                 ...params
             });
             url += '?' + urlParams.toString();
-        } else if (Object.keys(params).length > 0) {
-            const urlParams = new URLSearchParams(params);
-            url += '?' + urlParams.toString();
+        } else if (provider === 'digikey') {
+            // For Digikey, add query parameters if any (excluding URL path params)
+            const queryParams = {};
+            Object.entries(params).forEach(([key, value]) => {
+                if (!url.includes(`{${key}}`)) {
+                    queryParams[key] = value;
+                }
+            });
+            
+            if (Object.keys(queryParams).length > 0) {
+                const urlParams = new URLSearchParams(queryParams);
+                url += '?' + urlParams.toString();
+            }
         }
         
         return url;
@@ -425,9 +517,8 @@ class ApiManager {
         const requestOptions = {
             method: options.method || 'GET',
             headers: {
-                'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'User-Agent': 'K4LP-Engineering-Tools/2.0.0',
+                'User-Agent': 'K4LP-Engineering-Tools/2.1.0',
                 ...options.headers
             }
         };
@@ -436,10 +527,17 @@ class ApiManager {
         if (provider === 'digikey') {
             requestOptions.headers['Authorization'] = `${this.tokens.digikey.token_type} ${this.tokens.digikey.access_token}`;
             requestOptions.headers['X-DIGIKEY-Client-Id'] = this.tokens.digikey.client_id;
+            
+            // Add required Digikey locale headers
+            requestOptions.headers['X-DIGIKEY-Locale-Site'] = options.localeSite || 'US';
+            requestOptions.headers['X-DIGIKEY-Locale-Language'] = options.localeLanguage || 'en';
+            requestOptions.headers['X-DIGIKEY-Locale-Currency'] = options.localeCurrency || 'USD';
+            requestOptions.headers['X-DIGIKEY-Customer-Id'] = options.customerId || '0';
         }
 
         // Add request body for POST/PUT requests
         if (options.data && ['POST', 'PUT', 'PATCH'].includes(requestOptions.method)) {
+            requestOptions.headers['Content-Type'] = 'application/json';
             requestOptions.body = JSON.stringify(options.data);
         }
 
@@ -520,7 +618,53 @@ class ApiManager {
     }
 
     /**
-     * Search components across providers
+     * Search components using Digikey v4 KeywordSearch
+     */
+    async searchDigikeyKeyword(keyword, options = {}) {
+        const searchData = {
+            Keywords: keyword,
+            RecordCount: Math.min(options.limit || 50, 500), // Digikey max is 500
+            RecordStartPosition: options.offset || 0,
+            Sort: {
+                Option: options.sortBy || "SortByUnitPrice",
+                Direction: options.sortDirection || "Ascending"
+            },
+            RequestedQuantity: options.quantity || 1,
+            SearchOptions: options.searchOptions || [],
+            ExcludeMarketPlaceProducts: options.excludeMarketplace || false
+        };
+
+        // Add filters if provided
+        if (options.filters) {
+            searchData.Filters = options.filters;
+        }
+
+        return await this.makeDigikeyRequest('/products/v4/search/keyword', {
+            method: 'POST',
+            data: searchData,
+            cache: options.cache !== false,
+            cacheTtl: options.cacheTtl
+        });
+    }
+
+    /**
+     * Get product details using Digikey v4 ProductDetails
+     */
+    async getDigikeyProductDetails(partNumber, options = {}) {
+        const endpoint = `/products/v4/search/${encodeURIComponent(partNumber)}/productdetails`;
+        
+        return await this.makeDigikeyRequest(endpoint, {
+            method: 'GET',
+            params: {
+                includes: options.includes || 'All' // All, None, or specific includes
+            },
+            cache: options.cache !== false,
+            cacheTtl: options.cacheTtl
+        });
+    }
+
+    /**
+     * Search components across providers with enhanced Digikey v4 support
      */
     async searchComponents(keyword, options = {}) {
         const {
@@ -537,14 +681,15 @@ class ApiManager {
             metadata: {
                 searchTerm: keyword,
                 timestamp: Date.now(),
-                sources: []
+                sources: [],
+                apiVersions: {}
             }
         };
 
-        // Search Digikey
+        // Search Digikey v4
         if ((provider === 'both' || provider === 'digikey') && this.status.digikey === 'active') {
             try {
-                const cacheKey = `search_digikey_${keyword}_${limit}`;
+                const cacheKey = `search_digikey_v4_${keyword}_${limit}`;
                 let digikeyData;
                 
                 if (cache) {
@@ -552,21 +697,22 @@ class ApiManager {
                 }
                 
                 if (!digikeyData) {
-                    digikeyData = await this.searchDigikey(keyword, limit);
+                    digikeyData = await this.searchDigikeyKeyword(keyword, { limit, ...options });
                     if (cache) {
-                        this.cacheResponse('digikey', 'search', { keyword, limit }, digikeyData, cacheTtl);
+                        this.cacheResponse('digikey', 'keywordSearch', { keyword, limit }, digikeyData, cacheTtl);
                     }
                 }
                 
                 results.digikey = digikeyData;
                 results.metadata.sources.push('digikey');
+                results.metadata.apiVersions.digikey = 'v4';
                 
                 if (digikeyData && digikeyData.Products) {
                     results.combined.push(...this.normalizeDigikeyProducts(digikeyData.Products));
                 }
             } catch (error) {
-                console.error('Digikey search failed:', error);
-                this.logError('digikey', error, `search: ${keyword}`);
+                console.error('Digikey v4 search failed:', error);
+                this.logError('digikey', error, `keywordSearch: ${keyword}`);
             }
         }
 
@@ -589,6 +735,7 @@ class ApiManager {
                 
                 results.mouser = mouserData;
                 results.metadata.sources.push('mouser');
+                results.metadata.apiVersions.mouser = 'v1';
                 
                 if (mouserData && mouserData.SearchResults && mouserData.SearchResults.Parts) {
                     results.combined.push(...this.normalizeMouserProducts(mouserData.SearchResults.Parts));
@@ -603,29 +750,7 @@ class ApiManager {
     }
 
     /**
-     * Search Digikey products
-     */
-    async searchDigikey(keyword, limit = 50) {
-        const searchData = {
-            Keywords: keyword,
-            RecordCount: Math.min(limit, 500), // Digikey max
-            RecordStartPosition: 0,
-            Sort: {
-                Option: "SortByUnitPrice",
-                Direction: "Ascending"
-            },
-            RequestedQuantity: 1
-        };
-
-        return await this.makeDigikeyRequest('/Search/v3/Products/Keyword', {
-            method: 'POST',
-            data: searchData,
-            cache: true
-        });
-    }
-
-    /**
-     * Search Mouser products
+     * Search Mouser products (unchanged)
      */
     async searchMouser(keyword, limit = 50) {
         const params = {
@@ -641,15 +766,17 @@ class ApiManager {
     }
 
     /**
-     * Normalize Digikey product data to common format
+     * Normalize Digikey v4 product data to common format
      */
     normalizeDigikeyProducts(products) {
         return products.map(product => ({
             provider: 'digikey',
+            apiVersion: 'v4',
             providerPartNumber: product.DigiKeyPartNumber,
             manufacturerPartNumber: product.ManufacturerPartNumber,
-            manufacturer: product.Manufacturer?.Name || '',
+            manufacturer: product.Manufacturer?.Name || product.Manufacturer?.Id || '',
             description: product.ProductDescription,
+            detailedDescription: product.DetailedDescription,
             datasheet: product.PrimaryDatasheet,
             unitPrice: parseFloat(product.UnitPrice) || 0,
             quantityAvailable: parseInt(product.QuantityAvailable) || 0,
@@ -658,20 +785,29 @@ class ApiManager {
             series: product.Series?.Name || '',
             productUrl: product.ProductUrl,
             imageUrl: product.PrimaryPhoto,
+            thumbnailUrl: product.PrimaryPhotoThumbnail,
             category: product.Category?.Name || '',
             family: product.Family?.Name || '',
+            productStatus: product.ProductStatus?.Name || '',
+            rohs: product.RohsInfo || '',
+            leadStatus: product.LeadStatus || '',
+            partStatus: product.PartStatus || '',
             parameters: this.normalizeParameters(product.Parameters, 'digikey'),
             priceBreaks: this.normalizePriceBreaks(product.StandardPricing, 'digikey'),
+            myPricing: this.normalizePriceBreaks(product.MyPricing, 'digikey'),
+            alternatePackaging: product.AlternatePackaging || [],
+            tariffActive: product.TariffActive || false,
             lastUpdated: Date.now()
         }));
     }
 
     /**
-     * Normalize Mouser product data to common format
+     * Normalize Mouser product data to common format (unchanged)
      */
     normalizeMouserProducts(products) {
         return products.map(product => ({
             provider: 'mouser',
+            apiVersion: 'v1',
             providerPartNumber: product.MouserPartNumber,
             manufacturerPartNumber: product.ManufacturerPartNumber,
             manufacturer: product.Manufacturer,
@@ -787,7 +923,8 @@ class ApiManager {
      */
     isRateLimited(provider) {
         const limits = this.rateLimits[provider];
-        return limits.currentMinute >= limits.requestsPerMinute || 
+        return limits.currentSecond >= limits.requestsPerSecond ||
+               limits.currentMinute >= limits.requestsPerMinute || 
                limits.currentDay >= limits.requestsPerDay;
     }
 
@@ -799,6 +936,9 @@ class ApiManager {
         const limits = this.rateLimits[provider];
         
         // Initialize reset times if not set
+        if (!limits.secondReset) {
+            limits.secondReset = now + 1000; // 1 second from now
+        }
         if (!limits.minuteReset) {
             limits.minuteReset = now + 60000; // 1 minute from now
         }
@@ -806,8 +946,19 @@ class ApiManager {
             limits.dayReset = now + (24 * 60 * 60 * 1000); // 24 hours from now
         }
         
+        limits.currentSecond++;
         limits.currentMinute++;
         limits.currentDay++;
+    }
+
+    /**
+     * Reset second rate limits
+     */
+    resetSecondRateLimits() {
+        Object.values(this.rateLimits).forEach(limits => {
+            limits.currentSecond = 0;
+            limits.secondReset = Date.now() + 1000;
+        });
     }
 
     /**
@@ -864,7 +1015,12 @@ class ApiManager {
                 status: this.status[provider],
                 metrics: this.metrics[provider],
                 rateLimits: this.rateLimits[provider],
-                errors: this.errorHistory[provider].slice(-5) // Last 5 errors
+                errors: this.errorHistory[provider].slice(-5), // Last 5 errors
+                token: this.tokens[provider] ? {
+                    expires_at: this.tokens[provider].expires_at,
+                    expires_in: Math.max(0, Math.floor((this.tokens[provider].expires_at - Date.now()) / 1000)),
+                    sandbox: this.tokens[provider].sandbox
+                } : null
             };
         }
         
@@ -963,15 +1119,50 @@ class ApiManager {
     }
 
     /**
+     * Switch between sandbox and production environments
+     */
+    setSandboxMode(enabled) {
+        this.environment.useSandbox = enabled;
+        
+        // Clear existing token as it's environment-specific
+        if (this.tokens.digikey) {
+            this.tokens.digikey = null;
+            this.setStatus('digikey', 'inactive');
+        }
+        
+        if (window.storage) {
+            window.storage.setItem('digikey_environment', { useSandbox: enabled });
+        }
+        
+        const envLabel = enabled ? 'Sandbox' : 'Production';
+        console.log(`Switched to Digikey ${envLabel} environment`);
+        
+        // Re-authenticate if credentials are available
+        if (this.environment.digikeyClientId && this.environment.digikeyClientSecret) {
+            this.authenticateDigikey(
+                this.environment.digikeyClientId, 
+                this.environment.digikeyClientSecret, 
+                true, 
+                enabled
+            );
+        }
+    }
+
+    /**
      * Get comprehensive status for debugging
      */
     getDebugInfo() {
         return {
             version: this.version,
             status: this.status,
+            environment: this.environment,
             tokens: {
                 digikey: !!this.tokens.digikey,
                 mouser: !!this.tokens.mouser
+            },
+            tokenExpiry: {
+                digikey: this.tokens.digikey ? new Date(this.tokens.digikey.expires_at) : null,
+                mouser: null
             },
             metrics: this.metrics,
             rateLimits: this.rateLimits,
@@ -1017,4 +1208,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = ApiManager;
 }
 
-console.log('✓ K4LP API Manager v2.0.0 initialized');
+console.log('✓ K4LP API Manager v2.1.0 (Digikey API v4) initialized');
