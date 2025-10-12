@@ -5,27 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K4LP Engineering Tools</title>
     <link rel="stylesheet" href="css/site.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <div class="nav-brand-logo"></div>
-                <a href="index.html" class="nav-brand-link">K4LP</a>
-            </div>
-            <div class="nav-menu">
-                <a href="index.html" class="nav-link active">Tools</a>
-                <a href="contact.html" class="nav-link">About</a>
-            </div>
-            <div class="nav-actions">
-                <button id="settings-btn" class="settings-btn" aria-label="Settings">Settings</button>
-            </div>
-        </div>
-    </nav>
-
+    <!-- Navigation will be inserted by JavaScript -->
+    
     <main class="main-content">
         <div class="container">
             <header class="page-header">
@@ -66,24 +49,12 @@
         </div>
     </footer>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Settings</h3>
-                <button id="close-settings" class="close-btn">Close</button>
-            </div>
-            <form id="settings-form" class="modal-body">
-                <div id="settings-content">
-                    <!-- Settings content will be loaded dynamically -->
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Settings Modal will be inserted by JavaScript -->
 
-    <!-- Scripts - Only load navigation.js which contains everything -->
-    <script src="js/core/navigation.js"></script>
+    <!-- Scripts -->
+    <script src="js/common/storage.js"></script>
+    <script src="js/shared/navigation-html.js"></script>
+    <script src="js/shared/navigation.js"></script>
     <script src="js/pages/index/index.js"></script>
 </body>
 </html>
