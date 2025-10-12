@@ -132,9 +132,10 @@ class CredentialManager {
     async testMouserConnection() {
         try {
             const cred = this.credentials.mouser;
+            const testUrl = `https://api.mouser.com/api/v1/search/partnumber?apiKey=${cred.apiKey}`;
             
             // Test with a simple part search
-            const response = await fetch('https://api.mouser.com/api/v1/search/partnumber', {
+            const response = await fetch(testUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -142,12 +143,10 @@ class CredentialManager {
                 },
                 body: JSON.stringify({
                     SearchByPartRequest: {
-                        mouserPartNumber: 'TEST123',
-                        partSearchOptions: 'string'
+                        mouserPartNumber: "TEST123",
+                        partSearchOptions: "string"
                     }
-                }),
-                // Add API key as query parameter
-                url: `https://api.mouser.com/api/v1/search/partnumber?apiKey=${cred.apiKey}`
+                })
             });
 
             // Mouser returns 200 even for invalid keys, so we check response structure
