@@ -13,6 +13,7 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
+                <div class="nav-brand-logo"></div>
                 <a href="index.html" class="nav-brand-link">K4LP</a>
             </div>
             <div class="nav-menu">
@@ -34,21 +35,33 @@
 
             <section class="tools-section">
                 <div class="tools-header">
-                    <h2>Tools</h2>
-                    <div class="search-container">
-                        <input type="text" id="tool-search" placeholder="Search..." class="search-input">
+                    <div class="tools-title">
+                        <h2>Available Tools</h2>
+                        <p>Professional utilities for electronics engineering</p>
+                    </div>
+                    <div class="tools-filter">
+                        <div class="search-container">
+                            <input type="text" id="tool-search" placeholder="Search tools..." class="search-input">
+                        </div>
                     </div>
                 </div>
 
                 <div id="tools-container" class="tools-grid">
                     <!-- Tools will be loaded by JavaScript -->
                 </div>
+                
+                <div id="search-results-count" class="search-results-count"></div>
             </section>
         </div>
     </main>
 
     <footer class="footer">
-        <div class="container">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#" class="footer-link">Privacy</a>
+                <a href="#" class="footer-link">Terms</a>
+                <a href="#" class="footer-link">Docs</a>
+            </div>
             <p>&copy; <span id="footer-year">2025</span> Kalp Pariya</p>
         </div>
     </footer>
@@ -58,7 +71,7 @@
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Settings</h3>
+                <h3 class="modal-title">Settings</h3>
                 <button id="close-settings" class="close-btn">Close</button>
             </div>
             <form id="settings-form" class="modal-body">
@@ -69,12 +82,8 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="js/common/utils.js"></script>
-    <script src="js/common/storage.js"></script>
-    <script src="js/common/api.js"></script>
+    <!-- Scripts - Only load navigation.js which contains everything -->
     <script src="js/core/navigation.js"></script>
-    <script src="js/pages/settings/settings.js"></script>
     <script src="js/pages/index/index.js"></script>
 </body>
 </html>
