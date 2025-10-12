@@ -2,18 +2,28 @@
  * Enhanced Utility Functions
  * Common utility functions for calculations, validations, and data processing
  * Part of K4LP Engineering Tools - Swiss Minimalist Design
- * @version 2.0.0
+ * @version 2.1.0 - Enhanced Digikey/Mouser pricing with packaging considerations
  */
 
 class UtilityManager {
     constructor() {
-        this.version = '2.0.0';
+        this.version = '2.1.0';
         
         // Pricing calculation constants
         this.pricingDefaults = {
             defaultQuantity: 1,
             maxQuantity: 1000000,
             decimalPrecision: 6
+        };
+        
+        // Digikey packaging types and fees
+        this.digikeyPackaging = {
+            'Cut Tape': { code: 'CT', fee: 0, minQty: 1, description: 'Individual pieces cut from tape' },
+            'Tape & Reel': { code: 'TR', fee: 0, minQty: 'varies', description: 'Full manufacturer reel' },
+            'Digi-Reel': { code: 'DKR', fee: 7.00, minQty: 1, description: 'Custom reel with $7 fee' },
+            'Bulk': { code: 'BLK', fee: 0, minQty: 'varies', description: 'Bulk packaging' },
+            'Tube': { code: 'TB', fee: 0, minQty: 'varies', description: 'Tube packaging' },
+            'Tray': { code: 'TY', fee: 0, minQty: 'varies', description: 'Tray packaging' }
         };
         
         // Validation patterns
@@ -33,7 +43,8 @@ class UtilityManager {
                 USD: { symbol: '$', position: 'before' },
                 EUR: { symbol: '€', position: 'after' },
                 GBP: { symbol: '£', position: 'before' },
-                JPY: { symbol: '¥', position: 'before' }
+                JPY: { symbol: '¥', position: 'before' },
+                INR: { symbol: '₹', position: 'before' }
             }
         };
         
@@ -45,59 +56,284 @@ class UtilityManager {
      * Initialize utility manager
      */
     initialize() {
-        console.log('✓ K4LP Utility Manager v2.0.0 initialized');
+        console.log('✓ K4LP Utility Manager v2.1.0 (Enhanced Digikey/Mouser pricing) initialized');
     }
 
     /**
-     * Calculate unit price based on quantity and price breaks (Digikey method)
-     * Digikey uses tiered pricing - find the highest quantity tier that's <= requested quantity
+     * Calculate Digikey unit price with packaging considerations
+     * Digikey has complex pricing with multiple packaging options per part
      */
-    calculateDigikeyUnitPrice(priceBreaks, quantity) {
+    calculateDigikeyUnitPrice(product, quantity, preferredPackaging = null) {
         try {
-            if (!priceBreaks || !Array.isArray(priceBreaks) || priceBreaks.length === 0) {
-                return { unitPrice: 0, error: 'No price breaks available' };
+            if (!product || quantity <= 0) {
+                return { unitPrice: 0, error: 'Invalid product or quantity' };
             }
+
+            // Get all available packaging options for this product
+            const packagingOptions = this.extractDigikeyPackagingOptions(product);
             
-            if (!quantity || quantity <= 0) {
-                return { unitPrice: 0, error: 'Invalid quantity' };
+            if (packagingOptions.length === 0) {
+                return { unitPrice: 0, error: 'No packaging options available' };
             }
+
+            // Find the best pricing option for the requested quantity
+            const bestOption = this.findBestDigikeyPackaging(packagingOptions, quantity, preferredPackaging);
             
-            // Sort price breaks by quantity (ascending)
-            const sortedBreaks = priceBreaks
-                .filter(pb => pb.quantity > 0 && pb.unitPrice >= 0)
-                .sort((a, b) => a.quantity - b.quantity);
-            
-            if (sortedBreaks.length === 0) {
-                return { unitPrice: 0, error: 'No valid price breaks found' };
+            if (!bestOption) {
+                return { unitPrice: 0, error: 'No suitable packaging option found' };
             }
-            
-            // Find the appropriate price tier
-            let selectedBreak = sortedBreaks[0]; // Start with lowest quantity tier
-            
-            for (const priceBreak of sortedBreaks) {
-                if (quantity >= priceBreak.quantity) {
-                    selectedBreak = priceBreak;
-                } else {
-                    break; // We've found the highest applicable tier
-                }
-            }
+
+            // Calculate final pricing including packaging fees
+            const pricingResult = this.calculateDigikeyFinalPrice(bestOption, quantity);
             
             return {
-                unitPrice: parseFloat(selectedBreak.unitPrice),
-                selectedTier: selectedBreak,
-                totalPrice: parseFloat(selectedBreak.unitPrice) * quantity,
-                savings: this.calculateSavings(sortedBreaks[0], selectedBreak, quantity),
-                nextTier: this.findNextTier(sortedBreaks, selectedBreak)
+                unitPrice: pricingResult.unitPrice,
+                totalPrice: pricingResult.totalPrice,
+                packaging: bestOption.packaging,
+                packagingFee: pricingResult.packagingFee,
+                selectedTier: bestOption.selectedTier,
+                allOptions: packagingOptions,
+                breakdown: pricingResult.breakdown,
+                savings: pricingResult.savings,
+                recommendations: this.getDigikeyQuantityRecommendations(packagingOptions, quantity)
             };
             
         } catch (error) {
-            return { unitPrice: 0, error: `Calculation error: ${error.message}` };
+            return { unitPrice: 0, error: `Digikey calculation error: ${error.message}` };
         }
     }
 
     /**
+     * Extract all packaging options from Digikey product data
+     */
+    extractDigikeyPackagingOptions(product) {
+        const options = [];
+        
+        // Handle both StandardPricing and MyPricing
+        const pricingSources = [];
+        
+        if (product.StandardPricing && Array.isArray(product.StandardPricing)) {
+            pricingSources.push({ type: 'standard', pricing: product.StandardPricing });
+        }
+        
+        if (product.MyPricing && Array.isArray(product.MyPricing)) {
+            pricingSources.push({ type: 'customer', pricing: product.MyPricing });
+        }
+        
+        // Handle AlternatePackaging (different packaging types for same part)
+        if (product.AlternatePackaging && Array.isArray(product.AlternatePackaging)) {
+            product.AlternatePackaging.forEach(altPackage => {
+                if (altPackage.StandardPricing) {
+                    pricingSources.push({ 
+                        type: 'alternate_standard', 
+                        pricing: altPackage.StandardPricing,
+                        packaging: altPackage.Packaging,
+                        partNumber: altPackage.DigiKeyPartNumber
+                    });
+                }
+                if (altPackage.MyPricing) {
+                    pricingSources.push({ 
+                        type: 'alternate_customer', 
+                        pricing: altPackage.MyPricing,
+                        packaging: altPackage.Packaging,
+                        partNumber: altPackage.DigiKeyPartNumber
+                    });
+                }
+            });
+        }
+        
+        // Process each pricing source
+        pricingSources.forEach(source => {
+            const packaging = source.packaging || product.Packaging || { Name: 'Unknown' };
+            const packagingName = packaging.Name || 'Unknown';
+            
+            // Get packaging configuration
+            const packagingConfig = this.getPackagingConfig(packagingName);
+            
+            // Create price tiers
+            const priceTiers = source.pricing.map(tier => ({
+                quantity: parseInt(tier.BreakQuantity) || 0,
+                unitPrice: parseFloat(tier.UnitPrice) || 0,
+                totalPrice: parseFloat(tier.TotalPrice) || 0
+            })).filter(tier => tier.quantity > 0);
+            
+            if (priceTiers.length > 0) {
+                options.push({
+                    packaging: packagingName,
+                    packagingCode: packagingConfig.code,
+                    packagingFee: packagingConfig.fee,
+                    pricingType: source.type,
+                    partNumber: source.partNumber || product.DigiKeyPartNumber,
+                    priceTiers: priceTiers.sort((a, b) => a.quantity - b.quantity),
+                    minimumQuantity: Math.min(...priceTiers.map(t => t.quantity))
+                });
+            }
+        });
+        
+        return options;
+    }
+
+    /**
+     * Get packaging configuration by name
+     */
+    getPackagingConfig(packagingName) {
+        // Normalize packaging name
+        const normalized = packagingName.toLowerCase();
+        
+        if (normalized.includes('cut tape') || normalized.includes('ct')) {
+            return this.digikeyPackaging['Cut Tape'];
+        } else if (normalized.includes('digi-reel') || normalized.includes('dkr')) {
+            return this.digikeyPackaging['Digi-Reel'];
+        } else if (normalized.includes('tape') && normalized.includes('reel')) {
+            return this.digikeyPackaging['Tape & Reel'];
+        } else if (normalized.includes('bulk')) {
+            return this.digikeyPackaging['Bulk'];
+        } else if (normalized.includes('tube')) {
+            return this.digikeyPackaging['Tube'];
+        } else if (normalized.includes('tray')) {
+            return this.digikeyPackaging['Tray'];
+        }
+        
+        // Default to unknown with no fee
+        return { code: 'UNK', fee: 0, minQty: 1, description: 'Unknown packaging' };
+    }
+
+    /**
+     * Find the best packaging option for a given quantity
+     */
+    findBestDigikeyPackaging(packagingOptions, quantity, preferredPackaging = null) {
+        let bestOption = null;
+        let bestPrice = Infinity;
+        
+        packagingOptions.forEach(option => {
+            // Skip if preferred packaging is specified and this doesn't match
+            if (preferredPackaging && option.packaging !== preferredPackaging) {
+                return;
+            }
+            
+            // Find the appropriate price tier for this quantity
+            const selectedTier = this.findPriceTier(option.priceTiers, quantity);
+            
+            if (selectedTier) {
+                // Calculate total cost including packaging fees
+                const packagingFeePerUnit = option.packagingFee > 0 ? option.packagingFee / quantity : 0;
+                const effectiveUnitPrice = selectedTier.unitPrice + packagingFeePerUnit;
+                const totalCost = effectiveUnitPrice * quantity;
+                
+                // Prefer customer pricing over standard pricing
+                const priority = option.pricingType.includes('customer') ? 0 : 1;
+                const score = totalCost + (priority * 0.001); // Small penalty for non-customer pricing
+                
+                if (score < bestPrice) {
+                    bestPrice = score;
+                    bestOption = {
+                        ...option,
+                        selectedTier: selectedTier,
+                        effectiveUnitPrice: effectiveUnitPrice,
+                        totalCost: totalCost
+                    };
+                }
+            }
+        });
+        
+        return bestOption;
+    }
+
+    /**
+     * Find the appropriate price tier for a given quantity
+     */
+    findPriceTier(priceTiers, quantity) {
+        if (!priceTiers || priceTiers.length === 0) return null;
+        
+        // Sort tiers by quantity (should already be sorted)
+        const sortedTiers = priceTiers.sort((a, b) => a.quantity - b.quantity);
+        
+        // Find the highest tier where quantity >= tier.quantity
+        let selectedTier = sortedTiers[0];
+        
+        for (const tier of sortedTiers) {
+            if (quantity >= tier.quantity) {
+                selectedTier = tier;
+            } else {
+                break;
+            }
+        }
+        
+        return selectedTier;
+    }
+
+    /**
+     * Calculate final Digikey pricing including all fees
+     */
+    calculateDigikeyFinalPrice(option, quantity) {
+        const baseCost = option.selectedTier.unitPrice * quantity;
+        const packagingFee = option.packagingFee;
+        const packagingFeePerUnit = packagingFee > 0 ? packagingFee / quantity : 0;
+        
+        const totalCost = baseCost + packagingFee;
+        const unitPrice = totalCost / quantity;
+        
+        // Calculate savings vs first tier
+        const firstTier = option.priceTiers[0];
+        const firstTierTotal = (firstTier.unitPrice * quantity) + packagingFee;
+        const savings = {
+            absolute: Math.max(0, firstTierTotal - totalCost),
+            percentage: firstTierTotal > 0 ? Math.max(0, ((firstTierTotal - totalCost) / firstTierTotal) * 100) : 0
+        };
+        
+        return {
+            unitPrice: unitPrice,
+            totalPrice: totalCost,
+            packagingFee: packagingFee,
+            packagingFeePerUnit: packagingFeePerUnit,
+            baseCost: baseCost,
+            savings: savings,
+            breakdown: {
+                quantity: quantity,
+                baseUnitPrice: option.selectedTier.unitPrice,
+                baseCost: baseCost,
+                packagingFee: packagingFee,
+                totalCost: totalCost,
+                finalUnitPrice: unitPrice
+            }
+        };
+    }
+
+    /**
+     * Get quantity recommendations for Digikey products
+     */
+    getDigikeyQuantityRecommendations(packagingOptions, targetQuantity) {
+        const recommendations = [];
+        
+        packagingOptions.forEach(option => {
+            option.priceTiers.forEach(tier => {
+                const packagingFeePerUnit = option.packagingFee > 0 ? option.packagingFee / tier.quantity : 0;
+                const effectiveUnitPrice = tier.unitPrice + packagingFeePerUnit;
+                const totalCost = effectiveUnitPrice * tier.quantity;
+                
+                recommendations.push({
+                    quantity: tier.quantity,
+                    unitPrice: effectiveUnitPrice,
+                    totalCost: totalCost,
+                    packaging: option.packaging,
+                    packagingFee: option.packagingFee,
+                    baseUnitPrice: tier.unitPrice,
+                    costPerTargetQuantity: effectiveUnitPrice * targetQuantity,
+                    efficiency: 1 / effectiveUnitPrice,
+                    suitable: tier.quantity >= targetQuantity
+                });
+            });
+        });
+        
+        // Sort by cost efficiency for target quantity
+        return recommendations
+            .sort((a, b) => a.costPerTargetQuantity - b.costPerTargetQuantity)
+            .slice(0, 10); // Top 10 recommendations
+    }
+
+    /**
      * Calculate unit price based on quantity and price breaks (Mouser method)
-     * Mouser also uses tiered pricing similar to Digikey
+     * Mouser has simpler pricing structure compared to Digikey
      */
     calculateMouserUnitPrice(priceBreaks, quantity) {
         try {
@@ -111,7 +347,7 @@ class UtilityManager {
             
             // Parse Mouser price breaks (they might have currency symbols)
             const parsedBreaks = priceBreaks.map(pb => ({
-                quantity: parseInt(pb.quantity) || parseInt(pb.Quantity) || 0,
+                quantity: parseInt(pb.quantity || pb.Quantity) || 0,
                 unitPrice: this.parsePrice(pb.unitPrice || pb.Price || '0')
             })).filter(pb => pb.quantity > 0 && pb.unitPrice >= 0);
             
@@ -135,14 +371,16 @@ class UtilityManager {
             
             return {
                 unitPrice: selectedBreak.unitPrice,
-                selectedTier: selectedBreak,
                 totalPrice: selectedBreak.unitPrice * quantity,
+                selectedTier: selectedBreak,
                 savings: this.calculateSavings(sortedBreaks[0], selectedBreak, quantity),
-                nextTier: this.findNextTier(sortedBreaks, selectedBreak)
+                nextTier: this.findNextTier(sortedBreaks, selectedBreak),
+                allTiers: sortedBreaks,
+                recommendations: this.getOptimalQuantityRecommendations(sortedBreaks, quantity)
             };
             
         } catch (error) {
-            return { unitPrice: 0, error: `Calculation error: ${error.message}` };
+            return { unitPrice: 0, error: `Mouser calculation error: ${error.message}` };
         }
     }
 
@@ -160,7 +398,7 @@ class UtilityManager {
         
         // Remove currency symbols and whitespace
         const cleanPrice = priceString
-            .replace(/[$£€¥,\s]/g, '')
+            .replace(/[$£€¥₹,\s]/g, '')
             .replace(/[^\d\.]/g, '');
         
         const parsed = parseFloat(cleanPrice);
@@ -220,14 +458,22 @@ class UtilityManager {
                 // Calculate efficiency (lower unit price is better)
                 const efficiency = 1 / priceBreak.unitPrice;
                 
-                // Calculate cost difference for target quantity
+                // Calculate cost for target quantity
                 const costForTarget = priceBreak.unitPrice * targetQuantity;
+                
+                // Calculate cost if buying at this tier quantity
+                const costAtTierQuantity = priceBreak.unitPrice * priceBreak.quantity;
+                const excessQuantity = Math.max(0, priceBreak.quantity - targetQuantity);
+                const wastedCost = priceBreak.unitPrice * excessQuantity;
                 
                 recommendations.push({
                     quantity: priceBreak.quantity,
                     unitPrice: priceBreak.unitPrice,
-                    totalCost: costForTarget,
+                    costForTarget: costForTarget,
+                    costAtTierQuantity: costAtTierQuantity,
                     efficiency: efficiency,
+                    excessQuantity: excessQuantity,
+                    wastedCost: wastedCost,
                     recommended: priceBreak.quantity >= targetQuantity,
                     isBreakpoint: true,
                     savingsVsNext: index < sortedBreaks.length - 1 ? 
@@ -235,13 +481,52 @@ class UtilityManager {
                 });
             });
             
-            // Sort by efficiency (best deals first)
-            return recommendations.sort((a, b) => b.efficiency - a.efficiency);
+            // Sort by cost efficiency for target quantity
+            return recommendations.sort((a, b) => a.costForTarget - b.costForTarget);
             
         } catch (error) {
             console.error('Error calculating optimal quantities:', error);
             return [];
         }
+    }
+
+    /**
+     * Compare pricing between Digikey and Mouser
+     */
+    comparePricing(digikeyProduct, mouserProduct, quantity) {
+        const digikeyResult = this.calculateDigikeyUnitPrice(digikeyProduct, quantity);
+        const mouserResult = this.calculateMouserUnitPrice(
+            mouserProduct.priceBreaks || mouserProduct.PriceBreaks, 
+            quantity
+        );
+        
+        const comparison = {
+            quantity: quantity,
+            digikey: digikeyResult,
+            mouser: mouserResult,
+            winner: null,
+            savings: { absolute: 0, percentage: 0 }
+        };
+        
+        if (digikeyResult.unitPrice > 0 && mouserResult.unitPrice > 0) {
+            if (digikeyResult.totalPrice < mouserResult.totalPrice) {
+                comparison.winner = 'digikey';
+                comparison.savings.absolute = mouserResult.totalPrice - digikeyResult.totalPrice;
+                comparison.savings.percentage = (comparison.savings.absolute / mouserResult.totalPrice) * 100;
+            } else if (mouserResult.totalPrice < digikeyResult.totalPrice) {
+                comparison.winner = 'mouser';
+                comparison.savings.absolute = digikeyResult.totalPrice - mouserResult.totalPrice;
+                comparison.savings.percentage = (comparison.savings.absolute / digikeyResult.totalPrice) * 100;
+            } else {
+                comparison.winner = 'tie';
+            }
+        } else if (digikeyResult.unitPrice > 0) {
+            comparison.winner = 'digikey';
+        } else if (mouserResult.unitPrice > 0) {
+            comparison.winner = 'mouser';
+        }
+        
+        return comparison;
     }
 
     /**
@@ -310,26 +595,30 @@ class UtilityManager {
         // Electrical parameters
         if (name.includes('voltage') || name.includes('current') || name.includes('power') || 
             name.includes('resistance') || name.includes('capacitance') || name.includes('inductance') ||
-            name.includes('frequency') || name.includes('impedance') || name.includes('gain')) {
+            name.includes('frequency') || name.includes('impedance') || name.includes('gain') ||
+            name.includes('tolerance') || name.includes('esr') || name.includes('ripple')) {
             return 'electrical';
         }
         
         // Physical parameters
         if (name.includes('size') || name.includes('dimension') || name.includes('length') ||
             name.includes('width') || name.includes('height') || name.includes('diameter') ||
-            name.includes('weight') || name.includes('package') || name.includes('mounting')) {
+            name.includes('weight') || name.includes('package') || name.includes('mounting') ||
+            name.includes('case') || name.includes('footprint')) {
             return 'physical';
         }
         
         // Compliance parameters
         if (name.includes('rohs') || name.includes('lead') || name.includes('halogen') ||
-            name.includes('compliance') || name.includes('standard') || name.includes('certification')) {
+            name.includes('compliance') || name.includes('standard') || name.includes('certification') ||
+            name.includes('reach') || name.includes('environmental')) {
             return 'compliance';
         }
         
         // Basic parameters
         if (name.includes('manufacturer') || name.includes('part') || name.includes('series') ||
-            name.includes('category') || name.includes('family') || name.includes('type')) {
+            name.includes('category') || name.includes('family') || name.includes('type') ||
+            name.includes('status') || name.includes('description')) {
             return 'basic';
         }
         
@@ -403,7 +692,7 @@ class UtilityManager {
                 style: 'currency',
                 currency: currency,
                 minimumFractionDigits: precision,
-                maximumFractionDigits: precision
+                maximumFractionDigits: Math.max(precision, 4) // Allow up to 4 decimals for small amounts
             });
             
             return formatter.format(amount);
@@ -411,7 +700,7 @@ class UtilityManager {
         } catch (error) {
             // Fallback formatting
             const symbol = this.transformations.currency[currency]?.symbol || '$';
-            return showSymbol ? `${symbol}${amount.toFixed(2)}` : amount.toFixed(2);
+            return showSymbol ? `${symbol}${amount.toFixed(4)}` : amount.toFixed(4);
         }
     }
 
@@ -433,6 +722,47 @@ class UtilityManager {
         const scaled = number / scale;
         
         return scaled.toFixed(precision) + unit;
+    }
+
+    /**
+     * Create pricing summary for display
+     */
+    createPricingSummary(pricingResult, quantity) {
+        if (!pricingResult || pricingResult.error) {
+            return {
+                error: pricingResult?.error || 'Unknown pricing error',
+                displayPrice: 'N/A',
+                breakdown: null
+            };
+        }
+
+        const summary = {
+            unitPrice: pricingResult.unitPrice,
+            totalPrice: pricingResult.totalPrice,
+            quantity: quantity,
+            displayPrice: this.formatCurrency(pricingResult.unitPrice),
+            displayTotal: this.formatCurrency(pricingResult.totalPrice),
+            packaging: pricingResult.packaging,
+            savings: pricingResult.savings
+        };
+
+        // Add packaging info for Digikey
+        if (pricingResult.packagingFee !== undefined) {
+            summary.packagingFee = pricingResult.packagingFee;
+            summary.packagingFeeDisplay = this.formatCurrency(pricingResult.packagingFee);
+        }
+
+        // Add breakdown if available
+        if (pricingResult.breakdown) {
+            summary.breakdown = {
+                ...pricingResult.breakdown,
+                baseUnitPriceDisplay: this.formatCurrency(pricingResult.breakdown.baseUnitPrice),
+                baseCostDisplay: this.formatCurrency(pricingResult.breakdown.baseCost),
+                totalCostDisplay: this.formatCurrency(pricingResult.breakdown.totalCost)
+            };
+        }
+
+        return summary;
     }
 
     /**
@@ -759,4 +1089,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = UtilityManager;
 }
 
-console.log('✓ K4LP Utility Manager v2.0.0 initialized');
+console.log('✓ K4LP Utility Manager v2.1.0 (Enhanced Digikey/Mouser pricing) initialized');
