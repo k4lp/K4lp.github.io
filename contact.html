@@ -1,76 +1,152 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light dark" />
-  <title>Toolkit — Contact</title>
-  <link rel="stylesheet" href="css/site.css" />
-  <link rel="icon" href="data:,">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - K4LP Engineering Tools</title>
+    <link rel="stylesheet" href="css/site.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="page page--contact">
-  <header class="navbar" role="banner">
-    <div class="navbar__brand"><a href="index.html">PCB &amp; BOM Toolkit</a></div>
-    <nav class="navbar__links" aria-label="Primary">
-      <a class="btn btn--ghost" href="settings.html" aria-label="Settings"><span class="icon icon--gear" aria-hidden="true"></span><span class="label">Settings</span></a>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="index.html" class="nav-brand-link">K4LP Tools</a>
+            </div>
+            <div class="nav-actions">
+                <button id="settings-btn" class="settings-btn" aria-label="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 10v6m11-7h-6m-10 0H1m15.5-3.5L19 9m-8.5 8.5L7 21m13.5-13.5L19 9m-8.5 8.5L7 21"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </nav>
-  </header>
 
-  <main id="content" role="main">
-    <header class="hero">
-      <div class="container">
-        <h1>Contact</h1>
-        <p class="hero__lead">Minimal, client-side tools for BOM + parts.</p>
-      </div>
-    </header>
+    <main class="main-content">
+        <div class="container">
+            <header class="page-header">
+                <h1>Contact & About</h1>
+                <p class="page-subtitle">Learn more about this project and get in touch</p>
+            </header>
 
-    <section class="section">
-      <div class="container grid cols-2">
-        <div class="contact contact__card">
-          <div class="contact__row">
-            <div class="contact__label">Project</div>
-            <div class="contact__value">PCB &amp; BOM Toolkit</div>
-          </div>
-          <div class="contact__row">
-            <div class="contact__label">Focus</div>
-            <div class="contact__value">Excel mapping, Digi-Key/Mouser APIs, QR/Barcode.</div>
-          </div>
-          <div class="contact__row">
-            <div class="contact__label">Audience</div>
-            <div class="contact__value">Electronics / PCB assembly engineers.</div>
-          </div>
+            <div class="contact-grid">
+                <section class="project-info">
+                    <h2>About This Project</h2>
+                    <div class="info-content">
+                        <p>K4LP Engineering Tools is a comprehensive suite of web-based utilities designed specifically for electronics engineers working in PCB assembly and component procurement.</p>
+                        
+                        <h3>Key Features</h3>
+                        <ul class="feature-list">
+                            <li><strong>BOM Processing:</strong> Advanced Bill of Materials analysis and processing with supplier integration</li>
+                            <li><strong>Excel Integration:</strong> Seamless Excel file processing with visual column mapping and data extraction</li>
+                            <li><strong>Component Lookup:</strong> Real-time part number search across major suppliers (Digikey, Mouser)</li>
+                            <li><strong>QR/Barcode Scanning:</strong> High-precision scanning with customizable camera controls</li>
+                            <li><strong>Client-Side Storage:</strong> All data processed locally for maximum security and performance</li>
+                        </ul>
+                        
+                        <h3>Technical Details</h3>
+                        <ul class="tech-list">
+                            <li>Pure HTML5, CSS3, and JavaScript - no external dependencies</li>
+                            <li>Swiss minimalist design with Geist typography</li>
+                            <li>Modular architecture for scalability and maintenance</li>
+                            <li>Progressive enhancement and mobile-responsive</li>
+                            <li>Local storage for API keys and user preferences</li>
+                        </ul>
+                        
+                        <div class="project-stats">
+                            <div class="stat">
+                                <span class="stat-number">100%</span>
+                                <span class="stat-label">Client-Side Processing</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">0</span>
+                                <span class="stat-label">External Dependencies</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">∞</span>
+                                <span class="stat-label">Data Persistence</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="contact-section">
+                    <h2>Get in Touch</h2>
+                    <div class="contact-content">
+                        <p>Have questions, suggestions, or need support? Feel free to reach out!</p>
+                        
+                        <form id="contact-form" class="contact-form">
+                            <div class="form-group">
+                                <label for="email">Your Email Address</label>
+                                <input type="email" id="email" name="email" required placeholder="your.email@example.com">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="subject">Subject</label>
+                                <select id="subject" name="subject" required>
+                                    <option value="">Select a topic...</option>
+                                    <option value="bug-report">Bug Report</option>
+                                    <option value="feature-request">Feature Request</option>
+                                    <option value="technical-support">Technical Support</option>
+                                    <option value="general-inquiry">General Inquiry</option>
+                                    <option value="collaboration">Collaboration</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="message">Message</label>
+                                <textarea id="message" name="message" required placeholder="Describe your question, issue, or suggestion in detail..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary">Send Message</button>
+                        </form>
+                        
+                        <div class="contact-note">
+                            <p><em>Note: This is a demonstration contact form. In a production environment, this would integrate with a backend service for message handling.</em></p>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </div>
+    </main>
 
-        <div class="contact contact__card">
-          <form class="form" id="contact-form" novalidate>
-            <div class="field">
-              <label for="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="email@domain.tld" autocomplete="email" required>
-            </div>
-            <div class="field">
-              <label for="message">Message</label>
-              <textarea id="message" name="message" placeholder="Your message..." rows="6" required></textarea>
-            </div>
-            <div class="cluster right">
-              <button class="btn btn--secondary" type="reset">Clear</button>
-              <button class="btn btn--primary" type="submit" data-action="contact-submit">Send</button>
-            </div>
-            <p class="help mt-2">Placeholder only. Wire your endpoint in <code>js/contact/main.js</code>.</p>
-          </form>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; <span id="current-year">2025</span> Kalp Pariya. All rights reserved.</p>
         </div>
-      </div>
-    </section>
-  </main>
+    </footer>
 
-  <footer class="footer" role="contentinfo">
-    <div class="footer__wrap container">
-      <div>Engineered for PCB assembly</div>
-      <div class="footer__copy">&copy; Kalp Pariya — 2025</div>
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button id="close-settings" class="close-btn" aria-label="Close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <form id="settings-form" class="modal-body">
+                <div id="settings-content">
+                    <!-- Settings content will be loaded dynamically -->
+                </div>
+            </form>
+        </div>
     </div>
-  </footer>
 
-  <script type="module" src="js/common/dom.js"></script>
-  <script type="module" src="js/common/ui.js"></script>
-  <script type="module" src="js/contact/main.js"></script>
+    <!-- Scripts -->
+    <script src="js/common/utils.js"></script>
+    <script src="js/common/storage.js"></script>
+    <script src="js/common/api.js"></script>
+    <script src="js/core/navigation.js"></script>
+    <script src="js/pages/settings/settings.js"></script>
+    <script src="js/pages/contact/contact.js"></script>
 </body>
 </html>
