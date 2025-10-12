@@ -1,5 +1,5 @@
 /**
- * Index page functionality - Clean and minimal
+ * Index page functionality - Ultra minimal
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,43 +17,43 @@ function loadToolsList() {
     const tools = [
         {
             title: "BOM Processor",
-            description: "Process and analyze component Bill of Materials with supplier integration and price optimization.",
-            tags: ["BOM", "Components", "Excel", "API"],
+            description: "Process component Bill of Materials with supplier data and pricing analysis.",
+            tags: ["BOM", "Excel", "API"],
             link: "bom-processor.html",
             category: "processing"
         },
         {
             title: "Excel Analyzer",
-            description: "Advanced Excel file analysis with column mapping and automated data extraction capabilities.",
-            tags: ["Excel", "Analysis", "Data", "Mapping"],
+            description: "Analyze Excel files with column mapping and data extraction.",
+            tags: ["Excel", "Analysis", "Data"],
             link: "excel-analyzer.html",
             category: "analysis"
         },
         {
             title: "QR Scanner",
-            description: "High-precision QR and barcode scanning with batch processing and export functionality.",
-            tags: ["Scanner", "QR", "Barcode", "Camera"],
+            description: "Scan QR codes and barcodes with camera integration.",
+            tags: ["Scanner", "QR", "Camera"],
             link: "scanner.html",
             category: "scanning"
         },
         {
             title: "Part Lookup",
-            description: "Search component part numbers across multiple suppliers with real-time inventory data.",
-            tags: ["Parts", "Search", "Components", "Inventory"],
+            description: "Search component part numbers across supplier databases.",
+            tags: ["Parts", "Search", "Components"],
             link: "part-lookup.html",
             category: "search"
         },
         {
             title: "PCB Validator",
-            description: "Automated PCB design rule checking and component placement validation tools.",
-            tags: ["PCB", "Validation", "DRC", "Design"],
+            description: "Validate PCB designs and check component placement.",
+            tags: ["PCB", "Validation", "Design"],
             link: "pcb-validator.html",
             category: "validation"
         },
         {
             title: "Component Database",
-            description: "Centralized component library management with lifecycle tracking and supplier data.",
-            tags: ["Database", "Components", "Management"],
+            description: "Manage component library with supplier information.",
+            tags: ["Database", "Components"],
             link: "component-db.html",
             category: "management"
         }
@@ -70,12 +70,7 @@ function renderTools(tools) {
     toolsContainer.innerHTML = tools.map((tool, index) => `
         <div class="tool-card" data-category="${tool.category}" data-index="${index}">
             <div class="tool-card-header">
-                <div class="tool-icon">
-                    <div class="tool-icon-inner"></div>
-                </div>
-                <div class="tool-meta">
-                    <span class="tool-category">${tool.category}</span>
-                </div>
+                <div class="tool-category">${tool.category}</div>
             </div>
             <div class="tool-content">
                 <h3 class="tool-title">${tool.title}</h3>
@@ -85,35 +80,28 @@ function renderTools(tools) {
                 </div>
             </div>
             <div class="tool-actions">
-                <a href="${tool.link}" class="tool-link">
-                    <span class="tool-link-text">Open Tool</span>
-                    <div class="tool-link-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M7 17L17 7M17 7H7M17 7V17"/>
-                        </svg>
-                    </div>
-                </a>
+                <a href="${tool.link}" class="tool-link">Open</a>
             </div>
         </div>
     `).join('');
 }
 
 function setupFilterButtons() {
-    const toolsFilter = document.querySelector('.tools-filter');
-    if (!toolsFilter) return;
+    const toolsHeader = document.querySelector('.tools-header');
+    if (!toolsHeader) return;
 
     const filterButtonsContainer = document.createElement('div');
     filterButtonsContainer.className = 'filter-buttons';
     
     const categories = ['all', 'processing', 'analysis', 'scanning', 'search', 'validation', 'management'];
     const categoryLabels = {
-        'all': 'All',
-        'processing': 'Processing',
-        'analysis': 'Analysis',
-        'scanning': 'Scanning',
-        'search': 'Search',
-        'validation': 'Validation',
-        'management': 'Management'
+        'all': 'all',
+        'processing': 'processing',
+        'analysis': 'analysis',
+        'scanning': 'scanning',
+        'search': 'search',
+        'validation': 'validation',
+        'management': 'management'
     };
 
     categories.forEach((category, index) => {
@@ -125,7 +113,7 @@ function setupFilterButtons() {
         filterButtonsContainer.appendChild(button);
     });
 
-    toolsFilter.appendChild(filterButtonsContainer);
+    toolsHeader.appendChild(filterButtonsContainer);
 }
 
 function setupToolFiltering() {
@@ -148,9 +136,7 @@ function setupToolFiltering() {
                 }
             });
 
-            // Update results count
-            const visibleCards = document.querySelectorAll('.tool-card[style*="flex"], .tool-card:not([style*="none"])');
-            updateResultsCount(visibleCards.length);
+            updateResultsCount();
         }
     });
 }
@@ -162,7 +148,6 @@ function setupToolSearch() {
     const searchHandler = function(event) {
         const query = event.target.value.toLowerCase();
         const toolCards = document.querySelectorAll('.tool-card');
-        let visibleCount = 0;
 
         toolCards.forEach(card => {
             const title = card.querySelector('.tool-title').textContent.toLowerCase();
@@ -178,13 +163,12 @@ function setupToolSearch() {
 
             if (matches) {
                 card.style.display = 'flex';
-                visibleCount++;
             } else {
                 card.style.display = 'none';
             }
         });
 
-        updateResultsCount(visibleCount, query);
+        updateResultsCount(query);
         
         // Reset filter buttons if search is active
         if (query) {
@@ -196,27 +180,30 @@ function setupToolSearch() {
     let timeout;
     searchInput.addEventListener('input', function(event) {
         clearTimeout(timeout);
-        timeout = setTimeout(() => searchHandler(event), 300);
+        timeout = setTimeout(() => searchHandler(event), 200);
     });
 }
 
-function updateResultsCount(count, query = '') {
+function updateResultsCount(query = '') {
+    const visibleCards = document.querySelectorAll('.tool-card:not([style*="none"])');
+    const count = visibleCards.length;
+    
     let resultsElement = document.getElementById('search-results-count');
     
     if (!resultsElement) {
         resultsElement = document.createElement('div');
         resultsElement.id = 'search-results-count';
         resultsElement.className = 'search-results-count';
-        document.querySelector('.tools-filter').appendChild(resultsElement);
+        document.querySelector('.tools-header').appendChild(resultsElement);
     }
     
     if (count === 6 && !query) {
         resultsElement.textContent = '';
     } else {
         if (query) {
-            resultsElement.textContent = `${count} result${count !== 1 ? 's' : ''} for "${query}"`;
+            resultsElement.textContent = `${count} results for "${query}"`;
         } else {
-            resultsElement.textContent = `${count} tool${count !== 1 ? 's' : ''} found`;
+            resultsElement.textContent = `${count} tools`;
         }
     }
 }
