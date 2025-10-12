@@ -1,1 +1,170 @@
-test - empty doc
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCB Assembly Tools - Home</title>
+    <link rel="stylesheet" href="site.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-logo">PCB Assembly Tools</a>
+        <div class="navbar-controls">
+            <button class="navbar-settings-btn" id="settingsBtn" aria-label="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <section class="section">
+                <h1 class="section-title">Engineering Tools</h1>
+                <p class="mb-6">Professional tools for PCB assembly engineers, component sourcing specialists, and BOM management. All tools integrate with Digikey and Mouser APIs for real-time component data.</p>
+                
+                <div class="grid grid-cols-3 grid-gap-md">
+                    <!-- Tool Card 1: BOM Processor -->
+                    <a href="bom-processor.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">BOM Processor</h3>
+                            <p class="tool-card-description">Upload Excel BOM files, map columns, and automatically fetch component data from Digikey and Mouser. Supports batch processing and multi-sheet workbooks.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Excel</span>
+                                <span class="tool-card-tag">BOM</span>
+                                <span class="tool-card-tag">API</span>
+                                <span class="tool-card-tag">Batch</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 2: Component Scanner -->
+                    <a href="component-scanner.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">Component Scanner</h3>
+                            <p class="tool-card-description">Scan component barcodes and QR codes using your device camera. Instantly retrieve specifications, datasheets, and pricing from supplier APIs.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">QR Code</span>
+                                <span class="tool-card-tag">Barcode</span>
+                                <span class="tool-card-tag">Camera</span>
+                                <span class="tool-card-tag">Lookup</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 3: Part Matcher -->
+                    <a href="part-matcher.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">Part Matcher</h3>
+                            <p class="tool-card-description">Find alternate components based on specifications. Compare parameters, pricing, and availability across multiple suppliers to optimize your BOM.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Alternates</span>
+                                <span class="tool-card-tag">Compare</span>
+                                <span class="tool-card-tag">Optimization</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 4: Inventory Manager -->
+                    <a href="inventory-manager.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">Inventory Manager</h3>
+                            <p class="tool-card-description">Track component inventory with real-time stock levels. Scan components in and out, set reorder points, and generate purchase orders automatically.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Inventory</span>
+                                <span class="tool-card-tag">Stock</span>
+                                <span class="tool-card-tag">Tracking</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 5: Price Analyzer -->
+                    <a href="price-analyzer.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">Price Analyzer</h3>
+                            <p class="tool-card-description">Compare component pricing across Digikey and Mouser for different quantities. Analyze cost breakpoints and optimize order quantities for best pricing.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Pricing</span>
+                                <span class="tool-card-tag">Analysis</span>
+                                <span class="tool-card-tag">Cost</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 6: Datasheet Library -->
+                    <a href="datasheet-library.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">Datasheet Library</h3>
+                            <p class="tool-card-description">Organize and manage component datasheets. Automatically download and categorize PDFs from supplier APIs with full-text search capabilities.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Datasheets</span>
+                                <span class="tool-card-tag">Library</span>
+                                <span class="tool-card-tag">Search</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 7: PCB Spec Manager -->
+                    <a href="pcb-spec-manager.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">PCB Spec Manager</h3>
+                            <p class="tool-card-description">Manage PCB specifications including layer count, material, finish, and tolerances. Generate specification sheets and track revisions.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">PCB</span>
+                                <span class="tool-card-tag">Specifications</span>
+                                <span class="tool-card-tag">Revision</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 8: Supplier Comparison -->
+                    <a href="supplier-comparison.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">Supplier Comparison</h3>
+                            <p class="tool-card-description">Side-by-side comparison of component availability, lead times, and pricing between Digikey and Mouser. Export comparison reports to Excel.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Supplier</span>
+                                <span class="tool-card-tag">Comparison</span>
+                                <span class="tool-card-tag">Report</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Tool Card 9: BOM Validator -->
+                    <a href="bom-validator.html" class="tool-card">
+                        <div>
+                            <h3 class="tool-card-title">BOM Validator</h3>
+                            <p class="tool-card-description">Validate BOM completeness, check for obsolete parts, and verify component availability before ordering. Generate validation reports with recommendations.</p>
+                            <div class="tool-card-tags">
+                                <span class="tool-card-tag">Validation</span>
+                                <span class="tool-card-tag">Obsolescence</span>
+                                <span class="tool-card-tag">Audit</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-copyright">&copy; Kalp Pariya - 2025</p>
+        </div>
+    </footer>
+
+    <!-- API Settings Modal (Include from separate file) -->
+    <div id="settingsModalContainer"></div>
+
+    <!-- Scripts -->
+    <script src="js/common/storage.js"></script>
+    <script src="js/common/api-manager.js"></script>
+    <script src="js/common/modal.js"></script>
+    <script src="js/index/main.js"></script>
+</body>
+</html>

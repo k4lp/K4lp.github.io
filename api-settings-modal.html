@@ -1,0 +1,162 @@
+<!-- API Settings Modal -->
+<div class="modal-backdrop" id="apiSettingsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">API Configuration</h2>
+            <button class="modal-close" id="closeSettingsBtn" aria-label="Close settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <!-- Digikey API Section -->
+            <div class="settings-section">
+                <div class="settings-section-title">Digikey API</div>
+                <p class="text-sm text-gray mb-4">OAuth 2.0 authentication requires Client ID and Client Secret. Register at <a href="https://developer.digikey.com" target="_blank" rel="noopener noreferrer">developer.digikey.com</a></p>
+
+                <div class="api-credential-item">
+                    <div class="api-credential-header">
+                        <span class="api-credential-name">Digikey</span>
+                        <span class="status-badge status-inactive" id="digikeyStatus">
+                            Inactive
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="digikeyClientId">Client ID</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="digikeyClientId" 
+                            placeholder="Enter your Digikey Client ID"
+                            autocomplete="off"
+                        >
+                        <span class="form-helper">Unique identifier for your registered application</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="digikeyClientSecret">Client Secret</label>
+                        <input 
+                            type="password" 
+                            class="form-input" 
+                            id="digikeyClientSecret" 
+                            placeholder="Enter your Digikey Client Secret"
+                            autocomplete="off"
+                        >
+                        <span class="form-helper">Keep this secret secure and never share it</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="digikeyRedirectUri">Redirect URI (Optional)</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="digikeyRedirectUri" 
+                            placeholder="https://your-app-domain.com/callback"
+                            autocomplete="off"
+                        >
+                        <span class="form-helper">Must match the URI registered in your Digikey application</span>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="form-checkbox-label">
+                            <input type="checkbox" class="form-checkbox" id="digikeySandbox">
+                            <span>Use Sandbox Environment</span>
+                        </label>
+                        <span class="form-helper">Enable for testing without making production API calls</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mouser API Section -->
+            <div class="settings-section">
+                <div class="settings-section-title">Mouser API</div>
+                <p class="text-sm text-gray mb-4">Simple API key authentication. Two separate keys required. Register at <a href="https://www.mouser.com/api-hub/" target="_blank" rel="noopener noreferrer">mouser.com/api-hub</a></p>
+
+                <div class="api-credential-item">
+                    <div class="api-credential-header">
+                        <span class="api-credential-name">Mouser Search API</span>
+                        <span class="status-badge status-inactive" id="mouserSearchStatus">
+                            Inactive
+                        </span>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="mouserSearchApiKey">Search API Key</label>
+                        <input 
+                            type="text" 
+                            class="form-input font-mono" 
+                            id="mouserSearchApiKey" 
+                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                            autocomplete="off"
+                        >
+                        <span class="form-helper">Used for part search and product information queries</span>
+                    </div>
+                </div>
+
+                <div class="api-credential-item">
+                    <div class="api-credential-header">
+                        <span class="api-credential-name">Mouser Cart/Order API</span>
+                        <span class="status-badge status-inactive" id="mouserOrderStatus">
+                            Inactive
+                        </span>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="mouserOrderApiKey">Cart/Order API Key</label>
+                        <input 
+                            type="text" 
+                            class="form-input font-mono" 
+                            id="mouserOrderApiKey" 
+                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                            autocomplete="off"
+                        >
+                        <span class="form-helper">Used for cart operations and order management</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connection Testing -->
+            <div class="settings-section">
+                <div class="settings-section-title">Connection Testing</div>
+                <p class="text-sm text-gray mb-4">Test your API credentials to ensure they are configured correctly.</p>
+
+                <div class="flex gap-4">
+                    <button class="btn btn-secondary" id="testDigikeyBtn">
+                        <span>Test Digikey</span>
+                    </button>
+                    <button class="btn btn-secondary" id="testMouserSearchBtn">
+                        <span>Test Mouser Search</span>
+                    </button>
+                    <button class="btn btn-secondary" id="testMouserOrderBtn">
+                        <span>Test Mouser Order</span>
+                    </button>
+                </div>
+
+                <div id="testResultContainer" class="mt-4" style="display: none;">
+                    <div class="alert alert-info" id="testResultMessage">
+                        Test results will appear here
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Management -->
+            <div class="settings-section">
+                <div class="settings-section-title">Data Management</div>
+                <p class="text-sm text-gray mb-4">All API credentials are stored locally in your browser's storage and never expire. Clear data to remove all stored credentials.</p>
+
+                <button class="btn btn-ghost" id="clearDataBtn">
+                    <span>Clear All Stored Data</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
+            <button class="btn btn-primary" id="saveSettingsBtn">Save Configuration</button>
+        </div>
+    </div>
+</div>
