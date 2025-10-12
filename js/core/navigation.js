@@ -1,811 +1,757 @@
 /**
- * Enhanced Navigation System
- * Handles top navbar, settings modal, API status display, and navigation state
+ * Enhanced Navigation and Settings Management
+ * Provides sticky navigation, settings modal, and navigation state management
  * Part of K4LP Engineering Tools - Swiss Minimalist Design
- * @version 2.0.0
+ * @version 2.1.0 - Enhanced with comprehensive settings management
  */
 
 class NavigationManager {
     constructor() {
-        this.version = '2.0.0';
+        this.version = '2.1.0';
         
-        // DOM elements
-        this.navbar = null;
-        this.settingsButton = null;
-        this.settingsModal = null;
-        this.statusIndicators = new Map();
+        // Navigation state
+        this.currentPage = this.getCurrentPage();
+        this.navigationVisible = true;
+        this.settingsModalOpen = false;
         
-        // State management
-        this.currentPage = '';
-        this.isSettingsOpen = false;
-        this.apiStatuses = {
-            digikey: 'inactive',
-            mouser: 'inactive'
+        // Navigation items configuration
+        this.navigationItems = [
+            {
+                id: 'home',
+                label: 'Tools',
+                url: '/index.html',
+                icon: '🛠️',
+                description: 'Engineering tools dashboard'
+            },
+            {
+                id: 'contact',
+                label: 'Contact',
+                url: '/contact.html',
+                icon: '📞',
+                description: 'Project information and contact'
+            },
+            {
+                id: 'settings',
+                label: 'Settings',
+                action: 'openSettings',
+                icon: '⚙️',
+                description: 'API credentials and configuration'
+            }
+        ];
+        
+        // Settings configuration
+        this.settingsConfig = {
+            digikey: {
+                title: 'Digikey API',
+                description: 'Configure Digikey API credentials for component search',
+                fields: [
+                    {
+                        id: 'digikey-client-id',
+                        label: 'Client ID',
+                        type: 'text',
+                        placeholder: 'Enter your Digikey Client ID',
+                        required: true,
+                        validation: 'alphanumeric'
+                    },
+                    {
+                        id: 'digikey-client-secret',
+                        label: 'Client Secret',
+                        type: 'password',
+                        placeholder: 'Enter your Digikey Client Secret',
+                        required: true,
+                        validation: 'alphanumeric'
+                    },
+                    {
+                        id: 'digikey-sandbox',
+                        label: 'Use Sandbox',
+                        type: 'checkbox',
+                        description: 'Use Digikey sandbox environment for testing'
+                    }
+                ]
+            },
+            mouser: {
+                title: 'Mouser API',
+                description: 'Configure Mouser API credentials for component search',
+                fields: [
+                    {
+                        id: 'mouser-api-key',
+                        label: 'API Key',
+                        type: 'password',
+                        placeholder: 'Enter your Mouser API Key',
+                        required: true,
+                        validation: 'alphanumeric'
+                    }
+                ]
+            },
+            application: {
+                title: 'Application Settings',
+                description: 'General application preferences and behavior',
+                fields: [
+                    {
+                        id: 'theme',
+                        label: 'Theme',
+                        type: 'select',
+                        options: [
+                            { value: 'auto', label: 'Auto (System)' },
+                            { value: 'light', label: 'Light' },
+                            { value: 'dark', label: 'Dark' }
+                        ],
+                        default: 'auto'
+                    },
+                    {
+                        id: 'notifications',
+                        label: 'Enable Notifications',
+                        type: 'checkbox',
+                        description: 'Show system notifications for important events',
+                        default: true
+                    },
+                    {
+                        id: 'auto-save',
+                        label: 'Auto-save Settings',
+                        type: 'checkbox',
+                        description: 'Automatically save settings changes',
+                        default: true
+                    }
+                ]
+            }
         };
         
-        // Modal content template
-        this.settingsModalTemplate = `
-            <div class="modal-backdrop" id="settings-modal-backdrop">
-                <div class="modal-content settings-modal">
-                    <div class="modal-header">
-                        <h2>API Settings</h2>
-                        <button class="modal-close" id="close-settings" aria-label="Close settings">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Digikey Settings -->
-                        <div class="settings-section">
-                            <div class="settings-header">
-                                <h3>Digikey API v4</h3>
-                                <div class="status-indicator" id="digikey-status">
-                                    <span class="status-dot status--inactive"></span>
-                                    <span class="status-text">Inactive</span>
-                                </div>
-                            </div>
-                            <div class="settings-form">
-                                <div class="field">
-                                    <label for="digikey-client-id">Client ID</label>
-                                    <input type="text" id="digikey-client-id" placeholder="Enter Digikey Client ID" autocomplete="off">
-                                </div>
-                                <div class="field">
-                                    <label for="digikey-client-secret">Client Secret</label>
-                                    <input type="password" id="digikey-client-secret" placeholder="Enter Digikey Client Secret" autocomplete="new-password">
-                                </div>
-                                <div class="field field--checkbox">
-                                    <label>
-                                        <input type="checkbox" id="digikey-sandbox"> Use Sandbox Environment
-                                    </label>
-                                    <p class="help">Enable for testing with Digikey sandbox API</p>
-                                </div>
-                                <div class="field-actions">
-                                    <button class="btn btn--secondary" id="test-digikey">Test Connection</button>
-                                    <button class="btn btn--primary" id="save-digikey">Save & Authenticate</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Mouser Settings -->
-                        <div class="settings-section">
-                            <div class="settings-header">
-                                <h3>Mouser API</h3>
-                                <div class="status-indicator" id="mouser-status">
-                                    <span class="status-dot status--inactive"></span>
-                                    <span class="status-text">Inactive</span>
-                                </div>
-                            </div>
-                            <div class="settings-form">
-                                <div class="field">
-                                    <label for="mouser-api-key">API Key</label>
-                                    <input type="password" id="mouser-api-key" placeholder="Enter Mouser API Key" autocomplete="new-password">
-                                </div>
-                                <div class="field-actions">
-                                    <button class="btn btn--secondary" id="test-mouser">Test Connection</button>
-                                    <button class="btn btn--primary" id="save-mouser">Save & Configure</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Debug Information -->
-                        <div class="settings-section">
-                            <div class="settings-header">
-                                <h3>Debug Information</h3>
-                            </div>
-                            <div class="debug-info">
-                                <div class="debug-item">
-                                    <label>Storage Status:</label>
-                                    <span id="storage-status">Loading...</span>
-                                </div>
-                                <div class="debug-item">
-                                    <label>API Manager:</label>
-                                    <span id="api-manager-status">Loading...</span>
-                                </div>
-                                <div class="debug-item">
-                                    <label>Last Request:</label>
-                                    <span id="last-request-time">Never</span>
-                                </div>
-                                <button class="btn btn--ghost btn--small" id="show-detailed-debug">Show Detailed Debug</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Actions -->
-                        <div class="settings-actions">
-                            <button class="btn btn--danger" id="clear-all-data">Clear All Data</button>
-                            <button class="btn btn--secondary" id="export-settings">Export Settings</button>
-                            <button class="btn btn--secondary" id="import-settings">Import Settings</button>
-                        </div>
-                    </div>
+        // DOM elements
+        this.elements = {
+            navbar: null,
+            settingsModal: null,
+            settingsOverlay: null,
+            statusIndicators: null
+        };
+        
+        this.initialize();
+    }
+    
+    /**
+     * Initialize navigation manager
+     */
+    initialize() {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setupNavigation());
+        } else {
+            this.setupNavigation();
+        }
+        
+        console.log('✓ K4LP Navigation Manager v2.1.0 initialized');
+    }
+    
+    /**
+     * Get current page identifier
+     */
+    getCurrentPage() {
+        const path = window.location.pathname;
+        
+        if (path.includes('contact')) return 'contact';
+        if (path.includes('settings')) return 'settings';
+        return 'home';
+    }
+    
+    /**
+     * Setup navigation elements
+     */
+    setupNavigation() {
+        this.createNavigation();
+        this.createSettingsModal();
+        this.setupEventListeners();
+        this.updateNavigationState();
+        this.startStatusUpdates();
+    }
+    
+    /**
+     * Create main navigation
+     */
+    createNavigation() {
+        // Check if navigation already exists
+        let existingNav = document.querySelector('.main-navigation');
+        if (existingNav) {
+            this.elements.navbar = existingNav;
+            return;
+        }
+        
+        // Create navigation container
+        const nav = document.createElement('nav');
+        nav.className = 'main-navigation';
+        nav.innerHTML = `
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <h1>K4LP Tools</h1>
+                    <div class="nav-status" id="nav-status"></div>
+                </div>
+                <div class="nav-menu">
+                    ${this.navigationItems.map(item => `
+                        <a href="${item.url || '#'}" 
+                           class="nav-item ${item.action ? 'nav-action' : ''}" 
+                           data-page="${item.id}"
+                           data-action="${item.action || ''}"
+                           title="${item.description}">
+                            <span class="nav-icon">${item.icon}</span>
+                            <span class="nav-label">${item.label}</span>
+                        </a>
+                    `).join('')}
                 </div>
             </div>
         `;
         
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.initialize());
-        } else {
-            this.initialize();
-        }
+        // Insert at beginning of body
+        document.body.insertBefore(nav, document.body.firstChild);
+        this.elements.navbar = nav;
+        this.elements.statusIndicators = nav.querySelector('#nav-status');
     }
-
-    /**
-     * Initialize navigation system
-     */
-    initialize() {
-        try {
-            this.detectCurrentPage();
-            this.findNavElements();
-            this.createSettingsModal();
-            this.setupEventListeners();
-            this.loadApiStatuses();
-            this.startStatusPolling();
-            
-            console.log('✓ K4LP Navigation Manager v2.0.0 initialized');
-        } catch (error) {
-            console.error('Navigation initialization failed:', error);
-        }
-    }
-
-    /**
-     * Detect current page from URL
-     */
-    detectCurrentPage() {
-        const path = window.location.pathname;
-        const filename = path.split('/').pop() || 'index.html';
-        this.currentPage = filename.replace('.html', '');
-        
-        // Add page class to body
-        document.body.classList.add(`page--${this.currentPage}`);
-    }
-
-    /**
-     * Find navigation elements in DOM
-     */
-    findNavElements() {
-        this.navbar = document.querySelector('.navbar');
-        this.settingsButton = document.querySelector('[href="settings.html"], [data-action="open-settings"]');
-        
-        if (!this.settingsButton) {
-            // Create settings button if it doesn't exist
-            this.createSettingsButton();
-        }
-    }
-
-    /**
-     * Create settings button if it doesn't exist
-     */
-    createSettingsButton() {
-        if (this.navbar) {
-            const navLinks = this.navbar.querySelector('.navbar__links');
-            if (navLinks) {
-                const settingsButton = document.createElement('button');
-                settingsButton.className = 'btn btn--ghost';
-                settingsButton.setAttribute('data-action', 'open-settings');
-                settingsButton.setAttribute('aria-label', 'Settings');
-                settingsButton.innerHTML = `
-                    <span class="icon icon--gear" aria-hidden="true">⚙️</span>
-                    <span class="label">Settings</span>
-                `;
-                navLinks.appendChild(settingsButton);
-                this.settingsButton = settingsButton;
-            }
-        }
-    }
-
+    
     /**
      * Create settings modal
      */
     createSettingsModal() {
-        // Remove existing modal if present
-        const existingModal = document.getElementById('settings-modal-backdrop');
-        if (existingModal) {
-            existingModal.remove();
-        }
+        // Check if modal already exists
+        if (document.getElementById('settings-modal')) return;
         
-        // Create and insert modal
-        const modalContainer = document.createElement('div');
-        modalContainer.innerHTML = this.settingsModalTemplate;
-        document.body.appendChild(modalContainer.firstElementChild);
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'settings-overlay';
+        overlay.className = 'modal-overlay';
         
-        this.settingsModal = document.getElementById('settings-modal-backdrop');
+        // Create modal container
+        const modal = document.createElement('div');
+        modal.id = 'settings-modal';
+        modal.className = 'settings-modal';
+        
+        modal.innerHTML = `
+            <div class="modal-header">
+                <h2>Settings & Configuration</h2>
+                <button class="modal-close" id="settings-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="settings-tabs">
+                    ${Object.entries(this.settingsConfig).map(([key, config]) => `
+                        <button class="settings-tab" data-tab="${key}">
+                            ${config.title}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="settings-panels">
+                    ${Object.entries(this.settingsConfig).map(([key, config]) => `
+                        <div class="settings-panel" data-panel="${key}">
+                            <h3>${config.title}</h3>
+                            <p class="panel-description">${config.description}</p>
+                            <div class="settings-form">
+                                ${this.renderSettingsFields(config.fields)}
+                            </div>
+                            <div class="panel-status" id="${key}-status"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="settings-test-all">Test All Connections</button>
+                <button class="btn btn-primary" id="settings-save">Save Settings</button>
+                <button class="btn btn-secondary" id="settings-reset">Reset to Defaults</button>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        this.elements.settingsModal = modal;
+        this.elements.settingsOverlay = overlay;
+        
+        // Load current settings
+        this.loadSettings();
     }
-
+    
+    /**
+     * Render settings form fields
+     */
+    renderSettingsFields(fields) {
+        return fields.map(field => {
+            switch (field.type) {
+                case 'text':
+                case 'password':
+                    return `
+                        <div class="form-group">
+                            <label for="${field.id}">${field.label}${field.required ? ' *' : ''}</label>
+                            <input type="${field.type}" 
+                                   id="${field.id}" 
+                                   name="${field.id}"
+                                   placeholder="${field.placeholder || ''}"
+                                   ${field.required ? 'required' : ''}
+                                   data-validation="${field.validation || ''}">
+                            <small class="field-help">${field.description || ''}</small>
+                        </div>
+                    `;
+                
+                case 'checkbox':
+                    return `
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" 
+                                       id="${field.id}" 
+                                       name="${field.id}">
+                                <span class="checkbox-text">${field.label}</span>
+                            </label>
+                            <small class="field-help">${field.description || ''}</small>
+                        </div>
+                    `;
+                
+                case 'select':
+                    return `
+                        <div class="form-group">
+                            <label for="${field.id}">${field.label}</label>
+                            <select id="${field.id}" name="${field.id}">
+                                ${field.options.map(option => `
+                                    <option value="${option.value}" 
+                                            ${option.value === field.default ? 'selected' : ''}>
+                                        ${option.label}
+                                    </option>
+                                `).join('')}
+                            </select>
+                            <small class="field-help">${field.description || ''}</small>
+                        </div>
+                    `;
+                
+                default:
+                    return '';
+            }
+        }).join('');
+    }
+    
     /**
      * Setup event listeners
      */
     setupEventListeners() {
-        // Settings button click
-        if (this.settingsButton) {
-            this.settingsButton.addEventListener('click', (e) => {
+        // Navigation clicks
+        this.elements.navbar.addEventListener('click', (e) => {
+            const navItem = e.target.closest('.nav-item');
+            if (!navItem) return;
+            
+            const action = navItem.dataset.action;
+            if (action) {
                 e.preventDefault();
-                this.openSettings();
-            });
-        }
-        
-        // Modal close events
-        const closeButton = document.getElementById('close-settings');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => this.closeSettings());
-        }
-        
-        // Backdrop click to close
-        if (this.settingsModal) {
-            this.settingsModal.addEventListener('click', (e) => {
-                if (e.target === this.settingsModal) {
-                    this.closeSettings();
-                }
-            });
-        }
-        
-        // Escape key to close
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isSettingsOpen) {
-                this.closeSettings();
+                this.handleNavAction(action);
             }
         });
         
-        // API form handlers
-        this.setupApiFormHandlers();
-        
-        // Debug handlers
-        this.setupDebugHandlers();
-        
-        // API status change listeners
-        if (window.eventBus) {
-            window.eventBus.on('api-status-changed', (data) => {
-                this.updateApiStatus(data.provider, data.status);
+        // Settings modal events
+        if (this.elements.settingsModal) {
+            // Close modal
+            const closeBtn = this.elements.settingsModal.querySelector('#settings-close');
+            closeBtn.addEventListener('click', () => this.closeSettings());
+            
+            this.elements.settingsOverlay.addEventListener('click', (e) => {
+                if (e.target === this.elements.settingsOverlay) {
+                    this.closeSettings();
+                }
             });
+            
+            // Tab switching
+            const tabButtons = this.elements.settingsModal.querySelectorAll('.settings-tab');
+            tabButtons.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    this.switchSettingsTab(tab.dataset.tab);
+                });
+            });
+            
+            // Action buttons
+            const saveBtn = this.elements.settingsModal.querySelector('#settings-save');
+            saveBtn.addEventListener('click', () => this.saveSettings());
+            
+            const testBtn = this.elements.settingsModal.querySelector('#settings-test-all');
+            testBtn.addEventListener('click', () => this.testAllConnections());
+            
+            const resetBtn = this.elements.settingsModal.querySelector('#settings-reset');
+            resetBtn.addEventListener('click', () => this.resetSettings());
         }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape key closes modal
+            if (e.key === 'Escape' && this.settingsModalOpen) {
+                this.closeSettings();
+            }
+            
+            // Ctrl/Cmd + K opens settings
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                this.openSettings();
+            }
+        });
     }
-
+    
     /**
-     * Setup API form event handlers
+     * Handle navigation action
      */
-    setupApiFormHandlers() {
-        // Digikey handlers
-        const saveDigikey = document.getElementById('save-digikey');
-        const testDigikey = document.getElementById('test-digikey');
-        
-        if (saveDigikey) {
-            saveDigikey.addEventListener('click', () => this.saveDigikeySettings());
-        }
-        
-        if (testDigikey) {
-            testDigikey.addEventListener('click', () => this.testDigikeyConnection());
-        }
-        
-        // Mouser handlers
-        const saveMouser = document.getElementById('save-mouser');
-        const testMouser = document.getElementById('test-mouser');
-        
-        if (saveMouser) {
-            saveMouser.addEventListener('click', () => this.saveMouserSettings());
-        }
-        
-        if (testMouser) {
-            testMouser.addEventListener('click', () => this.testMouserConnection());
+    handleNavAction(action) {
+        switch (action) {
+            case 'openSettings':
+                this.openSettings();
+                break;
+            default:
+                console.warn(`Unknown navigation action: ${action}`);
         }
     }
-
+    
     /**
-     * Setup debug event handlers
+     * Update navigation state
      */
-    setupDebugHandlers() {
-        const clearAllData = document.getElementById('clear-all-data');
-        const exportSettings = document.getElementById('export-settings');
-        const importSettings = document.getElementById('import-settings');
-        const showDetailedDebug = document.getElementById('show-detailed-debug');
+    updateNavigationState() {
+        const navItems = this.elements.navbar.querySelectorAll('.nav-item');
         
-        if (clearAllData) {
-            clearAllData.addEventListener('click', () => this.clearAllData());
-        }
-        
-        if (exportSettings) {
-            exportSettings.addEventListener('click', () => this.exportSettings());
-        }
-        
-        if (importSettings) {
-            importSettings.addEventListener('click', () => this.importSettings());
-        }
-        
-        if (showDetailedDebug) {
-            showDetailedDebug.addEventListener('click', () => this.showDetailedDebug());
-        }
+        navItems.forEach(item => {
+            const page = item.dataset.page;
+            if (page === this.currentPage) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
     }
-
+    
     /**
      * Open settings modal
      */
     openSettings() {
-        if (!this.settingsModal) return;
+        if (!this.elements.settingsOverlay) return;
         
-        this.isSettingsOpen = true;
-        this.settingsModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        
-        // Load current settings
-        this.loadCurrentSettings();
-        this.updateDebugInfo();
+        this.elements.settingsOverlay.style.display = 'flex';
+        this.settingsModalOpen = true;
         
         // Focus first input
         setTimeout(() => {
-            const firstInput = this.settingsModal.querySelector('input');
+            const firstInput = this.elements.settingsModal.querySelector('input');
             if (firstInput) firstInput.focus();
         }, 100);
+        
+        // Show first tab
+        const firstTab = Object.keys(this.settingsConfig)[0];
+        this.switchSettingsTab(firstTab);
+        
+        document.body.style.overflow = 'hidden';
     }
-
+    
     /**
      * Close settings modal
      */
     closeSettings() {
-        if (!this.settingsModal) return;
+        if (!this.elements.settingsOverlay) return;
         
-        this.isSettingsOpen = false;
-        this.settingsModal.style.display = 'none';
+        this.elements.settingsOverlay.style.display = 'none';
+        this.settingsModalOpen = false;
         document.body.style.overflow = '';
     }
-
+    
     /**
-     * Load current settings into modal
+     * Switch settings tab
      */
-    loadCurrentSettings() {
-        if (!window.storage) return;
-        
-        try {
-            // Load Digikey settings
-            const digikeyCredentials = window.storage.getDigikeyCredentials();
-            const digikeyClientId = document.getElementById('digikey-client-id');
-            const digikeyClientSecret = document.getElementById('digikey-client-secret');
-            const digikeySandbox = document.getElementById('digikey-sandbox');
-            
-            if (digikeyClientId) digikeyClientId.value = digikeyCredentials.clientId || '';
-            if (digikeyClientSecret) digikeyClientSecret.value = digikeyCredentials.clientSecret || '';
-            
-            // Load sandbox preference
-            const sandboxSetting = window.storage.getItem('digikey_environment');
-            if (digikeySandbox && sandboxSetting) {
-                digikeySandbox.checked = sandboxSetting.useSandbox || false;
-            }
-            
-            // Load Mouser settings
-            const mouserCredentials = window.storage.getMouserCredentials();
-            const mouserApiKey = document.getElementById('mouser-api-key');
-            
-            if (mouserApiKey) mouserApiKey.value = mouserCredentials.apiKey || '';
-            
-        } catch (error) {
-            console.error('Error loading settings:', error);
-        }
-    }
-
-    /**
-     * Save Digikey settings
-     */
-    async saveDigikeySettings() {
-        const clientId = document.getElementById('digikey-client-id')?.value?.trim();
-        const clientSecret = document.getElementById('digikey-client-secret')?.value?.trim();
-        const useSandbox = document.getElementById('digikey-sandbox')?.checked || false;
-        
-        if (!clientId || !clientSecret) {
-            this.showNotification('Please enter both Client ID and Client Secret', 'error');
-            return;
-        }
-        
-        try {
-            this.updateApiStatus('digikey', 'connecting');
-            
-            if (!window.apiManager) {
-                throw new Error('API Manager not available');
-            }
-            
-            // Set sandbox mode
-            window.apiManager.setSandboxMode(useSandbox);
-            
-            // Authenticate
-            const success = await window.apiManager.authenticateDigikey(clientId, clientSecret, true, useSandbox);
-            
-            if (success) {
-                this.showNotification('Digikey settings saved and authenticated successfully!', 'success');
-                this.updateApiStatus('digikey', 'active');
+    switchSettingsTab(tabId) {
+        // Update tab buttons
+        const tabs = this.elements.settingsModal.querySelectorAll('.settings-tab');
+        tabs.forEach(tab => {
+            if (tab.dataset.tab === tabId) {
+                tab.classList.add('active');
             } else {
-                throw new Error('Authentication failed');
+                tab.classList.remove('active');
             }
-            
-        } catch (error) {
-            console.error('Digikey save error:', error);
-            this.updateApiStatus('digikey', 'error');
-            this.showNotification(`Digikey error: ${error.message}`, 'error');
-        }
-    }
-
-    /**
-     * Save Mouser settings
-     */
-    async saveMouserSettings() {
-        const apiKey = document.getElementById('mouser-api-key')?.value?.trim();
+        });
         
-        if (!apiKey) {
-            this.showNotification('Please enter Mouser API Key', 'error');
-            return;
-        }
-        
-        try {
-            this.updateApiStatus('mouser', 'connecting');
-            
-            if (!window.apiManager) {
-                throw new Error('API Manager not available');
-            }
-            
-            // Set API key
-            const success = window.apiManager.setMouserApiKey(apiKey, true);
-            
-            if (success) {
-                // Test the connection
-                await window.apiManager.testMouserConnection();
-                this.showNotification('Mouser settings saved and configured successfully!', 'success');
-                this.updateApiStatus('mouser', 'active');
+        // Update panels
+        const panels = this.elements.settingsModal.querySelectorAll('.settings-panel');
+        panels.forEach(panel => {
+            if (panel.dataset.panel === tabId) {
+                panel.style.display = 'block';
             } else {
-                throw new Error('Configuration failed');
+                panel.style.display = 'none';
             }
-            
-        } catch (error) {
-            console.error('Mouser save error:', error);
-            this.updateApiStatus('mouser', 'error');
-            this.showNotification(`Mouser error: ${error.message}`, 'error');
-        }
+        });
     }
-
+    
     /**
-     * Test Digikey connection
+     * Load current settings into form
      */
-    async testDigikeyConnection() {
-        const clientId = document.getElementById('digikey-client-id')?.value?.trim();
-        const clientSecret = document.getElementById('digikey-client-secret')?.value?.trim();
-        const useSandbox = document.getElementById('digikey-sandbox')?.checked || false;
+    loadSettings() {
+        if (!window.storage) {
+            console.warn('Storage manager not available');
+            return;
+        }
         
-        if (!clientId || !clientSecret) {
-            this.showNotification('Please enter credentials first', 'warning');
+        // Load Digikey settings
+        const digikeyCredentials = window.storage.getDigikeyCredentials();
+        const digikeyEnv = window.storage.getItem('digikey_environment') || {};
+        
+        this.setFieldValue('digikey-client-id', digikeyCredentials.clientId || '');
+        this.setFieldValue('digikey-client-secret', digikeyCredentials.clientSecret || '');
+        this.setFieldValue('digikey-sandbox', digikeyEnv.useSandbox || false);
+        
+        // Load Mouser settings
+        const mouserCredentials = window.storage.getMouserCredentials();
+        this.setFieldValue('mouser-api-key', mouserCredentials.apiKey || '');
+        
+        // Load application settings
+        const appSettings = window.storage.getItem('app_settings') || {};
+        this.setFieldValue('theme', appSettings.theme || 'auto');
+        this.setFieldValue('notifications', appSettings.notifications !== false);
+        this.setFieldValue('auto-save', appSettings.autoSave !== false);
+    }
+    
+    /**
+     * Save settings from form
+     */
+    async saveSettings() {
+        if (!window.storage) {
+            this.showStatusMessage('application', 'Storage manager not available', 'error');
             return;
         }
         
         try {
-            this.updateApiStatus('digikey', 'connecting');
+            // Save Digikey settings
+            const digikeyClientId = this.getFieldValue('digikey-client-id');
+            const digikeyClientSecret = this.getFieldValue('digikey-client-secret');
+            const digikeySandbox = this.getFieldValue('digikey-sandbox');
             
-            if (!window.apiManager) {
-                throw new Error('API Manager not available');
+            if (digikeyClientId && digikeyClientSecret) {
+                window.storage.saveDigikeyCredentials(digikeyClientId, digikeyClientSecret);
+                window.storage.setItem('digikey_environment', { useSandbox: digikeySandbox });
+                
+                // Test Digikey connection if API manager is available
+                if (window.apiManager) {
+                    await window.apiManager.authenticateDigikey(digikeyClientId, digikeyClientSecret, true, digikeySandbox);
+                    this.showStatusMessage('digikey', 'Digikey credentials saved and tested successfully', 'success');
+                } else {
+                    this.showStatusMessage('digikey', 'Digikey credentials saved', 'success');
+                }
             }
             
-            // Test authentication (without saving)
-            const success = await window.apiManager.authenticateDigikey(clientId, clientSecret, false, useSandbox);
+            // Save Mouser settings
+            const mouserApiKey = this.getFieldValue('mouser-api-key');
+            if (mouserApiKey) {
+                window.storage.saveMouserCredentials(mouserApiKey);
+                
+                // Test Mouser connection if API manager is available
+                if (window.apiManager) {
+                    window.apiManager.setMouserApiKey(mouserApiKey, true);
+                    this.showStatusMessage('mouser', 'Mouser API key saved successfully', 'success');
+                } else {
+                    this.showStatusMessage('mouser', 'Mouser API key saved', 'success');
+                }
+            }
             
-            if (success) {
-                const envLabel = useSandbox ? 'Sandbox' : 'Production';
-                this.showNotification(`Digikey ${envLabel} connection test successful!`, 'success');
-                this.updateApiStatus('digikey', 'active');
-            } else {
-                throw new Error('Authentication failed');
+            // Save application settings
+            const appSettings = {
+                theme: this.getFieldValue('theme'),
+                notifications: this.getFieldValue('notifications'),
+                autoSave: this.getFieldValue('auto-save')
+            };
+            
+            window.storage.setItem('app_settings', appSettings);
+            this.showStatusMessage('application', 'Application settings saved', 'success');
+            
+            // Apply theme change immediately
+            this.applyTheme(appSettings.theme);
+            
+            if (window.utils) {
+                window.utils.showNotification('Settings saved successfully', 'success');
             }
             
         } catch (error) {
-            console.error('Digikey test error:', error);
-            this.updateApiStatus('digikey', 'error');
-            this.showNotification(`Digikey test failed: ${error.message}`, 'error');
-        }
-    }
-
-    /**
-     * Test Mouser connection
-     */
-    async testMouserConnection() {
-        const apiKey = document.getElementById('mouser-api-key')?.value?.trim();
-        
-        if (!apiKey) {
-            this.showNotification('Please enter API key first', 'warning');
-            return;
-        }
-        
-        try {
-            this.updateApiStatus('mouser', 'connecting');
-            
-            if (!window.apiManager) {
-                throw new Error('API Manager not available');
+            console.error('Failed to save settings:', error);
+            if (window.utils) {
+                window.utils.showNotification('Failed to save settings: ' + error.message, 'error');
             }
-            
-            // Test with temporary setup
-            const tempApiManager = { ...window.apiManager };
-            tempApiManager.setMouserApiKey(apiKey, false);
-            
-            await tempApiManager.testMouserConnection();
-            this.showNotification('Mouser connection test successful!', 'success');
-            this.updateApiStatus('mouser', 'active');
-            
-        } catch (error) {
-            console.error('Mouser test error:', error);
-            this.updateApiStatus('mouser', 'error');
-            this.showNotification(`Mouser test failed: ${error.message}`, 'error');
         }
     }
-
+    
     /**
-     * Update API status indicator
+     * Test all API connections
      */
-    updateApiStatus(provider, status) {
-        this.apiStatuses[provider] = status;
-        
-        const statusElement = document.getElementById(`${provider}-status`);
-        if (!statusElement) return;
-        
-        const dot = statusElement.querySelector('.status-dot');
-        const text = statusElement.querySelector('.status-text');
-        
-        if (dot) {
-            // Remove all status classes
-            dot.className = 'status-dot';
-            dot.classList.add(`status--${status}`);
-        }
-        
-        if (text) {
-            text.textContent = this.formatStatusText(status);
-        }
-        
-        console.log(`🔄 ${provider} status: ${status}`);
-    }
-
-    /**
-     * Format status text for display
-     */
-    formatStatusText(status) {
-        const statusMap = {
-            'inactive': 'Inactive',
-            'connecting': 'Connecting...',
-            'active': 'Active',
-            'error': 'Error',
-            'rate_limited': 'Rate Limited'
-        };
-        
-        return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
-    }
-
-    /**
-     * Load API statuses on initialization
-     */
-    loadApiStatuses() {
-        if (window.apiManager) {
-            const statuses = window.apiManager.getApiStatuses();
-            Object.entries(statuses).forEach(([provider, status]) => {
-                this.updateApiStatus(provider, status);
-            });
-        }
-    }
-
-    /**
-     * Start polling for API status updates
-     */
-    startStatusPolling() {
-        setInterval(() => {
-            if (window.apiManager) {
-                const statuses = window.apiManager.getApiStatuses();
-                Object.entries(statuses).forEach(([provider, status]) => {
-                    if (this.apiStatuses[provider] !== status) {
-                        this.updateApiStatus(provider, status);
-                    }
-                });
-            }
-        }, 5000); // Poll every 5 seconds
-    }
-
-    /**
-     * Update debug information
-     */
-    updateDebugInfo() {
-        const storageStatus = document.getElementById('storage-status');
-        const apiManagerStatus = document.getElementById('api-manager-status');
-        const lastRequestTime = document.getElementById('last-request-time');
-        
-        if (storageStatus) {
-            storageStatus.textContent = window.storage ? 'Available' : 'Not Available';
-        }
-        
-        if (apiManagerStatus) {
-            apiManagerStatus.textContent = window.apiManager ? 'Available' : 'Not Available';
-        }
-        
-        if (lastRequestTime && window.apiManager) {
-            const debugInfo = window.apiManager.getDebugInfo();
-            const lastDigikey = debugInfo.metrics?.digikey?.lastRequestTime;
-            const lastMouser = debugInfo.metrics?.mouser?.lastRequestTime;
-            
-            const latest = Math.max(lastDigikey || 0, lastMouser || 0);
-            lastRequestTime.textContent = latest > 0 ? new Date(latest).toLocaleString() : 'Never';
-        }
-    }
-
-    /**
-     * Show detailed debug information
-     */
-    showDetailedDebug() {
+    async testAllConnections() {
         if (!window.apiManager) {
-            alert('API Manager not available');
-            return;
-        }
-        
-        const debugInfo = window.apiManager.getDebugInfo();
-        const formattedInfo = JSON.stringify(debugInfo, null, 2);
-        
-        // Create a modal or console log
-        console.log('Detailed Debug Info:', debugInfo);
-        
-        // Show in a simple text area modal
-        const debugModal = document.createElement('div');
-        debugModal.className = 'modal-backdrop';
-        debugModal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Debug Information</h3>
-                    <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <textarea readonly style="width: 100%; height: 400px; font-family: monospace; font-size: 12px;">${formattedInfo}</textarea>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(debugModal);
-        
-        // Auto-remove after 30 seconds
-        setTimeout(() => {
-            if (debugModal.parentNode) {
-                debugModal.remove();
+            if (window.utils) {
+                window.utils.showNotification('API manager not available', 'error');
             }
-        }, 30000);
-    }
-
-    /**
-     * Clear all stored data
-     */
-    clearAllData() {
-        if (!confirm('Are you sure you want to clear all stored data? This cannot be undone.')) {
             return;
         }
+        
+        const testBtn = this.elements.settingsModal.querySelector('#settings-test-all');
+        const originalText = testBtn.textContent;
+        testBtn.textContent = 'Testing...';
+        testBtn.disabled = true;
         
         try {
-            if (window.storage) {
-                window.storage.clear();
+            // Test Digikey
+            try {
+                const digikeyStatus = window.apiManager.getStatus('digikey');
+                if (digikeyStatus.status === 'active') {
+                    await window.apiManager.testDigikeyConnection();
+                    this.showStatusMessage('digikey', 'Digikey connection successful', 'success');
+                } else {
+                    this.showStatusMessage('digikey', 'Digikey not configured or inactive', 'warning');
+                }
+            } catch (error) {
+                this.showStatusMessage('digikey', 'Digikey connection failed: ' + error.message, 'error');
             }
             
-            if (window.apiManager) {
-                window.apiManager.clearAuthentication();
+            // Test Mouser
+            try {
+                const mouserStatus = window.apiManager.getStatus('mouser');
+                if (mouserStatus.status === 'active') {
+                    await window.apiManager.testMouserConnection();
+                    this.showStatusMessage('mouser', 'Mouser connection successful', 'success');
+                } else {
+                    this.showStatusMessage('mouser', 'Mouser not configured or inactive', 'warning');
+                }
+            } catch (error) {
+                this.showStatusMessage('mouser', 'Mouser connection failed: ' + error.message, 'error');
+            }
+            
+        } finally {
+            testBtn.textContent = originalText;
+            testBtn.disabled = false;
+        }
+    }
+    
+    /**
+     * Reset settings to defaults
+     */
+    resetSettings() {
+        if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+            if (window.storage) {
+                window.storage.clearAll();
             }
             
             // Clear form fields
-            const inputs = this.settingsModal.querySelectorAll('input');
-            inputs.forEach(input => {
-                if (input.type === 'checkbox') {
-                    input.checked = false;
-                } else {
-                    input.value = '';
-                }
+            Object.entries(this.settingsConfig).forEach(([section, config]) => {
+                config.fields.forEach(field => {
+                    this.setFieldValue(field.id, field.default || '');
+                });
             });
             
-            // Reset statuses
-            this.updateApiStatus('digikey', 'inactive');
-            this.updateApiStatus('mouser', 'inactive');
-            
-            this.showNotification('All data cleared successfully', 'success');
-            
-        } catch (error) {
-            console.error('Error clearing data:', error);
-            this.showNotification('Error clearing data: ' + error.message, 'error');
-        }
-    }
-
-    /**
-     * Export settings
-     */
-    exportSettings() {
-        try {
-            if (!window.storage) {
-                throw new Error('Storage not available');
+            if (window.utils) {
+                window.utils.showNotification('Settings reset to defaults', 'info');
             }
-            
-            const exportData = window.storage.exportData();
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `k4lp-settings-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            URL.revokeObjectURL(url);
-            
-            this.showNotification('Settings exported successfully', 'success');
-            
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showNotification('Export failed: ' + error.message, 'error');
         }
     }
-
+    
     /**
-     * Import settings
+     * Get field value from form
      */
-    importSettings() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
+    getFieldValue(fieldId) {
+        const field = this.elements.settingsModal.querySelector(`#${fieldId}`);
+        if (!field) return null;
         
-        input.onchange = async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            try {
-                const text = await file.text();
-                const importData = JSON.parse(text);
-                
-                if (!window.storage) {
-                    throw new Error('Storage not available');
-                }
-                
-                const result = window.storage.importData(importData);
-                
-                if (result.success) {
-                    this.showNotification(`Settings imported successfully (${result.imported} items)`, 'success');
-                    this.loadCurrentSettings();
-                } else {
-                    throw new Error(result.error);
-                }
-                
-            } catch (error) {
-                console.error('Import error:', error);
-                this.showNotification('Import failed: ' + error.message, 'error');
-            }
-        };
-        
-        input.click();
-    }
-
-    /**
-     * Show notification message
-     */
-    showNotification(message, type = 'info') {
-        // Create or update notification element
-        let notification = document.querySelector('.notification');
-        
-        if (!notification) {
-            notification = document.createElement('div');
-            notification.className = 'notification';
-            document.body.appendChild(notification);
+        if (field.type === 'checkbox') {
+            return field.checked;
         }
+        return field.value;
+    }
+    
+    /**
+     * Set field value in form
+     */
+    setFieldValue(fieldId, value) {
+        const field = this.elements.settingsModal.querySelector(`#${fieldId}`);
+        if (!field) return;
         
-        notification.className = `notification notification--${type}`;
-        notification.textContent = message;
-        notification.style.display = 'block';
+        if (field.type === 'checkbox') {
+            field.checked = Boolean(value);
+        } else {
+            field.value = value || '';
+        }
+    }
+    
+    /**
+     * Show status message in settings panel
+     */
+    showStatusMessage(section, message, type = 'info') {
+        const statusDiv = this.elements.settingsModal.querySelector(`#${section}-status`);
+        if (!statusDiv) return;
+        
+        statusDiv.className = `panel-status ${type}`;
+        statusDiv.textContent = message;
         
         // Auto-hide after 5 seconds
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.display = 'none';
-            }
+            statusDiv.textContent = '';
+            statusDiv.className = 'panel-status';
         }, 5000);
-        
-        console.log(`🔔 ${type.toUpperCase()}: ${message}`);
     }
-
+    
+    /**
+     * Apply theme
+     */
+    applyTheme(theme) {
+        const html = document.documentElement;
+        
+        switch (theme) {
+            case 'light':
+                html.classList.remove('dark-theme');
+                html.classList.add('light-theme');
+                break;
+            case 'dark':
+                html.classList.remove('light-theme');
+                html.classList.add('dark-theme');
+                break;
+            case 'auto':
+            default:
+                html.classList.remove('light-theme', 'dark-theme');
+                break;
+        }
+    }
+    
+    /**
+     * Start status updates
+     */
+    startStatusUpdates() {
+        this.updateStatus();
+        
+        // Update every 30 seconds
+        setInterval(() => {
+            this.updateStatus();
+        }, 30000);
+    }
+    
+    /**
+     * Update status indicators
+     */
+    updateStatus() {
+        if (!this.elements.statusIndicators || !window.apiManager) return;
+        
+        const status = window.apiManager.getStatus();
+        const indicators = [];
+        
+        // Digikey status
+        const digikeyStatus = status.digikey.status;
+        const digikeyClass = digikeyStatus === 'active' ? 'status-active' : 
+                           digikeyStatus === 'error' ? 'status-error' : 'status-inactive';
+        indicators.push(`<span class="status-indicator ${digikeyClass}" title="Digikey: ${digikeyStatus}">DK</span>`);
+        
+        // Mouser status
+        const mouserStatus = status.mouser.status;
+        const mouserClass = mouserStatus === 'active' ? 'status-active' : 
+                          mouserStatus === 'error' ? 'status-error' : 'status-inactive';
+        indicators.push(`<span class="status-indicator ${mouserClass}" title="Mouser: ${mouserStatus}">MS</span>`);
+        
+        this.elements.statusIndicators.innerHTML = indicators.join('');
+    }
+    
     /**
      * Get current navigation state
      */
-    getState() {
+    getNavigationState() {
         return {
             currentPage: this.currentPage,
-            isSettingsOpen: this.isSettingsOpen,
-            apiStatuses: { ...this.apiStatuses }
+            visible: this.navigationVisible,
+            settingsOpen: this.settingsModalOpen
         };
     }
 }
 
 // Create and expose global instance
-const navigation = new NavigationManager();
-window.navigation = navigation;
+const navigationManager = new NavigationManager();
+window.navigationManager = navigationManager;
 
 // Legacy compatibility
 window.NavigationManager = NavigationManager;
@@ -815,4 +761,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = NavigationManager;
 }
 
-console.log('✓ K4LP Navigation Manager v2.0.0 initialized');
+console.log('✓ K4LP Navigation Manager v2.1.0 initialized');
