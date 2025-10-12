@@ -1,869 +1,875 @@
 /**
- * Enhanced Utility Functions
- * Common utility functions for calculations, validations, and data processing
+ * Comprehensive Utility Functions for K4LP Engineering Tools
+ * Provides common utilities for validation, formatting, calculations, and data processing
  * Part of K4LP Engineering Tools - Swiss Minimalist Design
- * @version 2.1.0 - Enhanced Digikey/Mouser pricing with packaging considerations
+ * @version 2.3.0 - Enhanced with engineering-specific utilities
  */
 
 class UtilityManager {
     constructor() {
-        this.version = '2.1.0';
+        this.version = '2.3.0';
         
-        // Pricing calculation constants
-        this.pricingDefaults = {
-            defaultQuantity: 1,
-            maxQuantity: 1000000,
-            decimalPrecision: 6
+        // Common engineering unit prefixes
+        this.unitPrefixes = {
+            'T': 1e12,   // Tera
+            'G': 1e9,    // Giga
+            'M': 1e6,    // Mega
+            'k': 1e3,    // Kilo
+            'K': 1e3,    // Kilo (alternative)
+            '': 1,       // Base unit
+            'm': 1e-3,   // Milli
+            'u': 1e-6,   // Micro (alternative)
+            'μ': 1e-6,   // Micro
+            'n': 1e-9,   // Nano
+            'p': 1e-12,  // Pico
+            'f': 1e-15   // Femto
         };
         
-        // Digikey packaging types and fees
-        this.digikeyPackaging = {
-            'Cut Tape': { code: 'CT', fee: 0, minQty: 1, description: 'Individual pieces cut from tape' },
-            'Tape & Reel': { code: 'TR', fee: 0, minQty: 'varies', description: 'Full manufacturer reel' },
-            'Digi-Reel': { code: 'DKR', fee: 7.00, minQty: 1, description: 'Custom reel with $7 fee' },
-            'Bulk': { code: 'BLK', fee: 0, minQty: 'varies', description: 'Bulk packaging' },
-            'Tube': { code: 'TB', fee: 0, minQty: 'varies', description: 'Tube packaging' },
-            'Tray': { code: 'TY', fee: 0, minQty: 'varies', description: 'Tray packaging' }
+        // Common engineering units
+        this.engineeringUnits = {
+            // Electrical
+            'V': 'voltage',
+            'A': 'current',
+            'Ω': 'resistance',
+            'ohm': 'resistance',
+            'F': 'capacitance',
+            'H': 'inductance',
+            'W': 'power',
+            'Hz': 'frequency',
+            'Wh': 'energy',
+            'VA': 'apparent_power',
+            'VAR': 'reactive_power',
+            
+            // Physical
+            'mm': 'length',
+            'cm': 'length',
+            'm': 'length',
+            'in': 'length',
+            'mil': 'length',
+            'g': 'mass',
+            'kg': 'mass',
+            'oz': 'mass',
+            'lb': 'mass',
+            '°C': 'temperature',
+            '°F': 'temperature',
+            'K': 'temperature',
+            
+            // Time
+            's': 'time',
+            'min': 'time',
+            'h': 'time',
+            'ms': 'time',
+            'us': 'time',
+            'ns': 'time'
         };
         
-        // Validation patterns
-        this.patterns = {
-            partNumber: /^[A-Z0-9\-_\.]{2,50}$/i,
-            email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-            phone: /^[\+]?[1-9][\d\s\-\(\)]{7,15}$/,
-            url: /^https?:\/\/[^\s]+$/,
-            alphanumeric: /^[A-Z0-9]+$/i,
-            numeric: /^\d+(\.\d+)?$/,
-            hexColor: /^#[0-9A-F]{6}$/i
+        // Tolerance patterns for components
+        this.tolerancePatterns = {
+            '±': 'standard',
+            '+/-': 'standard',
+            '%': 'percentage',
+            'ppm': 'parts_per_million'
         };
         
-        // Common data transformations
-        this.transformations = {
-            currency: {
-                USD: { symbol: '$', position: 'before' },
-                EUR: { symbol: '€', position: 'after' },
-                GBP: { symbol: '£', position: 'before' },
-                JPY: { symbol: '¥', position: 'before' },
-                INR: { symbol: '₹', position: 'before' }
-            }
+        // Common component packages
+        this.packageTypes = {
+            // SMD packages
+            '0201': { type: 'chip', metric: '0603', length: 0.6, width: 0.3 },
+            '0402': { type: 'chip', metric: '1005', length: 1.0, width: 0.5 },
+            '0603': { type: 'chip', metric: '1608', length: 1.6, width: 0.8 },
+            '0805': { type: 'chip', metric: '2012', length: 2.0, width: 1.25 },
+            '1206': { type: 'chip', metric: '3216', length: 3.2, width: 1.6 },
+            '1210': { type: 'chip', metric: '3225', length: 3.2, width: 2.5 },
+            '2010': { type: 'chip', metric: '5025', length: 5.0, width: 2.5 },
+            '2512': { type: 'chip', metric: '6432', length: 6.4, width: 3.2 },
+            
+            // Through-hole packages
+            'DIP-8': { type: 'dip', pins: 8, pitch: 2.54 },
+            'DIP-14': { type: 'dip', pins: 14, pitch: 2.54 },
+            'DIP-16': { type: 'dip', pins: 16, pitch: 2.54 },
+            'DIP-20': { type: 'dip', pins: 20, pitch: 2.54 },
+            'DIP-28': { type: 'dip', pins: 28, pitch: 2.54 },
+            
+            // Surface mount packages
+            'SOIC-8': { type: 'soic', pins: 8, pitch: 1.27 },
+            'SOIC-14': { type: 'soic', pins: 14, pitch: 1.27 },
+            'SOIC-16': { type: 'soic', pins: 16, pitch: 1.27 },
+            'QFP-32': { type: 'qfp', pins: 32, pitch: 0.8 },
+            'QFP-44': { type: 'qfp', pins: 44, pitch: 0.8 },
+            'QFP-64': { type: 'qfp', pins: 64, pitch: 0.5 },
+            'QFN-16': { type: 'qfn', pins: 16, pitch: 0.5 },
+            'QFN-24': { type: 'qfn', pins: 24, pitch: 0.5 },
+            'BGA-100': { type: 'bga', pins: 100, pitch: 0.8 }
         };
         
-        // Initialize
+        // Notification settings
+        this.notificationSettings = {
+            duration: 5000, // 5 seconds
+            position: 'top-right',
+            showClose: true,
+            enableSound: false
+        };
+        
         this.initialize();
     }
-
+    
     /**
      * Initialize utility manager
      */
     initialize() {
-        console.log('✓ K4LP Utility Manager v2.1.0 (Enhanced Digikey/Mouser pricing) initialized');
+        console.log('✓ K4LP Utility Manager v2.3.0 initialized');
     }
-
+    
+    // =================================================================
+    // VALIDATION FUNCTIONS
+    // =================================================================
+    
     /**
-     * Calculate Digikey unit price with packaging considerations
-     * Digikey has complex pricing with multiple packaging options per part
+     * Validate part number format
      */
-    calculateDigikeyUnitPrice(product, quantity, preferredPackaging = null) {
+    validatePartNumber(partNumber) {
+        if (!partNumber || typeof partNumber !== 'string') {
+            return { valid: false, error: 'Part number is required' };
+        }
+        
+        const cleaned = partNumber.trim();
+        
+        if (cleaned.length < 2) {
+            return { valid: false, error: 'Part number too short' };
+        }
+        
+        if (cleaned.length > 50) {
+            return { valid: false, error: 'Part number too long' };
+        }
+        
+        // Check for valid characters (alphanumeric, hyphens, underscores, dots)
+        if (!/^[A-Za-z0-9\-_\.]+$/.test(cleaned)) {
+            return { valid: false, error: 'Part number contains invalid characters' };
+        }
+        
+        return { valid: true, cleaned: cleaned };
+    }
+    
+    /**
+     * Validate email format
+     */
+    validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    /**
+     * Validate URL format
+     */
+    validateUrl(url) {
         try {
-            if (!product || quantity <= 0) {
-                return { unitPrice: 0, error: 'Invalid product or quantity' };
-            }
-
-            // Get all available packaging options for this product
-            const packagingOptions = this.extractDigikeyPackagingOptions(product);
-            
-            if (packagingOptions.length === 0) {
-                return { unitPrice: 0, error: 'No packaging options available' };
-            }
-
-            // Find the best pricing option for the requested quantity
-            const bestOption = this.findBestDigikeyPackaging(packagingOptions, quantity, preferredPackaging);
-            
-            if (!bestOption) {
-                return { unitPrice: 0, error: 'No suitable packaging option found' };
-            }
-
-            // Calculate final pricing including packaging fees
-            const pricingResult = this.calculateDigikeyFinalPrice(bestOption, quantity);
-            
-            return {
-                unitPrice: pricingResult.unitPrice,
-                totalPrice: pricingResult.totalPrice,
-                packaging: bestOption.packaging,
-                packagingFee: pricingResult.packagingFee,
-                selectedTier: bestOption.selectedTier,
-                allOptions: packagingOptions,
-                breakdown: pricingResult.breakdown,
-                savings: pricingResult.savings,
-                recommendations: this.getDigikeyQuantityRecommendations(packagingOptions, quantity)
-            };
-            
-        } catch (error) {
-            return { unitPrice: 0, error: `Digikey calculation error: ${error.message}` };
+            new URL(url);
+            return true;
+        } catch {
+            return false;
         }
     }
-
+    
     /**
-     * Extract all packaging options from Digikey product data
+     * Validate quantity value
      */
-    extractDigikeyPackagingOptions(product) {
-        const options = [];
-        
-        // Handle both StandardPricing and MyPricing
-        const pricingSources = [];
-        
-        if (product.StandardPricing && Array.isArray(product.StandardPricing)) {
-            pricingSources.push({ type: 'standard', pricing: product.StandardPricing });
-        }
-        
-        if (product.MyPricing && Array.isArray(product.MyPricing)) {
-            pricingSources.push({ type: 'customer', pricing: product.MyPricing });
-        }
-        
-        // Handle AlternatePackaging (different packaging types for same part)
-        if (product.AlternatePackaging && Array.isArray(product.AlternatePackaging)) {
-            product.AlternatePackaging.forEach(altPackage => {
-                if (altPackage.StandardPricing) {
-                    pricingSources.push({ 
-                        type: 'alternate_standard', 
-                        pricing: altPackage.StandardPricing,
-                        packaging: altPackage.Packaging,
-                        partNumber: altPackage.DigiKeyPartNumber
-                    });
-                }
-                if (altPackage.MyPricing) {
-                    pricingSources.push({ 
-                        type: 'alternate_customer', 
-                        pricing: altPackage.MyPricing,
-                        packaging: altPackage.Packaging,
-                        partNumber: altPackage.DigiKeyPartNumber
-                    });
-                }
-            });
-        }
-        
-        // Process each pricing source
-        pricingSources.forEach(source => {
-            const packaging = source.packaging || product.Packaging || { Name: 'Unknown' };
-            const packagingName = packaging.Name || 'Unknown';
-            
-            // Get packaging configuration
-            const packagingConfig = this.getPackagingConfig(packagingName);
-            
-            // Create price tiers
-            const priceTiers = source.pricing.map(tier => ({
-                quantity: parseInt(tier.BreakQuantity) || 0,
-                unitPrice: parseFloat(tier.UnitPrice) || 0,
-                totalPrice: parseFloat(tier.TotalPrice) || 0
-            })).filter(tier => tier.quantity > 0);
-            
-            if (priceTiers.length > 0) {
-                options.push({
-                    packaging: packagingName,
-                    packagingCode: packagingConfig.code,
-                    packagingFee: packagingConfig.fee,
-                    pricingType: source.type,
-                    partNumber: source.partNumber || product.DigiKeyPartNumber,
-                    priceTiers: priceTiers.sort((a, b) => a.quantity - b.quantity),
-                    minimumQuantity: Math.min(...priceTiers.map(t => t.quantity))
-                });
-            }
-        });
-        
-        return options;
+    validateQuantity(quantity) {
+        const num = Number(quantity);
+        return !isNaN(num) && num >= 0 && Number.isInteger(num);
     }
-
+    
     /**
-     * Get packaging configuration by name
+     * Validate price value
      */
-    getPackagingConfig(packagingName) {
-        // Normalize packaging name
-        const normalized = packagingName.toLowerCase();
-        
-        if (normalized.includes('cut tape') || normalized.includes('ct')) {
-            return this.digikeyPackaging['Cut Tape'];
-        } else if (normalized.includes('digi-reel') || normalized.includes('dkr')) {
-            return this.digikeyPackaging['Digi-Reel'];
-        } else if (normalized.includes('tape') && normalized.includes('reel')) {
-            return this.digikeyPackaging['Tape & Reel'];
-        } else if (normalized.includes('bulk')) {
-            return this.digikeyPackaging['Bulk'];
-        } else if (normalized.includes('tube')) {
-            return this.digikeyPackaging['Tube'];
-        } else if (normalized.includes('tray')) {
-            return this.digikeyPackaging['Tray'];
-        }
-        
-        // Default to unknown with no fee
-        return { code: 'UNK', fee: 0, minQty: 1, description: 'Unknown packaging' };
+    validatePrice(price) {
+        const num = Number(price);
+        return !isNaN(num) && num >= 0;
     }
-
+    
+    // =================================================================
+    // FORMATTING FUNCTIONS
+    // =================================================================
+    
     /**
-     * Find the best packaging option for a given quantity
+     * Format currency value
      */
-    findBestDigikeyPackaging(packagingOptions, quantity, preferredPackaging = null) {
-        let bestOption = null;
-        let bestPrice = Infinity;
-        
-        packagingOptions.forEach(option => {
-            // Skip if preferred packaging is specified and this doesn't match
-            if (preferredPackaging && option.packaging !== preferredPackaging) {
-                return;
-            }
-            
-            // Find the appropriate price tier for this quantity
-            const selectedTier = this.findPriceTier(option.priceTiers, quantity);
-            
-            if (selectedTier) {
-                // Calculate total cost including packaging fees
-                const packagingFeePerUnit = option.packagingFee > 0 ? option.packagingFee / quantity : 0;
-                const effectiveUnitPrice = selectedTier.unitPrice + packagingFeePerUnit;
-                const totalCost = effectiveUnitPrice * quantity;
-                
-                // Prefer customer pricing over standard pricing
-                const priority = option.pricingType.includes('customer') ? 0 : 1;
-                const score = totalCost + (priority * 0.001); // Small penalty for non-customer pricing
-                
-                if (score < bestPrice) {
-                    bestPrice = score;
-                    bestOption = {
-                        ...option,
-                        selectedTier: selectedTier,
-                        effectiveUnitPrice: effectiveUnitPrice,
-                        totalCost: totalCost
-                    };
-                }
-            }
-        });
-        
-        return bestOption;
+    formatCurrency(value, currency = 'USD', locale = 'en-US') {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 6
+        }).format(value);
     }
-
+    
     /**
-     * Find the appropriate price tier for a given quantity
+     * Format number with engineering notation
      */
-    findPriceTier(priceTiers, quantity) {
-        if (!priceTiers || priceTiers.length === 0) return null;
+    formatEngineering(value, unit = '', precision = 3) {
+        if (value === 0) return `0 ${unit}`.trim();
         
-        // Sort tiers by quantity (should already be sorted)
-        const sortedTiers = priceTiers.sort((a, b) => a.quantity - b.quantity);
+        const absValue = Math.abs(value);
+        let prefix = '';
+        let scaledValue = value;
         
-        // Find the highest tier where quantity >= tier.quantity
-        let selectedTier = sortedTiers[0];
+        // Find appropriate prefix
+        const prefixes = Object.keys(this.unitPrefixes).sort((a, b) => 
+            Math.abs(Math.log10(this.unitPrefixes[b])) - Math.abs(Math.log10(this.unitPrefixes[a]))
+        );
         
-        for (const tier of sortedTiers) {
-            if (quantity >= tier.quantity) {
-                selectedTier = tier;
-            } else {
+        for (const p of prefixes) {
+            const prefixValue = this.unitPrefixes[p];
+            if (absValue >= prefixValue && prefixValue !== 1) {
+                prefix = p;
+                scaledValue = value / prefixValue;
                 break;
             }
         }
         
-        return selectedTier;
+        // Format with appropriate precision
+        const formatted = Number(scaledValue.toPrecision(precision));
+        return `${formatted} ${prefix}${unit}`.trim();
     }
-
+    
     /**
-     * Calculate final Digikey pricing including all fees
+     * Format file size
      */
-    calculateDigikeyFinalPrice(option, quantity) {
-        const baseCost = option.selectedTier.unitPrice * quantity;
-        const packagingFee = option.packagingFee;
-        const packagingFeePerUnit = packagingFee > 0 ? packagingFee / quantity : 0;
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
         
-        const totalCost = baseCost + packagingFee;
-        const unitPrice = totalCost / quantity;
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
         
-        // Calculate savings vs first tier
-        const firstTier = option.priceTiers[0];
-        const firstTierTotal = (firstTier.unitPrice * quantity) + packagingFee;
-        const savings = {
-            absolute: Math.max(0, firstTierTotal - totalCost),
-            percentage: firstTierTotal > 0 ? Math.max(0, ((firstTierTotal - totalCost) / firstTierTotal) * 100) : 0
-        };
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+    }
+    
+    /**
+     * Format duration in human readable format
+     */
+    formatDuration(milliseconds) {
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) return `${days}d ${hours % 24}h`;
+        if (hours > 0) return `${hours}h ${minutes % 60}m`;
+        if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+        return `${seconds}s`;
+    }
+    
+    /**
+     * Format date in various formats
+     */
+    formatDate(date, format = 'iso') {
+        const d = new Date(date);
+        
+        switch (format) {
+            case 'iso':
+                return d.toISOString();
+            case 'short':
+                return d.toLocaleDateString();
+            case 'long':
+                return d.toLocaleDateString(undefined, { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            case 'time':
+                return d.toLocaleTimeString();
+            case 'datetime':
+                return d.toLocaleString();
+            default:
+                return d.toString();
+        }
+    }
+    
+    /**
+     * Format percentage
+     */
+    formatPercentage(value, precision = 1) {
+        return `${(value * 100).toFixed(precision)}%`;
+    }
+    
+    // =================================================================
+    // PARSING FUNCTIONS
+    // =================================================================
+    
+    /**
+     * Parse engineering value with units
+     */
+    parseEngineering(valueStr) {
+        if (!valueStr || typeof valueStr !== 'string') {
+            return { value: NaN, unit: '', prefix: '' };
+        }
+        
+        const cleaned = valueStr.trim();
+        
+        // Match number with optional prefix and unit
+        const match = cleaned.match(/^([+-]?[\d\.]+)\s*([a-zA-Z\u03bc\u03a9\u2126\u00b5]*)$/i);
+        
+        if (!match) {
+            return { value: NaN, unit: cleaned, prefix: '' };
+        }
+        
+        const numValue = parseFloat(match[1]);
+        const unitPart = match[2] || '';
+        
+        // Try to separate prefix from unit
+        let prefix = '';
+        let unit = unitPart;
+        
+        if (unitPart.length > 1) {
+            const possiblePrefix = unitPart.charAt(0);
+            const remainingUnit = unitPart.slice(1);
+            
+            if (this.unitPrefixes[possiblePrefix] && this.engineeringUnits[remainingUnit]) {
+                prefix = possiblePrefix;
+                unit = remainingUnit;
+            }
+        }
+        
+        // Convert to base units
+        const multiplier = this.unitPrefixes[prefix] || 1;
+        const baseValue = numValue * multiplier;
         
         return {
-            unitPrice: unitPrice,
-            totalPrice: totalCost,
-            packagingFee: packagingFee,
-            packagingFeePerUnit: packagingFeePerUnit,
-            baseCost: baseCost,
-            savings: savings,
-            breakdown: {
-                quantity: quantity,
-                baseUnitPrice: option.selectedTier.unitPrice,
-                baseCost: baseCost,
-                packagingFee: packagingFee,
-                totalCost: totalCost,
-                finalUnitPrice: unitPrice
-            }
+            value: baseValue,
+            originalValue: numValue,
+            unit: unit,
+            prefix: prefix,
+            multiplier: multiplier
         };
     }
-
+    
     /**
-     * Get quantity recommendations for Digikey products
+     * Parse tolerance value
      */
-    getDigikeyQuantityRecommendations(packagingOptions, targetQuantity) {
-        const recommendations = [];
+    parseTolerance(toleranceStr) {
+        if (!toleranceStr || typeof toleranceStr !== 'string') {
+            return { value: NaN, type: 'unknown' };
+        }
         
-        packagingOptions.forEach(option => {
-            option.priceTiers.forEach(tier => {
-                const packagingFeePerUnit = option.packagingFee > 0 ? option.packagingFee / tier.quantity : 0;
-                const effectiveUnitPrice = tier.unitPrice + packagingFeePerUnit;
-                const totalCost = effectiveUnitPrice * tier.quantity;
-                
-                recommendations.push({
-                    quantity: tier.quantity,
-                    unitPrice: effectiveUnitPrice,
-                    totalCost: totalCost,
-                    packaging: option.packaging,
-                    packagingFee: option.packagingFee,
-                    baseUnitPrice: tier.unitPrice,
-                    costPerTargetQuantity: effectiveUnitPrice * targetQuantity,
-                    efficiency: 1 / effectiveUnitPrice,
-                    suitable: tier.quantity >= targetQuantity
-                });
-            });
-        });
+        const cleaned = toleranceStr.trim();
         
-        // Sort by cost efficiency for target quantity
-        return recommendations
-            .sort((a, b) => a.costPerTargetQuantity - b.costPerTargetQuantity)
-            .slice(0, 10); // Top 10 recommendations
+        // Check for percentage tolerance
+        if (cleaned.includes('%')) {
+            const match = cleaned.match(/([+-]?[\d\.]+)\s*%/);
+            if (match) {
+                return {
+                    value: parseFloat(match[1]),
+                    type: 'percentage',
+                    symbol: '%'
+                };
+            }
+        }
+        
+        // Check for ppm tolerance
+        if (cleaned.toLowerCase().includes('ppm')) {
+            const match = cleaned.match(/([+-]?[\d\.]+)\s*ppm/i);
+            if (match) {
+                return {
+                    value: parseFloat(match[1]),
+                    type: 'ppm',
+                    symbol: 'ppm'
+                };
+            }
+        }
+        
+        // Check for plus/minus tolerance
+        const plusMinusMatch = cleaned.match(/[±+\/-]\s*([\d\.]+)/);
+        if (plusMinusMatch) {
+            return {
+                value: parseFloat(plusMinusMatch[1]),
+                type: 'absolute',
+                symbol: '±'
+            };
+        }
+        
+        return { value: NaN, type: 'unknown' };
     }
-
+    
     /**
-     * Calculate unit price based on quantity and price breaks (Mouser method)
-     * Mouser has simpler pricing structure compared to Digikey
+     * Parse price from various formats
      */
-    calculateMouserUnitPrice(priceBreaks, quantity) {
-        try {
-            if (!priceBreaks || !Array.isArray(priceBreaks) || priceBreaks.length === 0) {
-                return { unitPrice: 0, error: 'No price breaks available' };
+    parsePrice(priceStr) {
+        if (typeof priceStr === 'number') return priceStr;
+        if (!priceStr || typeof priceStr !== 'string') return NaN;
+        
+        // Remove currency symbols and commas
+        const cleaned = priceStr.replace(/[\$£€¥,]/g, '').trim();
+        return parseFloat(cleaned);
+    }
+    
+    // =================================================================
+    // DATA PROCESSING FUNCTIONS
+    // =================================================================
+    
+    /**
+     * Deep clone an object
+     */
+    deepClone(obj) {
+        if (obj === null || typeof obj !== 'object') return obj;
+        if (obj instanceof Date) return new Date(obj.getTime());
+        if (obj instanceof Array) return obj.map(item => this.deepClone(item));
+        
+        const cloned = {};
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                cloned[key] = this.deepClone(obj[key]);
             }
-            
-            if (!quantity || quantity <= 0) {
-                return { unitPrice: 0, error: 'Invalid quantity' };
-            }
-            
-            // Parse Mouser price breaks (they might have currency symbols)
-            const parsedBreaks = priceBreaks.map(pb => ({
-                quantity: parseInt(pb.quantity || pb.Quantity) || 0,
-                unitPrice: this.parsePrice(pb.unitPrice || pb.Price || '0')
-            })).filter(pb => pb.quantity > 0 && pb.unitPrice >= 0);
-            
-            if (parsedBreaks.length === 0) {
-                return { unitPrice: 0, error: 'No valid price breaks found' };
-            }
-            
-            // Sort by quantity (ascending)
-            const sortedBreaks = parsedBreaks.sort((a, b) => a.quantity - b.quantity);
-            
-            // Find the appropriate price tier
-            let selectedBreak = sortedBreaks[0];
-            
-            for (const priceBreak of sortedBreaks) {
-                if (quantity >= priceBreak.quantity) {
-                    selectedBreak = priceBreak;
+        }
+        return cloned;
+    }
+    
+    /**
+     * Merge objects deeply
+     */
+    deepMerge(target, source) {
+        const result = this.deepClone(target);
+        
+        for (const key in source) {
+            if (source.hasOwnProperty(key)) {
+                if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                    result[key] = this.deepMerge(result[key] || {}, source[key]);
                 } else {
-                    break;
+                    result[key] = source[key];
                 }
             }
-            
-            return {
-                unitPrice: selectedBreak.unitPrice,
-                totalPrice: selectedBreak.unitPrice * quantity,
-                selectedTier: selectedBreak,
-                savings: this.calculateSavings(sortedBreaks[0], selectedBreak, quantity),
-                nextTier: this.findNextTier(sortedBreaks, selectedBreak),
-                allTiers: sortedBreaks,
-                recommendations: this.getOptimalQuantityRecommendations(sortedBreaks, quantity)
-            };
-            
-        } catch (error) {
-            return { unitPrice: 0, error: `Mouser calculation error: ${error.message}` };
-        }
-    }
-
-    /**
-     * Parse price string and extract numeric value
-     */
-    parsePrice(priceString) {
-        if (typeof priceString === 'number') {
-            return priceString;
-        }
-        
-        if (typeof priceString !== 'string') {
-            return 0;
-        }
-        
-        // Remove currency symbols and whitespace
-        const cleanPrice = priceString
-            .replace(/[$£€¥₹,\s]/g, '')
-            .replace(/[^\d\.]/g, '');
-        
-        const parsed = parseFloat(cleanPrice);
-        return isNaN(parsed) ? 0 : parsed;
-    }
-
-    /**
-     * Calculate savings between price tiers
-     */
-    calculateSavings(baseTier, selectedTier, quantity) {
-        if (!baseTier || !selectedTier || quantity <= 0) {
-            return { absolute: 0, percentage: 0 };
-        }
-        
-        const baseTotal = baseTier.unitPrice * quantity;
-        const selectedTotal = selectedTier.unitPrice * quantity;
-        const absoluteSavings = baseTotal - selectedTotal;
-        const percentageSavings = baseTotal > 0 ? (absoluteSavings / baseTotal) * 100 : 0;
-        
-        return {
-            absolute: Math.max(0, absoluteSavings),
-            percentage: Math.max(0, percentageSavings)
-        };
-    }
-
-    /**
-     * Find the next available price tier
-     */
-    findNextTier(sortedBreaks, currentTier) {
-        const currentIndex = sortedBreaks.findIndex(pb => 
-            pb.quantity === currentTier.quantity && pb.unitPrice === currentTier.unitPrice
-        );
-        
-        if (currentIndex >= 0 && currentIndex < sortedBreaks.length - 1) {
-            return sortedBreaks[currentIndex + 1];
-        }
-        
-        return null;
-    }
-
-    /**
-     * Get optimal quantity recommendations based on price breaks
-     */
-    getOptimalQuantityRecommendations(priceBreaks, targetQuantity) {
-        try {
-            if (!priceBreaks || !Array.isArray(priceBreaks)) {
-                return [];
-            }
-            
-            const sortedBreaks = priceBreaks
-                .filter(pb => pb.quantity > 0 && pb.unitPrice >= 0)
-                .sort((a, b) => a.quantity - b.quantity);
-            
-            const recommendations = [];
-            
-            sortedBreaks.forEach((priceBreak, index) => {
-                // Calculate efficiency (lower unit price is better)
-                const efficiency = 1 / priceBreak.unitPrice;
-                
-                // Calculate cost for target quantity
-                const costForTarget = priceBreak.unitPrice * targetQuantity;
-                
-                // Calculate cost if buying at this tier quantity
-                const costAtTierQuantity = priceBreak.unitPrice * priceBreak.quantity;
-                const excessQuantity = Math.max(0, priceBreak.quantity - targetQuantity);
-                const wastedCost = priceBreak.unitPrice * excessQuantity;
-                
-                recommendations.push({
-                    quantity: priceBreak.quantity,
-                    unitPrice: priceBreak.unitPrice,
-                    costForTarget: costForTarget,
-                    costAtTierQuantity: costAtTierQuantity,
-                    efficiency: efficiency,
-                    excessQuantity: excessQuantity,
-                    wastedCost: wastedCost,
-                    recommended: priceBreak.quantity >= targetQuantity,
-                    isBreakpoint: true,
-                    savingsVsNext: index < sortedBreaks.length - 1 ? 
-                        this.calculateSavings(priceBreak, sortedBreaks[index + 1], targetQuantity) : null
-                });
-            });
-            
-            // Sort by cost efficiency for target quantity
-            return recommendations.sort((a, b) => a.costForTarget - b.costForTarget);
-            
-        } catch (error) {
-            console.error('Error calculating optimal quantities:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Compare pricing between Digikey and Mouser
-     */
-    comparePricing(digikeyProduct, mouserProduct, quantity) {
-        const digikeyResult = this.calculateDigikeyUnitPrice(digikeyProduct, quantity);
-        const mouserResult = this.calculateMouserUnitPrice(
-            mouserProduct.priceBreaks || mouserProduct.PriceBreaks, 
-            quantity
-        );
-        
-        const comparison = {
-            quantity: quantity,
-            digikey: digikeyResult,
-            mouser: mouserResult,
-            winner: null,
-            savings: { absolute: 0, percentage: 0 }
-        };
-        
-        if (digikeyResult.unitPrice > 0 && mouserResult.unitPrice > 0) {
-            if (digikeyResult.totalPrice < mouserResult.totalPrice) {
-                comparison.winner = 'digikey';
-                comparison.savings.absolute = mouserResult.totalPrice - digikeyResult.totalPrice;
-                comparison.savings.percentage = (comparison.savings.absolute / mouserResult.totalPrice) * 100;
-            } else if (mouserResult.totalPrice < digikeyResult.totalPrice) {
-                comparison.winner = 'mouser';
-                comparison.savings.absolute = digikeyResult.totalPrice - mouserResult.totalPrice;
-                comparison.savings.percentage = (comparison.savings.absolute / digikeyResult.totalPrice) * 100;
-            } else {
-                comparison.winner = 'tie';
-            }
-        } else if (digikeyResult.unitPrice > 0) {
-            comparison.winner = 'digikey';
-        } else if (mouserResult.unitPrice > 0) {
-            comparison.winner = 'mouser';
-        }
-        
-        return comparison;
-    }
-
-    /**
-     * Extract and normalize product attributes/parameters
-     */
-    extractProductAttributes(product, provider) {
-        try {
-            const attributes = {
-                basic: {},
-                electrical: {},
-                physical: {},
-                compliance: {},
-                other: {}
-            };
-            
-            let rawParameters = [];
-            
-            // Extract parameters based on provider
-            if (provider === 'digikey' && product.Parameters) {
-                rawParameters = product.Parameters;
-            } else if (provider === 'mouser' && product.ProductAttributes) {
-                rawParameters = product.ProductAttributes;
-            } else if (product.parameters) {
-                // Already normalized
-                return this.categorizeAttributes(product.parameters);
-            }
-            
-            // Normalize parameter format
-            rawParameters.forEach(param => {
-                let name, value, unit;
-                
-                if (provider === 'digikey') {
-                    name = param.Parameter;
-                    value = param.Value;
-                    unit = param.ValueId || '';
-                } else if (provider === 'mouser') {
-                    name = param.AttributeName;
-                    value = param.AttributeValue;
-                    unit = param.AttributeUnit || '';
-                }
-                
-                if (name && value) {
-                    const category = this.categorizeParameter(name);
-                    attributes[category][name] = {
-                        value: value,
-                        unit: unit,
-                        displayValue: unit ? `${value} ${unit}` : value
-                    };
-                }
-            });
-            
-            return attributes;
-            
-        } catch (error) {
-            console.error('Error extracting product attributes:', error);
-            return { basic: {}, electrical: {}, physical: {}, compliance: {}, other: {} };
-        }
-    }
-
-    /**
-     * Categorize parameter by name
-     */
-    categorizeParameter(parameterName) {
-        const name = parameterName.toLowerCase();
-        
-        // Electrical parameters
-        if (name.includes('voltage') || name.includes('current') || name.includes('power') || 
-            name.includes('resistance') || name.includes('capacitance') || name.includes('inductance') ||
-            name.includes('frequency') || name.includes('impedance') || name.includes('gain') ||
-            name.includes('tolerance') || name.includes('esr') || name.includes('ripple')) {
-            return 'electrical';
-        }
-        
-        // Physical parameters
-        if (name.includes('size') || name.includes('dimension') || name.includes('length') ||
-            name.includes('width') || name.includes('height') || name.includes('diameter') ||
-            name.includes('weight') || name.includes('package') || name.includes('mounting') ||
-            name.includes('case') || name.includes('footprint')) {
-            return 'physical';
-        }
-        
-        // Compliance parameters
-        if (name.includes('rohs') || name.includes('lead') || name.includes('halogen') ||
-            name.includes('compliance') || name.includes('standard') || name.includes('certification') ||
-            name.includes('reach') || name.includes('environmental')) {
-            return 'compliance';
-        }
-        
-        // Basic parameters
-        if (name.includes('manufacturer') || name.includes('part') || name.includes('series') ||
-            name.includes('category') || name.includes('family') || name.includes('type') ||
-            name.includes('status') || name.includes('description')) {
-            return 'basic';
-        }
-        
-        return 'other';
-    }
-
-    /**
-     * Categorize already normalized attributes
-     */
-    categorizeAttributes(parameters) {
-        const attributes = {
-            basic: {},
-            electrical: {},
-            physical: {},
-            compliance: {},
-            other: {}
-        };
-        
-        Object.entries(parameters).forEach(([name, data]) => {
-            const category = this.categorizeParameter(name);
-            attributes[category][name] = data;
-        });
-        
-        return attributes;
-    }
-
-    /**
-     * Search and filter attributes
-     */
-    searchAttributes(attributes, searchTerm) {
-        if (!searchTerm) return attributes;
-        
-        const filtered = {
-            basic: {},
-            electrical: {},
-            physical: {},
-            compliance: {},
-            other: {}
-        };
-        
-        const lowerSearch = searchTerm.toLowerCase();
-        
-        Object.entries(attributes).forEach(([category, params]) => {
-            Object.entries(params).forEach(([name, data]) => {
-                if (name.toLowerCase().includes(lowerSearch) || 
-                    data.value.toString().toLowerCase().includes(lowerSearch)) {
-                    filtered[category][name] = data;
-                }
-            });
-        });
-        
-        return filtered;
-    }
-
-    /**
-     * Format currency with proper symbols and localization
-     */
-    formatCurrency(amount, currency = 'USD', options = {}) {
-        try {
-            const {
-                showSymbol = true,
-                precision = 2,
-                showZero = true
-            } = options;
-            
-            if (amount === 0 && !showZero) {
-                return 'N/A';
-            }
-            
-            const formatter = new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: currency,
-                minimumFractionDigits: precision,
-                maximumFractionDigits: Math.max(precision, 4) // Allow up to 4 decimals for small amounts
-            });
-            
-            return formatter.format(amount);
-            
-        } catch (error) {
-            // Fallback formatting
-            const symbol = this.transformations.currency[currency]?.symbol || '$';
-            return showSymbol ? `${symbol}${amount.toFixed(4)}` : amount.toFixed(4);
-        }
-    }
-
-    /**
-     * Format large numbers with appropriate units (K, M, B)
-     */
-    formatLargeNumber(number, precision = 1) {
-        if (number < 1000) {
-            return number.toString();
-        }
-        
-        const units = ['', 'K', 'M', 'B', 'T'];
-        const tier = Math.floor(Math.log10(Math.abs(number)) / 3);
-        
-        if (tier === 0) return number.toString();
-        
-        const unit = units[tier] || units[units.length - 1];
-        const scale = Math.pow(10, tier * 3);
-        const scaled = number / scale;
-        
-        return scaled.toFixed(precision) + unit;
-    }
-
-    /**
-     * Create pricing summary for display
-     */
-    createPricingSummary(pricingResult, quantity) {
-        if (!pricingResult || pricingResult.error) {
-            return {
-                error: pricingResult?.error || 'Unknown pricing error',
-                displayPrice: 'N/A',
-                breakdown: null
-            };
-        }
-
-        const summary = {
-            unitPrice: pricingResult.unitPrice,
-            totalPrice: pricingResult.totalPrice,
-            quantity: quantity,
-            displayPrice: this.formatCurrency(pricingResult.unitPrice),
-            displayTotal: this.formatCurrency(pricingResult.totalPrice),
-            packaging: pricingResult.packaging,
-            savings: pricingResult.savings
-        };
-
-        // Add packaging info for Digikey
-        if (pricingResult.packagingFee !== undefined) {
-            summary.packagingFee = pricingResult.packagingFee;
-            summary.packagingFeeDisplay = this.formatCurrency(pricingResult.packagingFee);
-        }
-
-        // Add breakdown if available
-        if (pricingResult.breakdown) {
-            summary.breakdown = {
-                ...pricingResult.breakdown,
-                baseUnitPriceDisplay: this.formatCurrency(pricingResult.breakdown.baseUnitPrice),
-                baseCostDisplay: this.formatCurrency(pricingResult.breakdown.baseCost),
-                totalCostDisplay: this.formatCurrency(pricingResult.breakdown.totalCost)
-            };
-        }
-
-        return summary;
-    }
-
-    /**
-     * Validate data using various validation rules
-     */
-    validate(value, rules) {
-        const results = {
-            isValid: true,
-            errors: [],
-            warnings: []
-        };
-        
-        if (!rules || rules.length === 0) {
-            return results;
-        }
-        
-        rules.forEach(rule => {
-            try {
-                const ruleResult = this.applyValidationRule(value, rule);
-                
-                if (!ruleResult.isValid) {
-                    results.isValid = false;
-                    results.errors.push(ruleResult.message);
-                }
-                
-                if (ruleResult.warning) {
-                    results.warnings.push(ruleResult.warning);
-                }
-                
-            } catch (error) {
-                results.isValid = false;
-                results.errors.push(`Validation rule error: ${error.message}`);
-            }
-        });
-        
-        return results;
-    }
-
-    /**
-     * Apply individual validation rule
-     */
-    applyValidationRule(value, rule) {
-        const result = { isValid: true, message: '', warning: null };
-        
-        switch (rule.type) {
-            case 'required':
-                if (value === null || value === undefined || value === '') {
-                    result.isValid = false;
-                    result.message = rule.message || 'This field is required';
-                }
-                break;
-                
-            case 'pattern':
-                if (value && !new RegExp(rule.pattern).test(value)) {
-                    result.isValid = false;
-                    result.message = rule.message || 'Invalid format';
-                }
-                break;
-                
-            case 'minLength':
-                if (value && value.length < rule.value) {
-                    result.isValid = false;
-                    result.message = rule.message || `Minimum length is ${rule.value}`;
-                }
-                break;
-                
-            case 'maxLength':
-                if (value && value.length > rule.value) {
-                    result.isValid = false;
-                    result.message = rule.message || `Maximum length is ${rule.value}`;
-                }
-                break;
-                
-            case 'range':
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue) && (numValue < rule.min || numValue > rule.max)) {
-                    result.isValid = false;
-                    result.message = rule.message || `Value must be between ${rule.min} and ${rule.max}`;
-                }
-                break;
-                
-            case 'email':
-                if (value && !this.patterns.email.test(value)) {
-                    result.isValid = false;
-                    result.message = rule.message || 'Invalid email format';
-                }
-                break;
-                
-            case 'partNumber':
-                if (value && !this.patterns.partNumber.test(value)) {
-                    result.isValid = false;
-                    result.message = rule.message || 'Invalid part number format';
-                }
-                break;
         }
         
         return result;
     }
-
+    
     /**
-     * Debounce function execution
+     * Remove duplicates from array based on property
+     */
+    removeDuplicates(array, keyFn = null) {
+        if (!Array.isArray(array)) return [];
+        
+        if (keyFn) {
+            const seen = new Set();
+            return array.filter(item => {
+                const key = keyFn(item);
+                if (seen.has(key)) {
+                    return false;
+                }
+                seen.add(key);
+                return true;
+            });
+        }
+        
+        return [...new Set(array)];
+    }
+    
+    /**
+     * Group array by property
+     */
+    groupBy(array, keyFn) {
+        return array.reduce((groups, item) => {
+            const key = keyFn(item);
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(item);
+            return groups;
+        }, {});
+    }
+    
+    /**
+     * Sort array by multiple criteria
+     */
+    sortBy(array, ...criteria) {
+        return array.sort((a, b) => {
+            for (const criterion of criteria) {
+                let aVal, bVal;
+                
+                if (typeof criterion === 'string') {
+                    aVal = this.getNestedProperty(a, criterion);
+                    bVal = this.getNestedProperty(b, criterion);
+                } else if (typeof criterion === 'function') {
+                    aVal = criterion(a);
+                    bVal = criterion(b);
+                }
+                
+                if (aVal < bVal) return -1;
+                if (aVal > bVal) return 1;
+            }
+            return 0;
+        });
+    }
+    
+    /**
+     * Get nested property from object
+     */
+    getNestedProperty(obj, path) {
+        return path.split('.').reduce((current, key) => current?.[key], obj);
+    }
+    
+    /**
+     * Set nested property in object
+     */
+    setNestedProperty(obj, path, value) {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((current, key) => {
+            if (!current[key] || typeof current[key] !== 'object') {
+                current[key] = {};
+            }
+            return current[key];
+        }, obj);
+        
+        target[lastKey] = value;
+        return obj;
+    }
+    
+    // =================================================================
+    // STRING UTILITIES
+    // =================================================================
+    
+    /**
+     * Generate slug from string
+     */
+    slugify(str) {
+        return str
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '') // Remove special characters
+            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    }
+    
+    /**
+     * Capitalize first letter
+     */
+    capitalize(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+    
+    /**
+     * Convert camelCase to Title Case
+     */
+    camelToTitle(str) {
+        return str
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
+            .trim();
+    }
+    
+    /**
+     * Truncate string with ellipsis
+     */
+    truncate(str, maxLength, suffix = '...') {
+        if (!str || str.length <= maxLength) return str;
+        return str.substring(0, maxLength - suffix.length) + suffix;
+    }
+    
+    /**
+     * Generate random string
+     */
+    randomString(length = 8, charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') {
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        return result;
+    }
+    
+    /**
+     * Generate UUID v4
+     */
+    generateUuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    
+    // =================================================================
+    // NOTIFICATION SYSTEM
+    // =================================================================
+    
+    /**
+     * Show notification
+     */
+    showNotification(message, type = 'info', options = {}) {
+        const config = { ...this.notificationSettings, ...options };
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <span class="notification-message">${message}</span>
+                ${config.showClose ? '<button class="notification-close">&times;</button>' : ''}
+            </div>
+        `;
+        
+        // Add to container or create one
+        let container = document.getElementById('notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'notification-container';
+            container.className = `notification-container ${config.position}`;
+            document.body.appendChild(container);
+        }
+        
+        container.appendChild(notification);
+        
+        // Auto-remove after duration
+        const timeout = setTimeout(() => {
+            this.removeNotification(notification);
+        }, config.duration);
+        
+        // Close button handler
+        if (config.showClose) {
+            const closeBtn = notification.querySelector('.notification-close');
+            closeBtn.addEventListener('click', () => {
+                clearTimeout(timeout);
+                this.removeNotification(notification);
+            });
+        }
+        
+        // Play sound if enabled
+        if (config.enableSound) {
+            this.playNotificationSound(type);
+        }
+        
+        return notification;
+    }
+    
+    /**
+     * Remove notification
+     */
+    removeNotification(notification) {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }
+    
+    /**
+     * Play notification sound
+     */
+    playNotificationSound(type) {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Different frequencies for different types
+            const frequencies = {
+                success: 800,
+                warning: 600,
+                error: 400,
+                info: 500
+            };
+            
+            oscillator.frequency.value = frequencies[type] || 500;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (error) {
+            // Silent fail for sound
+        }
+    }
+    
+    // =================================================================
+    // FILE UTILITIES
+    // =================================================================
+    
+    /**
+     * Download data as file
+     */
+    downloadFile(data, filename, mimeType = 'text/plain') {
+        const blob = new Blob([data], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    
+    /**
+     * Read file as text
+     */
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+    
+    /**
+     * Read file as data URL
+     */
+    readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // =================================================================
+    // ENGINEERING CALCULATIONS
+    // =================================================================
+    
+    /**
+     * Calculate resistor color code value
+     */
+    calculateResistorValue(colors) {
+        const colorValues = {
+            'black': 0, 'brown': 1, 'red': 2, 'orange': 3, 'yellow': 4,
+            'green': 5, 'blue': 6, 'violet': 7, 'grey': 8, 'gray': 8, 'white': 9
+        };
+        
+        const multipliers = {
+            'black': 1, 'brown': 10, 'red': 100, 'orange': 1000, 'yellow': 10000,
+            'green': 100000, 'blue': 1000000, 'violet': 10000000, 'grey': 100000000,
+            'gray': 100000000, 'white': 1000000000, 'gold': 0.1, 'silver': 0.01
+        };
+        
+        const tolerances = {
+            'brown': 1, 'red': 2, 'green': 0.5, 'blue': 0.25, 'violet': 0.1,
+            'grey': 0.05, 'gray': 0.05, 'gold': 5, 'silver': 10, 'none': 20
+        };
+        
+        if (colors.length < 3) {
+            throw new Error('At least 3 colors required');
+        }
+        
+        let value = 0;
+        
+        // 4-band or 5-band resistor
+        if (colors.length === 4) {
+            // 4-band: digit1, digit2, multiplier, tolerance
+            value = (colorValues[colors[0]] * 10 + colorValues[colors[1]]) * multipliers[colors[2]];
+        } else if (colors.length === 5) {
+            // 5-band: digit1, digit2, digit3, multiplier, tolerance
+            value = (colorValues[colors[0]] * 100 + colorValues[colors[1]] * 10 + colorValues[colors[2]]) * multipliers[colors[3]];
+        }
+        
+        const tolerance = tolerances[colors[colors.length - 1]] || 20;
+        
+        return {
+            value: value,
+            tolerance: tolerance,
+            formatted: this.formatEngineering(value, 'Ω') + ' ±' + tolerance + '%'
+        };
+    }
+    
+    /**
+     * Calculate series resistance
+     */
+    calculateSeriesResistance(resistors) {
+        return resistors.reduce((sum, r) => sum + r, 0);
+    }
+    
+    /**
+     * Calculate parallel resistance
+     */
+    calculateParallelResistance(resistors) {
+        if (resistors.length === 0) return 0;
+        if (resistors.length === 1) return resistors[0];
+        
+        const reciprocalSum = resistors.reduce((sum, r) => sum + (1 / r), 0);
+        return 1 / reciprocalSum;
+    }
+    
+    /**
+     * Calculate power dissipation (P = V²/R or I²R or VI)
+     */
+    calculatePower(voltage = null, current = null, resistance = null) {
+        if (voltage !== null && current !== null) {
+            return voltage * current;
+        } else if (voltage !== null && resistance !== null) {
+            return (voltage * voltage) / resistance;
+        } else if (current !== null && resistance !== null) {
+            return current * current * resistance;
+        }
+        throw new Error('Insufficient parameters for power calculation');
+    }
+    
+    /**
+     * Calculate capacitor reactance (Xc = 1/(2πfC))
+     */
+    calculateCapacitiveReactance(frequency, capacitance) {
+        return 1 / (2 * Math.PI * frequency * capacitance);
+    }
+    
+    /**
+     * Calculate inductor reactance (XL = 2πfL)
+     */
+    calculateInductiveReactance(frequency, inductance) {
+        return 2 * Math.PI * frequency * inductance;
+    }
+    
+    // =================================================================
+    // DEBUGGING AND LOGGING
+    // =================================================================
+    
+    /**
+     * Enhanced console logging with timestamps and colors
+     */
+    log(message, level = 'info', context = '') {
+        const timestamp = new Date().toISOString();
+        const prefix = context ? `[${context}]` : '';
+        const fullMessage = `${timestamp} ${prefix} ${message}`;
+        
+        const styles = {
+            info: 'color: #2196F3',
+            success: 'color: #4CAF50',
+            warning: 'color: #FF9800',
+            error: 'color: #F44336',
+            debug: 'color: #9E9E9E'
+        };
+        
+        console.log(`%c${fullMessage}`, styles[level] || styles.info);
+    }
+    
+    /**
+     * Performance timer
+     */
+    createTimer(label = 'Timer') {
+        const startTime = performance.now();
+        
+        return {
+            elapsed: () => performance.now() - startTime,
+            stop: () => {
+                const elapsed = performance.now() - startTime;
+                this.log(`${label}: ${elapsed.toFixed(2)}ms`, 'debug', 'TIMER');
+                return elapsed;
+            }
+        };
+    }
+    
+    /**
+     * Debounce function calls
      */
     debounce(func, wait, immediate = false) {
         let timeout;
@@ -872,105 +878,58 @@ class UtilityManager {
                 timeout = null;
                 if (!immediate) func(...args);
             };
-            
             const callNow = immediate && !timeout;
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
-            
             if (callNow) func(...args);
         };
     }
-
+    
     /**
-     * Throttle function execution
+     * Throttle function calls
      */
     throttle(func, limit) {
-        let inThrottle;
+        let lastFunc;
+        let lastRan;
         return function(...args) {
-            if (!inThrottle) {
-                func.apply(this, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
+            if (!lastRan) {
+                func(...args);
+                lastRan = Date.now();
+            } else {
+                clearTimeout(lastFunc);
+                lastFunc = setTimeout(() => {
+                    if ((Date.now() - lastRan) >= limit) {
+                        func(...args);
+                        lastRan = Date.now();
+                    }
+                }, limit - (Date.now() - lastRan));
             }
         };
     }
-
+    
+    // =================================================================
+    // BROWSER UTILITIES
+    // =================================================================
+    
     /**
-     * Deep clone object
+     * Check if running in mobile browser
      */
-    deepClone(obj) {
-        if (obj === null || typeof obj !== 'object') {
-            return obj;
-        }
-        
-        if (obj instanceof Date) {
-            return new Date(obj.getTime());
-        }
-        
-        if (obj instanceof Array) {
-            return obj.map(item => this.deepClone(item));
-        }
-        
-        if (typeof obj === 'object') {
-            const cloned = {};
-            Object.keys(obj).forEach(key => {
-                cloned[key] = this.deepClone(obj[key]);
-            });
-            return cloned;
-        }
+    isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
-
+    
     /**
-     * Generate unique ID
+     * Check if running in development mode
      */
-    generateId(prefix = 'id', length = 8) {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let result = prefix + '_';
-        
-        for (let i = 0; i < length; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        
-        return result;
+    isDevelopment() {
+        return location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.includes('.local');
     }
-
+    
     /**
-     * Calculate hash of string (simple djb2 algorithm)
-     */
-    calculateHash(str) {
-        let hash = 5381;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        }
-        return hash >>> 0; // Convert to unsigned 32-bit integer
-    }
-
-    /**
-     * Compare two versions (semantic versioning)
-     */
-    compareVersions(version1, version2) {
-        const v1parts = version1.split('.').map(Number);
-        const v2parts = version2.split('.').map(Number);
-        
-        const maxLength = Math.max(v1parts.length, v2parts.length);
-        
-        for (let i = 0; i < maxLength; i++) {
-            const v1part = v1parts[i] || 0;
-            const v2part = v2parts[i] || 0;
-            
-            if (v1part < v2part) return -1;
-            if (v1part > v2part) return 1;
-        }
-        
-        return 0;
-    }
-
-    /**
-     * Get browser and device information
+     * Get browser information
      */
     getBrowserInfo() {
         const ua = navigator.userAgent;
-        
         return {
             userAgent: ua,
             platform: navigator.platform,
@@ -978,108 +937,73 @@ class UtilityManager {
             cookieEnabled: navigator.cookieEnabled,
             onLine: navigator.onLine,
             vendor: navigator.vendor,
-            screen: {
-                width: screen.width,
-                height: screen.height,
-                colorDepth: screen.colorDepth
-            },
-            viewport: {
-                width: window.innerWidth,
-                height: window.innerHeight
-            },
-            timestamp: Date.now()
+            isMobile: this.isMobile(),
+            isDevelopment: this.isDevelopment()
         };
     }
-
+    
     /**
-     * Log performance metrics
+     * Copy text to clipboard
      */
-    logPerformance(label, startTime) {
-        if (typeof startTime === 'undefined') {
-            return performance.now();
-        }
-        
-        const duration = performance.now() - startTime;
-        console.log(`⚡ Performance [${label}]: ${duration.toFixed(2)}ms`);
-        return duration;
-    }
-
-    /**
-     * Safe JSON parse with error handling
-     */
-    safeJsonParse(jsonString, defaultValue = null) {
+    async copyToClipboard(text) {
         try {
-            return JSON.parse(jsonString);
+            await navigator.clipboard.writeText(text);
+            this.showNotification('Copied to clipboard', 'success');
+            return true;
         } catch (error) {
-            console.warn('JSON parse error:', error);
-            return defaultValue;
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                this.showNotification('Copied to clipboard', 'success');
+                return true;
+            } catch (fallbackError) {
+                document.body.removeChild(textArea);
+                this.showNotification('Failed to copy to clipboard', 'error');
+                return false;
+            }
         }
     }
-
+    
     /**
-     * Safe JSON stringify with error handling
+     * Get current page URL parameters
      */
-    safeJsonStringify(obj, defaultValue = '{}') {
-        try {
-            return JSON.stringify(obj);
-        } catch (error) {
-            console.warn('JSON stringify error:', error);
-            return defaultValue;
+    getUrlParams() {
+        return Object.fromEntries(new URLSearchParams(window.location.search));
+    }
+    
+    /**
+     * Update URL without reload
+     */
+    updateUrl(params, replace = false) {
+        const url = new URL(window.location);
+        
+        Object.entries(params).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+                url.searchParams.delete(key);
+            } else {
+                url.searchParams.set(key, value);
+            }
+        });
+        
+        if (replace) {
+            history.replaceState(null, '', url);
+        } else {
+            history.pushState(null, '', url);
         }
-    }
-
-    /**
-     * Escape HTML to prevent XSS
-     */
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    /**
-     * Unescape HTML
-     */
-    unescapeHtml(html) {
-        const div = document.createElement('div');
-        div.innerHTML = html;
-        return div.textContent || div.innerText || '';
-    }
-
-    /**
-     * Check if object is empty
-     */
-    isEmpty(obj) {
-        if (obj == null) return true;
-        if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0;
-        if (obj instanceof Map || obj instanceof Set) return obj.size === 0;
-        return Object.keys(obj).length === 0;
-    }
-
-    /**
-     * Get file extension from filename
-     */
-    getFileExtension(filename) {
-        return filename.split('.').pop().toLowerCase();
-    }
-
-    /**
-     * Format file size in human readable format
-     */
-    formatFileSize(bytes, precision = 2) {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(precision)) + ' ' + sizes[i];
     }
 }
 
 // Create and expose global instance
-const utils = new UtilityManager();
-window.utils = utils;
+const utilityManager = new UtilityManager();
+window.utils = utilityManager;
 
 // Legacy compatibility
 window.UtilityManager = UtilityManager;
@@ -1089,4 +1013,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = UtilityManager;
 }
 
-console.log('✓ K4LP Utility Manager v2.1.0 (Enhanced Digikey/Mouser pricing) initialized');
+console.log('✓ K4LP Utility Manager v2.3.0 initialized');
