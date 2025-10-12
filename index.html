@@ -1,195 +1,77 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PCB Assembly Tools - Home</title>
-    <link rel="stylesheet" href="css/site.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Toolkit — Index</title>
+  <link rel="stylesheet" href="css/site.css" />
+  <link rel="icon" href="data:,">
 </head>
 <body class="page page--index">
-
-  <!-- Navbar (brand -> index.html only; settings button opens drawer) -->
   <header class="navbar" role="banner">
-    <div class="navbar__brand">
-      <a href="index.html" aria-label="Home">PCB &amp; BOM Toolkit</a>
-    </div>
+    <div class="navbar__brand"><a href="index.html">PCB &amp; BOM Toolkit</a></div>
     <nav class="navbar__links" aria-label="Primary">
-      <!-- Intentionally no other page links per spec (references index.html only) -->
-      <button class="navbar__settings-btn" type="button" data-action="open-settings" aria-haspopup="dialog" aria-controls="settings" aria-label="Open Settings">
-        <span class="icon icon--gear" aria-hidden="true"></span>
-        <span class="label">Settings</span>
-      </button>
+      <a class="btn btn--ghost" href="settings.html" aria-label="Settings"><span class="icon icon--gear" aria-hidden="true"></span><span class="label">Settings</span></a>
     </nav>
   </header>
 
-  <noscript>
-    <div class="container section">
-      <div class="alert alert--warn">This app requires JavaScript. Please enable it to use the tools.</div>
-    </div>
-  </noscript>
-
-  <main id="content" class="content" role="main">
-    <!-- Hero -->
+  <main id="content" role="main">
     <header class="hero">
       <div class="container">
-        <h1>BOM, QR/Barcode &amp; Catalog Utilities</h1>
-        <p class="hero__lead">
-          Swiss-minimal, monochrome tools for PCB assembly engineers: Excel/BOM parsing, Digi-Key &amp; Mouser lookups, QR/Barcode scan &amp; generate, and more.
-          Everything runs client-side; API credentials are stored locally in your browser.
-        </p>
+        <h1>Tools</h1>
+        <p class="hero__lead">Client-side utilities for BOMs, parts, and codes.</p>
       </div>
     </header>
 
-    <!-- Tools -->
-    <section class="section" id="tools" aria-labelledby="tools-title">
+    <section class="section" aria-labelledby="tools-title">
       <div class="container">
-        <h2 class="section-title" id="tools-title">Tools</h2>
-
+        <h2 id="tools-title" class="sr-only">Tool List</h2>
         <div class="tools-grid">
-          <!-- BOM / Excel Mapper -->
-          <article class="card">
+          <a class="card" href="excel-mapper.html">
             <h3 class="card__title">Excel BOM Mapper</h3>
-            <p class="card__meta">Load spreadsheets, preview sheets, and map columns for part number, manufacturer, quantity, and reference designators.</p>
-            <div class="tags">
-              <span class="tag">excel</span>
-              <span class="tag">bom</span>
-              <span class="tag">mapping</span>
-            </div>
-            <div class="cluster right">
-              <a class="btn btn--primary" href="excel-mapper.html" aria-label="Open Excel BOM Mapper">Open</a>
-            </div>
-          </article>
-
-          <!-- Digi-Key Search -->
-          <article class="card">
+            <p class="card__meta">Preview + map columns</p>
+            <div class="tags"><span class="tag">excel</span><span class="tag">bom</span></div>
+          </a>
+          <a class="card" href="digikey.html">
             <h3 class="card__title">Digi-Key Lookup</h3>
-            <p class="card__meta">Query Digi-Key for live part data and availability from your mapped PNs. Uses your local API key from Settings.</p>
-            <div class="tags">
-              <span class="tag">digikey</span>
-              <span class="tag">api</span>
-              <span class="tag">availability</span>
-            </div>
-            <div class="cluster right">
-              <a class="btn btn--primary" href="digikey.html" aria-label="Open Digi-Key Lookup">Open</a>
-            </div>
-          </article>
-
-          <!-- Mouser Search -->
-          <article class="card">
+            <p class="card__meta">Parts &amp; availability</p>
+            <div class="tags"><span class="tag">api</span><span class="tag">catalog</span></div>
+          </a>
+          <a class="card" href="mouser.html">
             <h3 class="card__title">Mouser Lookup</h3>
-            <p class="card__meta">Query Mouser for alternates, lifecycle, and stock; map results back to your BOM rows.</p>
-            <div class="tags">
-              <span class="tag">mouser</span>
-              <span class="tag">api</span>
-              <span class="tag">alternates</span>
-            </div>
-            <div class="cluster right">
-              <a class="btn btn--primary" href="mouser.html" aria-label="Open Mouser Lookup">Open</a>
-            </div>
-          </article>
-
-          <!-- QR / Barcode Scanner -->
-          <article class="card">
+            <p class="card__meta">Alternates &amp; lifecycle</p>
+            <div class="tags"><span class="tag">api</span><span class="tag">catalog</span></div>
+          </a>
+          <a class="card" href="scanner.html">
             <h3 class="card__title">QR / Barcode Scanner</h3>
-            <p class="card__meta">Camera scanner with HUD overlays; adjust scanner parameters and see decoded values live.</p>
-            <div class="tags">
-              <span class="tag">qr</span>
-              <span class="tag">barcode</span>
-              <span class="tag">camera</span>
-            </div>
-            <div class="cluster right">
-              <a class="btn btn--primary" href="scanner.html" aria-label="Open QR / Barcode Scanner">Open</a>
-            </div>
-          </article>
-
-          <!-- QR / Barcode Generator -->
-          <article class="card">
-            <h3 class="card__title">QR / Barcode Generator</h3>
-            <p class="card__meta">Generate labels from BOM fields or free text; print-ready, monochrome outputs.</p>
-            <div class="tags">
-              <span class="tag">qr</span>
-              <span class="tag">barcode</span>
-              <span class="tag">labels</span>
-            </div>
-            <div class="cluster right">
-              <a class="btn btn--primary" href="codes.html" aria-label="Open QR / Barcode Generator">Open</a>
-            </div>
-          </article>
-
-          <!-- Contact -->
-          <article class="card">
-            <h3 class="card__title">Contact &amp; About</h3>
-            <p class="card__meta">Project details, scope, and how to reach us.</p>
-            <div class="tags">
-              <span class="tag">about</span>
-              <span class="tag">contact</span>
-            </div>
-            <div class="cluster right">
-              <a class="btn btn--secondary" href="contact.html" aria-label="Open Contact page">Open</a>
-            </div>
-          </article>
+            <p class="card__meta">HUD + adjustable params</p>
+            <div class="tags"><span class="tag">qr</span><span class="tag">barcode</span></div>
+          </a>
+          <a class="card" href="codes.html">
+            <h3 class="card__title">Code Generator</h3>
+            <p class="card__meta">Print-ready labels</p>
+            <div class="tags"><span class="tag">qr</span><span class="tag">barcode</span></div>
+          </a>
+          <a class="card" href="contact.html">
+            <h3 class="card__title">Contact</h3>
+            <p class="card__meta">About &amp; email</p>
+            <div class="tags"><span class="tag">info</span></div>
+          </a>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Settings Drawer (shared across all pages) -->
-  <div class="settings" id="settings" data-open="false" aria-hidden="true">
-    <div class="settings__backdrop" data-action="close-settings" aria-hidden="true"></div>
-    <aside class="settings__panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <header class="settings__header">
-        <h2 class="settings__title" id="settings-title">API Credentials</h2>
-        <button class="btn btn--icon" type="button" data-action="close-settings" aria-label="Close settings">✕</button>
-      </header>
-
-      <div class="settings__content">
-        <!-- Digi-Key -->
-        <div class="settings__row">
-          <div class="field">
-            <label for="dk-api-key">Digi-Key API Key</label>
-            <input id="dk-api-key" type="password" inputmode="text" autocomplete="off" placeholder="• • • • • • • •">
-            <small class="hint">Stored in your browser (no expiry).</small>
-          </div>
-          <span class="status-badge" id="dk-status" data-status="inactive" aria-live="polite">
-            <span class="dot"></span>Inactive
-          </span>
-        </div>
-
-        <!-- Mouser -->
-        <div class="settings__row">
-          <div class="field">
-            <label for="mouser-api-key">Mouser API Key</label>
-            <input id="mouser-api-key" type="password" inputmode="text" autocomplete="off" placeholder="• • • • • • • •">
-            <small class="hint">Stored in your browser (no expiry).</small>
-          </div>
-          <span class="status-badge" id="mouser-status" data-status="inactive" aria-live="polite">
-            <span class="dot"></span>Inactive
-          </span>
-        </div>
-      </div>
-
-      <footer class="settings__footer">
-        <button class="btn btn--secondary" type="button" data-action="clear-keys">Clear</button>
-        <div class="cluster right">
-          <button class="btn btn--ghost" type="button" data-action="test-apis">Test</button>
-          <button class="btn btn--primary" type="button" data-action="save-keys">Save</button>
-        </div>
-      </footer>
-    </aside>
-  </div>
-
-  <!-- Footer -->
   <footer class="footer" role="contentinfo">
     <div class="footer__wrap container">
-      <div>Built for PCB assembly &amp; BOM processing.</div>
+      <div>Engineered for PCB assembly</div>
       <div class="footer__copy">&copy; Kalp Pariya — 2025</div>
     </div>
   </footer>
 
-  <!-- Scripts (modular; no inline JS) -->
   <script type="module" src="js/common/dom.js"></script>
   <script type="module" src="js/common/storage.js"></script>
-  <script type="module" src="js/common/settings.js"></script>
   <script type="module" src="js/common/ui.js"></script>
   <script type="module" src="js/index/main.js"></script>
 </body>
