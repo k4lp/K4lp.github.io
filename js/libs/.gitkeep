@@ -1,0 +1,1 @@
+# Libraries Directory\n\nPlace all external JavaScript libraries here:\n- SheetJS (xlsx.js) for Excel processing\n- jsQR for QR code scanning\n- ZXing for barcode scanning\n- Any other required libraries\n\nDo not modify this file - it keeps the directory in version control.\n
