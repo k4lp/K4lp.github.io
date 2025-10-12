@@ -4,59 +4,166 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>Toolkit — Contact</title>
+  <title>K4LP Engineering Tools — Settings</title>
   <link rel="stylesheet" href="css/site.css" />
   <link rel="icon" href="data:,">
 </head>
-<body class="page page--contact">
+<body class="page page--settings">
   <header class="navbar" role="banner">
     <div class="navbar__brand"><a href="index.html">PCB &amp; BOM Toolkit</a></div>
     <nav class="navbar__links" aria-label="Primary">
-      <a class="btn btn--ghost" href="settings.html" aria-label="Settings"><span class="icon icon--gear" aria-hidden="true"></span><span class="label">Settings</span></a>
+      <a class="btn btn--ghost" href="index.html" aria-label="Home"><span class="icon icon--home" aria-hidden="true">🏠</span><span class="label">Home</span></a>
+      <a class="btn btn--ghost" href="contact.html" aria-label="Contact"><span class="icon icon--contact" aria-hidden="true">💬</span><span class="label">Contact</span></a>
     </nav>
   </header>
 
   <main id="content" role="main">
     <header class="hero">
       <div class="container">
-        <h1>Contact</h1>
-        <p class="hero__lead">Minimal, client-side tools for BOM + parts.</p>
+        <h1>API Settings</h1>
+        <p class="hero__lead">Configure your Digikey and Mouser API credentials for real-time component data.</p>
       </div>
     </header>
 
     <section class="section">
-      <div class="container grid cols-2">
-        <div class="contact contact__card">
-          <div class="contact__row">
-            <div class="contact__label">Project</div>
-            <div class="contact__value">PCB &amp; BOM Toolkit</div>
+      <div class="container">
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Initializing API systems...</p>
+        </div>
+
+        <!-- Settings Content -->
+        <div id="settings-content" class="settings-container" style="display: none;">
+          <!-- Digikey Settings -->
+          <div class="settings-section">
+            <div class="settings-header">
+              <h2>Digikey API v4</h2>
+              <div class="status-indicator" id="digikey-status">
+                <span class="status-dot status--inactive"></span>
+                <span class="status-text">Checking...</span>
+              </div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label for="digikey-client-id">Client ID</label>
+                <input type="text" id="digikey-client-id" placeholder="Enter your Digikey Client ID" autocomplete="off">
+                <p class="help">Obtain from <a href="https://developer.digikey.com" target="_blank">Digikey Developer Portal</a></p>
+              </div>
+              <div class="field">
+                <label for="digikey-client-secret">Client Secret</label>
+                <input type="password" id="digikey-client-secret" placeholder="Enter your Digikey Client Secret" autocomplete="new-password">
+                <p class="help">Keep this secret secure - never share publicly</p>
+              </div>
+              <div class="field field--checkbox">
+                <label>
+                  <input type="checkbox" id="digikey-sandbox"> Use Sandbox Environment
+                </label>
+                <p class="help">Enable for testing with Digikey sandbox API (limited data)</p>
+              </div>
+              <div class="field-actions">
+                <button class="btn btn--secondary" id="test-digikey" disabled>Test Connection</button>
+                <button class="btn btn--primary" id="save-digikey" disabled>Save &amp; Authenticate</button>
+              </div>
+              <div class="connection-log" id="digikey-log" style="display: none;">
+                <h4>Connection Log:</h4>
+                <pre id="digikey-log-content"></pre>
+              </div>
+            </div>
           </div>
-          <div class="contact__row">
-            <div class="contact__label">Focus</div>
-            <div class="contact__value">Excel mapping, Digi-Key/Mouser APIs, QR/Barcode.</div>
+          
+          <!-- Mouser Settings -->
+          <div class="settings-section">
+            <div class="settings-header">
+              <h3>Mouser API</h3>
+              <div class="status-indicator" id="mouser-status">
+                <span class="status-dot status--inactive"></span>
+                <span class="status-text">Checking...</span>
+              </div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label for="mouser-api-key">API Key</label>
+                <input type="password" id="mouser-api-key" placeholder="Enter your Mouser API Key" autocomplete="new-password">
+                <p class="help">Obtain from <a href="https://www.mouser.com/api-hub/" target="_blank">Mouser API Hub</a></p>
+              </div>
+              <div class="field-actions">
+                <button class="btn btn--secondary" id="test-mouser" disabled>Test Connection</button>
+                <button class="btn btn--primary" id="save-mouser" disabled>Save &amp; Configure</button>
+              </div>
+              <div class="connection-log" id="mouser-log" style="display: none;">
+                <h4>Connection Log:</h4>
+                <pre id="mouser-log-content"></pre>
+              </div>
+            </div>
           </div>
-          <div class="contact__row">
-            <div class="contact__label">Audience</div>
-            <div class="contact__value">Electronics / PCB assembly engineers.</div>
+          
+          <!-- System Information -->
+          <div class="settings-section">
+            <div class="settings-header">
+              <h3>System Information</h3>
+            </div>
+            <div class="system-info">
+              <div class="info-grid">
+                <div class="info-item">
+                  <label>Storage System:</label>
+                  <span id="storage-status">Loading...</span>
+                </div>
+                <div class="info-item">
+                  <label>API Manager:</label>
+                  <span id="api-manager-status">Loading...</span>
+                </div>
+                <div class="info-item">
+                  <label>Utility Manager:</label>
+                  <span id="utility-manager-status">Loading...</span>
+                </div>
+                <div class="info-item">
+                  <label>Last API Request:</label>
+                  <span id="last-request-time">Never</span>
+                </div>
+                <div class="info-item">
+                  <label>Storage Usage:</label>
+                  <span id="storage-usage">Loading...</span>
+                </div>
+                <div class="info-item">
+                  <label>Browser:</label>
+                  <span id="browser-info">Loading...</span>
+                </div>
+              </div>
+              <div class="system-actions">
+                <button class="btn btn--ghost btn--small" id="refresh-status">Refresh Status</button>
+                <button class="btn btn--ghost btn--small" id="show-detailed-debug">Show Debug Info</button>
+                <button class="btn btn--ghost btn--small" id="test-pricing">Test Pricing Calculations</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Data Management -->
+          <div class="settings-section">
+            <div class="settings-header">
+              <h3>Data Management</h3>
+            </div>
+            <div class="data-actions">
+              <div class="action-group">
+                <button class="btn btn--secondary" id="export-settings">Export Settings</button>
+                <button class="btn btn--secondary" id="import-settings">Import Settings</button>
+              </div>
+              <div class="action-group">
+                <button class="btn btn--warning" id="clear-cache">Clear Cache</button>
+                <button class="btn btn--danger" id="clear-all-data">Clear All Data</button>
+              </div>
+            </div>
+            <p class="help">Export your settings as a backup. Import to restore settings on another device.</p>
           </div>
         </div>
 
-        <div class="contact contact__card">
-          <form class="form" id="contact-form" novalidate>
-            <div class="field">
-              <label for="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="email@domain.tld" autocomplete="email" required>
-            </div>
-            <div class="field">
-              <label for="message">Message</label>
-              <textarea id="message" name="message" placeholder="Your message..." rows="6" required></textarea>
-            </div>
-            <div class="cluster right">
-              <button class="btn btn--secondary" type="reset">Clear</button>
-              <button class="btn btn--primary" type="submit" data-action="contact-submit">Send</button>
-            </div>
-            <p class="help mt-2">Placeholder only. Wire your endpoint in <code>js/contact/main.js</code>.</p>
-          </form>
+        <!-- Error State -->
+        <div id="error-state" class="error-container" style="display: none;">
+          <div class="error-icon">⚠️</div>
+          <h3>System Error</h3>
+          <p>One or more core systems failed to initialize properly.</p>
+          <div id="error-details"></div>
+          <button class="btn btn--primary" onclick="location.reload()">Reload Page</button>
         </div>
       </div>
     </section>
@@ -64,13 +171,63 @@
 
   <footer class="footer" role="contentinfo">
     <div class="footer__wrap container">
-      <div>Engineered for PCB assembly</div>
+      <div>Engineered for PCB assembly workflows</div>
       <div class="footer__copy">&copy; Kalp Pariya — 2025</div>
     </div>
   </footer>
 
-  <script type="module" src="js/common/dom.js"></script>
-  <script type="module" src="js/common/ui.js"></script>
-  <script type="module" src="js/contact/main.js"></script>
+  <!-- Notification System -->
+  <div id="notification-container"></div>
+
+  <!-- Core JavaScript - Load in order -->
+  <script src="js/common/storage.js"></script>
+  <script src="js/common/api.js"></script>
+  <script src="js/common/utils.js"></script>
+  <script src="js/core/navigation.js"></script>
+  <script src="js/pages/settings/settings.js"></script>
+
+  <!-- Initialize Settings Page -->
+  <script>
+    // Initialize settings page when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Settings page DOM loaded, initializing...');
+      
+      // Check if core systems are available
+      const coreSystemsReady = window.storage && window.apiManager && window.utils;
+      
+      if (coreSystemsReady) {
+        console.log('Core systems ready, showing settings interface');
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('settings-content').style.display = 'block';
+        
+        // Initialize settings functionality
+        if (window.settingsManager) {
+          window.settingsManager.initialize();
+        }
+      } else {
+        console.error('Core systems not ready:', {
+          storage: !!window.storage,
+          apiManager: !!window.apiManager,
+          utils: !!window.utils
+        });
+        
+        // Show error state after a delay
+        setTimeout(() => {
+          document.getElementById('loading-state').style.display = 'none';
+          document.getElementById('error-state').style.display = 'block';
+          
+          const errorDetails = document.getElementById('error-details');
+          errorDetails.innerHTML = `
+            <ul>
+              <li>Storage System: ${window.storage ? '✓ Ready' : '❌ Not Available'}</li>
+              <li>API Manager: ${window.apiManager ? '✓ Ready' : '❌ Not Available'}</li>
+              <li>Utility Manager: ${window.utils ? '✓ Ready' : '❌ Not Available'}</li>
+            </ul>
+            <p>Please check the browser console for detailed error messages.</p>
+          `;
+        }, 3000);
+      }
+    });
+  </script>
 </body>
 </html>
