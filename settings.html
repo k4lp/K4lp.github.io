@@ -130,31 +130,9 @@
                   <span id="browser-info">Loading...</span>
                 </div>
               </div>
-              <div class="system-actions">
-                <button class="btn btn--ghost btn--small" id="refresh-status">Refresh Status</button>
-                <button class="btn btn--ghost btn--small" id="show-detailed-debug">Show Debug Info</button>
-                <button class="btn btn--ghost btn--small" id="test-pricing">Test Pricing Calculations</button>
-              </div>
             </div>
           </div>
           
-          <!-- Data Management -->
-          <div class="settings-section">
-            <div class="settings-header">
-              <h3>Data Management</h3>
-            </div>
-            <div class="data-actions">
-              <div class="action-group">
-                <button class="btn btn--secondary" id="export-settings">Export Settings</button>
-                <button class="btn btn--secondary" id="import-settings">Import Settings</button>
-              </div>
-              <div class="action-group">
-                <button class="btn btn--warning" id="clear-cache">Clear Cache</button>
-                <button class="btn btn--danger" id="clear-all-data">Clear All Data</button>
-              </div>
-            </div>
-            <p class="help">Export your settings as a backup. Import to restore settings on another device.</p>
-          </div>
         </div>
 
         <!-- Error State -->
@@ -179,7 +157,8 @@
   <!-- Notification System -->
   <div id="notification-container"></div>
 
-  <!-- Core JavaScript - Load in order -->
+  <!-- Core JavaScript - Load in proper order -->
+  <script src="js/common/eventbus.js"></script>
   <script src="js/common/storage.js"></script>
   <script src="js/common/api.js"></script>
   <script src="js/common/utils.js"></script>
@@ -190,43 +169,62 @@
   <script>
     // Initialize settings page when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('Settings page DOM loaded, initializing...');
+      console.log('Settings page DOM loaded, checking core systems...');
       
-      // Check if core systems are available
-      const coreSystemsReady = window.storage && window.apiManager && window.utils;
+      // Wait for all scripts to load with timeout
+      let attempts = 0;
+      const maxAttempts = 30; // 3 seconds total
       
-      if (coreSystemsReady) {
-        console.log('Core systems ready, showing settings interface');
-        document.getElementById('loading-state').style.display = 'none';
-        document.getElementById('settings-content').style.display = 'block';
+      const checkSystems = () => {
+        attempts++;
         
-        // Initialize settings functionality
-        if (window.settingsManager) {
-          window.settingsManager.initialize();
-        }
-      } else {
-        console.error('Core systems not ready:', {
+        const coreSystemsReady = window.eventBus && window.storage && window.apiManager && window.utils;
+        
+        console.log('System check attempt', attempts, ':', {
+          eventBus: !!window.eventBus,
           storage: !!window.storage,
           apiManager: !!window.apiManager,
           utils: !!window.utils
         });
         
-        // Show error state after a delay
-        setTimeout(() => {
+        if (coreSystemsReady) {
+          console.log('✓ All core systems ready, showing settings interface');
+          document.getElementById('loading-state').style.display = 'none';
+          document.getElementById('settings-content').style.display = 'block';
+          
+          // Initialize settings functionality
+          if (window.settingsManager) {
+            window.settingsManager.initialize();
+          }
+        } else if (attempts < maxAttempts) {
+          setTimeout(checkSystems, 100);
+        } else {
+          console.error('❌ Core systems failed to load after', maxAttempts, 'attempts');
+          
           document.getElementById('loading-state').style.display = 'none';
           document.getElementById('error-state').style.display = 'block';
           
           const errorDetails = document.getElementById('error-details');
           errorDetails.innerHTML = `
+            <h4>Missing Systems:</h4>
             <ul>
-              <li>Storage System: ${window.storage ? '✓ Ready' : '❌ Not Available'}</li>
-              <li>API Manager: ${window.apiManager ? '✓ Ready' : '❌ Not Available'}</li>
-              <li>Utility Manager: ${window.utils ? '✓ Ready' : '❌ Not Available'}</li>
+              <li>Event Bus: ${window.eventBus ? '✓ Ready' : '❌ Missing'}</li>
+              <li>Storage System: ${window.storage ? '✓ Ready' : '❌ Missing'}</li>
+              <li>API Manager: ${window.apiManager ? '✓ Ready' : '❌ Missing'}</li>
+              <li>Utility Manager: ${window.utils ? '✓ Ready' : '❌ Missing'}</li>
             </ul>
-            <p>Please check the browser console for detailed error messages.</p>
+            <p><strong>Debug Help:</strong></p>
+            <ul>
+              <li>Check browser console for JavaScript errors</li>
+              <li>Ensure all JavaScript files are loading properly</li>
+              <li>Verify network connectivity</li>
+            </ul>
           `;
-        }, 3000);
-      }
+        }
+      };
+      
+      // Start checking immediately
+      checkSystems();
     });
   </script>
 </body>
