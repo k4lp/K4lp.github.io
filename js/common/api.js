@@ -1,7 +1,7 @@
 /**
- * Clean API Manager - Core Digikey & Mouser API Integration
- * Single-responsibility module focused on API authentication and requests
- * Part of K4LP Engineering Tools - Swiss Minimalist Design
+ * Clean API Manager - Digikey & Mouser API Integration
+ * Single responsibility: API authentication and requests ONLY
+ * No false status flags, proper credential validation
  */
 
 class ApiManager {
@@ -9,17 +9,11 @@ class ApiManager {
         this.endpoints = {
             digikey: {
                 base: 'https://api.digikey.com',
-                auth: 'https://api.digikey.com/v1/oauth2/token',
-                sandbox: 'https://sandbox-api.digikey.com'
+                auth: 'https://api.digikey.com/v1/oauth2/token'
             },
             mouser: {
                 base: 'https://api.mouser.com'
             }
-        };
-
-        this.status = {
-            digikey: 'inactive',
-            mouser: 'inactive'
         };
 
         this.tokens = {
@@ -27,19 +21,24 @@ class ApiManager {
             mouser: null
         };
 
-        this.credentials = {
-            digikey: { clientId: null, clientSecret: null },
-            mouser: { apiKey: null }
+        this.status = {
+            digikey: 'inactive',
+            mouser: 'inactive'
         };
     }
 
     /**
-     * Test Digikey connection with credentials
+     * Test Digikey connection with ACTUAL API call
      * @param {string} clientId - Digikey Client ID
      * @param {string} clientSecret - Digikey Client Secret
-     * @returns {Promise<boolean>} Connection status
+     * @returns {Promise<boolean>} Real connection status
      */
     async testDigikeyConnection(clientId, clientSecret) {
+        if (!clientId || !clientSecret) {
+            this.setStatus('digikey', 'inactive');
+            return false;
+        }
+
         try {
             this.setStatus('digikey', 'connecting');
             
@@ -49,10 +48,10 @@ class ApiManager {
                 return false;
             }
 
-            // Test with simple API call
-            const response = await this.makeDigikeyRequest('/products/v4/manufacturers');
+            // Test with real API call
+            const testResult = await this.makeDigikeyRequest('/products/v4/search/manufacturerPart');
             
-            if (response) {
+            if (testResult) {
                 this.setStatus('digikey', 'active');
                 return true;
             } else {
@@ -60,25 +59,32 @@ class ApiManager {
                 return false;
             }
         } catch (error) {
-            console.error('Digikey connection test failed:', error);
+            console.error('Digikey test failed:', error);
             this.setStatus('digikey', 'error');
             return false;
         }
     }
 
     /**
-     * Test Mouser connection with API key
+     * Test Mouser connection with ACTUAL API call
      * @param {string} apiKey - Mouser API Key
-     * @returns {Promise<boolean>} Connection status
+     * @returns {Promise<boolean>} Real connection status
      */
     async testMouserConnection(apiKey) {
+        if (!apiKey) {
+            this.setStatus('mouser', 'inactive');
+            return false;
+        }
+
         try {
             this.setStatus('mouser', 'connecting');
-            this.credentials.mouser.apiKey = apiKey;
             
-            const response = await this.makeMouserRequest('/api/v1/search/manufacturerlist');
+            // Test with real API call
+            const testResult = await this.makeMouserRequest('/api/v1/search/manufacturerlist', {
+                params: { apiKey }
+            });
             
-            if (response) {
+            if (testResult && testResult.ManufacturerList) {
                 this.setStatus('mouser', 'active');
                 return true;
             } else {
@@ -86,87 +92,61 @@ class ApiManager {
                 return false;
             }
         } catch (error) {
-            console.error('Mouser connection test failed:', error);
+            console.error('Mouser test failed:', error);
             this.setStatus('mouser', 'error');
             return false;
         }
     }
 
     /**
-     * Authenticate with Digikey using OAuth 2.0 Client Credentials
-     * @param {string} clientId - Digikey Client ID
-     * @param {string} clientSecret - Digikey Client Secret
-     * @returns {Promise<boolean>} Authentication success
+     * Authenticate with Digikey OAuth2
+     * @param {string} clientId - Client ID
+     * @param {string} clientSecret - Client Secret
+     * @returns {Promise<boolean>} Auth success
      */
     async authenticateDigikey(clientId, clientSecret) {
         try {
-            const requestBody = new URLSearchParams({
-                'client_id': clientId,
-                'client_secret': clientSecret,
-                'grant_type': 'client_credentials'
-            });
-
             const response = await fetch(this.endpoints.digikey.auth, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Accept': 'application/json'
                 },
-                body: requestBody.toString()
+                body: new URLSearchParams({
+                    'client_id': clientId,
+                    'client_secret': clientSecret,
+                    'grant_type': 'client_credentials'
+                })
             });
 
             if (!response.ok) {
-                throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+                throw new Error(`Auth failed: ${response.status}`);
             }
 
             const tokenData = await response.json();
             
             this.tokens.digikey = {
                 access_token: tokenData.access_token,
-                token_type: tokenData.token_type || 'Bearer',
-                expires_in: tokenData.expires_in,
-                expires_at: Date.now() + ((tokenData.expires_in - 30) * 1000)
+                expires_at: Date.now() + ((tokenData.expires_in - 30) * 1000),
+                clientId,
+                clientSecret
             };
 
-            this.credentials.digikey = { clientId, clientSecret };
             return true;
-            
         } catch (error) {
-            console.error('Digikey authentication failed:', error);
+            console.error('Digikey auth failed:', error);
             return false;
         }
-    }
-
-    /**
-     * Get current Digikey token (refresh if needed)
-     * @returns {Promise<string|null>} Access token
-     */
-    async getDigikeyToken() {
-        if (!this.tokens.digikey) {
-            return null;
-        }
-
-        // Check if token is expired
-        if (Date.now() >= this.tokens.digikey.expires_at) {
-            const { clientId, clientSecret } = this.credentials.digikey;
-            if (clientId && clientSecret) {
-                await this.authenticateDigikey(clientId, clientSecret);
-            } else {
-                return null;
-            }
-        }
-
-        return this.tokens.digikey ? this.tokens.digikey.access_token : null;
     }
 
     /**
      * Make authenticated Digikey API request
      * @param {string} endpoint - API endpoint
      * @param {Object} options - Request options
-     * @returns {Promise<Object|null>} API response data
+     * @returns {Promise<Object|null>} API response
      */
     async makeDigikeyRequest(endpoint, options = {}) {
-        const token = await this.getDigikeyToken();
+        const token = await this.getValidDigikeyToken();
         if (!token) {
             throw new Error('Digikey not authenticated');
         }
@@ -175,52 +155,37 @@ class ApiManager {
         const requestOptions = {
             method: options.method || 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'X-DIGIKEY-Client-Id': this.credentials.digikey.clientId,
+                'Authorization': `Bearer ${token.access_token}`,
+                'X-DIGIKEY-Client-Id': token.clientId,
                 'Accept': 'application/json',
-                'X-DIGIKEY-Locale-Site': 'US',
-                'X-DIGIKEY-Locale-Language': 'en',
-                'X-DIGIKEY-Locale-Currency': 'USD',
                 ...options.headers
             }
         };
 
-        if (options.data && ['POST', 'PUT', 'PATCH'].includes(requestOptions.method)) {
+        if (options.data) {
             requestOptions.headers['Content-Type'] = 'application/json';
             requestOptions.body = JSON.stringify(options.data);
         }
 
-        try {
-            const response = await fetch(url, requestOptions);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Digikey API request failed:', error);
-            throw error;
+        const response = await fetch(url, requestOptions);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+
+        return await response.json();
     }
 
     /**
      * Make Mouser API request
      * @param {string} endpoint - API endpoint
      * @param {Object} options - Request options
-     * @returns {Promise<Object|null>} API response data
+     * @returns {Promise<Object|null>} API response
      */
     async makeMouserRequest(endpoint, options = {}) {
-        if (!this.credentials.mouser.apiKey) {
-            throw new Error('Mouser not authenticated');
-        }
-
-        const params = new URLSearchParams({
-            apiKey: this.credentials.mouser.apiKey,
-            ...options.params
-        });
-
+        const params = new URLSearchParams(options.params || {});
         const url = `${this.endpoints.mouser.base}${endpoint}?${params.toString()}`;
+        
         const requestOptions = {
             method: options.method || 'GET',
             headers: {
@@ -229,83 +194,73 @@ class ApiManager {
             }
         };
 
-        if (options.data && ['POST', 'PUT', 'PATCH'].includes(requestOptions.method)) {
+        if (options.data) {
             requestOptions.headers['Content-Type'] = 'application/json';
             requestOptions.body = JSON.stringify(options.data);
         }
 
-        try {
-            const response = await fetch(url, requestOptions);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Mouser API request failed:', error);
-            throw error;
+        const response = await fetch(url, requestOptions);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+
+        return await response.json();
+    }
+
+    /**
+     * Get valid Digikey token (refresh if needed)
+     * @returns {Promise<Object|null>} Valid token or null
+     */
+    async getValidDigikeyToken() {
+        if (!this.tokens.digikey) {
+            return null;
+        }
+
+        // Check if token expired
+        if (Date.now() >= this.tokens.digikey.expires_at) {
+            const { clientId, clientSecret } = this.tokens.digikey;
+            const refreshed = await this.authenticateDigikey(clientId, clientSecret);
+            if (!refreshed) {
+                return null;
+            }
+        }
+
+        return this.tokens.digikey;
     }
 
     /**
      * Set API status and emit event
      * @param {string} provider - 'digikey' or 'mouser'
-     * @param {string} status - 'inactive', 'connecting', 'active', 'error'
+     * @param {string} status - Status value
      */
     setStatus(provider, status) {
         this.status[provider] = status;
         
-        // Update storage if available
-        if (window.storage) {
-            const apiKeys = window.storage.getApiKeys() || {};
-            window.storage.saveUserData({ ...apiKeys, [`${provider}Status`]: status });
-        }
-
-        // Emit event if event system available
-        if (window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('apiStatusChange', {
-                detail: { provider, status }
-            }));
-        }
-
-        console.log(`API Status: ${provider} -> ${status}`);
+        // Emit status change event
+        window.dispatchEvent(new CustomEvent('apiStatusChange', {
+            detail: { provider, status }
+        }));
     }
 
     /**
-     * Get current API status
+     * Get current status
      * @param {string} provider - Optional provider filter
-     * @returns {Object} Status object
+     * @returns {Object|string} Status object or specific status
      */
     getStatus(provider = null) {
-        if (provider) {
-            return {
-                status: this.status[provider],
-                authenticated: provider === 'digikey' ? !!this.tokens.digikey : !!this.credentials.mouser.apiKey
-            };
-        }
-        
-        return {
-            digikey: this.getStatus('digikey'),
-            mouser: this.getStatus('mouser')
-        };
+        return provider ? this.status[provider] : { ...this.status };
     }
 
     /**
-     * Clear all authentication
+     * Clear all authentication data
      */
-    clearAuthentication() {
+    clearAuth() {
         this.tokens = { digikey: null, mouser: null };
-        this.credentials = {
-            digikey: { clientId: null, clientSecret: null },
-            mouser: { apiKey: null }
-        };
         this.status = { digikey: 'inactive', mouser: 'inactive' };
-        
-        console.log('API authentication cleared');
     }
 }
 
-// Create and export singleton instance
+// Global instance
 const apiManager = new ApiManager();
 window.apiManager = apiManager;
