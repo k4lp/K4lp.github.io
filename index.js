@@ -2,9 +2,9 @@ class AdvancedGeminiInterface {
     constructor() {
         this.config = {
             apiKey: localStorage.getItem('gemini_api_key') || '',
-            model: localStorage.getItem('gemini_model') || 'gemini-2.0-flash-exp',
+            model: localStorage.getItem('gemini_model') || 'gemini-2.5-pro',
             temperature: parseFloat(localStorage.getItem('gemini_temperature')) || 1.0,
-            maxTokens: parseInt(localStorage.getItem('gemini_max_tokens')) || 8192,
+            maxTokens: parseInt(localStorage.getItem('gemini_max_tokens')) || 65536,
             systemPrompt: localStorage.getItem('gemini_system_prompt') || '',
             reasoningDepth: parseInt(localStorage.getItem('reasoning_depth')) || 2
         };
