@@ -1,68 +1,53 @@
 /**
- * Clean Utilities - Core utility functions for K4LP Engineering Tools
- * Single-responsibility module for common utility functions
- * Part of K4LP Engineering Tools - Swiss Minimalist Design
+ * Clean Utilities - Essential helper functions only
+ * Single responsibility: Core utilities for engineering workflows
+ * NO MPN validation, NO email validation, NO package functions
  */
 
 class UtilityManager {
     constructor() {
-        this.notificationSettings = {
-            duration: 5000,
-            position: 'top-right'
-        };
+        this.notificationDuration = 3000;
     }
 
     /**
-     * Show notification to user
+     * Show notification (clean, no bloat)
      * @param {string} message - Message to display
      * @param {string} type - 'success', 'error', 'warning', 'info'
-     * @param {Object} options - Additional options
      */
-    showNotification(message, type = 'info', options = {}) {
-        const config = { ...this.notificationSettings, ...options };
+    showNotification(message, type = 'info') {
+        // Remove existing notifications
+        document.querySelectorAll('.notification').forEach(n => n.remove());
         
-        // Remove any existing notifications
-        const existing = document.querySelector('.notification');
-        if (existing) {
-            existing.remove();
-        }
-        
-        // Create notification element
         const notification = document.createElement('div');
-        notification.className = `notification notification-${type} show`;
+        notification.className = `notification notification-${type}`;
         notification.innerHTML = `
             <div class="notification-content">
-                <span class="notification-message">${message}</span>
+                <span>${message}</span>
                 <button class="notification-close">&times;</button>
             </div>
         `;
         
         document.body.appendChild(notification);
         
-        // Auto-remove after duration
-        const timeout = setTimeout(() => {
-            this.removeNotification(notification);
-        }, config.duration);
+        // Show with animation
+        setTimeout(() => notification.classList.add('show'), 10);
         
-        // Close button handler
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', () => {
+        // Auto remove
+        const timeout = setTimeout(() => this.removeNotification(notification), this.notificationDuration);
+        
+        // Manual close
+        notification.querySelector('.notification-close').onclick = () => {
             clearTimeout(timeout);
             this.removeNotification(notification);
-        });
-        
-        return notification;
+        };
     }
 
     /**
      * Remove notification with animation
-     * @param {Element} notification - Notification element to remove
+     * @param {Element} notification - Notification element
      */
     removeNotification(notification) {
-        if (!notification || !notification.parentNode) return;
-        
         notification.classList.remove('show');
-        
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
@@ -71,17 +56,7 @@ class UtilityManager {
     }
 
     /**
-     * Format date in readable format
-     * @param {Date|string|number} date - Date to format
-     * @returns {string} Formatted date string
-     */
-    formatDate(date) {
-        const d = new Date(date);
-        return d.toLocaleString();
-    }
-
-    /**
-     * Debounce function calls to prevent excessive execution
+     * Debounce function calls
      * @param {Function} func - Function to debounce
      * @param {number} delay - Delay in milliseconds
      * @returns {Function} Debounced function
@@ -95,36 +70,18 @@ class UtilityManager {
     }
 
     /**
-     * Deep clone an object
-     * @param {Object} obj - Object to clone
-     * @returns {Object} Cloned object
+     * Format date for display
+     * @param {Date|string|number} date - Date to format
+     * @returns {string} Formatted date
      */
-    deepClone(obj) {
-        if (obj === null || typeof obj !== 'object') return obj;
-        if (obj instanceof Date) return new Date(obj.getTime());
-        if (obj instanceof Array) return obj.map(item => this.deepClone(item));
-        
-        const cloned = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                cloned[key] = this.deepClone(obj[key]);
-            }
-        }
-        return cloned;
-    }
-
-    /**
-     * Generate random string
-     * @param {number} length - Length of string
-     * @returns {string} Random string
-     */
-    randomString(length = 8) {
-        const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let result = '';
-        for (let i = 0; i < length; i++) {
-            result += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        return result;
+    formatDate(date) {
+        return new Date(date).toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     /**
@@ -139,31 +96,33 @@ class UtilityManager {
             return true;
         } catch (error) {
             // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.cssText = 'position: fixed; opacity: 0; pointer-events: none;';
+            document.body.appendChild(textarea);
+            textarea.select();
             
             try {
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                this.showNotification('Copied to clipboard', 'success');
-                return true;
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                if (success) {
+                    this.showNotification('Copied to clipboard', 'success');
+                    return true;
+                }
             } catch (fallbackError) {
-                document.body.removeChild(textArea);
-                this.showNotification('Failed to copy to clipboard', 'error');
-                return false;
+                document.body.removeChild(textarea);
             }
+            
+            this.showNotification('Failed to copy', 'error');
+            return false;
         }
     }
 
     /**
      * Download data as file
      * @param {string} data - Data to download
-     * @param {string} filename - Name of file
-     * @param {string} mimeType - MIME type of file
+     * @param {string} filename - File name
+     * @param {string} mimeType - MIME type
      */
     downloadFile(data, filename, mimeType = 'text/plain') {
         const blob = new Blob([data], { type: mimeType });
@@ -178,62 +137,63 @@ class UtilityManager {
         link.click();
         document.body.removeChild(link);
         
-        // Clean up the URL
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     /**
-     * Check if running on mobile device
-     * @returns {boolean} True if mobile
+     * Generate random ID
+     * @param {number} length - ID length
+     * @returns {string} Random ID
+     */
+    randomId(length = 8) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    /**
+     * Format file size
+     * @param {number} bytes - Size in bytes
+     * @returns {string} Formatted size
+     */
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+    }
+
+    /**
+     * Check if device is mobile
+     * @returns {boolean} Is mobile device
      */
     isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
     /**
-     * Get nested property from object safely
-     * @param {Object} obj - Object to traverse
-     * @param {string} path - Dot-notation path to property
-     * @returns {*} Property value or undefined
-     */
-    getNestedProperty(obj, path) {
-        return path.split('.').reduce((current, key) => current?.[key], obj);
-    }
-
-    /**
      * Create performance timer
-     * @param {string} label - Label for timer
-     * @returns {Object} Timer object with elapsed() and stop() methods
+     * @param {string} label - Timer label
+     * @returns {Object} Timer with stop() method
      */
     createTimer(label = 'Timer') {
-        const startTime = performance.now();
-        
+        const start = performance.now();
         return {
-            elapsed: () => performance.now() - startTime,
             stop: () => {
-                const elapsed = performance.now() - startTime;
+                const elapsed = performance.now() - start;
                 console.log(`${label}: ${elapsed.toFixed(2)}ms`);
                 return elapsed;
             }
         };
     }
-
-    /**
-     * Format file size in human readable format
-     * @param {number} bytes - Number of bytes
-     * @returns {string} Formatted size string
-     */
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
-        
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-    }
 }
 
-// Create and export singleton instance
+// Global instance
 const utils = new UtilityManager();
 window.utils = utils;
