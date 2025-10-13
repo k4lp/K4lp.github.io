@@ -1,452 +1,273 @@
 /**
- * Robust API Manager - Production-ready Digikey & Mouser API Integration
- * Based on proven authentication patterns and error handling
- * Handles token refresh, retries, and proper credential validation
+ * Unified API Manager - Orchestrates all API providers
+ * Ultra-robust, modular, and future-proof API management
+ * Coordinates Digikey and Mouser providers with unified interface
  */
 
-class ApiManager {
+class UnifiedApiManager {
     constructor() {
-        this.config = {
-            PRODUCTION: {
-                BASE_URL: 'https://api.digikey.com',
-                TOKEN_URL: 'https://api.digikey.com/v1/oauth2/token'
-            },
-            SANDBOX: {
-                BASE_URL: 'https://sandbox-api.digikey.com', 
-                TOKEN_URL: 'https://sandbox-api.digikey.com/v1/oauth2/token'
-            },
-            MOUSER: {
-                BASE_URL: 'https://api.mouser.com'
-            },
-            TOKEN_BUFFER: 300000, // 5 minutes before expiry
-            MAX_RETRIES: 3,
-            RETRY_DELAY: 1000,
-            AUTH_TIMEOUT: 15000 // 15 second timeout for auth requests
+        this.providers = {
+            digikey: null,
+            mouser: null
         };
-
-        this.credentials = {
-            digikey: {
-                clientId: null,
-                clientSecret: null,
-                environment: 'production', // 'production' or 'sandbox'
-                token: null,
-                expiry: null,
-                status: 'inactive'
-            },
-            mouser: {
-                apiKey: null,
-                status: 'inactive'
-            }
-        };
-
-        this.isAuthenticating = {
-            digikey: false,
-            mouser: false
-        };
+        
+        this.initialized = false;
+        this.initializationPromise = null;
+        
+        // Automatically initialize when providers are available
+        this.waitForDependencies().then(() => this.initialize());
     }
 
     /**
-     * Test Digikey connection with comprehensive error handling
-     * @param {string} clientId - Digikey Client ID
-     * @param {string} clientSecret - Digikey Client Secret  
-     * @param {string} environment - 'production' or 'sandbox'
-     * @returns {Promise<boolean>} Real connection status
+     * Wait for provider dependencies to load
+     * @returns {Promise<void>}
+     */
+    async waitForDependencies() {
+        const maxWait = 10000; // 10 seconds max wait
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < maxWait) {
+            if (window.BaseApiManager && window.DigikeyApiProvider && window.MouserApiProvider) {
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        throw new Error('API provider dependencies not loaded within timeout');
+    }
+
+    /**
+     * Initialize all API providers
+     * @returns {Promise<void>}
+     */
+    async initialize() {
+        if (this.initialized || this.initializationPromise) {
+            return this.initializationPromise;
+        }
+        
+        this.initializationPromise = this.performInitialization();
+        return this.initializationPromise;
+    }
+
+    /**
+     * Perform actual initialization
+     * @returns {Promise<void>}
+     */
+    async performInitialization() {
+        try {
+            console.log('Initializing API providers...');
+            
+            // Initialize Digikey provider
+            this.providers.digikey = new DigikeyApiProvider();
+            
+            // Initialize Mouser provider
+            this.providers.mouser = new MouserApiProvider();
+            
+            // Set up event forwarding
+            this.setupEventForwarding();
+            
+            // Load saved credentials
+            await this.loadSavedCredentials();
+            
+            this.initialized = true;
+            console.log('✓ All API providers initialized successfully');
+            
+            // Emit initialization complete event
+            window.dispatchEvent(new CustomEvent('apiManagerReady', {
+                detail: { providers: Object.keys(this.providers) }
+            }));
+            
+        } catch (error) {
+            console.error('API Manager initialization failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Setup event forwarding from providers
+     */
+    setupEventForwarding() {
+        Object.entries(this.providers).forEach(([name, provider]) => {
+            if (provider) {
+                // Forward status changes
+                provider.addEventListener('statusChange', (data) => {
+                    window.dispatchEvent(new CustomEvent('apiStatusChange', { detail: data }));
+                });
+                
+                // Forward authentication events
+                provider.addEventListener('authenticationSuccess', (data) => {
+                    window.dispatchEvent(new CustomEvent('apiAuthSuccess', { detail: data }));
+                });
+                
+                provider.addEventListener('authenticationError', (data) => {
+                    window.dispatchEvent(new CustomEvent('apiAuthError', { detail: data }));
+                });
+            }
+        });
+    }
+
+    /**
+     * Load saved credentials from storage
+     * @returns {Promise<void>}
+     */
+    async loadSavedCredentials() {
+        if (!window.storage) {
+            console.warn('Storage not available, skipping credential loading');
+            return;
+        }
+        
+        const apiKeys = window.storage.getApiKeys();
+        if (!apiKeys) {
+            console.log('No saved API credentials found');
+            return;
+        }
+        
+        // Load Digikey credentials
+        if (apiKeys.digikeyClientId && apiKeys.digikeyClientSecret) {
+            this.providers.digikey.setCredentials({
+                clientId: apiKeys.digikeyClientId,
+                clientSecret: apiKeys.digikeyClientSecret,
+                environment: apiKeys.digikeyEnvironment || 'production'
+            });
+            console.log('✓ Digikey credentials loaded from storage');
+        }
+        
+        // Load Mouser credentials
+        if (apiKeys.mouserApiKey) {
+            this.providers.mouser.setCredentials({
+                apiKey: apiKeys.mouserApiKey
+            });
+            console.log('✓ Mouser credentials loaded from storage');
+        }
+    }
+
+    /**
+     * Test connection for specific provider
+     * @param {string} provider - Provider name ('digikey' or 'mouser')
+     * @param {Object} credentials - Provider credentials
+     * @returns {Promise<boolean>} Connection test result
+     */
+    async testConnection(provider, credentials = null) {
+        await this.initialize();
+        
+        const providerInstance = this.providers[provider];
+        if (!providerInstance) {
+            throw new Error(`Unknown provider: ${provider}`);
+        }
+        
+        // Set credentials if provided
+        if (credentials) {
+            providerInstance.setCredentials(credentials);
+        }
+        
+        return await providerInstance.testConnection();
+    }
+
+    /**
+     * Test Digikey connection
+     * @param {string} clientId - Client ID
+     * @param {string} clientSecret - Client Secret
+     * @param {string} environment - Environment ('production' or 'sandbox')
+     * @returns {Promise<boolean>} Connection result
      */
     async testDigikeyConnection(clientId, clientSecret, environment = 'production') {
-        if (!clientId || !clientSecret) {
-            this.setStatus('digikey', 'inactive');
-            return false;
-        }
-
-        // Validate environment parameter
-        if (!['production', 'sandbox'].includes(environment)) {
-            environment = 'production';
-        }
-
-        try {
-            this.setStatus('digikey', 'connecting');
-            
-            // Store credentials for this test
-            this.credentials.digikey = {
-                clientId: clientId.trim(),
-                clientSecret: clientSecret.trim(),
-                environment,
-                token: null,
-                expiry: null,
-                status: 'connecting'
-            };
-
-            const authSuccess = await this.authenticateDigikey();
-            if (!authSuccess) {
-                this.setStatus('digikey', 'error');
-                return false;
-            }
-
-            // Test with a simple API call to verify the token works
-            const testResult = await this.testDigikeyApiCall();
-            
-            if (testResult) {
-                this.setStatus('digikey', 'active');
-                return true;
-            } else {
-                this.setStatus('digikey', 'error');
-                return false;
-            }
-        } catch (error) {
-            console.error('Digikey test failed:', error);
-            this.setStatus('digikey', 'error');
-            return false;
-        }
+        return await this.testConnection('digikey', {
+            clientId,
+            clientSecret,
+            environment
+        });
     }
 
     /**
-     * Test Mouser connection with proper API validation
-     * @param {string} apiKey - Mouser API Key
-     * @returns {Promise<boolean>} Real connection status
+     * Test Mouser connection
+     * @param {string} apiKey - API Key
+     * @returns {Promise<boolean>} Connection result
      */
     async testMouserConnection(apiKey) {
-        if (!apiKey) {
-            this.setStatus('mouser', 'inactive');
-            return false;
-        }
-
-        try {
-            this.setStatus('mouser', 'connecting');
-            
-            this.credentials.mouser = {
-                apiKey: apiKey.trim(),
-                status: 'connecting'
-            };
-            
-            // Test with actual API call
-            const testResult = await this.testMouserApiCall();
-            
-            if (testResult) {
-                this.setStatus('mouser', 'active');
-                return true;
-            } else {
-                this.setStatus('mouser', 'error');
-                return false;
-            }
-        } catch (error) {
-            console.error('Mouser test failed:', error);
-            this.setStatus('mouser', 'error');
-            return false;
-        }
+        return await this.testConnection('mouser', { apiKey });
     }
 
     /**
-     * Authenticate with Digikey using robust OAuth2 flow
-     * @returns {Promise<boolean>} Authentication success
+     * Search products across all providers
+     * @param {string} query - Search query
+     * @param {Object} options - Search options
+     * @returns {Promise<Object>} Unified search results
      */
-    async authenticateDigikey() {
-        if (this.isAuthenticating.digikey) {
-            console.log('Digikey authentication already in progress');
-            return false;
-        }
-
-        const cred = this.credentials.digikey;
-        if (!cred.clientId || !cred.clientSecret) {
-            throw new Error('Digikey credentials not set');
-        }
-
-        this.isAuthenticating.digikey = true;
-
-        try {
-            const config = cred.environment === 'sandbox' ? 
-                          this.config.SANDBOX : this.config.PRODUCTION;
-
-            console.log(`Authenticating Digikey (${cred.environment})...`);
-
-            // Create abort controller for timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), this.config.AUTH_TIMEOUT);
-
-            const response = await fetch(config.TOKEN_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json'
-                },
-                body: new URLSearchParams({
-                    'client_id': cred.clientId,
-                    'client_secret': cred.clientSecret,
-                    'grant_type': 'client_credentials'
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => 'Unknown error');
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-
-            const tokenData = await response.json();
-            
-            if (!tokenData.access_token || !tokenData.expires_in) {
-                throw new Error('Invalid token response: Missing access_token or expires_in');
-            }
-
-            // Store token with proper expiry calculation
-            cred.token = tokenData.access_token;
-            cred.expiry = Date.now() + ((tokenData.expires_in - 60) * 1000); // 1 minute buffer
-            cred.status = 'active';
-
-            console.log(`✓ Digikey authenticated successfully (expires in ${Math.floor(tokenData.expires_in/60)}m)`);
-            return true;
-
-        } catch (error) {
-            const errorMsg = error.name === 'AbortError' ? 'Request timeout' : error.message;
-            console.error('Digikey authentication failed:', errorMsg);
-            
-            cred.token = null;
-            cred.expiry = null;
-            cred.status = 'error';
-            
-            throw new Error(`Authentication failed: ${errorMsg}`);
-        } finally {
-            this.isAuthenticating.digikey = false;
-        }
-    }
-
-    /**
-     * Test Digikey API with authenticated request
-     * @returns {Promise<boolean>} API call success
-     */
-    async testDigikeyApiCall() {
-        const cred = this.credentials.digikey;
-        if (!cred.token) {
-            throw new Error('No Digikey token available');
-        }
-
-        const config = cred.environment === 'sandbox' ? 
-                      this.config.SANDBOX : this.config.PRODUCTION;
-
-        try {
-            const response = await fetch(`${config.BASE_URL}/products/v4/search/manufacturerPart`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${cred.token}`,
-                    'X-DIGIKEY-Client-Id': cred.clientId,
-                    'Accept': 'application/json',
-                    'X-DIGIKEY-Locale-Site': 'US',
-                    'X-DIGIKEY-Locale-Language': 'en',
-                    'X-DIGIKEY-Locale-Currency': 'USD'
-                }
-            });
-
-            // Even a 404 is a successful auth test (endpoint exists but no product specified)
-            return response.status === 404 || response.ok;
-        } catch (error) {
-            console.error('Digikey API test call failed:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Test Mouser API with authenticated request
-     * @returns {Promise<boolean>} API call success
-     */
-    async testMouserApiCall() {
-        const cred = this.credentials.mouser;
-        if (!cred.apiKey) {
-            throw new Error('No Mouser API key available');
-        }
-
-        try {
-            const response = await fetch(`${this.config.MOUSER.BASE_URL}/api/v1/search/manufacturerlist?apiKey=${cred.apiKey}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                return false;
-            }
-
-            const data = await response.json();
-            return !!(data && (data.ManufacturerList || data.Errors === undefined));
-        } catch (error) {
-            console.error('Mouser API test call failed:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Get valid Digikey token (refresh if needed)
-     * @returns {Promise<string|null>} Valid access token
-     */
-    async getValidDigikeyToken() {
-        const cred = this.credentials.digikey;
+    async searchProducts(query, options = {}) {
+        await this.initialize();
         
-        if (!cred.token || !cred.expiry) {
-            return null;
-        }
-
-        // Check if token is expired or about to expire
-        if (Date.now() >= (cred.expiry - this.config.TOKEN_BUFFER)) {
-            console.log('Digikey token expired, refreshing...');
+        const results = {};
+        const providers = options.providers || ['digikey', 'mouser'];
+        
+        // Search across specified providers
+        const searchPromises = providers.map(async (providerName) => {
+            const provider = this.providers[providerName];
+            if (!provider || !provider.hasValidCredentials()) {
+                return { provider: providerName, error: 'Not configured' };
+            }
             
             try {
-                const refreshed = await this.authenticateDigikey();
-                if (!refreshed) {
-                    return null;
+                let result;
+                if (providerName === 'digikey') {
+                    result = await provider.searchProducts(query, options);
+                } else if (providerName === 'mouser') {
+                    result = await provider.searchParts(query, options);
                 }
+                
+                return { provider: providerName, result };
             } catch (error) {
-                console.error('Token refresh failed:', error);
-                return null;
+                return { provider: providerName, error: error.message };
             }
-        }
-
-        return cred.token;
-    }
-
-    /**
-     * Make authenticated Digikey API request with retry logic
-     * @param {string} endpoint - API endpoint
-     * @param {Object} options - Request options
-     * @returns {Promise<Object>} API response data
-     */
-    async makeDigikeyRequest(endpoint, options = {}) {
-        const token = await this.getValidDigikeyToken();
-        if (!token) {
-            throw new Error('Digikey not authenticated');
-        }
-
-        const cred = this.credentials.digikey;
-        const config = cred.environment === 'sandbox' ? 
-                      this.config.SANDBOX : this.config.PRODUCTION;
-        
-        const url = config.BASE_URL + endpoint;
-        const requestOptions = {
-            method: options.method || 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'X-DIGIKEY-Client-Id': cred.clientId,
-                'Accept': 'application/json',
-                'X-DIGIKEY-Locale-Site': 'US',
-                'X-DIGIKEY-Locale-Language': 'en', 
-                'X-DIGIKEY-Locale-Currency': 'USD',
-                ...options.headers
-            }
-        };
-
-        if (options.data) {
-            requestOptions.headers['Content-Type'] = 'application/json';
-            requestOptions.body = JSON.stringify(options.data);
-        }
-
-        return this.apiCallWithRetry(() => fetch(url, requestOptions));
-    }
-
-    /**
-     * Make Mouser API request with retry logic
-     * @param {string} endpoint - API endpoint
-     * @param {Object} options - Request options
-     * @returns {Promise<Object>} API response data
-     */
-    async makeMouserRequest(endpoint, options = {}) {
-        const cred = this.credentials.mouser;
-        if (!cred.apiKey) {
-            throw new Error('Mouser not authenticated');
-        }
-
-        const params = new URLSearchParams({
-            apiKey: cred.apiKey,
-            ...options.params
         });
-
-        const url = `${this.config.MOUSER.BASE_URL}${endpoint}?${params.toString()}`;
-        const requestOptions = {
-            method: options.method || 'GET',
-            headers: {
-                'Accept': 'application/json',
-                ...options.headers
-            }
-        };
-
-        if (options.data) {
-            requestOptions.headers['Content-Type'] = 'application/json';
-            requestOptions.body = JSON.stringify(options.data);
-        }
-
-        return this.apiCallWithRetry(() => fetch(url, requestOptions));
+        
+        const searchResults = await Promise.all(searchPromises);
+        
+        // Organize results by provider
+        searchResults.forEach(({ provider, result, error }) => {
+            results[provider] = error ? { error } : result;
+        });
+        
+        return results;
     }
 
     /**
-     * API call with retry logic and proper error handling
-     * @param {Function} apiCall - Function that returns a fetch promise
-     * @returns {Promise<Object>} Parsed response data
+     * Get product details from specific provider
+     * @param {string} provider - Provider name
+     * @param {string} partNumber - Part number
+     * @returns {Promise<Object>} Product details
      */
-    async apiCallWithRetry(apiCall) {
-        let lastError;
+    async getProductDetails(provider, partNumber) {
+        await this.initialize();
         
-        for (let attempt = 0; attempt <= this.config.MAX_RETRIES; attempt++) {
-            try {
-                const response = await apiCall();
-                
-                if (!response.ok) {
-                    const errorText = await response.text().catch(() => '');
-                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
-                }
-
-                return await response.json();
-            } catch (error) {
-                lastError = error;
-                
-                // Don't retry on certain HTTP status codes
-                if (error.message.includes('401') || error.message.includes('403') || 
-                    error.message.includes('404') || error.message.includes('400')) {
-                    throw error;
-                }
-
-                if (attempt < this.config.MAX_RETRIES) {
-                    console.log(`API call failed (attempt ${attempt + 1}/${this.config.MAX_RETRIES + 1}): ${error.message}. Retrying...`);
-                    await this.sleep(this.config.RETRY_DELAY * (attempt + 1));
-                }
-            }
+        const providerInstance = this.providers[provider];
+        if (!providerInstance) {
+            throw new Error(`Unknown provider: ${provider}`);
         }
-
-        throw lastError;
+        
+        if (provider === 'digikey') {
+            return await providerInstance.getProductDetails(partNumber);
+        } else if (provider === 'mouser') {
+            return await providerInstance.getPartDetails(partNumber);
+        }
+        
+        throw new Error(`Product details not supported for provider: ${provider}`);
     }
 
     /**
-     * Set API status and emit event
-     * @param {string} provider - 'digikey' or 'mouser'
-     * @param {string} status - Status value
+     * Get status for all providers
+     * @returns {Object} Unified status
      */
-    setStatus(provider, status) {
-        if (this.credentials[provider]) {
-            this.credentials[provider].status = status;
-        }
-        
-        // Emit status change event
-        window.dispatchEvent(new CustomEvent('apiStatusChange', {
-            detail: { provider, status }
-        }));
-        
-        console.log(`API Status: ${provider} -> ${status}`);
-    }
-
-    /**
-     * Get current API status
-     * @param {string} provider - Optional provider filter
-     * @returns {Object} Status information
-     */
-    getStatus(provider = null) {
-        if (provider) {
+    getStatus() {
+        if (!this.initialized) {
             return {
-                status: this.credentials[provider]?.status || 'inactive',
-                authenticated: this.isAuthenticated(provider)
+                digikey: { status: 'initializing', authenticated: false },
+                mouser: { status: 'initializing', authenticated: false }
             };
         }
         
         return {
-            digikey: this.getStatus('digikey'),
-            mouser: this.getStatus('mouser')
+            digikey: this.providers.digikey?.getStatus() || { status: 'unavailable', authenticated: false },
+            mouser: this.providers.mouser?.getStatus() || { status: 'unavailable', authenticated: false }
         };
     }
 
@@ -456,47 +277,107 @@ class ApiManager {
      * @returns {boolean} Authentication status
      */
     isAuthenticated(provider) {
+        if (!this.initialized) return false;
+        
+        const providerInstance = this.providers[provider];
+        if (!providerInstance) return false;
+        
         if (provider === 'digikey') {
-            const cred = this.credentials.digikey;
-            return !!(cred.token && cred.expiry > Date.now());
+            return providerInstance.isAuthenticated();
         } else if (provider === 'mouser') {
-            return !!(this.credentials.mouser.apiKey);
+            return providerInstance.hasValidCredentials();
         }
+        
         return false;
     }
 
     /**
-     * Clear all authentication data
+     * Get comprehensive system metrics
+     * @returns {Object} System metrics
      */
-    clearAuth() {
-        this.credentials = {
-            digikey: {
-                clientId: null,
-                clientSecret: null,
-                environment: 'production',
-                token: null,
-                expiry: null,
-                status: 'inactive'
-            },
-            mouser: {
-                apiKey: null,
-                status: 'inactive'
-            }
-        };
+    getSystemMetrics() {
+        if (!this.initialized) {
+            return { status: 'not_initialized' };
+        }
         
-        console.log('API authentication cleared');
+        return {
+            digikey: this.providers.digikey?.getMetrics() || null,
+            mouser: this.providers.mouser?.getMetrics() || null,
+            initialized: this.initialized,
+            uptime: Date.now() - (this.initializationTime || Date.now())
+        };
     }
 
     /**
-     * Sleep utility for delays
-     * @param {number} ms - Milliseconds to sleep
-     * @returns {Promise} Sleep promise
+     * Clear all provider data
      */
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    clearAll() {
+        Object.values(this.providers).forEach(provider => {
+            if (provider && provider.clearAll) {
+                provider.clearAll();
+            }
+        });
+        
+        console.log('All API provider data cleared');
+    }
+
+    /**
+     * Get provider instance
+     * @param {string} provider - Provider name
+     * @returns {Object|null} Provider instance
+     */
+    getProvider(provider) {
+        return this.providers[provider] || null;
+    }
+
+    /**
+     * Check if system is ready
+     * @returns {boolean} Ready status
+     */
+    isReady() {
+        return this.initialized && 
+               this.providers.digikey && 
+               this.providers.mouser;
+    }
+
+    /**
+     * Wait for system to be ready
+     * @param {number} timeout - Timeout in milliseconds
+     * @returns {Promise<boolean>} Ready status
+     */
+    async waitForReady(timeout = 10000) {
+        const startTime = Date.now();
+        
+        while (!this.isReady() && (Date.now() - startTime) < timeout) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        return this.isReady();
+    }
+
+    /**
+     * Destroy all providers and clean up
+     */
+    destroy() {
+        Object.values(this.providers).forEach(provider => {
+            if (provider && provider.destroy) {
+                provider.destroy();
+            }
+        });
+        
+        this.providers = { digikey: null, mouser: null };
+        this.initialized = false;
+        this.initializationPromise = null;
+        
+        console.log('API Manager destroyed');
     }
 }
 
-// Global instance
-const apiManager = new ApiManager();
-window.apiManager = apiManager;
+// Create global instance when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.apiManager = new UnifiedApiManager();
+    });
+} else {
+    window.apiManager = new UnifiedApiManager();
+}
