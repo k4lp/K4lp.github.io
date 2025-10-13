@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K4LP Engineering Tools</title>
     <link rel="stylesheet" href="css/site.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔧</text></svg>">
 </head>
 <body>
     <main class="main-content">
@@ -32,11 +33,25 @@
         </div>
     </footer>
 
-    <!-- Load JavaScript modules -->
+    <!-- Load JavaScript modules in dependency order -->
+    <!-- 1. Base utilities -->
     <script src="js/common/storage.js"></script>
-    <script src="js/common/api.js"></script>
     <script src="js/common/utils.js"></script>
+    
+    <!-- 2. Base API framework -->
+    <script src="js/common/base-api.js"></script>
+    
+    <!-- 3. API providers -->
+    <script src="js/providers/digikey-api.js"></script>
+    <script src="js/providers/mouser-api.js"></script>
+    
+    <!-- 4. Unified API manager -->
+    <script src="js/common/api.js"></script>
+    
+    <!-- 5. Core systems -->
     <script src="js/core/navigation.js"></script>
+    
+    <!-- 6. Page-specific functionality -->
     <script src="js/pages/index/index.js"></script>
 </body>
 </html>
