@@ -1,45 +1,17 @@
 /**
  * K4LP Engineering Tools - Master Stylesheet
  * Swiss Minimalist Design System
- * Modular CSS Architecture - 2000+ lines total
- * 
- * This is the single CSS file referenced by all HTML pages
- * All styling is contained within these imported modules
+ * Enhanced with error handling and improved UI elements
  * 
  * Design Principles:
  * - Swiss minimalist aesthetics
  * - Monochrome color palette
  * - System fonts for reliability
  * - Clean, functional design
- * - No unnecessary animations
  * - Professional engineering focus
  */
 
-/* ===== CSS MODULE IMPORTS ===== */
-
-/* Base styles - Typography, reset, variables, core elements */
-@import url('./base.css');
-
-/* Layout system - Grid, flexbox, containers, spacing */
-@import url('./layout.css');
-
-/* Components - Buttons, forms, cards, modals, tables */
-@import url('./components.css');
-
-/* Navigation - Navbar, footer, breadcrumbs, pagination */
-@import url('./navigation.css');
-
-/* Pages - Page-specific styling and layouts */
-@import url('./pages.css');
-
-/* Utilities - Helper classes, spacing, text, responsive */
-@import url('./utilities.css');
-
-/* Responsive - Media queries, breakpoints, device optimizations */
-@import url('./responsive.css');
-
 /* ===== RELIABLE TYPOGRAPHY SYSTEM ===== */
-/* Using system monospace fonts for consistent rendering across all platforms */
 body {
     font-family: 
         'SF Mono',               /* macOS monospace */
@@ -95,7 +67,6 @@ body {
     gap: 8px;
 }
 
-/* Remove the square - no nav-brand-logo */
 .nav-brand-link {
     font-size: 16px;
     font-weight: 500;
@@ -174,6 +145,123 @@ body {
     padding: 0 20px;
 }
 
+/* ===== PAGE HEADER ===== */
+.page-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.page-header h1 {
+    font-size: 28px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    color: #000000;
+}
+
+.page-header p {
+    font-size: 16px;
+    color: #666666;
+    margin: 0;
+}
+
+/* ===== TOOLS GRID ===== */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+}
+
+.tool-card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    transition: box-shadow 0.2s ease;
+}
+
+.tool-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tool-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.tool-icon {
+    font-size: 24px;
+    width: 32px;
+    text-align: center;
+}
+
+.tool-info h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #000000;
+}
+
+.tool-status {
+    font-size: 12px;
+    color: #666666;
+    margin-top: 2px;
+}
+
+.tool-description {
+    margin-bottom: 16px;
+}
+
+.tool-description p {
+    margin: 0;
+    color: #333333;
+    font-size: 14px;
+}
+
+.tool-categories {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.category-tag {
+    background: #f0f0f0;
+    color: #333333;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.tool-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.tool-btn {
+    flex: 1;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tool-btn:hover:not(:disabled) {
+    background-color: #333333;
+}
+
+.tool-btn:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
 /* ===== MODAL SYSTEM ===== */
 .modal {
     position: fixed;
@@ -206,7 +294,7 @@ body {
     border: 1px solid #cccccc;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: 600px;
     max-height: 80vh;
     overflow: hidden;
     display: flex;
@@ -223,21 +311,25 @@ body {
 
 .modal-title {
     margin: 0;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 500;
+    color: #000000;
 }
 
 .close-btn {
     background: none;
     border: none;
-    font-size: 14px;
+    font-size: 18px;
     color: #666666;
     cursor: pointer;
     padding: 4px 8px;
     font-family: inherit;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
 }
 
 .close-btn:hover {
+    background-color: #f0f0f0;
     color: #000000;
 }
 
@@ -245,6 +337,235 @@ body {
     padding: 20px;
     overflow-y: auto;
     flex: 1;
+}
+
+/* ===== SETTINGS SECTIONS ===== */
+.settings-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.settings-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.settings-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #000000;
+}
+
+.api-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #eeeeee;
+}
+
+/* ===== FORMS ===== */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #333333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #ffffff;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #666666;
+    box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.1);
+}
+
+.form-help {
+    display: block;
+    font-size: 12px;
+    color: #666666;
+    margin-top: 4px;
+}
+
+.form-help a {
+    color: #000000;
+    text-decoration: underline;
+}
+
+.form-help a:hover {
+    color: #333333;
+}
+
+/* ===== ERROR MESSAGES ===== */
+.error-message {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    color: #c53030;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+    display: inline-block;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+    text-align: center;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: #000000;
+    color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #333333;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #333333;
+    border: 1px solid #cccccc;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #eeeeee;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c82333;
+}
+
+/* ===== STATUS INDICATORS ===== */
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-connecting {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ===== NOTIFICATIONS ===== */
+.notification {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 60;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #666666;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    margin-left: 8px;
+}
+
+.notification-close:hover {
+    color: #000000;
+}
+
+.notification-success {
+    border-left: 4px solid #28a745;
+}
+
+.notification-error {
+    border-left: 4px solid #dc3545;
+}
+
+.notification-info {
+    border-left: 4px solid #17a2b8;
+}
+
+.notification-warning {
+    border-left: 4px solid #ffc107;
 }
 
 /* ===== FOOTER ===== */
@@ -280,137 +601,6 @@ body {
     color: #000000;
 }
 
-/* ===== FORMS ===== */
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 4px;
-    color: #333333;
-}
-
-.form-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #cccccc;
-    border-radius: 4px;
-    font-size: 14px;
-    font-family: inherit;
-    background: #ffffff;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #666666;
-    box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.1);
-}
-
-/* ===== BUTTONS ===== */
-.btn {
-    display: inline-block;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-family: inherit;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-
-.btn-primary {
-    background: #000000;
-    color: #ffffff;
-}
-
-.btn-primary:hover {
-    background: #333333;
-}
-
-.btn-secondary {
-    background: #f5f5f5;
-    color: #333333;
-    border: 1px solid #cccccc;
-}
-
-.btn-secondary:hover {
-    background: #eeeeee;
-}
-
-.btn-danger {
-    background: #dc3545;
-    color: #ffffff;
-}
-
-.btn-danger:hover {
-    background: #c82333;
-}
-
-/* ===== STATUS INDICATORS ===== */
-.status {
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.status-active {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-inactive {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.status-connecting {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.status-error {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-/* ===== NOTIFICATIONS ===== */
-.notification {
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    background: #ffffff;
-    border: 1px solid #cccccc;
-    border-radius: 4px;
-    padding: 12px 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 60;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s ease;
-}
-
-.notification.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.notification-success {
-    border-left: 4px solid #28a745;
-}
-
-.notification-error {
-    border-left: 4px solid #dc3545;
-}
-
-.notification-info {
-    border-left: 4px solid #17a2b8;
-}
-
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
     .nav-container {
@@ -430,15 +620,37 @@ body {
         padding: 0 16px;
     }
     
+    .tools-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
     .modal-content {
         width: 95%;
         max-height: 90vh;
+        max-width: none;
     }
     
     .footer-content {
         flex-direction: column;
         gap: 8px;
         text-align: center;
+    }
+    
+    .settings-actions {
+        flex-direction: column;
+    }
+    
+    .api-status-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .notification {
+        right: 10px;
+        left: 10px;
+        min-width: auto;
     }
 }
 
@@ -451,7 +663,6 @@ body {
     }
 }
 
-/* High contrast mode support */
 @media (prefers-contrast: high) {
     .navbar {
         border-bottom-width: 2px;
@@ -462,9 +673,12 @@ body {
         background-color: #000000;
         color: #ffffff;
     }
+    
+    .form-input:focus {
+        border-width: 2px;
+    }
 }
 
-/* ===== FOCUS MANAGEMENT ===== */
 .focus-visible:focus {
     outline: 2px solid #666666;
     outline-offset: 2px;
@@ -491,4 +705,4 @@ body {
     }
 }
 
-/* ===== END OF SITE.CSS ===== */
+/* ===== END OF ENHANCED SITE.CSS ===== */
