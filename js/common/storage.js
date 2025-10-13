@@ -1,105 +1,56 @@
 /**
- * Storage Utility - Clean localStorage management for API credentials
- * Single-responsibility module for client-side data persistence
- * Part of K4LP Engineering Tools - Swiss Minimalist Design
+ * Clean Storage Manager - Minimal localStorage API for K4LP Engineering Tools
+ * Single responsibility: API credentials and user data persistence
+ * No validation, no assumptions - just clean storage operations
  */
 
 class StorageManager {
     constructor() {
-        this.API_KEYS_KEY = 'k4lp_api_keys';
-        this.USER_DATA_KEY = 'k4lp_user_data';
+        this.keys = {
+            API_KEYS: 'k4lp_api_keys',
+            USER_DATA: 'k4lp_user_data'
+        };
     }
 
     /**
-     * Save API credentials to localStorage
-     * @param {Object} keys - API credentials object
-     * @param {string} keys.digikeyClientId - Digikey Client ID
-     * @param {string} keys.digikeyClientSecret - Digikey Client Secret
-     * @param {string} keys.mouserApiKey - Mouser API Key
+     * Save API credentials
+     * @param {Object} keys - API credentials
      * @returns {boolean} Success status
      */
     saveApiKeys(keys) {
         try {
-            const sanitizedKeys = {
-                digikeyClientId: keys.digikeyClientId?.trim() || '',
-                digikeyClientSecret: keys.digikeyClientSecret?.trim() || '',
-                mouserApiKey: keys.mouserApiKey?.trim() || '',
-                lastUpdated: new Date().toISOString()
+            const data = {
+                digikeyClientId: keys.digikeyClientId || '',
+                digikeyClientSecret: keys.digikeyClientSecret || '',
+                mouserApiKey: keys.mouserApiKey || '',
+                savedAt: Date.now()
             };
             
-            localStorage.setItem(this.API_KEYS_KEY, JSON.stringify(sanitizedKeys));
+            localStorage.setItem(this.keys.API_KEYS, JSON.stringify(data));
             return true;
         } catch (error) {
-            console.error('Failed to save API keys:', error);
+            console.error('Storage save failed:', error);
             return false;
         }
     }
 
     /**
-     * Retrieve API credentials from localStorage
-     * @returns {Object|null} API credentials or null if not found
+     * Get API credentials
+     * @returns {Object|null} Stored credentials or null
      */
     getApiKeys() {
         try {
-            const keys = localStorage.getItem(this.API_KEYS_KEY);
-            return keys ? JSON.parse(keys) : null;
-        } catch (error) {
-            console.error('Failed to retrieve API keys:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Clear all API credentials from localStorage
-     * @returns {boolean} Success status
-     */
-    clearApiKeys() {
-        try {
-            localStorage.removeItem(this.API_KEYS_KEY);
-            return true;
-        } catch (error) {
-            console.error('Failed to clear API keys:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Save user data to localStorage
-     * @param {Object} data - User data object
-     * @returns {boolean} Success status
-     */
-    saveUserData(data) {
-        try {
-            const userData = {
-                ...data,
-                lastUpdated: new Date().toISOString()
-            };
-            
-            localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(userData));
-            return true;
-        } catch (error) {
-            console.error('Failed to save user data:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Retrieve user data from localStorage
-     * @returns {Object|null} User data or null if not found
-     */
-    getUserData() {
-        try {
-            const data = localStorage.getItem(this.USER_DATA_KEY);
+            const data = localStorage.getItem(this.keys.API_KEYS);
             return data ? JSON.parse(data) : null;
         } catch (error) {
-            console.error('Failed to retrieve user data:', error);
+            console.error('Storage read failed:', error);
             return null;
         }
     }
 
     /**
-     * Check if API keys are present (not validated)
-     * @returns {Object} Status of each API key
+     * Check if credentials exist (NOT validated)
+     * @returns {Object} Existence status only
      */
     hasApiKeys() {
         const keys = this.getApiKeys();
@@ -110,12 +61,58 @@ class StorageManager {
     }
 
     /**
-     * Check localStorage support
-     * @returns {boolean} Whether localStorage is available
+     * Save user data
+     * @param {Object} data - User data to store
+     * @returns {boolean} Success status
      */
-    isSupported() {
+    saveUserData(data) {
         try {
-            const test = 'k4lp_storage_test';
+            const userData = { ...data, savedAt: Date.now() };
+            localStorage.setItem(this.keys.USER_DATA, JSON.stringify(userData));
+            return true;
+        } catch (error) {
+            console.error('User data save failed:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get user data
+     * @returns {Object|null} Stored user data or null
+     */
+    getUserData() {
+        try {
+            const data = localStorage.getItem(this.keys.USER_DATA);
+            return data ? JSON.parse(data) : null;
+        } catch (error) {
+            console.error('User data read failed:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Clear all stored data
+     * @returns {boolean} Success status
+     */
+    clearAll() {
+        try {
+            Object.values(this.keys).forEach(key => {
+                localStorage.removeItem(key);
+            });
+            return true;
+        } catch (error) {
+            console.error('Storage clear failed:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Check if localStorage is available
+     * @returns {boolean} Storage availability
+     */
+    isAvailable() {
+        try {
+            const test = '__storage_test__';
             localStorage.setItem(test, 'test');
             localStorage.removeItem(test);
             return true;
@@ -125,8 +122,6 @@ class StorageManager {
     }
 }
 
-// Create and export singleton instance
+// Global instance
 const storage = new StorageManager();
-
-// Expose global functions
 window.storage = storage;
