@@ -1,0 +1,16 @@
+/* Layout primitives */
+.container { max-width: var(--container-max); margin-inline: auto; padding-inline: var(--space-7); }
+
+header.navbar { position: fixed; top: 0; left: 0; right: 0; height: var(--nav-height); background: var(--color-bg); border-bottom: 1px solid var(--color-border); z-index: var(--z-navbar); display: flex; align-items: center; }
+header.navbar .inner { display: flex; align-items: center; justify-content: space-between; height: 100%; }
+
+main.site-main { min-height: calc(100vh - var(--nav-height) - var(--footer-height)); padding-top: calc(var(--nav-height) + var(--space-8)); padding-bottom: calc(var(--footer-height) + var(--space-8)); }
+
+footer.site-footer { position: fixed; bottom: 0; left: 0; right: 0; height: var(--footer-height); background: var(--color-bg); border-top: 1px solid var(--color-border); display: flex; align-items: center; z-index: var(--z-footer); }
+footer.site-footer .inner { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+
+/* Fullscreen overlay for settings */
+#settings-overlay-root { position: fixed; inset: 0; z-index: var(--z-overlay); display: none; }
+#settings-overlay-root.open { display: block; }
+#settings-overlay-root .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.3); }
+#settings-overlay-root .panel { position: absolute; right: 0; top: 0; height: 100%; width: min(520px, 100%); background: var(--color-bg); border-left: 1px solid var(--color-border); padding: var(--space-8); overflow: auto; }

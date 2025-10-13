@@ -1,0 +1,3 @@
+/* Contact page specific adjustments */
+.contact { display: grid; gap: var(--space-6); padding-block: var(--space-8); max-width: 720px; }
+.contact .lead { color: var(--color-fg-muted); }
