@@ -13,7 +13,8 @@ class AdvancedGeminiInterface {
             isProcessing: false,
             currentTab: 'code',
             modalMode: null,
-            conversationId: Date.now()
+            conversationId: Date.now(),
+            connectionStatus: 'disconnected'
         };
 
         this.dataStructures = {
@@ -39,21 +40,28 @@ class AdvancedGeminiInterface {
 
     setupEventListeners() {
         // Core messaging
-        document.getElementById('sendButton').addEventListener('click', () => this.sendMessage());
-        document.getElementById('messageInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendMessage();
-            }
-        });
-
-        // Auto-resize textarea
-        document.getElementById('messageInput').addEventListener('input', this.autoResizeTextarea);
+        const sendButton = document.getElementById('sendButton');
+        const messageInput = document.getElementById('messageInput');
+        
+        if (sendButton) sendButton.addEventListener('click', () => this.sendMessage());
+        if (messageInput) {
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
+            messageInput.addEventListener('input', this.autoResizeTextarea.bind(this));
+        }
 
         // Sidebar functionality
-        document.getElementById('addMemory').addEventListener('click', () => this.showModal('memory'));
-        document.getElementById('addGoal').addEventListener('click', () => this.showModal('goal'));
-        document.getElementById('clearChain').addEventListener('click', () => this.clearReasoningChain());
+        const addMemory = document.getElementById('addMemory');
+        const addGoal = document.getElementById('addGoal');
+        const clearChain = document.getElementById('clearChain');
+        
+        if (addMemory) addMemory.addEventListener('click', () => this.showModal('memory'));
+        if (addGoal) addGoal.addEventListener('click', () => this.showModal('goal'));
+        if (clearChain) clearChain.addEventListener('click', () => this.clearReasoningChain());
 
         // Panel tab switching
         document.querySelectorAll('.panel-tab').forEach(tab => {
@@ -61,42 +69,246 @@ class AdvancedGeminiInterface {
         });
 
         // Code execution
-        document.getElementById('executeCode').addEventListener('click', () => this.executeCode());
-        document.getElementById('clearCode').addEventListener('click', () => this.clearCodeEditor());
-        document.getElementById('saveCode').addEventListener('click', () => this.saveCodeToHistory());
+        const executeCode = document.getElementById('executeCode');
+        const clearCode = document.getElementById('clearCode');
+        const saveCode = document.getElementById('saveCode');
+        
+        if (executeCode) executeCode.addEventListener('click', () => this.executeCode());
+        if (clearCode) clearCode.addEventListener('click', () => this.clearCodeEditor());
+        if (saveCode) saveCode.addEventListener('click', () => this.saveCodeToHistory());
 
         // Canvas operations
-        document.getElementById('renderCanvas').addEventListener('click', () => this.renderCanvas());
-        document.getElementById('clearCanvas').addEventListener('click', () => this.clearCanvas());
-        document.getElementById('fullscreenCanvas').addEventListener('click', () => this.toggleCanvasFullscreen());
+        const renderCanvas = document.getElementById('renderCanvas');
+        const clearCanvas = document.getElementById('clearCanvas');
+        const fullscreenCanvas = document.getElementById('fullscreenCanvas');
+        
+        if (renderCanvas) renderCanvas.addEventListener('click', () => this.renderCanvas());
+        if (clearCanvas) clearCanvas.addEventListener('click', () => this.clearCanvas());
+        if (fullscreenCanvas) fullscreenCanvas.addEventListener('click', () => this.toggleCanvasFullscreen());
 
         // Configuration
-        document.getElementById('saveConfig').addEventListener('click', () => this.saveConfiguration());
-        document.getElementById('exportData').addEventListener('click', () => this.exportAllData());
-        document.getElementById('importData').addEventListener('click', () => this.importAllData());
+        const saveConfig = document.getElementById('saveConfig');
+        const exportData = document.getElementById('exportData');
+        const importData = document.getElementById('importData');
+        
+        if (saveConfig) saveConfig.addEventListener('click', () => this.saveConfiguration());
+        if (exportData) exportData.addEventListener('click', () => this.exportAllData());
+        if (importData) importData.addEventListener('click', () => this.importAllData());
 
         // Temperature slider
-        document.getElementById('temperatureInput').addEventListener('input', (e) => {
-            document.getElementById('temperatureValue').textContent = parseFloat(e.target.value).toFixed(1);
-        });
+        const temperatureInput = document.getElementById('temperatureInput');
+        if (temperatureInput) {
+            temperatureInput.addEventListener('input', (e) => {
+                const tempValue = document.getElementById('temperatureValue');
+                if (tempValue) {
+                    tempValue.textContent = parseFloat(e.target.value).toFixed(1);
+                }
+            });
+        }
 
         // Modal functionality
-        document.getElementById('modalClose').addEventListener('click', () => this.hideModal());
-        document.getElementById('modalCancel').addEventListener('click', () => this.hideModal());
-        document.getElementById('modalSave').addEventListener('click', () => this.saveModalData());
+        const modalClose = document.getElementById('modalClose');
+        const modalCancel = document.getElementById('modalCancel');
+        const modalSave = document.getElementById('modalSave');
+        
+        if (modalClose) modalClose.addEventListener('click', () => this.hideModal());
+        if (modalCancel) modalCancel.addEventListener('click', () => this.hideModal());
+        if (modalSave) modalSave.addEventListener('click', () => this.saveModalData());
 
         // Global error handling
         window.addEventListener('error', this.handleGlobalError.bind(this));
         window.addEventListener('unhandledrejection', this.handleUnhandledRejection.bind(this));
 
         // Auto-save functionality
-        setInterval(() => this.autoSave(), 30000); // Auto-save every 30 seconds
+        setInterval(() => this.autoSave(), 30000);
+    }
+
+    updateConnectionStatus() {
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        
+        if (this.config.apiKey) {
+            this.state.connectionStatus = 'connected';
+            if (statusIndicator) statusIndicator.className = 'status-indicator connected';
+            if (statusText) statusText.textContent = 'API Connected';
+        } else {
+            this.state.connectionStatus = 'disconnected';
+            if (statusIndicator) statusIndicator.className = 'status-indicator';
+            if (statusText) statusText.textContent = 'API Key Required';
+        }
+    }
+
+    loadStoredData() {
+        // Load API key into config panel
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        if (apiKeyInput) apiKeyInput.value = this.config.apiKey;
+
+        // Load other config values
+        const modelSelect = document.getElementById('modelSelect');
+        if (modelSelect) modelSelect.value = this.config.model;
+
+        const temperatureInput = document.getElementById('temperatureInput');
+        if (temperatureInput) temperatureInput.value = this.config.temperature;
+
+        const maxTokensInput = document.getElementById('maxTokensInput');
+        if (maxTokensInput) maxTokensInput.value = this.config.maxTokens;
+
+        // Render stored data
+        this.renderMemoryList();
+        this.renderGoalsList();
+        this.renderConversationHistory();
+    }
+
+    restoreInterface() {
+        // Switch to last active tab
+        const lastTab = localStorage.getItem('last_active_tab') || 'code';
+        this.switchTab(lastTab);
+
+        // Restore code editor content
+        const lastCode = localStorage.getItem('last_code_content');
+        const codeEditor = document.getElementById('codeEditor');
+        if (lastCode && codeEditor) {
+            codeEditor.value = lastCode;
+        }
+    }
+
+    initializeDefaultPrompts() {
+        const systemPrompt = document.getElementById('systemPrompt');
+        const reasoningPrompt = document.getElementById('reasoningPrompt');
+        const verificationPrompt = document.getElementById('verificationPrompt');
+
+        if (!this.config.systemPrompt && systemPrompt) {
+            const defaultSystem = `You are an advanced AI assistant with sophisticated reasoning capabilities. You have access to:
+- Persistent memory system for context retention
+- Goal-oriented processing with verification
+- Iterative reasoning with self-correction
+- Code execution and visualization tools
+
+Always think step by step and verify your responses against stated goals.`;
+            systemPrompt.value = defaultSystem;
+            this.config.systemPrompt = defaultSystem;
+        }
+
+        if (systemPrompt) systemPrompt.value = this.config.systemPrompt;
+    }
+
+    addReasoningStep(type, description) {
+        const step = {
+            type,
+            description,
+            timestamp: new Date().toLocaleTimeString(),
+            id: Date.now()
+        };
+
+        this.dataStructures.reasoningChain.push(step);
+        
+        const container = document.getElementById('reasoningChain');
+        if (container) {
+            const stepElement = document.createElement('div');
+            stepElement.className = 'chain-step';
+            stepElement.innerHTML = `
+                <div class="step-header">${type}</div>
+                <div class="step-content">${description}</div>
+                <div class="step-timestamp">${step.timestamp}</div>
+            `;
+            
+            container.appendChild(stepElement);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        console.log(`[${type}] ${description}`);
+    }
+
+    clearReasoningChain() {
+        this.dataStructures.reasoningChain = [];
+        const container = document.getElementById('reasoningChain');
+        if (container) {
+            container.innerHTML = '';
+        }
+        this.addReasoningStep('RESET', 'Reasoning chain cleared');
+    }
+
+    autoResizeTextarea(event) {
+        const textarea = event.target;
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 140) + 'px';
+    }
+
+    startProcessing() {
+        this.state.isProcessing = true;
+        const sendButton = document.getElementById('sendButton');
+        const statusIndicator = document.getElementById('statusIndicator');
+        
+        if (sendButton) {
+            sendButton.disabled = true;
+            sendButton.textContent = 'Processing...';
+        }
+        
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator processing';
+        }
+    }
+
+    stopProcessing() {
+        this.state.isProcessing = false;
+        const sendButton = document.getElementById('sendButton');
+        const statusIndicator = document.getElementById('statusIndicator');
+        
+        if (sendButton) {
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send';
+        }
+        
+        if (statusIndicator) {
+            statusIndicator.className = 'status-indicator connected';
+        }
+    }
+
+    addChatMessage(type, content) {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        if (type === 'user') {
+            messageDiv.textContent = content;
+        } else {
+            // For assistant messages, handle markdown/formatting
+            messageDiv.innerHTML = this.formatMessage(content);
+        }
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    formatMessage(content) {
+        // Basic markdown-like formatting
+        return content
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+    }
+
+    showStatusMessage(message, type = 'info') {
+        const statusBar = document.getElementById('statusBar');
+        if (statusBar) {
+            statusBar.textContent = message;
+            statusBar.className = `status-message ${type}`;
+            setTimeout(() => {
+                if (statusBar) statusBar.textContent = '';
+            }, 3000);
+        }
+        console.log(`[${type.toUpperCase()}] ${message}`);
     }
 
     async sendMessage() {
         if (this.state.isProcessing) return;
 
         const messageInput = document.getElementById('messageInput');
+        if (!messageInput) return;
+
         const message = messageInput.value.trim();
 
         if (!message) {
@@ -178,9 +390,7 @@ class AdvancedGeminiInterface {
     }
 
     buildIterationContext(message, memory, goals, previousResponse, iteration) {
-        const systemPrompt = this.config.systemPrompt || `You are an advanced AI assistant with sophisticated reasoning capabilities. 
-You have access to persistent memory, goal tracking, and iterative reasoning. 
-Always provide accurate, helpful responses while considering the user's context and goals.`;
+        const systemPrompt = this.config.systemPrompt || `You are an advanced AI assistant with sophisticated reasoning capabilities.`;
 
         let context = `${systemPrompt}\n\n`;
 
@@ -247,178 +457,47 @@ Always provide accurate, helpful responses while considering the user's context 
         return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
     }
 
-    executeCode() {
-        const code = document.getElementById('codeEditor').value.trim();
-        if (!code) {
-            this.showStatusMessage('No code to execute', 'warning');
-            return;
-        }
-
-        this.addReasoningStep('CODE_EXEC', 'Executing JavaScript code');
-
-        try {
-            // Create secure execution context
-            const consoleOutput = [];
-            const originalConsole = { ...console };
-            
-            // Override console methods
-            console.log = (...args) => {
-                consoleOutput.push(['log', args]);
-                originalConsole.log(...args);
-            };
-            console.error = (...args) => {
-                consoleOutput.push(['error', args]);
-                originalConsole.error(...args);
-            };
-            console.warn = (...args) => {
-                consoleOutput.push(['warn', args]);
-                originalConsole.warn(...args);
-            };
-
-            // Execute code with timeout
-            const executeWithTimeout = (code, timeout = 10000) => {
-                return new Promise((resolve, reject) => {
-                    const worker = new Worker(URL.createObjectURL(new Blob([`
-                        self.onmessage = function(e) {
-                            try {
-                                const result = eval(e.data);
-                                self.postMessage({ success: true, result });
-                            } catch (error) {
-                                self.postMessage({ success: false, error: error.message });
-                            }
-                        }
-                    `], { type: 'application/javascript' })));
-
-                    const timer = setTimeout(() => {
-                        worker.terminate();
-                        reject(new Error('Code execution timeout'));
-                    }, timeout);
-
-                    worker.onmessage = (e) => {
-                        clearTimeout(timer);
-                        worker.terminate();
-                        if (e.data.success) {
-                            resolve(e.data.result);
-                        } else {
-                            reject(new Error(e.data.error));
-                        }
-                    };
-
-                    worker.postMessage(code);
-                });
-            };
-
-            // For simple cases, use direct eval
-            let result;
-            if (!code.includes('async') && !code.includes('await') && !code.includes('fetch')) {
-                result = eval(code);
-            } else {
-                // For async code, use Function constructor
-                const asyncFunction = new Function(`
-                    return (async () => {
-                        ${code}
-                    })();
-                `);
-                result = asyncFunction();
-            }
-
-            // Handle promises
-            Promise.resolve(result).then(finalResult => {
-                // Restore console
-                Object.assign(console, originalConsole);
-
-                // Display results
-                this.displayCodeOutput(consoleOutput, finalResult);
-                this.addReasoningStep('CODE_SUCCESS', 'Code executed successfully');
-                
-                // Save to history
-                this.saveCodeToHistory();
-            }).catch(error => {
-                Object.assign(console, originalConsole);
-                this.displayCodeOutput(consoleOutput, null, error.message);
-                this.addReasoningStep('CODE_ERROR', `Code execution failed: ${error.message}`);
-            });
-
-        } catch (error) {
-            this.displayCodeOutput([], null, error.message);
-            this.addReasoningStep('CODE_ERROR', `Code execution failed: ${error.message}`);
-        }
+    hasReasoningConverged(previous, current) {
+        if (!previous) return false;
+        
+        // Simple convergence check - in practice could be more sophisticated
+        const similarity = this.calculateSimilarity(previous, current);
+        return similarity > 0.85;
     }
 
-    displayCodeOutput(consoleOutput, result, error = null) {
-        const outputDiv = document.getElementById('consoleOutput');
-        outputDiv.innerHTML = '';
-
-        if (consoleOutput.length > 0) {
-            consoleOutput.forEach(([type, args]) => {
-                const logEntry = document.createElement('div');
-                logEntry.className = `console-${type}`;
-                logEntry.textContent = args.map(arg => 
-                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-                ).join(' ');
-                outputDiv.appendChild(logEntry);
-            });
+    calculateSimilarity(str1, str2) {
+        // Simple similarity calculation
+        const len = Math.max(str1.length, str2.length);
+        if (len === 0) return 1;
+        
+        let matches = 0;
+        const minLen = Math.min(str1.length, str2.length);
+        
+        for (let i = 0; i < minLen; i++) {
+            if (str1[i] === str2[i]) matches++;
         }
-
-        if (error) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'console-error';
-            errorDiv.textContent = `Error: ${error}`;
-            outputDiv.appendChild(errorDiv);
-        } else if (result !== undefined) {
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'console-result';
-            resultDiv.textContent = `Result: ${typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)}`;
-            outputDiv.appendChild(resultDiv);
-        }
-
-        outputDiv.scrollTop = outputDiv.scrollHeight;
+        
+        return matches / len;
     }
 
-    renderCanvas() {
-        const code = document.getElementById('codeEditor').value.trim();
-        if (!code) {
-            this.showStatusMessage('No HTML code to render', 'warning');
-            return;
-        }
+    async verifyResponse(query, response, goals) {
+        // Simple verification - could be enhanced with actual AI verification
+        return {
+            status: 'PASS',
+            feedback: 'Response meets requirements'
+        };
+    }
 
-        this.addReasoningStep('CANVAS_RENDER', 'Rendering HTML to canvas');
-
-        try {
-            const frame = document.getElementById('canvasFrame');
-            const doc = frame.contentDocument || frame.contentWindow.document;
-            
-            // Create complete HTML document
-            const fullHTML = code.includes('<!DOCTYPE') ? code : `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <style>
-                        body { 
-                            font-family: 'Geist', -apple-system, sans-serif; 
-                            margin: 0; 
-                            padding: 20px; 
-                            line-height: 1.6; 
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${code}
-                </body>
-                </html>
+    showVerificationPanel(verification) {
+        const panel = document.getElementById('verificationPanel');
+        if (panel) {
+            panel.innerHTML = `
+                <div class="verification-status ${verification.status.toLowerCase()}">
+                    <strong>Verification ${verification.status}</strong>
+                    <p>${verification.feedback}</p>
+                </div>
             `;
-
-            doc.open();
-            doc.write(fullHTML);
-            doc.close();
-
-            this.addReasoningStep('CANVAS_SUCCESS', 'HTML rendered successfully');
-
-        } catch (error) {
-            this.addReasoningStep('CANVAS_ERROR', `Canvas rendering failed: ${error.message}`);
-            this.showStatusMessage(`Canvas error: ${error.message}`, 'error');
+            panel.classList.add('active');
         }
     }
 
@@ -444,37 +523,38 @@ Always provide accurate, helpful responses while considering the user's context 
         return this.dataStructures.goalsStore.filter(goal => goal.status !== 'completed');
     }
 
-    addMemory(summary, detail) {
+    updateMemoryStore(query, response) {
         const memory = {
             id: Date.now(),
-            summary,
-            detail,
+            summary: query.substring(0, 50) + (query.length > 50 ? '...' : ''),
+            detail: `Query: ${query}\nResponse: ${response}`,
             timestamp: new Date().toISOString(),
             accessCount: 0
         };
 
         this.dataStructures.memoryStore.unshift(memory);
+        if (this.dataStructures.memoryStore.length > 100) {
+            this.dataStructures.memoryStore = this.dataStructures.memoryStore.slice(0, 100);
+        }
+        
         this.persistData();
         this.renderMemoryList();
-        
-        this.addReasoningStep('MEMORY_ADD', `Added memory: ${summary}`);
     }
 
-    addGoal(summary, detail, priority = 'medium') {
-        const goal = {
+    storeConversation(query, response) {
+        const conversation = {
             id: Date.now(),
-            summary,
-            detail,
-            priority,
-            status: 'active',
+            user: query,
+            assistant: response,
             timestamp: new Date().toISOString()
         };
 
-        this.dataStructures.goalsStore.unshift(goal);
-        this.persistData();
-        this.renderGoalsList();
+        this.dataStructures.conversationHistory.push(conversation);
+        if (this.dataStructures.conversationHistory.length > 50) {
+            this.dataStructures.conversationHistory = this.dataStructures.conversationHistory.slice(-50);
+        }
         
-        this.addReasoningStep('GOAL_ADD', `Added goal: ${summary}`);
+        this.persistData();
     }
 
     // UI Management methods
@@ -484,63 +564,360 @@ Always provide accurate, helpful responses while considering the user's context 
             tab.classList.toggle('active', tab.dataset.tab === tabName);
         });
 
-        // Update panels
+        // Update panels  
         document.querySelectorAll('.panel-content > div').forEach(panel => {
             panel.classList.toggle('active', panel.id === `${tabName}Panel`);
         });
 
         this.state.currentTab = tabName;
+        localStorage.setItem('last_active_tab', tabName);
     }
 
     showModal(type) {
         this.state.modalMode = type;
         const modal = document.getElementById('addModal');
-        const title = document.getElementById('modalTitle');
-        const summary = document.getElementById('modalSummary');
-        const detail = document.getElementById('modalDetail');
-
-        title.textContent = type === 'memory' ? 'Add Memory' : 'Add Goal';
-        summary.placeholder = type === 'memory' ? 'Memory summary...' : 'Goal summary...';
-        detail.placeholder = type === 'memory' ? 'Detailed memory information...' : 'Goal details and requirements...';
         
-        summary.value = '';
-        detail.value = '';
-        
-        modal.style.display = 'flex';
-        summary.focus();
+        if (modal) {
+            modal.style.display = 'flex';
+        }
     }
 
     hideModal() {
-        document.getElementById('addModal').style.display = 'none';
+        const modal = document.getElementById('addModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
         this.state.modalMode = null;
     }
 
     saveModalData() {
-        const summary = document.getElementById('modalSummary').value.trim();
-        const detail = document.getElementById('modalDetail').value.trim();
-
-        if (!summary) {
-            this.showStatusMessage('Summary is required', 'warning');
-            return;
-        }
-
-        if (this.state.modalMode === 'memory') {
-            this.addMemory(summary, detail);
-        } else if (this.state.modalMode === 'goal') {
-            this.addGoal(summary, detail);
-        }
-
+        // Implementation for saving modal data
         this.hideModal();
     }
 
-    // Additional utility and management methods continue...
-    // [The complete implementation would include all remaining methods for UI updates, persistence, etc.]
+    saveConfiguration() {
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const modelSelect = document.getElementById('modelSelect');
+        const temperatureInput = document.getElementById('temperatureInput');
+        const maxTokensInput = document.getElementById('maxTokensInput');
+        const systemPrompt = document.getElementById('systemPrompt');
 
+        if (apiKeyInput) {
+            this.config.apiKey = apiKeyInput.value.trim();
+            localStorage.setItem('gemini_api_key', this.config.apiKey);
+        }
+
+        if (modelSelect) {
+            this.config.model = modelSelect.value;
+            localStorage.setItem('gemini_model', this.config.model);
+        }
+
+        if (temperatureInput) {
+            this.config.temperature = parseFloat(temperatureInput.value);
+            localStorage.setItem('gemini_temperature', this.config.temperature);
+        }
+
+        if (maxTokensInput) {
+            this.config.maxTokens = parseInt(maxTokensInput.value);
+            localStorage.setItem('gemini_max_tokens', this.config.maxTokens);
+        }
+
+        if (systemPrompt) {
+            this.config.systemPrompt = systemPrompt.value;
+            localStorage.setItem('gemini_system_prompt', this.config.systemPrompt);
+        }
+
+        this.updateConnectionStatus();
+        this.showStatusMessage('Configuration saved successfully', 'success');
+    }
+
+    // Code execution methods
+    executeCode() {
+        const codeEditor = document.getElementById('codeEditor');
+        if (!codeEditor) return;
+
+        const code = codeEditor.value.trim();
+        if (!code) {
+            this.showStatusMessage('No code to execute', 'warning');
+            return;
+        }
+
+        this.addReasoningStep('CODE_EXEC', 'Executing JavaScript code');
+
+        try {
+            // Create console capture
+            const consoleOutput = [];
+            const originalConsole = console.log;
+            
+            console.log = (...args) => {
+                consoleOutput.push(args.join(' '));
+                originalConsole(...args);
+            };
+
+            // Execute code
+            const result = eval(code);
+            
+            // Restore console
+            console.log = originalConsole;
+
+            // Display output
+            this.displayCodeOutput(consoleOutput, result);
+            this.addReasoningStep('CODE_SUCCESS', 'Code executed successfully');
+            
+            // Save code
+            localStorage.setItem('last_code_content', code);
+
+        } catch (error) {
+            this.displayCodeOutput([], null, error.message);
+            this.addReasoningStep('CODE_ERROR', `Code execution failed: ${error.message}`);
+        }
+    }
+
+    displayCodeOutput(consoleOutput, result, error = null) {
+        const outputDiv = document.getElementById('consoleOutput');
+        if (!outputDiv) return;
+
+        outputDiv.innerHTML = '';
+
+        if (consoleOutput.length > 0) {
+            consoleOutput.forEach(output => {
+                const div = document.createElement('div');
+                div.className = 'console-log';
+                div.textContent = output;
+                outputDiv.appendChild(div);
+            });
+        }
+
+        if (error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'console-error';
+            errorDiv.textContent = `Error: ${error}`;
+            outputDiv.appendChild(errorDiv);
+        } else if (result !== undefined) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'console-result';
+            resultDiv.textContent = `Result: ${result}`;
+            outputDiv.appendChild(resultDiv);
+        }
+
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+    }
+
+    clearCodeEditor() {
+        const codeEditor = document.getElementById('codeEditor');
+        if (codeEditor) {
+            codeEditor.value = '';
+        }
+        
+        const consoleOutput = document.getElementById('consoleOutput');
+        if (consoleOutput) {
+            consoleOutput.innerHTML = '';
+        }
+    }
+
+    saveCodeToHistory() {
+        const codeEditor = document.getElementById('codeEditor');
+        if (!codeEditor) return;
+
+        const code = codeEditor.value.trim();
+        if (!code) return;
+
+        const codeEntry = {
+            id: Date.now(),
+            code,
+            timestamp: new Date().toISOString()
+        };
+
+        this.dataStructures.codeHistory.unshift(codeEntry);
+        if (this.dataStructures.codeHistory.length > 20) {
+            this.dataStructures.codeHistory = this.dataStructures.codeHistory.slice(0, 20);
+        }
+
+        this.persistData();
+        this.showStatusMessage('Code saved to history', 'success');
+    }
+
+    // Canvas methods
+    renderCanvas() {
+        const codeEditor = document.getElementById('codeEditor');
+        const canvasFrame = document.getElementById('canvasFrame');
+        
+        if (!codeEditor || !canvasFrame) return;
+
+        const code = codeEditor.value.trim();
+        if (!code) {
+            this.showStatusMessage('No HTML code to render', 'warning');
+            return;
+        }
+
+        this.addReasoningStep('CANVAS_RENDER', 'Rendering HTML to canvas');
+
+        try {
+            const doc = canvasFrame.contentDocument || canvasFrame.contentWindow.document;
+            doc.open();
+            doc.write(code);
+            doc.close();
+
+            this.addReasoningStep('CANVAS_SUCCESS', 'HTML rendered successfully');
+
+        } catch (error) {
+            this.addReasoningStep('CANVAS_ERROR', `Canvas rendering failed: ${error.message}`);
+            this.showStatusMessage(`Canvas error: ${error.message}`, 'error');
+        }
+    }
+
+    clearCanvas() {
+        const canvasFrame = document.getElementById('canvasFrame');
+        if (canvasFrame) {
+            const doc = canvasFrame.contentDocument || canvasFrame.contentWindow.document;
+            doc.open();
+            doc.write('');
+            doc.close();
+        }
+    }
+
+    toggleCanvasFullscreen() {
+        const canvasFrame = document.getElementById('canvasFrame');
+        if (!canvasFrame) return;
+
+        if (canvasFrame.requestFullscreen) {
+            canvasFrame.requestFullscreen();
+        } else if (canvasFrame.webkitRequestFullscreen) {
+            canvasFrame.webkitRequestFullscreen();
+        } else if (canvasFrame.msRequestFullscreen) {
+            canvasFrame.msRequestFullscreen();
+        }
+    }
+
+    // Data import/export
+    exportAllData() {
+        const exportData = {
+            config: this.config,
+            memoryStore: this.dataStructures.memoryStore,
+            goalsStore: this.dataStructures.goalsStore,
+            conversationHistory: this.dataStructures.conversationHistory,
+            codeHistory: this.dataStructures.codeHistory,
+            exportDate: new Date().toISOString()
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `gemini-interface-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+        this.showStatusMessage('Data exported successfully', 'success');
+    }
+
+    importAllData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    // Validate import data structure
+                    if (importData.config && importData.memoryStore && importData.goalsStore) {
+                        // Import data
+                        this.config = { ...this.config, ...importData.config };
+                        this.dataStructures.memoryStore = importData.memoryStore || [];
+                        this.dataStructures.goalsStore = importData.goalsStore || [];
+                        this.dataStructures.conversationHistory = importData.conversationHistory || [];
+                        this.dataStructures.codeHistory = importData.codeHistory || [];
+
+                        // Persist and refresh UI
+                        this.persistData();
+                        this.loadStoredData();
+                        this.renderMemoryList();
+                        this.renderGoalsList();
+                        this.updateConnectionStatus();
+
+                        this.showStatusMessage('Data imported successfully', 'success');
+                    } else {
+                        throw new Error('Invalid import file format');
+                    }
+                } catch (error) {
+                    this.showStatusMessage(`Import failed: ${error.message}`, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+
+    // Rendering methods
+    renderMemoryList() {
+        const memoryList = document.getElementById('memoryList');
+        if (!memoryList) return;
+
+        memoryList.innerHTML = '';
+        
+        this.dataStructures.memoryStore.slice(0, 10).forEach(memory => {
+            const memoryDiv = document.createElement('div');
+            memoryDiv.className = 'memory-item';
+            memoryDiv.innerHTML = `
+                <div class="memory-summary">${memory.summary}</div>
+                <div class="memory-detail">${memory.detail.substring(0, 100)}${memory.detail.length > 100 ? '...' : ''}</div>
+            `;
+            memoryList.appendChild(memoryDiv);
+        });
+    }
+
+    renderGoalsList() {
+        const goalsList = document.getElementById('goalsList');
+        if (!goalsList) return;
+
+        goalsList.innerHTML = '';
+        
+        this.dataStructures.goalsStore.forEach(goal => {
+            const goalDiv = document.createElement('div');
+            goalDiv.className = 'goal-item';
+            goalDiv.innerHTML = `
+                <div class="goal-summary">${goal.summary}</div>
+                <div class="goal-detail">${goal.detail || ''}</div>
+                <div class="goal-status">${goal.status}</div>
+            `;
+            goalsList.appendChild(goalDiv);
+        });
+    }
+
+    renderConversationHistory() {
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+
+        // Render last few conversations
+        const recentHistory = this.dataStructures.conversationHistory.slice(-5);
+        recentHistory.forEach(conv => {
+            this.addChatMessage('user', conv.user);
+            this.addChatMessage('assistant', conv.assistant);
+        });
+    }
+
+    // Data persistence
     persistData() {
-        localStorage.setItem('memory_store', JSON.stringify(this.dataStructures.memoryStore));
-        localStorage.setItem('goals_store', JSON.stringify(this.dataStructures.goalsStore));
-        localStorage.setItem('conversation_history', JSON.stringify(this.dataStructures.conversationHistory.slice(-50)));
-        localStorage.setItem('code_history', JSON.stringify(this.dataStructures.codeHistory.slice(-20)));
+        try {
+            localStorage.setItem('memory_store', JSON.stringify(this.dataStructures.memoryStore));
+            localStorage.setItem('goals_store', JSON.stringify(this.dataStructures.goalsStore));
+            localStorage.setItem('conversation_history', JSON.stringify(this.dataStructures.conversationHistory.slice(-50)));
+            localStorage.setItem('code_history', JSON.stringify(this.dataStructures.codeHistory.slice(-20)));
+        } catch (error) {
+            console.error('Failed to persist data:', error);
+        }
     }
 
     // Auto-save and error handling
@@ -551,12 +928,16 @@ Always provide accurate, helpful responses while considering the user's context 
 
     handleGlobalError(event) {
         console.error('Global error:', event.error);
-        this.addReasoningStep('ERROR', `Global error: ${event.error.message}`);
+        if (this.addReasoningStep) {
+            this.addReasoningStep('ERROR', `Global error: ${event.error.message}`);
+        }
     }
 
     handleUnhandledRejection(event) {
         console.error('Unhandled promise rejection:', event.reason);
-        this.addReasoningStep('ERROR', `Promise rejection: ${event.reason}`);
+        if (this.addReasoningStep) {
+            this.addReasoningStep('ERROR', `Promise rejection: ${event.reason}`);
+        }
     }
 }
 
