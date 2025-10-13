@@ -7,54 +7,36 @@
     <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
-    <!-- Navigation will be inserted by JavaScript -->
-    
     <main class="main-content">
         <div class="container">
             <header class="page-header">
-                <h1>Engineering Tools</h1>
-                <p>PCB assembly and component management utilities</p>
+                <h1>K4LP Engineering Tools</h1>
+                <p>Professional utilities for PCB assembly and component procurement</p>
             </header>
 
-            <section class="tools-section">
-                <div class="tools-header">
-                    <div class="tools-title">
-                        <h2>Available Tools</h2>
-                        <p>Professional utilities for electronics engineering</p>
-                    </div>
-                    <div class="tools-filter">
-                        <div class="search-container">
-                            <input type="text" id="tool-search" placeholder="Search tools..." class="search-input">
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tools-container" class="tools-grid">
-                    <!-- Tools will be loaded by JavaScript -->
-                </div>
-                
-                <div id="search-results-count" class="search-results-count"></div>
-            </section>
+            <div class="tools-grid" id="tools-container">
+                <!-- Tools will be loaded by JavaScript -->
+            </div>
         </div>
     </main>
 
     <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-links">
-                <a href="#" class="footer-link">Privacy</a>
-                <a href="#" class="footer-link">Terms</a>
-                <a href="#" class="footer-link">Docs</a>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="contact.html" class="footer-link">Contact</a>
+                    <a href="https://github.com/k4lp/K4lp.github.io" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+                </div>
+                <p>&copy; <span id="footer-year">2025</span> Kalp Pariya</p>
             </div>
-            <p>&copy; <span id="footer-year">2025</span> Kalp Pariya</p>
         </div>
     </footer>
 
-    <!-- Settings Modal will be inserted by JavaScript -->
-
-    <!-- Scripts -->
+    <!-- Load JavaScript modules -->
     <script src="js/common/storage.js"></script>
-    <script src="js/shared/navigation-html.js"></script>
-    <script src="js/shared/navigation.js"></script>
+    <script src="js/common/api.js"></script>
+    <script src="js/common/utils.js"></script>
+    <script src="js/core/navigation.js"></script>
     <script src="js/pages/index/index.js"></script>
 </body>
 </html>
