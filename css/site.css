@@ -1,4 +1,8 @@
 /* Single entry stylesheet: site.css */
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/geist@latest/400.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/geist@latest/500.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/geist@latest/600.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@latest/400.css');
 @import url('./tokens.css');
 @import url('./base.css');
 @import url('./layout.css');
