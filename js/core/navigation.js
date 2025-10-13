@@ -1,7 +1,7 @@
 /**
- * Navigation Manager - Enhanced with robust API testing
- * Proper integration with improved ApiManager
- * Handles environment selection and comprehensive error reporting
+ * Navigation Manager - Enhanced for modular API system
+ * Integrates with UnifiedApiManager and provider-specific modules
+ * Ultra-robust with comprehensive error handling
  */
 
 class NavigationManager {
@@ -9,6 +9,7 @@ class NavigationManager {
         this.currentPage = this.getCurrentPage();
         this.settingsModal = null;
         this.isSettingsOpen = false;
+        this.apiReady = false;
         
         this.initialize();
     }
@@ -22,7 +23,31 @@ class NavigationManager {
         this.attachEventListeners();
         this.updateActiveNavigation();
         
+        // Wait for API manager to be ready
+        this.waitForApiManager();
+        
         console.log('Navigation Manager initialized');
+    }
+
+    /**
+     * Wait for API manager to be ready
+     */
+    async waitForApiManager() {
+        const maxWait = 10000; // 10 seconds
+        const startTime = Date.now();
+        
+        while (!this.apiReady && (Date.now() - startTime) < maxWait) {
+            if (window.apiManager && window.apiManager.isReady()) {
+                this.apiReady = true;
+                console.log('✓ API Manager ready for navigation');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!this.apiReady) {
+            console.warn('API Manager not ready within timeout');
+        }
     }
 
     /**
@@ -30,7 +55,7 @@ class NavigationManager {
      */
     createNavigation() {
         const existingNav = document.querySelector('.navbar');
-        if (existingNav) return; // Already exists
+        if (existingNav) return;
         
         const nav = document.createElement('nav');
         nav.className = 'navbar';
@@ -46,6 +71,10 @@ class NavigationManager {
                 </div>
                 
                 <div class="nav-actions">
+                    <div class="api-status-indicators" id="nav-status-indicators">
+                        <span class="status-dot status-inactive" title="Digikey: Not configured" data-provider="digikey"></span>
+                        <span class="status-dot status-inactive" title="Mouser: Not configured" data-provider="mouser"></span>
+                    </div>
                     <button id="settings-btn" class="settings-btn" type="button">
                         Settings
                     </button>
@@ -57,7 +86,7 @@ class NavigationManager {
     }
 
     /**
-     * Create enhanced settings modal with environment selection
+     * Create enhanced settings modal
      */
     createSettingsModal() {
         if (document.getElementById('settings-modal')) return;
@@ -80,24 +109,31 @@ class NavigationManager {
                             <div class="form-group">
                                 <label for="digikey-environment">Environment</label>
                                 <select id="digikey-environment" name="digikeyEnvironment" class="form-input">
-                                    <option value="production">Production</option>
+                                    <option value="production">Production (Live Data)</option>
                                     <option value="sandbox">Sandbox (Testing)</option>
                                 </select>
-                                <small class="form-help">Use Sandbox for testing, Production for live data</small>
+                                <small class="form-help">Use Sandbox for testing, Production for live component data</small>
                             </div>
                             
                             <div class="form-group">
                                 <label for="digikey-client-id">Client ID</label>
-                                <input type="text" id="digikey-client-id" name="digikeyClientId" class="form-input" placeholder="Enter Client ID">
+                                <input type="text" id="digikey-client-id" name="digikeyClientId" class="form-input" 
+                                       placeholder="Enter Digikey Client ID" spellcheck="false">
+                                <small class="form-help">Get from <a href="https://developer.digikey.com/" target="_blank" rel="noopener">Digikey Developer Portal</a></small>
                             </div>
                             
                             <div class="form-group">
                                 <label for="digikey-client-secret">Client Secret</label>
-                                <input type="password" id="digikey-client-secret" name="digikeyClientSecret" class="form-input" placeholder="Enter Client Secret">
+                                <input type="password" id="digikey-client-secret" name="digikeyClientSecret" class="form-input" 
+                                       placeholder="Enter Client Secret" spellcheck="false">
+                                <small class="form-help">Keep this secret and never share it</small>
                             </div>
                             
                             <div class="api-status-row">
-                                <span>Status: <span id="digikey-status" class="status status-inactive">Not Configured</span></span>
+                                <div class="status-info">
+                                    <span>Status: <span id="digikey-status" class="status status-inactive">Not Configured</span></span>
+                                    <div id="digikey-details" class="status-details"></div>
+                                </div>
                                 <button type="button" id="test-digikey" class="btn btn-secondary">Test Connection</button>
                             </div>
                             
@@ -109,16 +145,38 @@ class NavigationManager {
                             
                             <div class="form-group">
                                 <label for="mouser-api-key">API Key</label>
-                                <input type="password" id="mouser-api-key" name="mouserApiKey" class="form-input" placeholder="Enter API Key">
-                                <small class="form-help">Get your API key from <a href="https://www.mouser.com/api-hub" target="_blank" rel="noopener">Mouser API Hub</a></small>
+                                <input type="password" id="mouser-api-key" name="mouserApiKey" class="form-input" 
+                                       placeholder="Enter Mouser API Key" spellcheck="false">
+                                <small class="form-help">Get your API key from <a href="https://www.mouser.com/api-hub/" target="_blank" rel="noopener">Mouser API Hub</a></small>
                             </div>
                             
                             <div class="api-status-row">
-                                <span>Status: <span id="mouser-status" class="status status-inactive">Not Configured</span></span>
+                                <div class="status-info">
+                                    <span>Status: <span id="mouser-status" class="status status-inactive">Not Configured</span></span>
+                                    <div id="mouser-details" class="status-details"></div>
+                                </div>
                                 <button type="button" id="test-mouser" class="btn btn-secondary">Test Connection</button>
                             </div>
                             
                             <div id="mouser-error" class="error-message" style="display: none;"></div>
+                        </div>
+                        
+                        <div class="system-info" id="system-info">
+                            <h3>System Status</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">API Manager:</span>
+                                    <span class="info-value" id="api-manager-status">Loading...</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Storage:</span>
+                                    <span class="info-value" id="storage-status">Checking...</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Providers:</span>
+                                    <span class="info-value" id="providers-status">Initializing...</span>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="settings-actions">
@@ -146,18 +204,11 @@ class NavigationManager {
 
         // Settings modal events
         if (this.settingsModal) {
-            // Close modal
             this.settingsModal.querySelector('#close-settings').addEventListener('click', () => this.closeSettings());
             this.settingsModal.querySelector('.modal-overlay').addEventListener('click', () => this.closeSettings());
-            
-            // Form submission
             this.settingsModal.querySelector('#settings-form').addEventListener('submit', (e) => this.saveSettings(e));
-            
-            // Test buttons
             this.settingsModal.querySelector('#test-digikey').addEventListener('click', () => this.testDigikey());
             this.settingsModal.querySelector('#test-mouser').addEventListener('click', () => this.testMouser());
-            
-            // Clear button
             this.settingsModal.querySelector('#clear-settings').addEventListener('click', () => this.clearAllSettings());
         }
 
@@ -168,22 +219,58 @@ class NavigationManager {
             }
         });
 
-        // Listen for API status changes
+        // Listen for API events
         window.addEventListener('apiStatusChange', (e) => this.updateApiStatus(e.detail));
+        window.addEventListener('apiManagerReady', () => this.onApiManagerReady());
+        window.addEventListener('apiAuthSuccess', (e) => this.onAuthSuccess(e.detail));
+        window.addEventListener('apiAuthError', (e) => this.onAuthError(e.detail));
+    }
+
+    /**
+     * Handle API manager ready event
+     */
+    onApiManagerReady() {
+        this.apiReady = true;
+        this.updateSystemInfo();
+        this.updateNavStatusIndicators();
+        console.log('✓ Navigation integrated with API Manager');
+    }
+
+    /**
+     * Handle authentication success
+     * @param {Object} detail - Auth success details
+     */
+    onAuthSuccess(detail) {
+        console.log(`✓ ${detail.provider} authentication successful`);
+        this.updateNavStatusIndicators();
+    }
+
+    /**
+     * Handle authentication error
+     * @param {Object} detail - Auth error details
+     */
+    onAuthError(detail) {
+        console.error(`✗ ${detail.provider} authentication failed:`, detail.error);
     }
 
     /**
      * Open settings modal
      */
-    openSettings() {
+    async openSettings() {
         if (!this.settingsModal) return;
         
         this.settingsModal.classList.add('active');
         this.isSettingsOpen = true;
         document.body.style.overflow = 'hidden';
         
+        // Wait for API manager if not ready
+        if (!this.apiReady) {
+            await this.waitForApiManager();
+        }
+        
         this.loadCurrentSettings();
         this.updateStatusDisplay();
+        this.updateSystemInfo();
     }
 
     /**
@@ -196,7 +283,6 @@ class NavigationManager {
         this.isSettingsOpen = false;
         document.body.style.overflow = '';
         
-        // Clear any error messages
         this.clearErrorMessages();
     }
 
@@ -229,10 +315,9 @@ class NavigationManager {
     }
 
     /**
-     * Save settings with environment support
-     * @param {Event} e - Form submit event
+     * Save settings
      */
-    saveSettings(e) {
+    async saveSettings(e) {
         e.preventDefault();
         
         if (!window.storage) {
@@ -240,10 +325,15 @@ class NavigationManager {
             return;
         }
         
+        if (!this.apiReady) {
+            this.showError('API Manager not ready', 'general');
+            return;
+        }
+        
         const formData = new FormData(e.target);
         const credentials = {};
         
-        // Only save if not masked
+        // Collect form data (only if not masked)
         const digikeyClientId = formData.get('digikeyClientId');
         const digikeyClientSecret = formData.get('digikeyClientSecret');
         const digikeyEnvironment = formData.get('digikeyEnvironment');
@@ -262,13 +352,31 @@ class NavigationManager {
             credentials.mouserApiKey = mouserApiKey.trim();
         }
         
-        // Merge with existing credentials
+        // Save to storage
         const existingKeys = window.storage.getApiKeys() || {};
         const updatedKeys = { ...existingKeys, ...credentials };
         
         if (window.storage.saveApiKeys(updatedKeys)) {
+            // Update providers with new credentials
+            if (credentials.digikeyClientId || credentials.digikeyClientSecret) {
+                const digikeyCreds = {
+                    clientId: updatedKeys.digikeyClientId,
+                    clientSecret: updatedKeys.digikeyClientSecret,
+                    environment: updatedKeys.digikeyEnvironment || 'production'
+                };
+                window.apiManager.getProvider('digikey')?.setCredentials(digikeyCreds);
+            }
+            
+            if (credentials.mouserApiKey) {
+                const mouserCreds = {
+                    apiKey: updatedKeys.mouserApiKey
+                };
+                window.apiManager.getProvider('mouser')?.setCredentials(mouserCreds);
+            }
+            
             window.utils?.showNotification('Settings saved successfully', 'success');
             this.updateStatusDisplay();
+            this.updateNavStatusIndicators();
             this.clearErrorMessages();
         } else {
             this.showError('Failed to save settings', 'general');
@@ -276,11 +384,11 @@ class NavigationManager {
     }
 
     /**
-     * Test Digikey connection with comprehensive error handling
+     * Test Digikey connection
      */
     async testDigikey() {
-        if (!window.apiManager) {
-            this.showError('API Manager not available', 'digikey');
+        if (!this.apiReady) {
+            this.showError('API Manager not ready', 'digikey');
             return;
         }
         
@@ -303,12 +411,14 @@ class NavigationManager {
         
         try {
             console.log(`Testing Digikey connection (${environment})...`);
+            
             const result = await window.apiManager.testDigikeyConnection(clientId, clientSecret, environment);
             
             if (result) {
                 window.utils?.showNotification(`Digikey ${environment} connection successful`, 'success');
+                this.updateDigikeyDetails(`Connected to ${environment} environment`);
             } else {
-                this.showError(`Digikey ${environment} connection failed - please verify your credentials`, 'digikey');
+                this.showError(`Digikey ${environment} connection failed`, 'digikey');
             }
         } catch (error) {
             console.error('Digikey test error:', error);
@@ -316,15 +426,16 @@ class NavigationManager {
         } finally {
             testBtn.disabled = false;
             testBtn.textContent = originalText;
+            this.updateNavStatusIndicators();
         }
     }
 
     /**
-     * Test Mouser connection with comprehensive error handling
+     * Test Mouser connection
      */
     async testMouser() {
-        if (!window.apiManager) {
-            this.showError('API Manager not available', 'mouser');
+        if (!this.apiReady) {
+            this.showError('API Manager not ready', 'mouser');
             return;
         }
         
@@ -345,12 +456,14 @@ class NavigationManager {
         
         try {
             console.log('Testing Mouser connection...');
+            
             const result = await window.apiManager.testMouserConnection(apiKey);
             
             if (result) {
                 window.utils?.showNotification('Mouser connection successful', 'success');
+                this.updateMouserDetails('Connected successfully');
             } else {
-                this.showError('Mouser connection failed - please verify your API key', 'mouser');
+                this.showError('Mouser connection failed', 'mouser');
             }
         } catch (error) {
             console.error('Mouser test error:', error);
@@ -358,6 +471,145 @@ class NavigationManager {
         } finally {
             testBtn.disabled = false;
             testBtn.textContent = originalText;
+            this.updateNavStatusIndicators();
+        }
+    }
+
+    /**
+     * Update navigation status indicators
+     */
+    updateNavStatusIndicators() {
+        if (!this.apiReady) return;
+        
+        const indicators = document.getElementById('nav-status-indicators');
+        if (!indicators) return;
+        
+        const status = window.apiManager.getStatus();
+        
+        // Update Digikey indicator
+        const digikeyDot = indicators.querySelector('[data-provider="digikey"]');
+        if (digikeyDot) {
+            const digikeyStatus = status.digikey.authenticated ? 'active' : 
+                                status.digikey.status === 'error' ? 'error' : 'inactive';
+            digikeyDot.className = `status-dot status-${digikeyStatus}`;
+            digikeyDot.title = `Digikey: ${this.formatStatusForTooltip(status.digikey)}`;
+        }
+        
+        // Update Mouser indicator
+        const mouserDot = indicators.querySelector('[data-provider="mouser"]');
+        if (mouserDot) {
+            const mouserStatus = status.mouser.authenticated ? 'active' : 
+                               status.mouser.status === 'error' ? 'error' : 'inactive';
+            mouserDot.className = `status-dot status-${mouserStatus}`;
+            mouserDot.title = `Mouser: ${this.formatStatusForTooltip(status.mouser)}`;
+        }
+    }
+
+    /**
+     * Update system information display
+     */
+    updateSystemInfo() {
+        const apiManagerStatus = document.getElementById('api-manager-status');
+        const storageStatus = document.getElementById('storage-status');
+        const providersStatus = document.getElementById('providers-status');
+        
+        if (apiManagerStatus) {
+            apiManagerStatus.textContent = this.apiReady ? 'Ready' : 'Loading...';
+            apiManagerStatus.className = this.apiReady ? 'status-success' : 'status-warning';
+        }
+        
+        if (storageStatus) {
+            const available = window.storage?.isAvailable();
+            storageStatus.textContent = available ? 'Available' : 'Unavailable';
+            storageStatus.className = available ? 'status-success' : 'status-error';
+        }
+        
+        if (providersStatus) {
+            const providerCount = this.apiReady ? 2 : 0;
+            providersStatus.textContent = `${providerCount}/2 loaded`;
+            providersStatus.className = providerCount === 2 ? 'status-success' : 'status-warning';
+        }
+    }
+
+    /**
+     * Helper methods for status display
+     */
+    updateDigikeyDetails(message) {
+        const details = this.settingsModal?.querySelector('#digikey-details');
+        if (details) {
+            details.textContent = message;
+        }
+    }
+
+    updateMouserDetails(message) {
+        const details = this.settingsModal?.querySelector('#mouser-details');
+        if (details) {
+            details.textContent = message;
+        }
+    }
+
+    formatStatusForTooltip(statusObj) {
+        if (statusObj.authenticated) {
+            return 'Connected';
+        } else if (statusObj.hasCredentials) {
+            return 'Configured';
+        } else {
+            return 'Not configured';
+        }
+    }
+
+    /**
+     * Update API status display
+     */
+    updateApiStatus(statusChange) {
+        const { provider, status, message } = statusChange;
+        const statusElement = this.settingsModal?.querySelector(`#${provider}-status`);
+        
+        if (statusElement) {
+            statusElement.textContent = this.formatStatus(status);
+            statusElement.className = `status status-${status}`;
+        }
+        
+        // Update details if message provided
+        if (message) {
+            if (provider === 'digikey') {
+                this.updateDigikeyDetails(message);
+            } else if (provider === 'mouser') {
+                this.updateMouserDetails(message);
+            }
+        }
+        
+        this.updateNavStatusIndicators();
+    }
+
+    /**
+     * Update status display based on stored credentials
+     */
+    updateStatusDisplay() {
+        if (!window.storage || !this.apiReady) return;
+        
+        const status = window.apiManager.getStatus();
+        
+        // Update Digikey status
+        const digikeyStatus = this.settingsModal?.querySelector('#digikey-status');
+        if (digikeyStatus) {
+            const text = status.digikey.authenticated ? 'Connected' :
+                        status.digikey.hasCredentials ? 'Configured' : 'Not Configured';
+            const statusClass = status.digikey.authenticated ? 'active' : 'inactive';
+            
+            digikeyStatus.textContent = text;
+            digikeyStatus.className = `status status-${statusClass}`;
+        }
+        
+        // Update Mouser status
+        const mouserStatus = this.settingsModal?.querySelector('#mouser-status');
+        if (mouserStatus) {
+            const text = status.mouser.authenticated ? 'Connected' :
+                        status.mouser.hasCredentials ? 'Configured' : 'Not Configured';
+            const statusClass = status.mouser.authenticated ? 'active' : 'inactive';
+            
+            mouserStatus.textContent = text;
+            mouserStatus.className = `status status-${statusClass}`;
         }
     }
 
@@ -365,23 +617,22 @@ class NavigationManager {
      * Clear all settings
      */
     clearAllSettings() {
-        if (!confirm('Clear all saved data? This cannot be undone.')) {
+        if (!confirm('Clear all saved data? This will remove all API credentials and cannot be undone.')) {
             return;
         }
         
         if (window.storage?.clearAll()) {
-            window.utils?.showNotification('All data cleared', 'success');
-            
-            // Clear API manager authentication
             if (window.apiManager) {
-                window.apiManager.clearAuth();
+                window.apiManager.clearAll();
             }
             
-            // Reset form
+            window.utils?.showNotification('All data cleared', 'success');
+            
             const form = this.settingsModal.querySelector('#settings-form');
             form.reset();
             
             this.updateStatusDisplay();
+            this.updateNavStatusIndicators();
             this.clearErrorMessages();
         } else {
             this.showError('Failed to clear data', 'general');
@@ -389,72 +640,7 @@ class NavigationManager {
     }
 
     /**
-     * Update API status display from events
-     * @param {Object} statusChange - Status change event detail
-     */
-    updateApiStatus(statusChange) {
-        const { provider, status } = statusChange;
-        const statusElement = this.settingsModal?.querySelector(`#${provider}-status`);
-        
-        if (statusElement) {
-            statusElement.textContent = this.formatStatus(status);
-            statusElement.className = `status status-${status}`;
-        }
-    }
-
-    /**
-     * Update status display based on stored credentials
-     */
-    updateStatusDisplay() {
-        if (!window.storage) return;
-        
-        const hasKeys = window.storage.hasApiKeys();
-        
-        // Update Digikey status
-        const digikeyStatus = this.settingsModal?.querySelector('#digikey-status');
-        if (digikeyStatus) {
-            let status, text;
-            
-            if (window.apiManager?.isAuthenticated('digikey')) {
-                status = 'active';
-                text = 'Connected';
-            } else if (hasKeys.digikey) {
-                status = 'inactive';
-                text = 'Configured';
-            } else {
-                status = 'inactive';
-                text = 'Not Configured';
-            }
-            
-            digikeyStatus.textContent = text;
-            digikeyStatus.className = `status status-${status}`;
-        }
-        
-        // Update Mouser status
-        const mouserStatus = this.settingsModal?.querySelector('#mouser-status');
-        if (mouserStatus) {
-            let status, text;
-            
-            if (window.apiManager?.isAuthenticated('mouser')) {
-                status = 'active';
-                text = 'Connected';
-            } else if (hasKeys.mouser) {
-                status = 'inactive';
-                text = 'Configured';
-            } else {
-                status = 'inactive';
-                text = 'Not Configured';
-            }
-            
-            mouserStatus.textContent = text;
-            mouserStatus.className = `status status-${status}`;
-        }
-    }
-
-    /**
-     * Show error message in appropriate section
-     * @param {string} message - Error message
-     * @param {string} provider - 'digikey', 'mouser', or 'general'
+     * Show error message
      */
     showError(message, provider) {
         const errorElement = this.settingsModal?.querySelector(`#${provider}-error`);
@@ -467,7 +653,7 @@ class NavigationManager {
     }
 
     /**
-     * Clear all error messages
+     * Clear error messages
      */
     clearErrorMessages() {
         const errorElements = this.settingsModal?.querySelectorAll('.error-message');
@@ -481,8 +667,6 @@ class NavigationManager {
 
     /**
      * Format status for display
-     * @param {string} status - Status value
-     * @returns {string} Formatted status
      */
     formatStatus(status) {
         const statusMap = {
@@ -512,7 +696,6 @@ class NavigationManager {
 
     /**
      * Get current page name
-     * @returns {string} Current page filename
      */
     getCurrentPage() {
         const path = window.location.pathname;
