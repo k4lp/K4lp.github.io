@@ -3,141 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K4LP - Development Tools</title>
-    <link rel="stylesheet" href="css/site.css">
+    <title>Gemini Advanced Reasoning Interface</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <a href="#" class="nav-brand">K4LP</a>
-            <div class="nav-links">
-                <a href="#tools">Tools</a>
-                <a href="#gemini-chat">Gemini AI</a>
-                <a href="contact.html">Contact</a>
+    <div class="container">
+        <header class="header">
+            <h1>Gemini Advanced Reasoning Interface</h1>
+            <div class="api-config">
+                <input type="password" id="apiKey" placeholder="Enter Gemini API Key" />
+                <button id="saveKey">Save</button>
+                <span id="keyStatus"></span>
             </div>
-        </div>
-    </nav>
+        </header>
 
-    <main class="main-content">
-        <section class="hero">
-            <div class="container">
-                <h1>Development Tools</h1>
-                <p>Professional utilities for developers and engineers</p>
-            </div>
-        </section>
+        <div class="main-layout">
+            <!-- Left Panel - Data Structures -->
+            <div class="left-panel">
+                <div class="data-section">
+                    <h3>Memory Bank</h3>
+                    <div id="memoryList" class="data-list"></div>
+                    <button id="clearMemory">Clear All</button>
+                </div>
 
-        <section id="tools" class="tools-section">
-            <div class="container">
-                <h2>Available Tools</h2>
-                <div class="tools-grid">
-                    <div class="tool-card">
-                        <h3>Digikey Tool</h3>
-                        <p>BOM management and component sourcing with Digikey API integration</p>
-                        <a href="digikey-tool.html" class="tool-link">Access Tool</a>
-                    </div>
-                    <div class="tool-card">
-                        <h3>QR Scanner</h3>
-                        <p>Fast QR code scanning and processing utility</p>
-                        <a href="qr-scanner.html" class="tool-link">Access Tool</a>
-                    </div>
-                    <div class="tool-card">
-                        <h3>Salary Calculator</h3>
-                        <p>Comprehensive CTC to in-hand salary calculator for Indian tax structure</p>
-                        <a href="salary-calculator.html" class="tool-link">Access Tool</a>
-                    </div>
+                <div class="data-section">
+                    <h3>Goals</h3>
+                    <div id="goalsList" class="data-list"></div>
+                    <button id="setGoals">Set Goals</button>
+                </div>
+
+                <div class="data-section">
+                    <h3>Reasoning Chain</h3>
+                    <div id="reasoningChain" class="data-list"></div>
+                    <button id="clearReasoning">Clear</button>
                 </div>
             </div>
-        </section>
 
-        <section id="gemini-chat" class="gemini-section">
-            <div class="container">
+            <!-- Center Panel - Chat Interface -->
+            <div class="center-panel">
                 <div class="chat-container">
-                    <div class="chat-header">
-                        <h3>Gemini Reasoning Interface</h3>
-                        <div class="chat-controls">
-                            <select id="model-selector" class="model-select">
-                                <option value="pro">Gemini 2.5 Pro (Complex Reasoning)</option>
-                                <option value="flash" selected>Gemini 2.5 Flash (Standard)</option>
-                                <option value="lite">Gemini 2.5 Flash Lite (Fast)</option>
-                            </select>
-                            <button id="clear-chat" class="btn-clear">Clear</button>
-                        </div>
-                    </div>
-
-                    <div class="chat-messages" id="messages"></div>
-
-                    <div class="reasoning-panel" id="reasoning" style="display:none">
-                        <div class="reasoning-header">
-                            <h4>Internal Reasoning Chain</h4>
-                            <span class="iteration-counter">Iteration: <span id="iteration-count">0</span>/10</span>
-                        </div>
-                        <div id="reasoning-steps" class="reasoning-content"></div>
-                    </div>
-
-                    <div class="canvas-container" id="canvas-container" style="display:none">
-                        <div class="canvas-header">
-                            <h4>Canvas Output</h4>
-                            <button id="canvas-toggle" class="btn-toggle">Hide</button>
-                        </div>
-                        <iframe id="canvas" sandbox="allow-scripts allow-same-origin"></iframe>
-                    </div>
-
-                    <div class="chat-input-container">
-                        <div class="chat-status" id="chat-status">
-                            <span class="status-text">Ready</span>
-                            <div class="status-indicators">
-                                <span id="memory-count">Memory: 0</span>
-                                <span id="goal-status">Goals: -</span>
-                            </div>
-                        </div>
-                        <div class="chat-input">
-                            <textarea id="user-input" placeholder="Ask me anything... I'll use iterative reasoning to provide comprehensive answers." rows="3"></textarea>
-                            <div class="input-controls">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="show-reasoning"> Show reasoning process
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enable-canvas"> Enable canvas output
-                                </label>
-                                <button id="send-btn" class="btn-send" disabled>Send</button>
-                            </div>
+                    <div id="chatHistory" class="chat-history"></div>
+                    <div class="input-container">
+                        <textarea id="messageInput" placeholder="Enter your message..."></textarea>
+                        <div class="input-controls">
+                            <button id="executeCode">Execute JS</button>
+                            <button id="showCanvas">Canvas</button>
+                            <button id="sendMessage">Send</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
-    </main>
 
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 K4LP. Professional development tools.</p>
+                <!-- Code Execution Area -->
+                <div id="codeSection" class="code-section hidden">
+                    <h3>JavaScript Execution Environment</h3>
+                    <textarea id="codeInput" placeholder="Enter JavaScript code..."></textarea>
+                    <button id="runCode">Run Code</button>
+                    <div id="codeOutput" class="code-output"></div>
+                </div>
+
+                <!-- Canvas Display Area -->
+                <div id="canvasSection" class="canvas-section hidden">
+                    <h3>HTML Canvas Display</h3>
+                    <textarea id="htmlInput" placeholder="Enter HTML content..."></textarea>
+                    <button id="renderHtml">Render</button>
+                    <div id="htmlOutput" class="html-output"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel - System Status -->
+            <div class="right-panel">
+                <div class="status-section">
+                    <h3>System Status</h3>
+                    <div id="systemStatus">
+                        <div class="status-item">
+                            <span>API Status:</span>
+                            <span id="apiStatus">Disconnected</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Memory Items:</span>
+                            <span id="memoryCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Reasoning Steps:</span>
+                            <span id="reasoningCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls-section">
+                    <h3>Advanced Controls</h3>
+                    <label>
+                        <input type="checkbox" id="iterativeMode" checked>
+                        Iterative Reasoning
+                    </label>
+                    <label>
+                        <input type="checkbox" id="verificationMode" checked>
+                        Output Verification
+                    </label>
+                    <label>
+                        <input type="checkbox" id="memoryMode" checked>
+                        Auto Memory Storage
+                    </label>
+                    <button id="resetSession">Reset Session</button>
+                </div>
+            </div>
         </div>
-    </footer>
 
-    <!-- API Key Modal -->
-    <div id="api-key-modal" class="modal" style="display:none">
-        <div class="modal-content">
-            <h3>Gemini API Configuration</h3>
-            <p>Enter your Google AI API key to use the Gemini chat interface:</p>
-            <input type="password" id="api-key-input" placeholder="Enter API key...">
-            <div class="modal-actions">
-                <button id="save-api-key" class="btn-primary">Save</button>
-                <button id="cancel-api-key" class="btn-secondary">Cancel</button>
+        <!-- Goal Setting Modal -->
+        <div id="goalModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Set Conversation Goals</h3>
+                <textarea id="goalInput" placeholder="Define your goals for this conversation..."></textarea>
+                <div class="modal-buttons">
+                    <button id="saveGoals">Save Goals</button>
+                    <button id="cancelGoals">Cancel</button>
+                </div>
             </div>
-            <p class="modal-note">Your API key is stored locally and never transmitted to our servers.</p>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="js/libs/gemini-ai.min.js"></script>
-    <script src="js/common/data-structures.js"></script>
-    <script src="js/common/persistence.js"></script>
-    <script src="js/common/gemini-client.js"></script>
-    <script src="js/common/canvas-renderer.js"></script>
-    <script src="js/chat/prompt-templates.js"></script>
-    <script src="js/chat/verification-system.js"></script>
-    <script src="js/chat/reasoning-engine.js"></script>
-    <script src="js/chat/chat-ui.js"></script>
-    <script src="js/pages/index.js"></script>
+    <script src="dataStructures.js"></script>
+    <script src="geminiApi.js"></script>
+    <script src="reasoningEngine.js"></script>
+    <script src="codeExecutor.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
