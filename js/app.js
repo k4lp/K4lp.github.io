@@ -2,6 +2,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM fully loaded and parsed');
 
+  const keyring = new KeyRing();
+  const memory = new MemoryStore();
   // Get all DOM element references
   const els = {
     settings: document.getElementById('settings'),
