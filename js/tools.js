@@ -88,3 +88,24 @@ class ExternalTools {
   }
 }
 window.ExternalTools = ExternalTools;
+
+async function runUserJS(code){
+  // WARNING: This uses eval() and can execute arbitrary code.
+  // This is a major security risk in a real application.
+  // It is implemented here as per the user's specific request.
+  console.log(`Executing JS:`, code);
+  let output = '';
+  let lastValue = undefined;
+  try {
+    const oldLog = console.log;
+    console.log = (...args) => {
+      output += args.map(a => JSON.stringify(a)).join(' ') + '\n';
+      oldLog.apply(console, args);
+    };
+    lastValue = await eval(code);
+    console.log = oldLog; // Restore original console.log
+  } catch (e) {
+    output += `Execution Error: ${e.message}\nStack: ${e.stack}`;
+  }
+  return { output, lastValue };
+}

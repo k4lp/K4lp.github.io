@@ -24,8 +24,29 @@ class KeyRing {
     return this.getActive();
   }
   markRateLimited(){
-    // Simple rotation on 429; production could add backoff timestamps.
+    // Set a cool-off period for the current key before rotating.
+    this.state.coolOff[this.state.index] = Date.now() + 60000; // 1 minute cool-off
+    this.save();
     return this.rotate();
+  }
+
+  rotate(){
+    const n = this.state.keys.length;
+    const now = Date.now();
+    for(let step=1; step<=n; step++){
+      const ni = (this.state.index + step) % n;
+      // Rotate to the next key that is not in a cool-off period.
+      if(this.state.keys[ni] && now > (this.state.coolOff[ni] || 0)){
+        this.state.index = ni;
+        this.save();
+        return this.getActive();
+      }
+    }
+    // If all keys are in cool-off, return the one that will be available soonest.
+    const soonestKeyIndex = this.state.coolOff.indexOf(Math.min(...this.state.coolOff));
+    this.state.index = soonestKeyIndex;
+    this.save();
+    return this.getActive();
   }
 }
 window.KeyRing = KeyRing;
