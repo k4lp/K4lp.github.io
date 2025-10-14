@@ -1,4 +1,5 @@
 // js/prompts.js
+
 const EXTERNAL_TOOLS_SPEC = `
 You have access ONLY to the External Tools system described here.
 Tools:
@@ -48,5 +49,6 @@ Guidance:
 
 ${EXTERNAL_TOOLS_SPEC}
 `;
+
 window.EXTERNAL_TOOLS_SPEC = EXTERNAL_TOOLS_SPEC;
 window.SYSTEM_PROMPT = SYSTEM_PROMPT;

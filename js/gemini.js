@@ -1,15 +1,21 @@
 // js/gemini.js
+
 class GeminiClient {
-  constructor({keyring, getModel, systemPromptProvider}){
+  constructor({ keyring, getModel, systemPromptProvider }) {
     this.keyring = keyring;
     this.getModel = getModel;
     this.systemPromptProvider = systemPromptProvider;
     this.base = 'https://generativelanguage.googleapis.com/v1beta';
   }
 
-  async streamChat({messages, onText, onPartialJSON}){
+  async streamChat({ messages, onText, onPartialJSON }) {
     const model = this.getModel();
     const key = this.keyring.getActive();
+
+    if (!key) {
+      throw new Error('API key is not set. Please set it in the settings.');
+    }
+
     const url = `${this.base}/models/${encodeURIComponent(model)}:streamGenerateContent?key=${encodeURIComponent(key)}`;
 
     const body = {
@@ -24,35 +30,36 @@ class GeminiClient {
       }
     };
 
-    try{
+    try {
       await streamSSE(url, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       }, (data) => {
-        try{
+        try {
           const obj = JSON.parse(data);
           const parts = obj?.candidates?.[0]?.content?.parts;
-          if(parts){
-            for(const p of parts){
-              if(typeof p.text === 'string'){
+          if (parts) {
+            for (const p of parts) {
+              if (typeof p.text === 'string') {
                 onText(p.text);
-                if(onPartialJSON){
+                if (onPartialJSON) {
                   onPartialJSON(p.text);
                 }
               }
             }
           }
-        }catch(e){
+        } catch (e) {
           // Non-JSON SSE data chunks can be ignored.
         }
       });
-    } catch(e){
-      if(e.status === 429 || (e.body||"").toLowerCase().includes('rate')){
+    } catch (e) {
+      if (e.status === 429 || (e.body || "").toLowerCase().includes('rate')) {
         this.keyring.markRateLimited();
       }
       throw e;
     }
   }
 }
+
 window.GeminiClient = GeminiClient;
