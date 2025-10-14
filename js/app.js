@@ -122,6 +122,7 @@
   }
 
   function logTrace(msg){
+    chatState.iterative.push(msg);
     const line = document.createElement('div');
     line.textContent = msg;
     els.traceLog.appendChild(line);
@@ -145,6 +146,7 @@
     // Show user
     addMessage('user', userText);
     chatState.iterative = [];
+    els.traceLog.innerHTML = '';
     const bubble = addMessage('assistant', '');
 
     // Prepare messages
@@ -175,6 +177,8 @@
         if(tc){
           // Hide tool call from the chat, execute and continue (no append)
           executeToolCall(tc).catch(err=> logTool(`Tool error: ${err}`));
+          // Clear the buffer after processing the tool call
+          buffer = '';
           return;
         }
         // Otherwise, append visible prose incrementally (but keep minimal until final)
@@ -183,7 +187,14 @@
       onPartialJSON: (t)=>{
         // Lightly parse iterative reasoning markers if the model emits them as plain text
         if(t.includes('"iterative_reasoning"')){
-          logTrace('[update] iterative reasoning step');
+          try {
+            const reasoning = JSON.parse(t);
+            if(reasoning.iterative_reasoning){
+              logTrace(reasoning.iterative_reasoning);
+            }
+          } catch(e) {
+            // Ignore parsing errors
+          }
         }
       }
     });
@@ -207,8 +218,7 @@
     chatState.history.push({ role:'user', content: `Tool observation for ${tc.name}:\n${JSON.stringify(res).slice(0,4000)}` });
   }
 
-  els.composer.addEventListener('submit', async (e)=>{
-    e.preventDefault();
+  async function handleSubmit(){
     const text = els.prompt.value.trim();
     if(!text) return;
     els.prompt.value = '';
@@ -218,9 +228,25 @@
       const b = addMessage('assistant', '');
       appendToBubble(b, `Error: ${err.message||String(err)}`);
     }
+  }
+
+  els.composer.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    handleSubmit();
+  });
+  els.send.addEventListener('click', (e)=>{
+    e.preventDefault();
+    handleSubmit();
   });
 
   function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m])) }
   function truncate(s, n){ return s.length>n ? s.slice(0,n-1)+'…' : s }
+
+  // Auto-resize textarea
+  const initialHeight = els.prompt.scrollHeight;
+  els.prompt.addEventListener('input', ()=>{
+    els.prompt.style.height = 'auto';
+    els.prompt.style.height = `${Math.max(initialHeight, els.prompt.scrollHeight)}px`;
+  });
 
 })();

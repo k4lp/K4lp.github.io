@@ -16,12 +16,12 @@ Tools:
 
 Protocol:
 - Think stepwise and produce a short iterative plan in "iterative_reasoning", not your full hidden chain-of-thought.
-- When you need a tool, emit a single JSON block wrapped in a fenced code block:
+- When you need a tool, you MUST emit a single JSON block wrapped in a fenced code block, like this:
 \`\`\`json
 {"tool_call":{"name":"code.run_js","args":{"code":"console.log('ok')"}}}
 \`\`\`
-- After each tool, summarize the observation in "iterative_reasoning".
-- When ready to produce the final answer, emit a block:
+- After each tool, you MUST summarize the observation in "iterative_reasoning".
+- When you are ready to produce the final answer, you MUST emit a block in the following format:
 \`\`\`json
 {"final":{"content":"... you may include placeholders like {{var:result}} ..."}}
 \`\`\`

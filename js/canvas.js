@@ -12,6 +12,10 @@ class HTMLCanvas {
     const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
   <foreignObject width="100%" height="100%">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+      body { font-family: 'Geist', sans-serif; }
+    </style>
     <div xmlns="http://www.w3.org/1999/xhtml">${html}</div>
   </foreignObject>
 </svg>`;
