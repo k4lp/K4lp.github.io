@@ -407,941 +407,872 @@
     </div>
 
     <script>
-        /* 
-          Drop-in JS for the existing HTML. Robust Gemini chat runtime featuring:
-          - Model: gemini-2.5-flash-latest (forced)
-          - Streaming with SSE, retries, exponential backoff + jitter, abort/cancel
-          - Five-key rotation (localStorage) with per-key circuit breakers
-          - Quota + usage tracking (per key and session) with simple RPM/day budgets
-          - Memory summaries + on-demand memory fetch
-          - Immediate Reasoning Chain (IRC) for the current reply
-          - Goals verification pass (auto)
-          - External Tools: run_js, render_html, set_var/get_var, list_memories/fetch_memory, list_tools
-          - JS execution (runs in the page; network access via fetch)
-          - Canvas HTML renderer
-          - {{var:NAME}} variable injection
-          - Responsive to missing DOM (graceful no-ops)
-        
-          SECURITY NOTE: This enables arbitrary JS execution in your browser.
-          Only run trusted prompts and code.
-        */
+        /*
+          DROP-IN REPLACEMENT for your previous <script>…</script> block.
+    Paste this entire snippet inside your page’s
+    <script>
+ tags, replacing the old code.
 
-        (() => {
-            "use strict";
+  What’s new vs prior version:
+  - Auto-fetches the live model list via ListModels and updates the <select id="model">.
+    • If fetching fails (no internet/invalid keys), falls back to built-ins.
+    • Chooses the correct streaming path per model (streamGenerateContent vs generateContent).
+  - Shows per-key status & rate-limit view (validity + local quotas + live usage).
+  - Keeps five-key rotation, circuit breakers, SSE streaming, JS execution, canvas rendering,
+    Memory/IRC/Goals data-structures, verification pass, variable injection, cancel/abort.
 
-            /* ========================= DOM HOOKS (graceful if absent) ========================= */
-            const q = (id) => document.getElementById(id);
-            const els = {
-                aside: document.querySelector('aside'),
-                model: q('model'),
-                keyInputs: [1, 2, 3, 4, 5].map((n) => q('key' + n)).filter(Boolean),
-                saveKeys: q('saveKeys'),
-                temp: q('temp'),
-                send: q('send'),
-                newThread: q('newThread'),
-                chat: q('chat'),
-                prompt: q('prompt'),
-                goals: q('goals'),
-                saveGoals: q('saveGoals'),
-                clearGoals: q('clearGoals'),
-                memSummary: q('memSummary'),
-                memValue: q('memValue'),
-                addMemory: q('addMemory'),
-                clearMemory: q('clearMemory'),
-                memoryList: q('memoryList'),
-                runJS: q('runJS'),
-                clearJS: q('clearJS'),
-                jsCode: q('jsCode'),
-                jsLog: q('jsLog'),
-                renderHTML: q('renderHTML'),
-                clearCanvas: q('clearCanvas'),
-                htmlCanvasInput: q('htmlCanvasInput'),
-                canvas: q('canvas'),
-                toolLog: q('toolLog'),
-                varList: q('varList'),
-                ircList: q('ircList'),
-            };
+  NOTE: Gemini's public API typically does not return explicit X-RateLimit headers.
+  We display (a) whether the key is valid/usable, and (b) configurable local quotas & live usage.
+*/
 
-            /* ========================= CONSTANTS ========================= */
-            const DEFAULT_MODEL = "gemini-2.5-flash-latest"; // forced
-            const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
-            const STREAM_ENDPOINT = (model, key) =>
-                `${GEMINI_BASE}/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(
-                    key
-                )}`;
+(() => {
+  "use strict";
 
-            // Quotas: simple local budgets; tune as needed
-            const DEFAULT_QUOTAS = {
-                rpm: 60,         // requests per minute per key
-                daily: 10000,    // max requests per day per key
-                sessionMax: 5000 // max requests this page-load (all keys)
-            };
+  /* ========================= DOM HOOKS (graceful if absent) ========================= */
+  const q = (id) => document.getElementById(id);
+  const els = {
+    aside: document.querySelector('aside'),
+    model: q('model'),
+    keyInputs: [1, 2, 3, 4, 5].map((n) => q('key' + n)).filter(Boolean),
+    saveKeys: q('saveKeys'),
+    temp: q('temp'),
+    send: q('send'),
+    newThread: q('newThread'),
+    chat: q('chat'),
+    prompt: q('prompt'),
+    goals: q('goals'),
+    saveGoals: q('saveGoals'),
+    clearGoals: q('clearGoals'),
+    memSummary: q('memSummary'),
+    memValue: q('memValue'),
+    addMemory: q('addMemory'),
+    clearMemory: q('clearMemory'),
+    memoryList: q('memoryList'),
+    runJS: q('runJS'),
+    clearJS: q('clearJS'),
+    jsCode: q('jsCode'),
+    jsLog: q('jsLog'),
+    renderHTML: q('renderHTML'),
+    clearCanvas: q('clearCanvas'),
+    htmlCanvasInput: q('htmlCanvasInput'),
+    canvas: q('canvas'),
+    toolLog: q('toolLog'),
+    varList: q('varList'),
+    ircList: q('ircList'),
+  };
 
-            // Retry/backoff
-            const MAX_TOOL_ITERATIONS = 8; // avoid infinite tool loops
-            const MAX_RETRY_PER_CALL = 3;
-            const BASE_BACKOFF_MS = 600;   // exponential backoff base
-            const JITTER_MS = 400;         // random jitter cap
-            const CIRCUIT_BREAK_MS = 60_000; // if a key hard-fails, pause it for this long
+  /* ========================= CONSTANTS ========================= */
+  const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+  const MODEL_LIST_PATH = () => `${GEMINI_BASE}/models`;
+  const STREAM_ENDPOINT = (model, key, method) =>
+    `${GEMINI_BASE}/models/${encodeURIComponent(model)}:${method}?alt=sse&key=${encodeURIComponent(key)}`;
 
-            // Keys storage
-            const KEYS_STORAGE = "gemini_keys"; // array of keys
-            const GOALS_STORAGE = "goals";
-            const MEMS_STORAGE = "memories";
-            const QUOTA_STORAGE = "gemini_quota_config"; // optional user override
+  // Fallback options ONLY if live fetch fails
+  const FALLBACK_MODELS = [
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-pro-latest"
+  ];
 
-            /* ========================= STATE ========================= */
-            const state = {
-                // conversation
-                history: [], // Gemini "contents"
-                irc: [],     // Immediate Reasoning Chain
-                memories: [], // [{summary, value, ts}]
-                variables: {}, // name->value, available to {{var:NAME}} injection
+  // Quotas: local budgets; tune with localStorage key "gemini_quota_config"
+  const DEFAULT_QUOTAS = {
+    rpm: 60,         // requests per minute per key
+    daily: 10000,    // requests per calendar day per key
+    sessionMax: 5000 // per page-load, across all keys
+  };
 
-                // model + generation
-                temperature: 0.3,
+  // Retry/backoff
+  const MAX_TOOL_ITERATIONS = 8;
+  const MAX_RETRY_PER_CALL = 3;
+  const BASE_BACKOFF_MS = 600;
+  const JITTER_MS = 400;
+  const CIRCUIT_BREAK_MS = 60_000;
 
-                // keys + usage
-                keyIndex: 0,
-                circuit: {}, // key -> { openUntil: timestamp }
-                usage: {
-                    session: { requests: 0, inChars: 0, outChars: 0, startedAt: Date.now() },
-                    perKey: {} // keyHash -> { day:'YYYY-MM-DD', dailyRequests, minuteWindowStart, minuteCount, totalRequests, inChars, outChars }
-                },
+  // Storage keys
+  const KEYS_STORAGE = "gemini_keys";
+  const GOALS_STORAGE = "goals";
+  const MEMS_STORAGE = "memories";
+  const QUOTA_STORAGE = "gemini_quota_config";
+  const MODELS_CACHE_STORAGE = "gemini_models_cache"; // optional cache
 
-                // control
-                inFlight: null, // { aborter, kind: 'draft'|'verify' }
-                model: DEFAULT_MODEL
-            };
+  /* ========================= STATE ========================= */
+  const state = {
+    // conversation
+    history: [],
+    irc: [],
+    memories: [],
+    variables: {},
 
-            /* ========================= UTILITIES ========================= */
-            const now = () => Date.now();
-            const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
-            const hashKey = (k) => {
-                // Lightweight obfuscation for local usage mapping
-                let h = 0;
-                for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-                return "k" + (h >>> 0).toString(16);
-            };
+    // model & streaming method
+    model: null,
+    modelsByName: {},  // name -> meta
+    streamingMethodByModel: {}, // name -> 'streamGenerateContent' | 'generateContent'
 
-            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-            const jitter = () => Math.floor(Math.random() * JITTER_MS);
+    // generation
+    temperature: 0.3,
 
-            function el(tag, cls) {
-                const e = document.createElement(tag);
-                if (cls) e.className = cls;
-                return e;
-            }
-            function escapeHtml(s) {
-                return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
-            }
-            function asDisplay(v) {
-                try {
-                    if (typeof v === "string") return v;
-                    return JSON.stringify(v, null, 2);
-                } catch {
-                    return String(v);
-                }
-            }
-            function clamp(n, lo, hi) {
-                return Math.max(lo, Math.min(hi, n));
-            }
+    // keys + usage
+    keyIndex: 0,
+    circuit: {}, // key -> { openUntil }
+    usage: {
+      session: { requests: 0, inChars: 0, outChars: 0, startedAt: Date.now() },
+      perKey: {} // keyHash -> { day, dailyRequests, minuteWindowStart, minuteCount, totalRequests, inChars, outChars }
+    },
+    keyStatus: {}, // keyHash -> { lastChecked, ok, http, msg }
 
-            /* ========================= LOGGING ========================= */
-            function logTool(who, text) {
-                const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
-                if (els.toolLog) {
-                    els.toolLog.textContent += line;
-                    els.toolLog.scrollTop = els.toolLog.scrollHeight;
-                } else {
-                    console.log(line.trim());
-                }
-            }
+    // control
+    inFlight: null
+  };
 
-            function ensureUsagePanel() {
-                if (!els.aside) return null;
-                let panel = q('usagePanel');
-                if (panel) return panel;
-                panel = el('div', 'section');
-                panel.id = 'usagePanel';
-                panel.innerHTML = `
+  /* ========================= UTILITIES ========================= */
+  const now = () => Date.now();
+  const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const jitter = () => Math.floor(Math.random() * JITTER_MS);
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const safeJSON = (s) => { try { return JSON.parse(s); } catch { return null; } };
+
+  function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
+  }
+  function asDisplay(v) { try { return typeof v === "string" ? v : JSON.stringify(v, null, 2); } catch { return String(v); } }
+
+  function hashKey(k) { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return "k" + (h >>> 0).toString(16); }
+
+  /* ========================= LOGGING ========================= */
+  function logTool(who, text) {
+    const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
+    if (els.toolLog) { els.toolLog.textContent += line; els.toolLog.scrollTop = els.toolLog.scrollHeight; }
+    else { console.log(line.trim()); }
+  }
+
+  /* ========================= PANELS (Usage + Rate Limits) ========================= */
+  function ensureUsagePanel() {
+    if (!els.aside) return null;
+    let panel = q('usagePanel');
+    if (panel) return panel;
+    panel = el('div', 'section');
+    panel.id = 'usagePanel';
+    panel.innerHTML = `
       <h2>Usage</h2>
       <div id="usageSummary" class="small mono"></div>
       <div id="usageKeys" class="small mono" style="margin-top:6px"></div>
+      <div class="divider"></div>
+      <h2>Key Status & Rate Limits</h2>
+      <div id="rateLimits" class="small mono"></div>
     `;
-                els.aside.appendChild(panel);
-                return panel;
-            }
+    els.aside.appendChild(panel);
+    return panel;
+  }
 
-            function updateUsageUI() {
-                const panel = ensureUsagePanel();
-                const session = state.usage.session;
-                const sumEl = q('usageSummary');
-                const keysEl = q('usageKeys');
-                const quota = getQuotaConfig();
-                if (sumEl) {
-                    sumEl.textContent =
-                        `Session requests: ${session.requests} / ${quota.sessionMax} | In chars: ${session.inChars} | Out chars: ${session.outChars}`;
-                }
-                if (keysEl) {
-                    const lines = [];
-                    for (const [kh, v] of Object.entries(state.usage.perKey)) {
-                        lines.push(`${kh}: day ${v.day} | daily ${v.dailyRequests}/${quota.daily} | minute ${v.minuteCount}/${quota.rpm} | total ${v.totalRequests}`);
-                    }
-                    keysEl.textContent = lines.join('\n') || '(no key usage yet)';
-                }
-            }
+  function updateUsageUI() {
+    ensureUsagePanel();
+    const session = state.usage.session;
+    const sumEl = q('usageSummary');
+    const keysEl = q('usageKeys');
+    const rateEl = q('rateLimits');
+    const quota = getQuotaConfig();
+    if (sumEl) sumEl.textContent =
+      `Session requests: ${session.requests}/${quota.sessionMax} | In chars: ${session.inChars} | Out chars: ${session.outChars}`;
+    if (keysEl) {
+      const lines = [];
+      for (const [kh, v] of Object.entries(state.usage.perKey)) {
+        lines.push(`${kh}: day ${v.day} | daily ${v.dailyRequests}/${quota.daily} | minute ${v.minuteCount}/${quota.rpm} | total ${v.totalRequests}`);
+      }
+      keysEl.textContent = lines.join('\n') || '(no key usage yet)';
+    }
+    if (rateEl) {
+      const keys = getStoredKeys();
+      if (!keys.length) { rateEl.textContent = '(enter and save API keys to view status)'; return; }
+      const rows = [];
+      for (const k of keys) {
+        const kh = hashKey(k);
+        const st = state.keyStatus[kh] || {};
+        const u = state.usage.perKey[kh];
+        const validity = st.ok ? 'OK' : (st.http ? `HTTP ${st.http}` : 'Unknown');
+        const msg = st.msg ? ` — ${st.msg}` : '';
+        rows.push(`${kh}: ${validity}${msg}`);
+        if (u) rows.push(`  usage → minute ${u.minuteCount}/${getQuotaConfig().rpm}, daily ${u.dailyRequests}/${getQuotaConfig().daily}, total ${u.totalRequests}`);
+      }
+      rateEl.textContent = rows.join('\n');
+    }
+  }
 
-            /* ========================= UI HELPERS ========================= */
-            function addMsg(role, content) {
-                if (!els.chat) return { pre: { textContent: '' }, set: () => { } };
-                const wrap = el("div", "msg " + role);
-                const meta = el("div", "meta");
-                meta.textContent = role === "user" ? "You" : "Model";
-                const pre = el("div");
-                pre.className = "mono";
-                pre.style.whiteSpace = "pre-wrap";
-                pre.textContent = content || "";
-                wrap.appendChild(meta);
-                wrap.appendChild(pre);
-                els.chat.appendChild(wrap);
-                els.chat.scrollTop = els.chat.scrollHeight;
-                return { pre, set: (t) => { pre.textContent = t; els.chat.scrollTop = els.chat.scrollHeight; } };
-            }
-
-            function renderIRC() {
-                if (!els.ircList) return;
-                els.ircList.textContent = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)";
-            }
-
-            function renderVars() {
-                if (!els.varList) return;
-                const entries = Object.entries(state.variables);
-                els.varList.innerHTML = entries.length
-                    ? entries.map(([k, v]) => `<span class="kv mono">${escapeHtml(k)} = ${escapeHtml(String(v))}</span>`).join("")
-                    : "";
-            }
-
-            function renderMemories() {
-                if (!els.memoryList) return;
-                if (!state.memories.length) {
-                    els.memoryList.innerHTML = '<div class="small">No memory items yet.</div>';
-                    return;
-                }
-                els.memoryList.innerHTML = state.memories
-                    .map(
-                        (m, i) => `
+  /* ========================= UI HELPERS ========================= */
+  function addMsg(role, content) {
+    if (!els.chat) return { pre: { textContent: '' }, set: () => {} };
+    const wrap = el("div", "msg " + role);
+    const meta = el("div", "meta"); meta.textContent = role === "user" ? "You" : "Model";
+    const pre = el("div"); pre.className = "mono"; pre.style.whiteSpace = "pre-wrap"; pre.textContent = content || "";
+    wrap.appendChild(meta); wrap.appendChild(pre); els.chat.appendChild(wrap); els.chat.scrollTop = els.chat.scrollHeight;
+    return { pre, set: (t) => { pre.textContent = t; els.chat.scrollTop = els.chat.scrollHeight; } };
+  }
+  function renderIRC() { if (els.ircList) els.ircList.textContent = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)"; }
+  function renderVars() {
+    if (!els.varList) return;
+    const entries = Object.entries(state.variables);
+    els.varList.innerHTML = entries.length ? entries.map(([k, v]) => `<span class="kv mono">${escapeHtml(k)} = ${escapeHtml(String(v))}</span>`).join("") : "";
+  }
+  function renderMemories() {
+    if (!els.memoryList) return;
+    if (!state.memories.length) { els.memoryList.innerHTML = '<div class="small">No memory items yet.</div>'; return; }
+    els.memoryList.innerHTML = state.memories.map((m, i) => `
       <div style="margin-bottom:10px">
         <div><span class="pill">#${i}</span> <strong>${escapeHtml(m.summary)}</strong></div>
         <div class="small mono" style="margin-top:4px; white-space:pre-wrap">${escapeHtml(m.value)}</div>
-      </div>`
-                    )
-                    .join("");
-            }
+      </div>`).join("");
+  }
 
-            /* ========================= STORAGE INIT ========================= */
-            function getStoredKeys() {
-                return JSON.parse(localStorage.getItem(KEYS_STORAGE) || "[]");
-            }
-            function setStoredKeys(arr) {
-                localStorage.setItem(KEYS_STORAGE, JSON.stringify(arr));
-            }
-            function getQuotaConfig() {
-                const cfg = JSON.parse(localStorage.getItem(QUOTA_STORAGE) || "null");
-                return {
-                    rpm: (cfg && +cfg.rpm) || DEFAULT_QUOTAS.rpm,
-                    daily: (cfg && +cfg.daily) || DEFAULT_QUOTAS.daily,
-                    sessionMax: (cfg && +cfg.sessionMax) || DEFAULT_QUOTAS.sessionMax
-                };
-            }
-            function loadFromStorage() {
-                const keys = getStoredKeys();
-                keys.forEach((k, i) => { if (els.keyInputs[i]) els.keyInputs[i].value = k; });
-                state.temperature = parseFloat((els.temp && els.temp.value) || "0.3") || 0.3;
+  /* ========================= STORAGE ========================= */
+  function getStoredKeys() { return JSON.parse(localStorage.getItem(KEYS_STORAGE) || "[]"); }
+  function setStoredKeys(arr) { localStorage.setItem(KEYS_STORAGE, JSON.stringify(arr)); }
+  function getQuotaConfig() {
+    const cfg = JSON.parse(localStorage.getItem(QUOTA_STORAGE) || "null");
+    return {
+      rpm: (cfg && +cfg.rpm) || DEFAULT_QUOTAS.rpm,
+      daily: (cfg && +cfg.daily) || DEFAULT_QUOTAS.daily,
+      sessionMax: (cfg && +cfg.sessionMax) || DEFAULT_QUOTAS.sessionMax
+    };
+  }
 
-                state.model = DEFAULT_MODEL;
-                if (els.model) {
-                    els.model.value = DEFAULT_MODEL;
-                    els.model.disabled = true; // force model
-                }
+  /* ========================= USAGE & QUOTA ========================= */
+  function initKeyUsage(key) {
+    const kh = hashKey(key);
+    const today = toISODate(now());
+    const u = state.usage.perKey[kh];
+    if (!u || u.day !== today) {
+      state.usage.perKey[kh] = {
+        day: today, dailyRequests: 0,
+        minuteWindowStart: now(), minuteCount: 0,
+        totalRequests: (u && u.totalRequests) || 0,
+        inChars: (u && u.inChars) || 0, outChars: (u && u.outChars) || 0
+      };
+    }
+  }
+  function addInChars(key, n) {
+    const kh = hashKey(key); initKeyUsage(key);
+    state.usage.perKey[kh].inChars += n; state.usage.session.inChars += n; updateUsageUI();
+  }
+  function addOutChars(key, n) {
+    const kh = hashKey(key); initKeyUsage(key);
+    state.usage.perKey[kh].outChars += n; state.usage.session.outChars += n; updateUsageUI();
+  }
+  function checkAndConsumeQuota(key) {
+    const quota = getQuotaConfig();
+    if (state.usage.session.requests >= quota.sessionMax) throw new Error("Session request limit reached.");
+    initKeyUsage(key);
+    const kh = hashKey(key);
+    const u = state.usage.perKey[kh];
 
-                state.memories = JSON.parse(localStorage.getItem(MEMS_STORAGE) || "[]");
-                renderMemories();
+    // daily
+    if (u.dailyRequests >= quota.daily) throw new Error(`Daily quota reached for key ${kh}.`);
 
-                const g = localStorage.getItem(GOALS_STORAGE) || "";
-                if (els.goals) els.goals.value = g;
+    // rpm
+    const nowMs = now();
+    if (nowMs - u.minuteWindowStart >= 60_000) { u.minuteWindowStart = nowMs; u.minuteCount = 0; }
+    if (u.minuteCount >= quota.rpm) throw new Error(`Per-minute quota reached for key ${kh}.`);
 
-                updateUsageUI();
-                renderIRC();
-                renderVars();
-            }
+    // consume
+    u.minuteCount++; u.dailyRequests++; u.totalRequests++; state.usage.session.requests++; updateUsageUI();
+  }
 
-            /* ========================= USAGE & QUOTA ========================= */
-            function initKeyUsage(key) {
-                const kh = hashKey(key);
-                const u = state.usage.perKey[kh];
-                const today = toISODate(now());
-                if (!u || u.day !== today) {
-                    state.usage.perKey[kh] = {
-                        day: today,
-                        dailyRequests: 0,
-                        minuteWindowStart: now(),
-                        minuteCount: 0,
-                        totalRequests: (u && u.totalRequests) || 0,
-                        inChars: (u && u.inChars) || 0,
-                        outChars: (u && u.outChars) || 0
-                    };
-                }
-            }
+  /* ========================= KEY MANAGEMENT ========================= */
+  function getActiveKey() {
+    const keys = getStoredKeys();
+    if (!keys.length) throw new Error("No API key found. Save up to five keys.");
+    let i = 0;
+    while (i < keys.length) {
+      const idx = state.keyIndex % keys.length;
+      const k = keys[idx];
+      const circuit = state.circuit[k];
+      if (!circuit || circuit.openUntil <= now()) return k;
+      state.keyIndex++; i++;
+    }
+    throw new Error("All keys are temporarily paused by circuit breaker.");
+  }
+  function rotateKey(reason) { state.keyIndex++; logTool("system", `Rotating key${reason ? `: ${reason}` : ""}`); }
+  function openCircuitFor(key, ms) { state.circuit[key] = { openUntil: now() + ms }; logTool("system", `Circuit opened for current key for ${Math.round(ms / 1000)}s`); }
 
-            function checkAndConsumeQuota(key) {
-                const quota = getQuotaConfig();
-                if (state.usage.session.requests >= quota.sessionMax) {
-                    throw new Error("Session request limit reached.");
-                }
-                initKeyUsage(key);
-                const kh = hashKey(key);
-                const u = state.usage.perKey[kh];
+  /* ========================= JS EXECUTION & CANVAS ========================= */
+  async function runUserJS(src) {
+    if (els.jsLog) els.jsLog.textContent = "";
+    const originalLog = console.log;
+    let logs = [];
+    console.log = (...args) => { logs.push(args.map((a) => asDisplay(a)).join(" ")); originalLog(...args); };
+    try {
+      const fn = new Function(`return (async ()=>{ ${src}\n })()`);
+      const result = await fn();
+      console.log = originalLog;
+      if (els.jsLog) els.jsLog.textContent = logs.map((l) => "• " + l).join("\n") + (result !== undefined ? `\n\nreturn → ${asDisplay(result)}` : "");
+      logTool("run_js", `Executed (${src.length} chars)`);
+      return { logs, result };
+    } catch (err) {
+      console.log = originalLog;
+      if (els.jsLog) els.jsLog.textContent = (logs.length ? logs.map((l) => "• " + l).join("\n") + "\n\n" : "") + "ERROR → " + String(err && err.stack || err);
+      logTool("run_js", `Error: ${String(err)}`);
+      return { logs, error: String(err) };
+    }
+  }
+  function renderCanvas(html) { if (els.canvas) { els.canvas.innerHTML = html; logTool("render_html", "Updated canvas"); } }
 
-                // Daily
-                if (u.dailyRequests >= quota.daily) {
-                    throw new Error(`Daily quota reached for key ${kh}.`);
-                }
+  /* ========================= TOOLS DECLARATIONS ========================= */
+  const functionDeclarations = [
+    { name: "fetch_memory", description: "Fetch a detailed memory by index from provided memory summaries.", parameters: { type: "OBJECT", properties: { index: { type: "INTEGER" } }, required: ["index"] } },
+    { name: "list_memories", description: "List available memory summaries with indices.", parameters: { type: "OBJECT", properties: {} } },
+    { name: "irc_add", description: "Append one step to the Immediate Reasoning Chain for the current reply.", parameters: { type: "OBJECT", properties: { step: { type: "STRING" } }, required: ["step"] } },
+    { name: "run_js", description: "Execute JavaScript in the browser. Use for network fetch, compute, parsing. Return logs and result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
+    { name: "render_html", description: "Render HTML into the canvas region for previews or interactive reasoning.", parameters: { type: "OBJECT", properties: { html: { type: "STRING" } }, required: ["html"] } },
+    { name: "set_var", description: "Set a named variable for later injection into the final answer using {{var:NAME}}.", parameters: { type: "OBJECT", properties: { name: { type: "STRING" }, value: { type: "STRING" } }, required: ["name", "value"] } },
+    { name: "get_var", description: "Get a named variable value previously set.", parameters: { type: "OBJECT", properties: { name: { type: "STRING" } }, required: ["name"] } },
+    { name: "list_tools", description: "Return a concise list of available tools and when to use them.", parameters: { type: "OBJECT", properties: {} } }
+  ];
 
-                // RPM: sliding window (simple 60-sec window)
-                const nowMs = now();
-                if (nowMs - u.minuteWindowStart >= 60_000) {
-                    u.minuteWindowStart = nowMs;
-                    u.minuteCount = 0;
-                }
-                if (u.minuteCount >= quota.rpm) {
-                    throw new Error(`Per-minute quota reached for key ${kh}.`);
-                }
+  /* ========================= SYSTEM INSTRUCTION ========================= */
+  function buildSystemInstruction() {
+    const memorySummaries = state.memories.map((m, i) => `#${i}: ${m.summary}`).join("\n") || "(none)";
+    const ircSoFar = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)";
+    const goals = (els.goals && els.goals.value.trim()) || "(none)";
+    return [
+      "You are a helpful model with access to an External Tools system. Do not reveal chain-of-thought.",
+      "Work in iterations: plan → (optionally call tools) → draft → verify against goals → final. Keep planning brief via irc_add.",
+      "",
+      "DATA STRUCTURES:",
+      "• Memory: You receive only memory summaries; call list_memories then fetch_memory(index) when needed.",
+      "• Immediate Reasoning Chain (IRC): Steps for the current reply only. Append short steps with irc_add(step).",
+      "• Goals: Global constraints to satisfy in the final answer. A verification pass checks your draft with Goals + IRC.",
+      "",
+      "TOOLS:",
+      "• run_js({code}): Executes real JS in the user's browser (network fetch allowed).",
+      "• render_html({html}): Renders HTML into a visible canvas.",
+      "• set_var/get_var: Manage variables for final answer placeholders {{var:NAME}}.",
+      "• list_memories/fetch_memory, list_tools.",
+      "",
+      "OUTPUT PROTOCOL:",
+      "• Do not output chain-of-thought.",
+      "• If you include JS-produced content in the final answer, set a variable via set_var and reference it as {{var:NAME}}.",
+      "",
+      "SUPPLIED CONTEXT:",
+      `• Memory Summaries:\n${memorySummaries}`,
+      `• Immediate Reasoning Chain:\n${ircSoFar}`,
+      `• Goals:\n${goals}`
+    ].join("\n");
+  }
 
-                // consume
-                u.minuteCount++;
-                u.dailyRequests++;
-                u.totalRequests++;
-                state.usage.session.requests++;
-                updateUsageUI();
-            }
+  /* ========================= GEMINI: MODEL LIST (ListModels) ========================= */
+  async function fetchAllModelsWithAnyKey() {
+    const keys = getStoredKeys();
+    if (!keys.length) throw new Error("No API key found to fetch model list.");
 
-            function addInChars(key, n) {
-                const kh = hashKey(key);
-                initKeyUsage(key);
-                state.usage.perKey[kh].inChars += n;
-                state.usage.session.inChars += n;
-                updateUsageUI();
-            }
-            function addOutChars(key, n) {
-                const kh = hashKey(key);
-                initKeyUsage(key);
-                state.usage.perKey[kh].outChars += n;
-                state.usage.session.outChars += n;
-                updateUsageUI();
-            }
+    const models = [];
+    let ok = false;
 
-            /* ========================= KEY MANAGEMENT ========================= */
-            function getActiveKey() {
-                const keys = getStoredKeys();
-                if (!keys.length) throw new Error("No API key found. Save up to five keys.");
-                let i = 0;
-                while (i < keys.length) {
-                    const idx = state.keyIndex % keys.length;
-                    const k = keys[idx];
-                    const circuit = state.circuit[k];
-                    if (!circuit || circuit.openUntil <= now()) {
-                        return k;
-                    }
-                    // this key is in open state; rotate
-                    state.keyIndex++;
-                    i++;
-                }
-                throw new Error("All keys are temporarily paused by circuit breaker.");
-            }
-            function rotateKey(reason) {
-                state.keyIndex++;
-                logTool("system", `Rotating key${reason ? `: ${reason}` : ""}`);
-            }
-            function openCircuitFor(key, ms) {
-                state.circuit[key] = { openUntil: now() + ms };
-                logTool("system", `Circuit opened for current key for ${Math.round(ms / 1000)}s`);
-            }
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[(state.keyIndex + i) % keys.length];
+      try {
+        checkAndConsumeQuota(key);
+      } catch (e) {
+        continue; // try next key
+      }
 
-            /* ========================= JS EXECUTION (in-page) ========================= */
-            async function runUserJS(src) {
-                if (els.jsLog) els.jsLog.textContent = "";
-                const originalLog = console.log;
-                let logs = [];
-                console.log = (...args) => {
-                    logs.push(args.map((a) => asDisplay(a)).join(" "));
-                    originalLog(...args);
-                };
-                try {
-                    const fn = new Function(`return (async ()=>{ ${src}\n })()`);
-                    const result = await fn();
-                    console.log = originalLog;
-                    if (els.jsLog) {
-                        els.jsLog.textContent =
-                            logs.map((l) => "• " + l).join("\n") + (result !== undefined ? `\n\nreturn → ${asDisplay(result)}` : "");
-                    }
-                    logTool("run_js", `Executed (${src.length} chars)`);
-                    return { logs, result };
-                } catch (err) {
-                    console.log = originalLog;
-                    if (els.jsLog) {
-                        els.jsLog.textContent =
-                            (logs.length ? logs.map((l) => "• " + l).join("\n") + "\n\n" : "") + "ERROR → " + String(err && err.stack || err);
-                    }
-                    logTool("run_js", `Error: ${String(err)}`);
-                    return { logs, error: String(err) };
-                }
-            }
+      let pageToken = null;
+      try {
+        do {
+          const url = new URL(MODEL_LIST_PATH());
+          url.searchParams.set("key", key);
+          url.searchParams.set("pageSize", "100");
+          if (pageToken) url.searchParams.set("pageToken", pageToken);
 
-            function renderCanvas(html) {
-                if (els.canvas) {
-                    els.canvas.innerHTML = html;
-                    logTool("render_html", "Updated canvas");
-                }
-            }
+          const res = await fetch(url.toString(), { method: "GET" });
+          const kh = hashKey(key);
+          state.keyStatus[kh] = { lastChecked: now(), ok: res.ok, http: res.status, msg: res.ok ? "Listed models" : "Failed to list models" };
 
-            /* ========================= TOOLS DECLARATIONS ========================= */
-            const functionDeclarations = [
-                {
-                    name: "fetch_memory",
-                    description: "Fetch a detailed memory by index from provided memory summaries.",
-                    parameters: { type: "OBJECT", properties: { index: { type: "INTEGER" } }, required: ["index"] }
-                },
-                {
-                    name: "list_memories",
-                    description: "List available memory summaries with indices.",
-                    parameters: { type: "OBJECT", properties: {} }
-                },
-                {
-                    name: "irc_add",
-                    description: "Append one step to the Immediate Reasoning Chain for the current reply.",
-                    parameters: { type: "OBJECT", properties: { step: { type: "STRING" } }, required: ["step"] }
-                },
-                {
-                    name: "run_js",
-                    description: "Execute JavaScript in the browser. Use for network fetch, compute, parsing. Return logs and result.",
-                    parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] }
-                },
-                {
-                    name: "render_html",
-                    description: "Render HTML into the canvas region for previews or interactive reasoning.",
-                    parameters: { type: "OBJECT", properties: { html: { type: "STRING" } }, required: ["html"] }
-                },
-                {
-                    name: "set_var",
-                    description: "Set a named variable for later injection into the final answer using {{var:NAME}}.",
-                    parameters: { type: "OBJECT", properties: { name: { type: "STRING" }, value: { type: "STRING" } }, required: ["name", "value"] }
-                },
-                {
-                    name: "get_var",
-                    description: "Get a named variable value previously set.",
-                    parameters: { type: "OBJECT", properties: { name: { type: "STRING" } }, required: ["name"] }
-                },
-                {
-                    name: "list_tools",
-                    description: "Return a concise list of available tools and when to use them.",
-                    parameters: { type: "OBJECT", properties: {} }
-                }
-            ];
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) { openCircuitFor(key, 5 * CIRCUIT_BREAK_MS); }
+            if (res.status === 429 || res.status === 503) { openCircuitFor(key, CIRCUIT_BREAK_MS); }
+            rotateKey(`ListModels HTTP ${res.status}`);
+            break; // try next key
+          }
 
-            /* ========================= SYSTEM INSTRUCTION ========================= */
-            function buildSystemInstruction() {
-                const memorySummaries = state.memories.map((m, i) => `#${i}: ${m.summary}`).join("\n") || "(none)";
-                const ircSoFar = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)";
-                const goals = (els.goals && els.goals.value.trim()) || "(none)";
+          const txt = await res.text();
+          addOutChars(key, txt.length);
+          const json = safeJSON(txt) || {};
+          const pageModels = Array.isArray(json.models) ? json.models : [];
+          models.push(...pageModels);
+          pageToken = json.nextPageToken || null;
+          ok = true;
+        } while (pageToken);
 
-                return [
-                    "You are a helpful model with access to an External Tools system. Do not reveal chain-of-thought.",
-                    "Work in iterations: plan → (optionally call tools) → draft → verify against goals → final. Keep planning brief via irc_add.",
-                    "",
-                    "DATA STRUCTURES:",
-                    "• Memory: You receive only memory summaries; call list_memories then fetch_memory(index) for details when needed.",
-                    "• Immediate Reasoning Chain (IRC): Steps for the current reply only. Append short steps with irc_add(step).",
-                    "• Goals: Global constraints to satisfy in the final answer. A verification pass checks your draft with Goals + IRC.",
-                    "",
-                    "TOOLS:",
-                    "• run_js({code}): Executes real JS in the user's browser (with network fetch).",
-                    "• render_html({html}): Renders HTML into a visible canvas.",
-                    "• set_var/get_var: Manage variables for final answer placeholders {{var:NAME}}.",
-                    "• list_memories/fetch_memory, list_tools.",
-                    "",
-                    "TOOL INTENT POLICY (robust identification):",
-                    "- Use run_js for any web request, data transformation, heavy compute, or parsing.",
-                    "- Use render_html to preview or iterate on visual/HTML outputs.",
-                    "- Use fetch_memory only when a summary indicates relevant details are needed.",
-                    "- Always keep IRC concise and add steps via irc_add when planning or verifying.",
-                    "",
-                    "OUTPUT PROTOCOL:",
-                    "• Do not output chain-of-thought. Provide clear, direct answers.",
-                    "• If you want to include JS-produced content in the final answer, store it into a variable via set_var and reference it via {{var:NAME}}. The renderer will replace placeholders.",
-                    "",
-                    "SUPPLIED CONTEXT:",
-                    `• Memory Summaries:\n${memorySummaries}`,
-                    `• Immediate Reasoning Chain:\n${ircSoFar}`,
-                    `• Goals:\n${goals}`
-                ].join("\n");
-            }
+        if (ok) { state.keyIndex = (state.keyIndex + i) % keys.length; break; } // lock onto the working key
+      } catch (err) {
+        const kh = hashKey(key);
+        state.keyStatus[kh] = { lastChecked: now(), ok: false, http: 0, msg: String(err) };
+        openCircuitFor(key, CIRCUIT_BREAK_MS);
+        continue;
+      }
+    }
 
-            /* ========================= GEMINI CALLS: STREAMING + RETRIES ========================= */
-            function buildPayload(contents) {
-                return {
-                    systemInstruction: { role: "user", parts: [{ text: buildSystemInstruction() }] },
-                    tools: [{ functionDeclarations }],
-                    contents,
-                    generationConfig: {
-                        temperature: (els.temp && Number(els.temp.value || "0.3")) || state.temperature,
-                        candidateCount: 1
-                    },
-                    safetySettings: []
-                };
-            }
+    updateUsageUI();
 
-            async function* readSSE(stream, currentKey) {
-                const reader = stream.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let buf = "";
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    const textChunk = decoder.decode(value, { stream: true });
-                    addOutChars(currentKey, textChunk.length);
-                    buf += textChunk;
-                    let idx;
-                    while ((idx = buf.indexOf("\n\n")) >= 0) {
-                        const chunk = buf.slice(0, idx).trim();
-                        buf = buf.slice(idx + 2);
-                        if (!chunk) continue;
-                        const lines = chunk.split("\n").map((s) => s.trim());
-                        for (const l of lines) {
-                            if (!l.startsWith("data:")) continue;
-                            const payload = l.slice(5).trim();
-                            if (!payload || payload === "[DONE]") continue;
-                            try {
-                                yield JSON.parse(payload);
-                            } catch {
-                                // ignore parse errors
-                            }
-                        }
-                    }
-                }
-            }
+    if (!ok) throw new Error("Could not fetch models with any available key.");
+    return models;
+  }
 
-            function extractParts(evt) {
-                const out = { textDelta: "", toolCalls: [] };
-                const cands = evt.candidates || [];
-                for (const c of cands) {
-                    const parts = (c.content && c.content.parts) || [];
-                    for (const p of parts) {
-                        if (p.text) out.textDelta += p.text;
-                        if (p.functionCall) out.toolCalls.push(p.functionCall);
-                    }
-                }
-                return out;
-            }
+  function selectStreamingMethod(meta) {
+    const methods = meta.supportedGenerationMethods || [];
+    // Prefer explicit streaming method if advertised
+    if (methods.includes("streamGenerateContent")) return "streamGenerateContent";
+    // Fallback: many models stream via generateContent with alt=sse
+    if (methods.includes("generateContent") || methods.includes("create")) return "generateContent";
+    return null; // unsupported for our chat
+  }
 
-            async function sseRequestWithRetry(payload, kind) {
-                let attempts = 0;
-                while (attempts < MAX_RETRY_PER_CALL) {
-                    const key = getActiveKey();
-                    try {
-                        checkAndConsumeQuota(key);
-                    } catch (quotaErr) {
-                        // If quota exceeded on this key, rotate to next and try again.
-                        rotateKey(String(quotaErr));
-                        attempts++;
-                        continue;
-                    }
+  function populateModelSelect(models) {
+    if (!els.model) return;
 
-                    const url = STREAM_ENDPOINT(state.model, key);
-                    const bodyStr = JSON.stringify(payload);
-                    addInChars(key, bodyStr.length);
+    els.model.innerHTML = "";
+    const usable = [];
 
-                    const aborter = new AbortController();
-                    state.inFlight = { aborter, kind };
-                    let res;
-                    try {
-                        res = await fetch(url, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: bodyStr,
-                            signal: aborter.signal
-                        });
-                    } catch (err) {
-                        // Network failure: open circuit briefly and retry with backoff
-                        openCircuitFor(key, CIRCUIT_BREAK_MS);
-                        rotateKey("network error");
-                        attempts++;
-                        await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter());
-                        continue;
-                    } finally {
-                        state.inFlight = null;
-                    }
+    for (const m of models) {
+      const method = selectStreamingMethod(m);
+      if (!method) continue;
+      usable.push({ name: m.name, method, displayName: m.displayName || m.name });
+      state.modelsByName[m.name] = m;
+      state.streamingMethodByModel[m.name] = method;
+    }
 
-                    if (res.status === 429 || res.status === 503) {
-                        openCircuitFor(key, CIRCUIT_BREAK_MS);
-                        rotateKey(`HTTP ${res.status}`);
-                        attempts++;
-                        await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter());
-                        continue;
-                    }
-                    if (res.status === 401 || res.status === 403) {
-                        // Invalid or unauthorized key: open circuit longer for this key
-                        openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
-                        rotateKey(`HTTP ${res.status}`);
-                        attempts++;
-                        continue;
-                    }
-                    if (!res.ok) {
-                        const text = await safeText(res);
-                        logTool("system", `Gemini error ${res.status}: ${text.slice(0, 200)}`);
-                        // For non-retryable 4xx other than 401/403/429, bubble up
-                        if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-                            throw new Error(`Gemini error ${res.status}: ${text}`);
-                        }
-                        // Retryable?
-                        attempts++;
-                        await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter());
-                        continue;
-                    }
+    if (usable.length === 0) {
+      // Fallback only if nothing usable came back
+      for (const f of FALLBACK_MODELS) {
+        const opt = el("option");
+        opt.value = f; opt.textContent = f;
+        els.model.appendChild(opt);
+        state.streamingMethodByModel[f] = "streamGenerateContent"; // best guess
+      }
+      // If we previously forced a model, keep it; else choose first fallback
+      state.model = state.model || FALLBACK_MODELS[0];
+      els.model.value = state.model;
+      logTool("system", "Using fallback model list (live fetch yielded no usable models).");
+      return;
+    }
 
-                    return { stream: res.body, key }; // success
-                }
-                throw new Error("All retries exhausted.");
-            }
+    // Sort a bit: prefer "-latest", then flash/pro
+    usable.sort((a, b) => {
+      const la = a.name.includes("latest") ? 1 : 0;
+      const lb = b.name.includes("latest") ? 1 : 0;
+      if (la !== lb) return lb - la;
+      const fa = a.name.includes("flash") ? 1 : 0;
+      const fb = b.name.includes("flash") ? 1 : 0;
+      if (fa !== fb) return fb - fa;
+      const pa = a.name.includes("pro") ? 1 : 0;
+      const pb = b.name.includes("pro") ? 1 : 0;
+      return pb - pa;
+    });
 
-            async function safeText(res) {
-                try { return await res.text(); } catch { return "(no body)"; }
-            }
+    for (const u of usable) {
+      const opt = el("option");
+      opt.value = u.name;
+      opt.textContent = u.displayName;
+      els.model.appendChild(opt);
+    }
 
-            /* ========================= TOOL EXECUTION ========================= */
-            function toolResponseContent(name, response) {
-                return {
-                    role: "tool",
-                    parts: [
-                        {
-                            functionResponse: {
-                                name,
-                                response: typeof response === "object" && response !== null ? response : { data: String(response) }
-                            }
-                        }
-                    ]
-                };
-            }
+    // Choose currently selected if still present, else first usable
+    if (!state.model || !state.streamingMethodByModel[state.model]) {
+      state.model = usable[0].name;
+    }
+    els.model.value = state.model;
+    logTool("system", `Model list updated (${usable.length} usable). Selected: ${state.model}`);
+  }
 
-            async function execTool(call) {
-                const { name, args } = call;
-                try {
-                    switch (name) {
-                        case "list_tools": {
-                            const tools = [
-                                { name: "fetch_memory(index)", use: "Retrieve detailed memory by index" },
-                                { name: "list_memories()", use: "List memory summaries and indices" },
-                                { name: "irc_add(step)", use: "Append one planning/validation step" },
-                                { name: "run_js(code)", use: "Execute JS in browser; can fetch the internet" },
-                                { name: "render_html(html)", use: "Render HTML in canvas" },
-                                { name: "set_var(name,value) / get_var(name)", use: "Manage variables for {{var:NAME}} replacement" }
-                            ];
-                            logTool("tool", "list_tools called");
-                            return toolResponseContent("list_tools", { tools });
-                        }
-                        case "list_memories": {
-                            const summaries = state.memories.map((m, i) => ({ index: i, summary: m.summary }));
-                            logTool("tool", "list_memories called");
-                            return toolResponseContent("list_memories", { summaries });
-                        }
-                        case "fetch_memory": {
-                            const i = Number(args?.index);
-                            if (Number.isNaN(i) || i < 0 || i >= state.memories.length) throw new Error("Invalid memory index");
-                            logTool("tool", `fetch_memory #${i}`);
-                            return toolResponseContent("fetch_memory", { index: i, value: state.memories[i].value, summary: state.memories[i].summary });
-                        }
-                        case "irc_add": {
-                            const step = String(args?.step || "").slice(0, 500);
-                            if (step) state.irc.push(step);
-                            renderIRC();
-                            logTool("tool", `irc_add "${step}"`);
-                            return toolResponseContent("irc_add", { ok: true, length: state.irc.length });
-                        }
-                        case "run_js": {
-                            const code = String(args?.code || "");
-                            logTool("tool", `run_js (${code.length} chars)`);
-                            const out = await runUserJS(code);
-                            if (out && out.result && typeof out.result === "object") {
-                                Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v));
-                                renderVars();
-                            }
-                            return toolResponseContent("run_js", out);
-                        }
-                        case "render_html": {
-                            const html = String(args?.html || "");
-                            renderCanvas(html);
-                            return toolResponseContent("render_html", { ok: true });
-                        }
-                        case "set_var": {
-                            const name = String(args?.name || "").trim();
-                            const value = String(args?.value ?? "");
-                            if (!name) throw new Error("name required");
-                            state.variables[name] = value;
-                            renderVars();
-                            logTool("tool", `set_var ${name}`);
-                            return toolResponseContent("set_var", { ok: true });
-                        }
-                        case "get_var": {
-                            const name = String(args?.name || "").trim();
-                            const value = state.variables[name];
-                            logTool("tool", `get_var ${name}`);
-                            return toolResponseContent("get_var", { name, value: value ?? null });
-                        }
-                        default:
-                            logTool("tool", `Unknown tool: ${name}`);
-                            return toolResponseContent(name, { error: `Unknown tool ${name}` });
-                    }
-                } catch (err) {
-                    logTool("tool", `Error in ${name}: ${String(err)}`);
-                    return toolResponseContent(name, { error: String(err) });
-                }
-            }
+  async function refreshModelList() {
+    if (!els.model) return;
+    els.model.disabled = true;
+    const prev = els.model.value;
+    els.model.innerHTML = "";
+    const loading = el("option"); loading.value = ""; loading.textContent = "Loading models…"; els.model.appendChild(loading);
 
-            /* ========================= CHAT ORCHESTRATION ========================= */
-            function buildUserContent(text) {
-                return { role: "user", parts: [{ text }] };
-            }
-            function buildSystem(text) {
-                return { role: "user", parts: [{ text }] };
-            }
+    try {
+      const cached = safeJSON(localStorage.getItem(MODELS_CACHE_STORAGE));
+      if (cached && Array.isArray(cached.models) && now() - (cached.cachedAt || 0) < 30 * 60 * 1000) {
+        populateModelSelect(cached.models);
+      } else {
+        const live = await fetchAllModelsWithAnyKey();
+        localStorage.setItem(MODELS_CACHE_STORAGE, JSON.stringify({ models: live, cachedAt: now() }));
+        populateModelSelect(live);
+      }
+    } catch (e) {
+      logTool("system", "Model list fetch failed. Using fallback options.");
+      populateModelSelect([]); // triggers fallback list only
+    } finally {
+      els.model.disabled = false;
+      if (prev && state.streamingMethodByModel[prev]) { els.model.value = prev; state.model = prev; }
+      updateUsageUI();
+    }
+  }
 
-            async function toolIteration(conversation, streamSink) {
-                let iteration = 0;
-                while (iteration++ < MAX_TOOL_ITERATIONS) {
-                    const payload = buildPayload(conversation);
-                    let draft = "";
-                    const { stream, key } = await sseRequestWithRetry(payload, "draft");
-                    for await (const evt of readSSE(stream, key)) {
-                        const { textDelta, toolCalls } = extractParts(evt);
-                        if (textDelta) {
-                            draft += textDelta;
-                            streamSink(textDelta);
-                        }
-                        if (toolCalls && toolCalls.length) {
-                            // Execute tools, then continue with updated conversation
-                            for (const call of toolCalls) {
-                                logTool("intention", `Tool call requested: ${call.name}`);
-                                const toolContent = await execTool(call);
-                                conversation.push(toolContent);
-                            }
-                        }
-                    }
-                    // If we got tool calls, the conversation was extended; loop to let model consume tool responses
-                    if (conversation.length && conversation[conversation.length - 1].role === "tool") {
-                        continue;
-                    }
-                    // No outstanding tool calls; return final draft for this phase
-                    return { draft, conversation };
-                }
-                throw new Error("Maximum tool iterations exceeded.");
-            }
+  async function recheckKeyStatuses() {
+    const keys = getStoredKeys();
+    if (!keys.length) { updateUsageUI(); return; }
 
-            async function verifyPass() {
-                const verifyPrompt = [
-                    "VERIFY AGAINST GOALS.",
-                    "Given the previous draft answer, STRICTLY check it against the Goals and the IRC (steps).",
-                    "If the draft fully satisfies all goals, return a concise, professional FINAL answer.",
-                    "Otherwise, revise it to satisfy all goals and return only the revised FINAL answer.",
-                    "Do NOT include analysis. Do NOT mention verification.",
-                    "If the draft used variables like {{var:NAME}}, keep those placeholders intact."
-                ].join(" ");
-                const verifyConversation = [
-                    ...state.history,
-                    { role: "user", parts: [{ text: verifyPrompt }] }
-                ];
-                const payload = buildPayload(verifyConversation);
-                const { stream, key } = await sseRequestWithRetry(payload, "verify");
-                let verified = "";
-                for await (const evt of readSSE(stream, key)) {
-                    const { textDelta } = extractParts(evt);
-                    if (textDelta) verified += textDelta;
-                }
-                return verified;
-            }
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const url = new URL(MODEL_LIST_PATH());
+      url.searchParams.set("key", key);
+      url.searchParams.set("pageSize", "1");
+      try {
+        // We COUNT this as a request so it participates in local quotas.
+        checkAndConsumeQuota(key);
+        const res = await fetch(url.toString(), { method: "GET" });
+        const kh = hashKey(key);
+        state.keyStatus[kh] = { lastChecked: now(), ok: res.ok, http: res.status, msg: res.ok ? "OK" : "Not authorized or invalid" };
+        if (res.status === 401 || res.status === 403) openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
+        if (res.status === 429 || res.status === 503) openCircuitFor(key, CIRCUIT_BREAK_MS);
+      } catch (err) {
+        const kh = hashKey(key);
+        state.keyStatus[kh] = { lastChecked: now(), ok: false, http: 0, msg: String(err) };
+      }
+    }
+    updateUsageUI();
+  }
 
-            async function runChatTurn(userText) {
-                // Push user
-                const userContent = buildUserContent(userText);
-                state.history.push(userContent);
+  /* ========================= GEMINI STREAMING ========================= */
+  function buildPayload(contents) {
+    return {
+      systemInstruction: { role: "user", parts: [{ text: buildSystemInstruction() }] },
+      tools: [{ functionDeclarations }],
+      contents,
+      generationConfig: {
+        temperature: (els.temp && Number(els.temp.value || "0.3")) || state.temperature,
+        candidateCount: 1
+      },
+      safetySettings: []
+    };
+  }
 
-                // DRAFT PHASE (with tools)
-                const modelMsg = addMsg("model", "");
-                const conv = [...state.history, buildSystem("Use tools as needed, then provide a draft.")];
-                let lastText = "";
-                const { draft, conversation } = await toolIteration(conv, (delta) => {
-                    lastText += delta;
-                    modelMsg.set(lastText);
-                });
+  async function* readSSE(stream, currentKey) {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const textChunk = decoder.decode(value, { stream: true });
+      addOutChars(currentKey, textChunk.length);
+      buf += textChunk;
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 2);
+        if (!chunk) continue;
+        const lines = chunk.split("\n").map((s) => s.trim());
+        for (const l of lines) {
+          if (!l.startsWith("data:")) continue;
+          const payload = l.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          const obj = safeJSON(payload);
+          if (obj) yield obj;
+        }
+      }
+    }
+  }
 
-                state.history.push({ role: "model", parts: [{ text: draft || "" }] });
+  function extractParts(evt) {
+    const out = { textDelta: "", toolCalls: [] };
+    const cands = evt.candidates || [];
+    for (const c of cands) {
+      const parts = (c.content && c.content.parts) || [];
+      for (const p of parts) {
+        if (p.text) out.textDelta += p.text;
+        if (p.functionCall) out.toolCalls.push(p.functionCall);
+      }
+    }
+    return out;
+  }
 
-                // VERIFICATION PHASE
-                const verifyMsg = addMsg("model", "");
-                const verified = await verifyPass();
+  async function sseRequestWithRetry(payload, kind) {
+    let attempts = 0;
+    while (attempts < MAX_RETRY_PER_CALL) {
+      const key = getActiveKey();
+      try { checkAndConsumeQuota(key); }
+      catch (quotaErr) { rotateKey(String(quotaErr)); attempts++; continue; }
 
-                // VARIABLE INJECTION
-                const injected = verified.replace(/\{\{var:([\w\-]+)\}\}/g, (_, name) => String(state.variables[name] ?? ""));
-                verifyMsg.set(injected);
+      // Choose path based on selected model’s capabilities
+      const modelName = state.model;
+      const method = state.streamingMethodByModel[modelName] || "streamGenerateContent";
+      const url = STREAM_ENDPOINT(modelName, key, method);
+      const bodyStr = JSON.stringify(payload);
+      addInChars(key, bodyStr.length);
 
-                // Save final
-                state.history.push({ role: "model", parts: [{ text: injected }] });
-            }
+      const aborter = new AbortController();
+      state.inFlight = { aborter, kind };
+      let res;
+      try {
+        res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr, signal: aborter.signal });
+      } catch (err) {
+        openCircuitFor(key, CIRCUIT_BREAK_MS);
+        rotateKey("network error");
+        attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
+      } finally {
+        state.inFlight = null;
+      }
 
-            /* ========================= EVENT BINDINGS ========================= */
-            function bindUI() {
-                if (els.saveKeys) {
-                    els.saveKeys.onclick = () => {
-                        const keys = els.keyInputs.map((i) => i.value.trim()).filter(Boolean);
-                        setStoredKeys(keys);
-                        logTool("system", `Saved API keys (${keys.length})`);
-                    };
-                }
+      if (res.status === 429 || res.status === 503) {
+        openCircuitFor(key, CIRCUIT_BREAK_MS);
+        rotateKey(`HTTP ${res.status}`);
+        attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
+      }
+      if (res.status === 401 || res.status === 403) {
+        openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
+        rotateKey(`HTTP ${res.status}`);
+        attempts++; continue;
+      }
+      if (!res.ok) {
+        const text = await (async()=>{ try { return await res.text(); } catch { return "(no body)"; }})();
+        logTool("system", `Gemini error ${res.status}: ${text.slice(0, 200)}`);
+        attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
+      }
+      return { stream: res.body, key }; // success
+    }
+    throw new Error("All retries exhausted.");
+  }
 
-                if (els.saveGoals) {
-                    els.saveGoals.onclick = () => {
-                        const g = (els.goals && els.goals.value.trim()) || "";
-                        localStorage.setItem(GOALS_STORAGE, g);
-                        logTool("system", "Saved goals");
-                    };
-                }
-                if (els.clearGoals) {
-                    els.clearGoals.onclick = () => {
-                        localStorage.removeItem(GOALS_STORAGE);
-                        if (els.goals) els.goals.value = "";
-                        logTool("system", "Cleared goals");
-                    };
-                }
+  /* ========================= TOOLS RUNTIME ========================= */
+  function toolResponseContent(name, response) {
+    return { role: "tool", parts: [{ functionResponse: { name, response: typeof response === "object" && response !== null ? response : { data: String(response) } } }] };
+  }
 
-                if (els.addMemory) {
-                    els.addMemory.onclick = () => {
-                        const s = (els.memSummary && els.memSummary.value.trim()) || "";
-                        const v = (els.memValue && els.memValue.value.trim()) || "";
-                        if (!s || !v) return;
-                        state.memories.push({ summary: s, value: v, ts: now() });
-                        if (els.memSummary) els.memSummary.value = "";
-                        if (els.memValue) els.memValue.value = "";
-                        localStorage.setItem(MEMS_STORAGE, JSON.stringify(state.memories));
-                        renderMemories();
-                    };
-                }
-                if (els.clearMemory) {
-                    els.clearMemory.onclick = () => {
-                        state.memories = [];
-                        localStorage.removeItem(MEMS_STORAGE);
-                        renderMemories();
-                        logTool("system", "Cleared memory store");
-                    };
-                }
+  async function execTool(call) {
+    const { name, args } = call;
+    try {
+      switch (name) {
+        case "list_tools": {
+          const tools = [
+            { name: "fetch_memory(index)", use: "Retrieve detailed memory by index" },
+            { name: "list_memories()", use: "List memory summaries and indices" },
+            { name: "irc_add(step)", use: "Append one planning/validation step" },
+            { name: "run_js(code)", use: "Execute JS in browser; can fetch the internet" },
+            { name: "render_html(html)", use: "Render HTML in canvas" },
+            { name: "set_var(name,value) / get_var(name)", use: "Manage variables for {{var:NAME}} replacement" }
+          ];
+          logTool("tool", "list_tools called");
+          return toolResponseContent("list_tools", { tools });
+        }
+        case "list_memories": {
+          const summaries = state.memories.map((m, i) => ({ index: i, summary: m.summary }));
+          logTool("tool", "list_memories called");
+          return toolResponseContent("list_memories", { summaries });
+        }
+        case "fetch_memory": {
+          const i = Number(args?.index);
+          if (Number.isNaN(i) || i < 0 || i >= state.memories.length) throw new Error("Invalid memory index");
+          logTool("tool", `fetch_memory #${i}`);
+          return toolResponseContent("fetch_memory", { index: i, value: state.memories[i].value, summary: state.memories[i].summary });
+        }
+        case "irc_add": {
+          const step = String(args?.step || "").slice(0, 500);
+          if (step) state.irc.push(step);
+          renderIRC();
+          logTool("tool", `irc_add "${step}"`);
+          return toolResponseContent("irc_add", { ok: true, length: state.irc.length });
+        }
+        case "run_js": {
+          const code = String(args?.code || "");
+          logTool("tool", `run_js (${code.length} chars)`);
+          const out = await runUserJS(code);
+          if (out && out.result && typeof out.result === "object") { Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v)); renderVars(); }
+          return toolResponseContent("run_js", out);
+        }
+        case "render_html": {
+          const html = String(args?.html || "");
+          renderCanvas(html);
+          return toolResponseContent("render_html", { ok: true });
+        }
+        case "set_var": {
+          const name = String(args?.name || "").trim();
+          const value = String(args?.value ?? "");
+          if (!name) throw new Error("name required");
+          state.variables[name] = value; renderVars(); logTool("tool", `set_var ${name}`);
+          return toolResponseContent("set_var", { ok: true });
+        }
+        case "get_var": {
+          const name = String(args?.name || "").trim();
+          const value = state.variables[name];
+          logTool("tool", `get_var ${name}`);
+          return toolResponseContent("get_var", { name, value: value ?? null });
+        }
+        default:
+          logTool("tool", `Unknown tool: ${name}`);
+          return toolResponseContent(name, { error: `Unknown tool ${name}` });
+      }
+    } catch (err) {
+      logTool("tool", `Error in ${name}: ${String(err)}`);
+      return toolResponseContent(name, { error: String(err) });
+    }
+  }
 
-                if (els.runJS) {
-                    els.runJS.onclick = async () => {
-                        const code = (els.jsCode && els.jsCode.value) || "";
-                        const out = await runUserJS(code);
-                        if (out && out.result && typeof out.result === "object") {
-                            Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v));
-                            renderVars();
-                        }
-                    };
-                }
-                if (els.clearJS) {
-                    els.clearJS.onclick = () => {
-                        if (els.jsCode) els.jsCode.value = "";
-                        if (els.jsLog) els.jsLog.textContent = "";
-                    };
-                }
+  /* ========================= CHAT LOOP ========================= */
+  function buildUserContent(text) { return { role: "user", parts: [{ text }] }; }
+  function buildSystem(text) { return { role: "user", parts: [{ text }] }; }
 
-                if (els.renderHTML) {
-                    els.renderHTML.onclick = () => {
-                        const html = (els.htmlCanvasInput && els.htmlCanvasInput.value) || "";
-                        renderCanvas(html);
-                    };
-                }
-                if (els.clearCanvas) {
-                    els.clearCanvas.onclick = () => renderCanvas("");
-                }
+  async function toolIteration(conversation, streamSink) {
+    let iteration = 0;
+    while (iteration++ < MAX_TOOL_ITERATIONS) {
+      const payload = buildPayload(conversation);
+      let draft = "";
+      const { stream, key } = await sseRequestWithRetry(payload, "draft");
+      for await (const evt of readSSE(stream, key)) {
+        const { textDelta, toolCalls } = extractParts(evt);
+        if (textDelta) { draft += textDelta; streamSink(textDelta); }
+        if (toolCalls && toolCalls.length) {
+          for (const call of toolCalls) {
+            logTool("intention", `Tool call requested: ${call.name}`);
+            const toolContent = await execTool(call);
+            conversation.push(toolContent);
+          }
+        }
+      }
+      if (conversation.length && conversation[conversation.length - 1].role === "tool") continue;
+      return { draft, conversation };
+    }
+    throw new Error("Maximum tool iterations exceeded.");
+  }
 
-                // Send / Cancel behavior with AbortController
-                let sending = false;
-                const setSending = (on) => {
-                    sending = on;
-                    if (els.send) {
-                        els.send.textContent = on ? "Cancel" : "Send";
-                    }
-                };
+  async function verifyPass() {
+    const verifyPrompt = [
+      "VERIFY AGAINST GOALS.",
+      "Given the previous draft answer, STRICTLY check it against the Goals and the IRC (steps).",
+      "If the draft fully satisfies all goals, return a concise, professional FINAL answer.",
+      "Otherwise, revise it to satisfy all goals and return only the revised FINAL answer.",
+      "Do NOT include analysis. Do NOT mention verification.",
+      "If the draft used variables like {{var:NAME}}, keep those placeholders intact."
+    ].join(" ");
+    const verifyConversation = [...state.history, { role: "user", parts: [{ text: verifyPrompt }] }];
+    const payload = buildPayload(verifyConversation);
+    const { stream, key } = await sseRequestWithRetry(payload, "verify");
+    let verified = "";
+    for await (const evt of readSSE(stream, key)) {
+      const { textDelta } = extractParts(evt);
+      if (textDelta) verified += textDelta;
+    }
+    return verified;
+  }
 
-                if (els.send) {
-                    els.send.onclick = async () => {
-                        if (sending && state.inFlight && state.inFlight.aborter) {
-                            state.inFlight.aborter.abort();
-                            logTool("system", "Aborted current request");
-                            setSending(false);
-                            return;
-                        }
-                        const text = (els.prompt && els.prompt.value.trim()) || "";
-                        if (!text) return;
-                        const yourMsg = addMsg("user", text);
-                        if (els.prompt) els.prompt.value = "";
-                        try {
-                            setSending(true);
-                            await runChatTurn(text);
-                        } catch (err) {
-                            addMsg("model", "Error: " + String((err && err.message) || err));
-                        } finally {
-                            setSending(false);
-                        }
-                    };
-                }
+  async function runChatTurn(userText) {
+    const userContent = buildUserContent(userText);
+    state.history.push(userContent);
 
-                // New thread
-                if (els.newThread) {
-                    els.newThread.onclick = () => {
-                        state.history = [];
-                        state.irc = [];
-                        renderIRC();
-                        if (els.chat) els.chat.innerHTML = "";
-                        logTool("system", "Started a new thread");
-                    };
-                }
+    const modelMsg = addMsg("model", "");
+    const conv = [...state.history, buildSystem("Use tools as needed, then provide a draft.")];
+    let lastText = "";
+    const { draft, conversation } = await toolIteration(conv, (delta) => { lastText += delta; modelMsg.set(lastText); });
 
-                // Temperature sync (optional)
-                if (els.temp) {
-                    els.temp.onchange = () => {
-                        const t = parseFloat(els.temp.value);
-                        state.temperature = isFinite(t) ? clamp(t, 0, 1) : 0.3;
-                    };
-                }
+    state.history.push({ role: "model", parts: [{ text: draft || "" }] });
 
-                // ESC to cancel
-                window.addEventListener("keydown", (e) => {
-                    if (e.key === "Escape" && state.inFlight && state.inFlight.aborter) {
-                        state.inFlight.aborter.abort();
-                        logTool("system", "Aborted current request (Esc)");
-                    }
-                });
-            }
+    const verifyMsg = addMsg("model", "");
+    const verified = await verifyPass();
+    const injected = verified.replace(/\{\{var:([\w\-]+)\}\}/g, (_, name) => String(state.variables[name] ?? ""));
+    verifyMsg.set(injected);
+    state.history.push({ role: "model", parts: [{ text: injected }] });
+  }
 
-            /* ========================= BOOT ========================= */
-            window.addEventListener("load", () => {
-                // Force model
-                if (els.model) {
-                    els.model.value = DEFAULT_MODEL;
-                    els.model.disabled = true;
-                }
-                loadFromStorage();
-                bindUI();
-                logTool("system", `Ready. Model: ${DEFAULT_MODEL}`);
-            });
-        })();
+  /* ========================= BINDINGS & BOOTSTRAP ========================= */
+  function bindUI() {
+    // Save Keys => persist + recheck + refresh models
+    if (els.saveKeys) {
+      els.saveKeys.onclick = async () => {
+        const keys = els.keyInputs.map((i) => i.value.trim()).filter(Boolean);
+        setStoredKeys(keys);
+        logTool("system", `Saved API keys (${keys.length})`);
+        await recheckKeyStatuses();
+        await refreshModelList();
+      };
+    }
+
+    if (els.saveGoals) els.saveGoals.onclick = () => { const g = (els.goals && els.goals.value.trim()) || ""; localStorage.setItem(GOALS_STORAGE, g); logTool("system", "Saved goals"); };
+    if (els.clearGoals) els.clearGoals.onclick = () => { localStorage.removeItem(GOALS_STORAGE); if (els.goals) els.goals.value = ""; logTool("system", "Cleared goals"); };
+
+    if (els.addMemory) els.addMemory.onclick = () => {
+      const s = (els.memSummary && els.memSummary.value.trim()) || "";
+      const v = (els.memValue && els.memValue.value.trim()) || "";
+      if (!s || !v) return;
+      state.memories.push({ summary: s, value: v, ts: now() });
+      if (els.memSummary) els.memSummary.value = "";
+      if (els.memValue) els.memValue.value = "";
+      localStorage.setItem(MEMS_STORAGE, JSON.stringify(state.memories));
+      renderMemories();
+    };
+    if (els.clearMemory) els.clearMemory.onclick = () => { state.memories = []; localStorage.removeItem(MEMS_STORAGE); renderMemories(); logTool("system", "Cleared memory store"); };
+
+    if (els.runJS) els.runJS.onclick = async () => { const code = (els.jsCode && els.jsCode.value) || ""; const out = await runUserJS(code); if (out && out.result && typeof out.result === "object") { Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v)); renderVars(); } };
+    if (els.clearJS) els.clearJS.onclick = () => { if (els.jsCode) els.jsCode.value = ""; if (els.jsLog) els.jsLog.textContent = ""; };
+
+    if (els.renderHTML) els.renderHTML.onclick = () => { const html = (els.htmlCanvasInput && els.htmlCanvasInput.value) || ""; renderCanvas(html); };
+    if (els.clearCanvas) els.clearCanvas.onclick = () => renderCanvas("");
+
+    // Send / Cancel
+    let sending = false;
+    const setSending = (on) => { sending = on; if (els.send) els.send.textContent = on ? "Cancel" : "Send"; };
+    if (els.send) {
+      els.send.onclick = async () => {
+        if (sending && state.inFlight && state.inFlight.aborter) { state.inFlight.aborter.abort(); logTool("system", "Aborted current request"); setSending(false); return; }
+        const text = (els.prompt && els.prompt.value.trim()) || ""; if (!text) return;
+        addMsg("user", text); if (els.prompt) els.prompt.value = "";
+        try { setSending(true); await runChatTurn(text); } catch (err) { addMsg("model", "Error: " + String((err && err.message) || err)); } finally { setSending(false); }
+      };
+    }
+
+    // New thread
+    if (els.newThread) els.newThread.onclick = () => { state.history = []; state.irc = []; renderIRC(); if (els.chat) els.chat.innerHTML = ""; logTool("system", "Started a new thread"); };
+
+    // Model select: update chosen model
+    if (els.model) {
+      els.model.onchange = () => {
+        const sel = els.model.value;
+        state.model = sel;
+        logTool("system", `Selected model: ${sel} (method: ${state.streamingMethodByModel[sel] || 'streamGenerateContent'})`);
+      };
+    }
+
+    // Temperature
+    if (els.temp) els.temp.onchange = () => { const t = parseFloat(els.temp.value); state.temperature = isFinite(t) ? clamp(t, 0, 1) : 0.3; };
+
+    // ESC to cancel
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.inFlight && state.inFlight.aborter) { state.inFlight.aborter.abort(); logTool("system", "Aborted current request (Esc)"); }
+    });
+  }
+
+  function loadFromStorage() {
+    const keys = getStoredKeys();
+    keys.forEach((k, i) => { if (els.keyInputs[i]) els.keyInputs[i].value = k; });
+
+    const t = parseFloat((els.temp && els.temp.value) || "0.3"); state.temperature = isFinite(t) ? t : 0.3;
+    state.memories = JSON.parse(localStorage.getItem(MEMS_STORAGE) || "[]"); renderMemories();
+    const g = localStorage.getItem(GOALS_STORAGE) || ""; if (els.goals) els.goals.value = g;
+
+    // If a cached model list exists, seed UI immediately (refresh will update)
+    const cached = safeJSON(localStorage.getItem(MODELS_CACHE_STORAGE));
+    if (cached && Array.isArray(cached.models)) populateModelSelect(cached.models);
+    else populateModelSelect([]); // ensures fallback options until we fetch
+
+    updateUsageUI();
+    renderIRC();
+    renderVars();
+  }
+
+  window.addEventListener("load", async () => {
+    loadFromStorage();
+    bindUI();
+    logTool("system", "Booting… fetching model list & key statuses.");
+    try {
+      await recheckKeyStatuses();
+      await refreshModelList();
+    } catch (e) {
+      // Already handled with fallbacks
+    }
+    // Auto-refresh models every 30 minutes
+    setInterval(refreshModelList, 30 * 60 * 1000);
+  });
+})();
     </script>
 </body>
 </html>
