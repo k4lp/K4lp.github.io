@@ -101,7 +101,8 @@
     els.settings.classList.remove('open');
   });
 
-  els.cancelSettings.addEventListener('click', ()=>{
+  els.cancelSettings.addEventListener('click', (e)=>{
+    e.preventDefault();
     els.settings.classList.remove('open');
   });
 

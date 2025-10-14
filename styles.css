@@ -187,7 +187,7 @@ textarea.mono, .mono {
 }
 
 .modal-overlay {
-  display: none;
+  visibility: hidden;
   position: fixed;
   top: 0;
   left: 0;
@@ -197,9 +197,10 @@ textarea.mono, .mono {
   z-index: 1000;
   justify-content: center;
   align-items: center;
+  display: flex;
 }
 .modal-overlay.open {
-  display: flex;
+  visibility: visible;
 }
 .modal {
   background: var(--bg);
@@ -225,11 +226,33 @@ textarea.mono, .mono {
   border: 1px solid #ccc;
 }
 
-@media (max-width: 900px) {
-  .layout { grid-template-columns: 280px 1fr; }
-  .panel.right { display: none; }
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 240px 1fr;
+  }
+  .panel.right {
+    display: none; /* Hide right panel on tablets */
+  }
 }
-@media (max-width: 600px) {
-  .layout { grid-template-columns: 1fr; }
-  .panel.left { display: none; }
+
+@media (max-width: 768px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: auto; /* Allow content to scroll */
+  }
+  .panel {
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .center {
+    height: calc(100vh - var(--topbar-h) - 80px); /* Adjust height for composer */
+  }
+  .composer textarea {
+    font-size: 16px; /* Larger font for mobile */
+  }
+  .modal {
+    width: 90%;
+  }
 }
