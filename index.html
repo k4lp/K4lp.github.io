@@ -407,24 +407,6 @@
     </div>
 
     <script>
-        /*
-          DROP-IN REPLACEMENT for your previous <script>…</script> block.
-    Paste this entire snippet inside your page’s
-    <script>
- tags, replacing the old code.
-
-  What’s new vs prior version:
-  - Auto-fetches the live model list via ListModels and updates the <select id="model">.
-    • If fetching fails (no internet/invalid keys), falls back to built-ins.
-    • Chooses the correct streaming path per model (streamGenerateContent vs generateContent).
-  - Shows per-key status & rate-limit view (validity + local quotas + live usage).
-  - Keeps five-key rotation, circuit breakers, SSE streaming, JS execution, canvas rendering,
-    Memory/IRC/Goals data-structures, verification pass, variable injection, cancel/abort.
-
-  NOTE: Gemini's public API typically does not return explicit X-RateLimit headers.
-  We display (a) whether the key is valid/usable, and (b) configurable local quotas & live usage.
-*/
-
 (() => {
   "use strict";
 
