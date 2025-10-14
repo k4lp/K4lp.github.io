@@ -1,9 +1,13 @@
+console.log('app.js script started');
+const keyring = new KeyRing();
+console.log('KeyRing instantiated:', keyring);
+const memory = new MemoryStore();
+console.log('MemoryStore instantiated:', memory);
+
 // Wrap everything in DOMContentLoaded to ensure DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM fully loaded and parsed');
 
-  const keyring = new KeyRing();
-  const memory = new MemoryStore();
   // Get all DOM element references
   const els = {
     settings: document.getElementById('settings'),
@@ -41,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Load saved API key and model
       try {
+        console.log('Accessing keyring in openSettings:', keyring);
         const savedKey = keyring.get('gemini-api-key');
         const savedModel = localStorage.getItem('gemini-model') || 'gemini-2.0-flash';
 
