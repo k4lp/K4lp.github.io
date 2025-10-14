@@ -30,6 +30,9 @@
       document.getElementById('key-4'),
       document.getElementById('key-5'),
     ],
+    console: document.getElementById('console'),
+    consoleOutput: document.getElementById('console-output'),
+    clearConsole: document.getElementById('clear-console'),
   };
 
   const keyring = new KeyRing();
@@ -59,8 +62,58 @@
   }
   const tools = new ExternalTools({memory, canvas: htmlCanvas, varsRef, runUserJS});
 
-  function getModel(){ return els.model.value || 'gemini-2.5-flash-latest' }
-  function systemPrompt(){ return SYSTEM_PROMPT }
+  // --- Inline Console ---
+  function setupInlineConsole(){
+    const nativeLog = console.log;
+    const nativeError = console.error;
+    const nativeWarn = console.warn;
+
+    function logToScreen(message, type = 'log'){
+      const el = document.createElement('div');
+      el.textContent = message;
+      el.classList.add(`log-${type}`);
+      els.consoleOutput.appendChild(el);
+      els.consoleOutput.scrollTop = els.consoleOutput.scrollHeight;
+    }
+
+    console.log = (...args) => {
+      nativeLog.apply(console, args);
+      const message = args.map(a => JSON.stringify(a)).join(' ');
+      logToScreen(message, 'log');
+    };
+
+    console.error = (...args) => {
+      nativeError.apply(console, args);
+      const message = args.map(a => a instanceof Error ? a.stack : JSON.stringify(a)).join(' ');
+      logToScreen(message, 'error');
+    };
+
+    console.warn = (...args) => {
+        nativeWarn.apply(console, args);
+        const message = args.map(a => JSON.stringify(a)).join(' ');
+        logToScreen(message, 'warn');
+    };
+
+    els.clearConsole.addEventListener('click', () => {
+      els.consoleOutput.innerHTML = '';
+    });
+
+    window.addEventListener('error', (event) => {
+      console.error(event.error);
+    });
+  }
+  setupInlineConsole();
+  // --- End Inline Console ---
+
+  function getModel(){
+    const model = els.model.value || 'gemini-flash-latest';
+    console.log(`Using model: ${model}`);
+    return model;
+  }
+  function systemPrompt(){
+    console.log('Getting system prompt');
+    return SYSTEM_PROMPT;
+  }
 
   const client = new GeminiClient({ keyring, getModel, systemPromptProvider: systemPrompt });
 
@@ -89,29 +142,45 @@
   renderMemory();
 
   els.addMemory.addEventListener('click', ()=>{
+    console.log('Add memory button clicked');
     const summary = prompt('Summary:') || '';
     const details = prompt('Details:') || '';
-    if(summary){ memory.add(summary, details); renderMemory() }
+    if(summary){
+      console.log('Adding new memory:', {summary, details});
+      memory.add(summary, details);
+      renderMemory();
+    } else {
+      console.log('Add memory cancelled');
+    }
   });
-  els.saveGoals.addEventListener('click', ()=> memory.setGoals(els.goalsText.value||""));
+  els.saveGoals.addEventListener('click', ()=> {
+    console.log('Saving goals');
+    memory.setGoals(els.goalsText.value||"");
+  });
 
   els.showTrace.addEventListener('change', ()=>{
     els.traceLog.classList.toggle('hidden', !els.showTrace.checked);
   });
 
   els.runJS.addEventListener('click', async ()=>{
+    console.log('Run JS button clicked');
     const res = await runUserJS(els.jsCode.value);
     els.jsOutput.textContent = res.output + (res.lastValue? `\n[return] ${res.lastValue}` : '');
+    console.log('JS execution complete');
   });
-  els.clearCanvas.addEventListener('click', ()=> htmlCanvas.clear());
+  els.clearCanvas.addEventListener('click', ()=> {
+    console.log('Clear canvas button clicked');
+    htmlCanvas.clear();
+  });
 
   els.openSettings.addEventListener('click', ()=>{
     console.log('--- OPEN SETTINGS CLICKED ---');
     // load keys
+    console.log('Loading keys into settings modal');
     keyring.state.keys.forEach((k, i)=> els.keyInputs[i].value = k);
     els.model.value = getModel();
-    els.settings.style.display = 'flex';
-    console.log('Settings modal display style set to flex.');
+    els.settings.classList.add('open');
+    console.log('Settings modal opened.');
   });
   els.saveSettings.addEventListener('click', ()=>{
     console.log('Saving settings...');
@@ -121,14 +190,14 @@
     keyring.setKey(3, els.keyInputs[3].value);
     keyring.setKey(4, els.keyInputs[4].value);
     els.activeModel.textContent = getModel();
-    els.settings.style.display = 'none';
+    els.settings.classList.remove('open');
     console.log('Settings saved and modal closed.');
   });
 
   els.cancelSettings.addEventListener('click', (e)=>{
     console.log('Canceling settings...');
     e.preventDefault();
-    els.settings.style.display = 'none';
+    els.settings.classList.remove('open');
     console.log('Settings modal closed without saving.');
   });
 
@@ -255,22 +324,30 @@
   }
 
   async function handleSubmit(){
+    console.log('Handling submit');
     const text = els.prompt.value.trim();
-    if(!text) return;
+    if(!text) {
+      console.log('Empty prompt, not submitting');
+      return;
+    }
+    console.log('Prompt text:', text);
     els.prompt.value = '';
     try{
       await orchestrate(text);
     }catch(err){
+      console.error('Error during orchestration:', err);
       const b = addMessage('assistant', '');
       appendToBubble(b, `Error: ${err.message||String(err)}`);
     }
   }
 
   els.composer.addEventListener('submit', (e)=>{
+    console.log('Composer submit event');
     e.preventDefault();
     handleSubmit();
   });
   els.send.addEventListener('click', (e)=>{
+    console.log('Send button click event');
     e.preventDefault();
     handleSubmit();
   });

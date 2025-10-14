@@ -15,14 +15,6 @@ class KeyRing {
   setKey(i, val){ this.state.keys[i] = val || ""; this.save() }
   getActive(){ return this.state.keys[this.state.index] || "" }
   setIndex(i){ this.state.index = i % this.state.keys.length; this.save() }
-  rotate(){
-    const n = this.state.keys.length;
-    for(let step=1; step<=n; step++){
-      const ni = (this.state.index + step) % n;
-      if(this.state.keys[ni]){ this.state.index = ni; this.save(); return this.getActive() }
-    }
-    return this.getActive();
-  }
   markRateLimited(){
     // Set a cool-off period for the current key before rotating.
     this.state.coolOff[this.state.index] = Date.now() + 60000; // 1 minute cool-off
