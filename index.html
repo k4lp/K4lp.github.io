@@ -407,535 +407,941 @@
     </div>
 
     <script>
-/* ============ Storage & State ============ */
-const els = {
-  model: document.getElementById('model'),
-  keyInputs: [1,2,3,4,5].map(n=>document.getElementById('key'+n)),
-  saveKeys: document.getElementById('saveKeys'),
-  temp: document.getElementById('temp'),
-  send: document.getElementById('send'),
-  newThread: document.getElementById('newThread'),
-  chat: document.getElementById('chat'),
-  prompt: document.getElementById('prompt'),
-  goals: document.getElementById('goals'),
-  saveGoals: document.getElementById('saveGoals'),
-  clearGoals: document.getElementById('clearGoals'),
-  memSummary: document.getElementById('memSummary'),
-  memValue: document.getElementById('memValue'),
-  addMemory: document.getElementById('addMemory'),
-  clearMemory: document.getElementById('clearMemory'),
-  memoryList: document.getElementById('memoryList'),
-  runJS: document.getElementById('runJS'),
-  clearJS: document.getElementById('clearJS'),
-  jsCode: document.getElementById('jsCode'),
-  jsLog: document.getElementById('jsLog'),
-  renderHTML: document.getElementById('renderHTML'),
-  clearCanvas: document.getElementById('clearCanvas'),
-  htmlCanvasInput: document.getElementById('htmlCanvasInput'),
-  canvas: document.getElementById('canvas'),
-  toolLog: document.getElementById('toolLog'),
-  varList: document.getElementById('varList'),
-  ircList: document.getElementById('ircList'),
-};
+        /* 
+          Drop-in JS for the existing HTML. Robust Gemini chat runtime featuring:
+          - Model: gemini-2.5-flash-latest (forced)
+          - Streaming with SSE, retries, exponential backoff + jitter, abort/cancel
+          - Five-key rotation (localStorage) with per-key circuit breakers
+          - Quota + usage tracking (per key and session) with simple RPM/day budgets
+          - Memory summaries + on-demand memory fetch
+          - Immediate Reasoning Chain (IRC) for the current reply
+          - Goals verification pass (auto)
+          - External Tools: run_js, render_html, set_var/get_var, list_memories/fetch_memory, list_tools
+          - JS execution (runs in the page; network access via fetch)
+          - Canvas HTML renderer
+          - {{var:NAME}} variable injection
+          - Responsive to missing DOM (graceful no-ops)
+        
+          SECURITY NOTE: This enables arbitrary JS execution in your browser.
+          Only run trusted prompts and code.
+        */
 
-const state = {
-  history: [], // [{role:'user'|'model'|'tool', parts:[{text}|{functionResponse}|{functionCall}] }]
-  irc: [],     // Immediate Reasoning Chain (per thread)
-  memories: [],// [{summary, value, ts}]
-  variables: {}, // name -> value
-  goals: '',
-  keyIndex: 0
-};
+        (() => {
+            "use strict";
 
-function loadFromStorage(){
-  const keys = JSON.parse(localStorage.getItem('gemini_keys')||'[]');
-  keys.forEach((k,i)=>{ if(els.keyInputs[i]) els.keyInputs[i].value = k; });
-  state.goals = localStorage.getItem('goals') || '';
-  els.goals.value = state.goals;
-  state.memories = JSON.parse(localStorage.getItem('memories')||'[]');
-  renderMemories();
-  renderVars();
-  renderIRC();
-}
-function saveKeys(){
-  const keys = els.keyInputs.map(i=>i.value.trim()).filter(Boolean);
-  localStorage.setItem('gemini_keys', JSON.stringify(keys));
-  logTool('system','Saved API keys ('+keys.length+')');
-}
-function saveGoals(){
-  state.goals = els.goals.value.trim();
-  localStorage.setItem('goals', state.goals);
-  logTool('system','Saved goals');
-}
-function clearGoals(){
-  state.goals = '';
-  els.goals.value = '';
-  localStorage.removeItem('goals');
-  logTool('system','Cleared goals');
-}
-function addMemory(){
-  const s = els.memSummary.value.trim();
-  const v = els.memValue.value.trim();
-  if(!s || !v) return;
-  state.memories.push({summary:s, value:v, ts:Date.now()});
-  els.memSummary.value=''; els.memValue.value='';
-  localStorage.setItem('memories', JSON.stringify(state.memories));
-  renderMemories();
-}
-function clearMemory(){
-  state.memories = [];
-  localStorage.removeItem('memories');
-  renderMemories();
-  logTool('system','Cleared memory store');
-}
-function renderMemories(){
-  if(!state.memories.length){ els.memoryList.innerHTML = '<div class="small">No memory items yet.</div>'; return; }
-  els.memoryList.innerHTML = state.memories.map((m,i)=>(
-    `<div style="margin-bottom:10px">
-      <div><span class="pill">#${i}</span> <strong>${escapeHtml(m.summary)}</strong></div>
-      <div class="small mono" style="margin-top:4px; white-space:pre-wrap">${escapeHtml(m.value)}</div>
-    </div>`
-  )).join('');
-}
-function renderIRC(){
-  els.ircList.textContent = state.irc.length ? state.irc.map((s,i)=>`${i+1}. ${s}`).join('\n') : '(empty)';
-}
-function renderVars(){
-  const entries = Object.entries(state.variables);
-  els.varList.innerHTML = entries.length ? entries.map(([k,v])=>`<span class="kv mono">${escapeHtml(k)} = ${escapeHtml(String(v))}</span>`).join('') : '';
-}
+            /* ========================= DOM HOOKS (graceful if absent) ========================= */
+            const q = (id) => document.getElementById(id);
+            const els = {
+                aside: document.querySelector('aside'),
+                model: q('model'),
+                keyInputs: [1, 2, 3, 4, 5].map((n) => q('key' + n)).filter(Boolean),
+                saveKeys: q('saveKeys'),
+                temp: q('temp'),
+                send: q('send'),
+                newThread: q('newThread'),
+                chat: q('chat'),
+                prompt: q('prompt'),
+                goals: q('goals'),
+                saveGoals: q('saveGoals'),
+                clearGoals: q('clearGoals'),
+                memSummary: q('memSummary'),
+                memValue: q('memValue'),
+                addMemory: q('addMemory'),
+                clearMemory: q('clearMemory'),
+                memoryList: q('memoryList'),
+                runJS: q('runJS'),
+                clearJS: q('clearJS'),
+                jsCode: q('jsCode'),
+                jsLog: q('jsLog'),
+                renderHTML: q('renderHTML'),
+                clearCanvas: q('clearCanvas'),
+                htmlCanvasInput: q('htmlCanvasInput'),
+                canvas: q('canvas'),
+                toolLog: q('toolLog'),
+                varList: q('varList'),
+                ircList: q('ircList'),
+            };
 
-/* ============ UI Helpers ============ */
-function el(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
-function addMsg(role, content, streaming=false){
-  const wrap = el('div','msg '+role);
-  const meta = el('div','meta'); meta.textContent = role==='user'?'You':'Model';
-  const pre = el('div'); pre.className = 'mono'; pre.style.whiteSpace='pre-wrap';
-  pre.textContent = content || '';
-  wrap.appendChild(meta); wrap.appendChild(pre);
-  els.chat.appendChild(wrap);
-  els.chat.scrollTop = els.chat.scrollHeight;
-  return {wrap, pre, set:(t)=>{ pre.textContent=t; }};
-}
-function updateLastMsg(pre, text){ pre.textContent = text; els.chat.scrollTop = els.chat.scrollHeight; }
-function logTool(who, text){
-  const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
-  els.toolLog.textContent += line;
-  els.toolLog.scrollTop = els.toolLog.scrollHeight;
-}
+            /* ========================= CONSTANTS ========================= */
+            const DEFAULT_MODEL = "gemini-2.5-flash-latest"; // forced
+            const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+            const STREAM_ENDPOINT = (model, key) =>
+                `${GEMINI_BASE}/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(
+                    key
+                )}`;
 
-/* ============ JS Execution Env (no sandbox, full browser JS) ============ */
-async function runUserJS(src, fromTool=false){
-  els.jsLog.textContent = ''; // reset for clarity
-  const originalLog = console.log;
-  let logs=[];
-  console.log = (...args)=>{ logs.push(args.map(a=>toDisplay(a)).join(' ')); originalLog(...args); };
-  try{
-    // Support top-level await: wrap in async function
-    const fn = new Function(`return (async ()=>{ ${src}\n })()`);
-    const result = await fn();
-    console.log = originalLog;
-    const out = { logs, result };
-    els.jsLog.textContent = logs.map(l=>'• '+l).join('\n') + (result!==undefined?`\n\nreturn → ${toDisplay(result)}`:'');
-    logTool('run_js', `Executed (${src.length} chars)`);
-    return out;
-  }catch(err){
-    console.log = originalLog;
-    els.jsLog.textContent = (logs.length?logs.map(l=>'• '+l).join('\n')+'\n\n':'') + 'ERROR → ' + String(err && err.stack || err);
-    logTool('run_js', `Error: ${String(err)}`);
-    return { logs, error: String(err) };
-  }
-}
-els.runJS.onclick = async ()=>{
-  const code = els.jsCode.value;
-  const out = await runUserJS(code);
-  // If the JS returns an object, allow promoting keys to variables
-  if(out && out.result && typeof out.result === 'object'){
-    Object.entries(out.result).forEach(([k,v])=>{ state.variables[k]=v; });
-    renderVars();
-  }
-};
-els.clearJS.onclick = ()=>{ els.jsCode.value=''; els.jsLog.textContent=''; };
+            // Quotas: simple local budgets; tune as needed
+            const DEFAULT_QUOTAS = {
+                rpm: 60,         // requests per minute per key
+                daily: 10000,    // max requests per day per key
+                sessionMax: 5000 // max requests this page-load (all keys)
+            };
 
-/* Canvas HTML renderer */
-function renderCanvas(html){
-  els.canvas.innerHTML = html;
-  logTool('render_html','Updated canvas');
-}
-els.renderHTML.onclick = ()=> renderCanvas(els.htmlCanvasInput.value);
-els.clearCanvas.onclick = ()=> renderCanvas('');
+            // Retry/backoff
+            const MAX_TOOL_ITERATIONS = 8; // avoid infinite tool loops
+            const MAX_RETRY_PER_CALL = 3;
+            const BASE_BACKOFF_MS = 600;   // exponential backoff base
+            const JITTER_MS = 400;         // random jitter cap
+            const CIRCUIT_BREAK_MS = 60_000; // if a key hard-fails, pause it for this long
 
-/* ============ Gemini Function Declarations (Tools) ============ */
-const functionDeclarations = [
-  {
-    name: "fetch_memory",
-    description: "Fetch a detailed memory by index from provided memory summaries.",
-    parameters: { type:"OBJECT", properties:{ index:{type:"INTEGER"} }, required:["index"] }
-  },
-  {
-    name: "list_memories",
-    description: "List available memory summaries with indices.",
-    parameters: { type:"OBJECT", properties:{} }
-  },
-  {
-    name: "irc_add",
-    description: "Append one step to the Immediate Reasoning Chain for the current reply.",
-    parameters: { type:"OBJECT", properties:{ step:{type:"STRING"} }, required:["step"] }
-  },
-  {
-    name: "run_js",
-    description: "Execute JavaScript in the user's browser. Return logs and result. Use for browsing the web via fetch, parsing, compute, etc.",
-    parameters: { type:"OBJECT", properties:{ code:{type:"STRING"} }, required:["code"] }
-  },
-  {
-    name: "render_html",
-    description: "Render HTML into the canvas region for previews or interactive reasoning.",
-    parameters: { type:"OBJECT", properties:{ html:{type:"STRING"} }, required:["html"] }
-  },
-  {
-    name: "set_var",
-    description: "Set a named variable for later injection into the final answer using {{var:NAME}} placeholders.",
-    parameters: { type:"OBJECT", properties:{ name:{type:"STRING"}, value:{type:"STRING"} }, required:["name","value"] }
-  },
-  {
-    name: "get_var",
-    description: "Get a named variable value previously set.",
-    parameters: { type:"OBJECT", properties:{ name:{type:"STRING"} }, required:["name"] }
-  },
-  {
-    name: "list_tools",
-    description: "Return a short list of available tools and when to use them.",
-    parameters: { type:"OBJECT", properties:{} }
-  }
-];
+            // Keys storage
+            const KEYS_STORAGE = "gemini_keys"; // array of keys
+            const GOALS_STORAGE = "goals";
+            const MEMS_STORAGE = "memories";
+            const QUOTA_STORAGE = "gemini_quota_config"; // optional user override
 
-/* ============ System Instruction ============ */
-function buildSystemInstruction(){
-  const memorySummaries = state.memories.map((m,i)=>`#${i}: ${m.summary}`).join('\n') || '(none)';
-  const ircSoFar = state.irc.length ? state.irc.map((s,i)=>`${i+1}. ${s}`).join('\n') : '(empty)';
-  const goals = state.goals || '(none)';
+            /* ========================= STATE ========================= */
+            const state = {
+                // conversation
+                history: [], // Gemini "contents"
+                irc: [],     // Immediate Reasoning Chain
+                memories: [], // [{summary, value, ts}]
+                variables: {}, // name->value, available to {{var:NAME}} injection
 
-  return [
-`You are a helpful model with access to an External Tools system. You must *not* reveal chain-of-thought. Use the provided tools when helpful. Work iteratively: plan → (optionally call tools) → draft → verify against goals → final.`,
-`DATA STRUCTURES:
-• Memory: You are given only memory *summaries*. If a memory is needed, call fetch_memory({index}). You may first call list_memories() to see indices. Do NOT assume details you haven’t fetched.
-• Immediate Reasoning Chain (IRC): For the current reply only. When you plan or refine steps, append short steps with irc_add({step}). IRC is automatically supplied on subsequent iterations and in the verification pass.
-• Goals: Global constraints to satisfy in the final answer. The system runs your draft through a verification pass with these Goals plus the IRC. Treat your initial draft as provisional.
+                // model + generation
+                temperature: 0.3,
 
-TOOLS:
-• run_js({code}): Executes real JavaScript in the user's browser (with network access via fetch). Use for web requests, data processing, etc. Return value becomes available to you.
-• render_html({html}): Render HTML into a visible canvas to aid intermediate reasoning or previews.
-• set_var({name,value}) / get_var({name}): Manage variables for final answer injection. Use placeholders in your text like {{var:NAME}}.
-• fetch_memory({index}), list_memories(), irc_add({step}), list_tools().
+                // keys + usage
+                keyIndex: 0,
+                circuit: {}, // key -> { openUntil: timestamp }
+                usage: {
+                    session: { requests: 0, inChars: 0, outChars: 0, startedAt: Date.now() },
+                    perKey: {} // keyHash -> { day:'YYYY-MM-DD', dailyRequests, minuteWindowStart, minuteCount, totalRequests, inChars, outChars }
+                },
 
-OUTPUT PROTOCOL:
-• Do not output chain-of-thought. Summarize reasoning at a high level if needed.
-• If you want to include JS-produced content in your final answer, store it into a variable (set_var) and reference it via {{var:NAME}}.
+                // control
+                inFlight: null, // { aborter, kind: 'draft'|'verify' }
+                model: DEFAULT_MODEL
+            };
 
-SUPPLIED CONTEXT (ALWAYS):
-• Memory Summaries:
-${memorySummaries}
+            /* ========================= UTILITIES ========================= */
+            const now = () => Date.now();
+            const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
+            const hashKey = (k) => {
+                // Lightweight obfuscation for local usage mapping
+                let h = 0;
+                for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+                return "k" + (h >>> 0).toString(16);
+            };
 
-• Immediate Reasoning Chain (IRC) so far:
-${ircSoFar}
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            const jitter = () => Math.floor(Math.random() * JITTER_MS);
 
-• Goals:
-${goals}
+            function el(tag, cls) {
+                const e = document.createElement(tag);
+                if (cls) e.className = cls;
+                return e;
+            }
+            function escapeHtml(s) {
+                return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
+            }
+            function asDisplay(v) {
+                try {
+                    if (typeof v === "string") return v;
+                    return JSON.stringify(v, null, 2);
+                } catch {
+                    return String(v);
+                }
+            }
+            function clamp(n, lo, hi) {
+                return Math.max(lo, Math.min(hi, n));
+            }
 
-Follow the above exactly.`
-  ].join('\n\n');
-}
+            /* ========================= LOGGING ========================= */
+            function logTool(who, text) {
+                const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
+                if (els.toolLog) {
+                    els.toolLog.textContent += line;
+                    els.toolLog.scrollTop = els.toolLog.scrollHeight;
+                } else {
+                    console.log(line.trim());
+                }
+            }
 
-/* ============ Gemini Streaming ============ */
-function getKeys(){ return JSON.parse(localStorage.getItem('gemini_keys')||'[]'); }
-function getActiveKey(){ const keys=getKeys(); if(!keys.length) throw new Error('No API key found'); return keys[state.keyIndex % keys.length]; }
-function rotateKey(){ state.keyIndex = (state.keyIndex+1) % Math.max(1,getKeys().length); }
+            function ensureUsagePanel() {
+                if (!els.aside) return null;
+                let panel = q('usagePanel');
+                if (panel) return panel;
+                panel = el('div', 'section');
+                panel.id = 'usagePanel';
+                panel.innerHTML = `
+      <h2>Usage</h2>
+      <div id="usageSummary" class="small mono"></div>
+      <div id="usageKeys" class="small mono" style="margin-top:6px"></div>
+    `;
+                els.aside.appendChild(panel);
+                return panel;
+            }
 
-async function sseRequest(payload){
-  const model = els.model.value;
-  let attempts = 0, maxAttempts = Math.max(1, getKeys().length);
+            function updateUsageUI() {
+                const panel = ensureUsagePanel();
+                const session = state.usage.session;
+                const sumEl = q('usageSummary');
+                const keysEl = q('usageKeys');
+                const quota = getQuotaConfig();
+                if (sumEl) {
+                    sumEl.textContent =
+                        `Session requests: ${session.requests} / ${quota.sessionMax} | In chars: ${session.inChars} | Out chars: ${session.outChars}`;
+                }
+                if (keysEl) {
+                    const lines = [];
+                    for (const [kh, v] of Object.entries(state.usage.perKey)) {
+                        lines.push(`${kh}: day ${v.day} | daily ${v.dailyRequests}/${quota.daily} | minute ${v.minuteCount}/${quota.rpm} | total ${v.totalRequests}`);
+                    }
+                    keysEl.textContent = lines.join('\n') || '(no key usage yet)';
+                }
+            }
 
-  while(attempts < maxAttempts){
-    const key = getActiveKey();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
-    const res = await fetch(url, {
-      method:'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
+            /* ========================= UI HELPERS ========================= */
+            function addMsg(role, content) {
+                if (!els.chat) return { pre: { textContent: '' }, set: () => { } };
+                const wrap = el("div", "msg " + role);
+                const meta = el("div", "meta");
+                meta.textContent = role === "user" ? "You" : "Model";
+                const pre = el("div");
+                pre.className = "mono";
+                pre.style.whiteSpace = "pre-wrap";
+                pre.textContent = content || "";
+                wrap.appendChild(meta);
+                wrap.appendChild(pre);
+                els.chat.appendChild(wrap);
+                els.chat.scrollTop = els.chat.scrollHeight;
+                return { pre, set: (t) => { pre.textContent = t; els.chat.scrollTop = els.chat.scrollHeight; } };
+            }
 
-    if(res.status===429 || res.status===503){
-      logTool('system', `Rate limit or service busy (HTTP ${res.status}). Rotating key...`);
-      rotateKey(); attempts++; continue;
-    }
-    if(!res.ok){
-      const text = await res.text();
-      throw new Error(`Gemini error ${res.status}: ${text}`);
-    }
+            function renderIRC() {
+                if (!els.ircList) return;
+                els.ircList.textContent = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)";
+            }
 
-    return res.body; // ReadableStream (SSE)
-  }
-  throw new Error('All API keys exhausted due to rate limits.');
-}
+            function renderVars() {
+                if (!els.varList) return;
+                const entries = Object.entries(state.variables);
+                els.varList.innerHTML = entries.length
+                    ? entries.map(([k, v]) => `<span class="kv mono">${escapeHtml(k)} = ${escapeHtml(String(v))}</span>`).join("")
+                    : "";
+            }
 
-async function* readSSE(stream){
-  const reader = stream.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buf = '';
-  while(true){
-    const {value, done} = await reader.read();
-    if(done) break;
-    buf += decoder.decode(value, {stream:true});
-    let idx;
-    while((idx = buf.indexOf('\n\n'))>=0){
-      const chunk = buf.slice(0, idx).trim();
-      buf = buf.slice(idx+2);
-      const lines = chunk.split('\n').map(s=>s.trim());
-      const dataLines = lines.filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trim());
-      for(const dl of dataLines){
-        if(dl === '[DONE]' || dl === '') continue;
-        try{ yield JSON.parse(dl); }catch(e){ /* ignore */ }
-      }
-    }
-  }
-}
+            function renderMemories() {
+                if (!els.memoryList) return;
+                if (!state.memories.length) {
+                    els.memoryList.innerHTML = '<div class="small">No memory items yet.</div>';
+                    return;
+                }
+                els.memoryList.innerHTML = state.memories
+                    .map(
+                        (m, i) => `
+      <div style="margin-bottom:10px">
+        <div><span class="pill">#${i}</span> <strong>${escapeHtml(m.summary)}</strong></div>
+        <div class="small mono" style="margin-top:4px; white-space:pre-wrap">${escapeHtml(m.value)}</div>
+      </div>`
+                    )
+                    .join("");
+            }
 
-/* Extract text and tool calls from a streamed event object */
-function extractParts(evt){
-  const out = { textDelta:'', toolCalls:[] };
-  const cands = evt.candidates || [];
-  for(const c of cands){
-    const parts = (c.content && c.content.parts) || [];
-    for(const p of parts){
-      if(p.text) out.textDelta += p.text;
-      if(p.functionCall) out.toolCalls.push(p.functionCall);
-    }
-  }
-  return out;
-}
+            /* ========================= STORAGE INIT ========================= */
+            function getStoredKeys() {
+                return JSON.parse(localStorage.getItem(KEYS_STORAGE) || "[]");
+            }
+            function setStoredKeys(arr) {
+                localStorage.setItem(KEYS_STORAGE, JSON.stringify(arr));
+            }
+            function getQuotaConfig() {
+                const cfg = JSON.parse(localStorage.getItem(QUOTA_STORAGE) || "null");
+                return {
+                    rpm: (cfg && +cfg.rpm) || DEFAULT_QUOTAS.rpm,
+                    daily: (cfg && +cfg.daily) || DEFAULT_QUOTAS.daily,
+                    sessionMax: (cfg && +cfg.sessionMax) || DEFAULT_QUOTAS.sessionMax
+                };
+            }
+            function loadFromStorage() {
+                const keys = getStoredKeys();
+                keys.forEach((k, i) => { if (els.keyInputs[i]) els.keyInputs[i].value = k; });
+                state.temperature = parseFloat((els.temp && els.temp.value) || "0.3") || 0.3;
 
-/* ============ Tool Execution (Browser-side) ============ */
-function toolResponseContent(name, response){
-  return {
-    role: "tool",
-    parts: [
-      {
-        functionResponse: {
-          name,
-          response: (typeof response === 'object' && response!==null) ? response : { data: String(response) }
-        }
-      }
-    ]
-  };
-}
+                state.model = DEFAULT_MODEL;
+                if (els.model) {
+                    els.model.value = DEFAULT_MODEL;
+                    els.model.disabled = true; // force model
+                }
 
-async function execTool(call){
-  const {name, args} = call;
-  try{
-    switch(name){
-      case 'list_tools': {
-        const tools = [
-          {name:'fetch_memory(index)', use:'Retrieve detailed memory by index'},
-          {name:'list_memories()', use:'List memory summaries and indices'},
-          {name:'irc_add(step)', use:'Append one planning/validation step'},
-          {name:'run_js(code)', use:'Execute JS in browser; can fetch the internet'},
-          {name:'render_html(html)', use:'Render HTML in canvas'},
-          {name:'set_var(name,value) / get_var(name)', use:'Manage variables for {{var:NAME}} replacement'}
-        ];
-        logTool('tool', 'list_tools called');
-        return toolResponseContent('list_tools', { tools });
-      }
-      case 'list_memories': {
-        const summaries = state.memories.map((m,i)=>({index:i, summary:m.summary}));
-        logTool('tool','list_memories called');
-        return toolResponseContent('list_memories', { summaries });
-      }
-      case 'fetch_memory': {
-        const i = Number(args?.index);
-        if(Number.isNaN(i) || i<0 || i>=state.memories.length) throw new Error('Invalid memory index');
-        logTool('tool',`fetch_memory #${i}`);
-        return toolResponseContent('fetch_memory', { index:i, value: state.memories[i].value, summary: state.memories[i].summary });
-      }
-      case 'irc_add': {
-        const step = String(args?.step||'').slice(0, 500);
-        if(step) state.irc.push(step);
-        renderIRC();
-        logTool('tool',`irc_add "${step}"`);
-        return toolResponseContent('irc_add', { ok:true, length: state.irc.length });
-      }
-      case 'run_js': {
-        const code = String(args?.code||'');
-        logTool('tool',`run_js (${code.length} chars)`);
-        const out = await runUserJS(code, true);
-        // promote any object keys to variables for convenience?
-        if(out && out.result && typeof out.result === 'object'){
-          Object.entries(out.result).forEach(([k,v])=>{ state.variables[k]=v; });
-          renderVars();
-        }
-        return toolResponseContent('run_js', out);
-      }
-      case 'render_html': {
-        const html = String(args?.html||'');
-        renderCanvas(html);
-        return toolResponseContent('render_html', { ok:true });
-      }
-      case 'set_var': {
-        const name = String(args?.name||'').trim();
-        const value = String(args?.value ?? '');
-        if(!name) throw new Error('name required');
-        state.variables[name] = value;
-        renderVars();
-        logTool('tool',`set_var ${name}`);
-        return toolResponseContent('set_var', { ok:true });
-      }
-      case 'get_var': {
-        const name = String(args?.name||'').trim();
-        const value = state.variables[name];
-        logTool('tool',`get_var ${name}`);
-        return toolResponseContent('get_var', { name, value: value ?? null });
-      }
-      default:
-        logTool('tool',`Unknown tool: ${name}`);
-        return toolResponseContent(name, { error:`Unknown tool ${name}` });
-    }
-  }catch(err){
-    logTool('tool',`Error in ${name}: ${String(err)}`);
-    return toolResponseContent(name, { error:String(err) });
-  }
-}
+                state.memories = JSON.parse(localStorage.getItem(MEMS_STORAGE) || "[]");
+                renderMemories();
 
-/* ============ Chat Loop (tool-using, then verification) ============ */
-function buildUserContent(text){
-  return {
-    role: "user",
-    parts: [{ text }]
-  };
-}
-function buildSystem(systemText){
-  return { role:"user", parts:[{text: systemText}] }; // systemInstruction is separate, but we also include a lightweight reminder in contents.
-}
-function buildPayload(contents){
-  return {
-    systemInstruction: { role:"user", parts:[{text: buildSystemInstruction()}] },
-    tools: [{ functionDeclarations }],
-    contents,
-    generationConfig: {
-      temperature: Number(els.temp.value || '0.3'),
-      candidateCount: 1
-    },
-    safetySettings: [] // allow caller to decide; keep empty for neutral defaults
-  };
-}
+                const g = localStorage.getItem(GOALS_STORAGE) || "";
+                if (els.goals) els.goals.value = g;
 
-async function toolIteration(conversation){
-  // One iteration: request, stream text, collect tool calls; if tool calls, execute and return {updatedConversation, draftText}
-  const payload = buildPayload(conversation);
-  const stream = await sseRequest(payload);
-  let draft = '';
-  for await (const evt of readSSE(stream)){
-    const {textDelta, toolCalls} = extractParts(evt);
-    if(textDelta){ draft += textDelta; yield { type:'delta', text: textDelta }; }
-    if(toolCalls && toolCalls.length){
-      // Finish current stream and execute tools sequentially
-      for(const call of toolCalls){
-        yield { type:'tool_call', call };
-        const toolContent = await execTool(call);
-        conversation.push(toolContent);
-      }
-    }
-  }
-  yield { type:'done', draft, conversation };
-}
+                updateUsageUI();
+                renderIRC();
+                renderVars();
+            }
 
-async function runChatTurn(userText){
-  // 1) Push user
-  const userContent = buildUserContent(userText);
-  state.history.push(userContent);
+            /* ========================= USAGE & QUOTA ========================= */
+            function initKeyUsage(key) {
+                const kh = hashKey(key);
+                const u = state.usage.perKey[kh];
+                const today = toISODate(now());
+                if (!u || u.day !== today) {
+                    state.usage.perKey[kh] = {
+                        day: today,
+                        dailyRequests: 0,
+                        minuteWindowStart: now(),
+                        minuteCount: 0,
+                        totalRequests: (u && u.totalRequests) || 0,
+                        inChars: (u && u.inChars) || 0,
+                        outChars: (u && u.outChars) || 0
+                    };
+                }
+            }
 
-  // 2) Tool loop until we have a complete draft with no outstanding tool calls
-  let conversation = [...state.history, buildSystem('Use tools as needed, then provide a draft.')];
-  const modelMsg = addMsg('model',''); // streaming target
+            function checkAndConsumeQuota(key) {
+                const quota = getQuotaConfig();
+                if (state.usage.session.requests >= quota.sessionMax) {
+                    throw new Error("Session request limit reached.");
+                }
+                initKeyUsage(key);
+                const kh = hashKey(key);
+                const u = state.usage.perKey[kh];
 
-  for await (const event of toolIteration(conversation)){
-    if(event.type==='delta'){ modelMsg.set((modelMsg.pre.textContent||'') + event.text); }
-    if(event.type==='tool_call'){ /* already logged */ }
-    if(event.type==='done'){
-      // done streaming for this iteration; update conversation and draft
-      conversation = event.conversation;
-      var draftText = event.draft;
-    }
-  }
+                // Daily
+                if (u.dailyRequests >= quota.daily) {
+                    throw new Error(`Daily quota reached for key ${kh}.`);
+                }
 
-  // Append model draft to history
-  state.history.push({ role:'model', parts:[{text:draftText||''}] });
+                // RPM: sliding window (simple 60-sec window)
+                const nowMs = now();
+                if (nowMs - u.minuteWindowStart >= 60_000) {
+                    u.minuteWindowStart = nowMs;
+                    u.minuteCount = 0;
+                }
+                if (u.minuteCount >= quota.rpm) {
+                    throw new Error(`Per-minute quota reached for key ${kh}.`);
+                }
 
-  // 3) Verification pass against Goals + IRC
-  const verifyMsg = addMsg('model',''); // show verification result as the *final* message
-  const verifyPrompt = [
-    'VERIFY AGAINST GOALS.',
-    'Given the previous draft answer, STRICTLY check it against the Goals and the IRC (steps).',
-    'If the draft fully satisfies all goals, return a concise, professional FINAL answer.',
-    'Otherwise, revise it to satisfy all goals and return only the revised FINAL answer.',
-    'Do NOT include analysis. Do NOT mention verification.',
-    'If the draft used variables like {{var:NAME}}, keep those placeholders intact.'
-  ].join(' ');
-  const verifyConversation = [
-    ...state.history,
-    { role:'user', parts:[{text: verifyPrompt}] }
-  ];
+                // consume
+                u.minuteCount++;
+                u.dailyRequests++;
+                u.totalRequests++;
+                state.usage.session.requests++;
+                updateUsageUI();
+            }
 
-  // Stream verification result
-  const payload = buildPayload(verifyConversation);
-  const verifyStream = await sseRequest(payload);
-  let verified = '';
-  for await (const evt of readSSE(verifyStream)){
-    const {textDelta} = extractParts(evt);
-    if(textDelta){ verified += textDelta; verifyMsg.set((verifyMsg.pre.textContent||'') + textDelta); }
-  }
+            function addInChars(key, n) {
+                const kh = hashKey(key);
+                initKeyUsage(key);
+                state.usage.perKey[kh].inChars += n;
+                state.usage.session.inChars += n;
+                updateUsageUI();
+            }
+            function addOutChars(key, n) {
+                const kh = hashKey(key);
+                initKeyUsage(key);
+                state.usage.perKey[kh].outChars += n;
+                state.usage.session.outChars += n;
+                updateUsageUI();
+            }
 
-  // 4) Perform variable injection on the verified text and replace the rendered bubble
-  const injected = verified.replace(/\{\{var:([\w\-]+)\}\}/g, (_,name)=> String(state.variables[name] ?? ''));
-  verifyMsg.set(injected);
+            /* ========================= KEY MANAGEMENT ========================= */
+            function getActiveKey() {
+                const keys = getStoredKeys();
+                if (!keys.length) throw new Error("No API key found. Save up to five keys.");
+                let i = 0;
+                while (i < keys.length) {
+                    const idx = state.keyIndex % keys.length;
+                    const k = keys[idx];
+                    const circuit = state.circuit[k];
+                    if (!circuit || circuit.openUntil <= now()) {
+                        return k;
+                    }
+                    // this key is in open state; rotate
+                    state.keyIndex++;
+                    i++;
+                }
+                throw new Error("All keys are temporarily paused by circuit breaker.");
+            }
+            function rotateKey(reason) {
+                state.keyIndex++;
+                logTool("system", `Rotating key${reason ? `: ${reason}` : ""}`);
+            }
+            function openCircuitFor(key, ms) {
+                state.circuit[key] = { openUntil: now() + ms };
+                logTool("system", `Circuit opened for current key for ${Math.round(ms / 1000)}s`);
+            }
 
-  // 5) Save final model message
-  state.history.push({ role:'model', parts:[{text: injected}] });
-}
+            /* ========================= JS EXECUTION (in-page) ========================= */
+            async function runUserJS(src) {
+                if (els.jsLog) els.jsLog.textContent = "";
+                const originalLog = console.log;
+                let logs = [];
+                console.log = (...args) => {
+                    logs.push(args.map((a) => asDisplay(a)).join(" "));
+                    originalLog(...args);
+                };
+                try {
+                    const fn = new Function(`return (async ()=>{ ${src}\n })()`);
+                    const result = await fn();
+                    console.log = originalLog;
+                    if (els.jsLog) {
+                        els.jsLog.textContent =
+                            logs.map((l) => "• " + l).join("\n") + (result !== undefined ? `\n\nreturn → ${asDisplay(result)}` : "");
+                    }
+                    logTool("run_js", `Executed (${src.length} chars)`);
+                    return { logs, result };
+                } catch (err) {
+                    console.log = originalLog;
+                    if (els.jsLog) {
+                        els.jsLog.textContent =
+                            (logs.length ? logs.map((l) => "• " + l).join("\n") + "\n\n" : "") + "ERROR → " + String(err && err.stack || err);
+                    }
+                    logTool("run_js", `Error: ${String(err)}`);
+                    return { logs, error: String(err) };
+                }
+            }
 
-/* ============ Actions ============ */
-els.send.onclick = async ()=>{
-  const text = els.prompt.value.trim();
-  if(!text) return;
-  const yourMsg = addMsg('user', text);
-  els.prompt.value='';
-  try{
-    await runChatTurn(text);
-  }catch(err){
-    const e = addMsg('model', 'Error: ' + String(err && err.message || err));
-  }
-};
+            function renderCanvas(html) {
+                if (els.canvas) {
+                    els.canvas.innerHTML = html;
+                    logTool("render_html", "Updated canvas");
+                }
+            }
 
-els.newThread.onclick = ()=>{
-  state.history = [];
-  state.irc = [];
-  renderIRC();
-  els.chat.innerHTML = '';
-  logTool('system','Started a new thread');
-};
+            /* ========================= TOOLS DECLARATIONS ========================= */
+            const functionDeclarations = [
+                {
+                    name: "fetch_memory",
+                    description: "Fetch a detailed memory by index from provided memory summaries.",
+                    parameters: { type: "OBJECT", properties: { index: { type: "INTEGER" } }, required: ["index"] }
+                },
+                {
+                    name: "list_memories",
+                    description: "List available memory summaries with indices.",
+                    parameters: { type: "OBJECT", properties: {} }
+                },
+                {
+                    name: "irc_add",
+                    description: "Append one step to the Immediate Reasoning Chain for the current reply.",
+                    parameters: { type: "OBJECT", properties: { step: { type: "STRING" } }, required: ["step"] }
+                },
+                {
+                    name: "run_js",
+                    description: "Execute JavaScript in the browser. Use for network fetch, compute, parsing. Return logs and result.",
+                    parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] }
+                },
+                {
+                    name: "render_html",
+                    description: "Render HTML into the canvas region for previews or interactive reasoning.",
+                    parameters: { type: "OBJECT", properties: { html: { type: "STRING" } }, required: ["html"] }
+                },
+                {
+                    name: "set_var",
+                    description: "Set a named variable for later injection into the final answer using {{var:NAME}}.",
+                    parameters: { type: "OBJECT", properties: { name: { type: "STRING" }, value: { type: "STRING" } }, required: ["name", "value"] }
+                },
+                {
+                    name: "get_var",
+                    description: "Get a named variable value previously set.",
+                    parameters: { type: "OBJECT", properties: { name: { type: "STRING" } }, required: ["name"] }
+                },
+                {
+                    name: "list_tools",
+                    description: "Return a concise list of available tools and when to use them.",
+                    parameters: { type: "OBJECT", properties: {} }
+                }
+            ];
 
-els.saveKeys.onclick = saveKeys;
-els.saveGoals.onclick = saveGoals;
-els.clearGoals.onclick = clearGoals;
-els.addMemory.onclick = addMemory;
-els.clearMemory.onclick = clearMemory;
+            /* ========================= SYSTEM INSTRUCTION ========================= */
+            function buildSystemInstruction() {
+                const memorySummaries = state.memories.map((m, i) => `#${i}: ${m.summary}`).join("\n") || "(none)";
+                const ircSoFar = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)";
+                const goals = (els.goals && els.goals.value.trim()) || "(none)";
 
-window.addEventListener('load', loadFromStorage);
+                return [
+                    "You are a helpful model with access to an External Tools system. Do not reveal chain-of-thought.",
+                    "Work in iterations: plan → (optionally call tools) → draft → verify against goals → final. Keep planning brief via irc_add.",
+                    "",
+                    "DATA STRUCTURES:",
+                    "• Memory: You receive only memory summaries; call list_memories then fetch_memory(index) for details when needed.",
+                    "• Immediate Reasoning Chain (IRC): Steps for the current reply only. Append short steps with irc_add(step).",
+                    "• Goals: Global constraints to satisfy in the final answer. A verification pass checks your draft with Goals + IRC.",
+                    "",
+                    "TOOLS:",
+                    "• run_js({code}): Executes real JS in the user's browser (with network fetch).",
+                    "• render_html({html}): Renders HTML into a visible canvas.",
+                    "• set_var/get_var: Manage variables for final answer placeholders {{var:NAME}}.",
+                    "• list_memories/fetch_memory, list_tools.",
+                    "",
+                    "TOOL INTENT POLICY (robust identification):",
+                    "- Use run_js for any web request, data transformation, heavy compute, or parsing.",
+                    "- Use render_html to preview or iterate on visual/HTML outputs.",
+                    "- Use fetch_memory only when a summary indicates relevant details are needed.",
+                    "- Always keep IRC concise and add steps via irc_add when planning or verifying.",
+                    "",
+                    "OUTPUT PROTOCOL:",
+                    "• Do not output chain-of-thought. Provide clear, direct answers.",
+                    "• If you want to include JS-produced content in the final answer, store it into a variable via set_var and reference it via {{var:NAME}}. The renderer will replace placeholders.",
+                    "",
+                    "SUPPLIED CONTEXT:",
+                    `• Memory Summaries:\n${memorySummaries}`,
+                    `• Immediate Reasoning Chain:\n${ircSoFar}`,
+                    `• Goals:\n${goals}`
+                ].join("\n");
+            }
 
-/* ============ Utility ============ */
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])); }
-function toDisplay(v){
-  try{ if(typeof v==='string') return v; return JSON.stringify(v, null, 2); }
-  catch{ return String(v); }
-}
+            /* ========================= GEMINI CALLS: STREAMING + RETRIES ========================= */
+            function buildPayload(contents) {
+                return {
+                    systemInstruction: { role: "user", parts: [{ text: buildSystemInstruction() }] },
+                    tools: [{ functionDeclarations }],
+                    contents,
+                    generationConfig: {
+                        temperature: (els.temp && Number(els.temp.value || "0.3")) || state.temperature,
+                        candidateCount: 1
+                    },
+                    safetySettings: []
+                };
+            }
+
+            async function* readSSE(stream, currentKey) {
+                const reader = stream.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buf = "";
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    const textChunk = decoder.decode(value, { stream: true });
+                    addOutChars(currentKey, textChunk.length);
+                    buf += textChunk;
+                    let idx;
+                    while ((idx = buf.indexOf("\n\n")) >= 0) {
+                        const chunk = buf.slice(0, idx).trim();
+                        buf = buf.slice(idx + 2);
+                        if (!chunk) continue;
+                        const lines = chunk.split("\n").map((s) => s.trim());
+                        for (const l of lines) {
+                            if (!l.startsWith("data:")) continue;
+                            const payload = l.slice(5).trim();
+                            if (!payload || payload === "[DONE]") continue;
+                            try {
+                                yield JSON.parse(payload);
+                            } catch {
+                                // ignore parse errors
+                            }
+                        }
+                    }
+                }
+            }
+
+            function extractParts(evt) {
+                const out = { textDelta: "", toolCalls: [] };
+                const cands = evt.candidates || [];
+                for (const c of cands) {
+                    const parts = (c.content && c.content.parts) || [];
+                    for (const p of parts) {
+                        if (p.text) out.textDelta += p.text;
+                        if (p.functionCall) out.toolCalls.push(p.functionCall);
+                    }
+                }
+                return out;
+            }
+
+            async function sseRequestWithRetry(payload, kind) {
+                let attempts = 0;
+                while (attempts < MAX_RETRY_PER_CALL) {
+                    const key = getActiveKey();
+                    try {
+                        checkAndConsumeQuota(key);
+                    } catch (quotaErr) {
+                        // If quota exceeded on this key, rotate to next and try again.
+                        rotateKey(String(quotaErr));
+                        attempts++;
+                        continue;
+                    }
+
+                    const url = STREAM_ENDPOINT(state.model, key);
+                    const bodyStr = JSON.stringify(payload);
+                    addInChars(key, bodyStr.length);
+
+                    const aborter = new AbortController();
+                    state.inFlight = { aborter, kind };
+                    let res;
+                    try {
+                        res = await fetch(url, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: bodyStr,
+                            signal: aborter.signal
+                        });
+                    } catch (err) {
+                        // Network failure: open circuit briefly and retry with backoff
+                        openCircuitFor(key, CIRCUIT_BREAK_MS);
+                        rotateKey("network error");
+                        attempts++;
+                        await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter());
+                        continue;
+                    } finally {
+                        state.inFlight = null;
+                    }
+
+                    if (res.status === 429 || res.status === 503) {
+                        openCircuitFor(key, CIRCUIT_BREAK_MS);
+                        rotateKey(`HTTP ${res.status}`);
+                        attempts++;
+                        await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter());
+                        continue;
+                    }
+                    if (res.status === 401 || res.status === 403) {
+                        // Invalid or unauthorized key: open circuit longer for this key
+                        openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
+                        rotateKey(`HTTP ${res.status}`);
+                        attempts++;
+                        continue;
+                    }
+                    if (!res.ok) {
+                        const text = await safeText(res);
+                        logTool("system", `Gemini error ${res.status}: ${text.slice(0, 200)}`);
+                        // For non-retryable 4xx other than 401/403/429, bubble up
+                        if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+                            throw new Error(`Gemini error ${res.status}: ${text}`);
+                        }
+                        // Retryable?
+                        attempts++;
+                        await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter());
+                        continue;
+                    }
+
+                    return { stream: res.body, key }; // success
+                }
+                throw new Error("All retries exhausted.");
+            }
+
+            async function safeText(res) {
+                try { return await res.text(); } catch { return "(no body)"; }
+            }
+
+            /* ========================= TOOL EXECUTION ========================= */
+            function toolResponseContent(name, response) {
+                return {
+                    role: "tool",
+                    parts: [
+                        {
+                            functionResponse: {
+                                name,
+                                response: typeof response === "object" && response !== null ? response : { data: String(response) }
+                            }
+                        }
+                    ]
+                };
+            }
+
+            async function execTool(call) {
+                const { name, args } = call;
+                try {
+                    switch (name) {
+                        case "list_tools": {
+                            const tools = [
+                                { name: "fetch_memory(index)", use: "Retrieve detailed memory by index" },
+                                { name: "list_memories()", use: "List memory summaries and indices" },
+                                { name: "irc_add(step)", use: "Append one planning/validation step" },
+                                { name: "run_js(code)", use: "Execute JS in browser; can fetch the internet" },
+                                { name: "render_html(html)", use: "Render HTML in canvas" },
+                                { name: "set_var(name,value) / get_var(name)", use: "Manage variables for {{var:NAME}} replacement" }
+                            ];
+                            logTool("tool", "list_tools called");
+                            return toolResponseContent("list_tools", { tools });
+                        }
+                        case "list_memories": {
+                            const summaries = state.memories.map((m, i) => ({ index: i, summary: m.summary }));
+                            logTool("tool", "list_memories called");
+                            return toolResponseContent("list_memories", { summaries });
+                        }
+                        case "fetch_memory": {
+                            const i = Number(args?.index);
+                            if (Number.isNaN(i) || i < 0 || i >= state.memories.length) throw new Error("Invalid memory index");
+                            logTool("tool", `fetch_memory #${i}`);
+                            return toolResponseContent("fetch_memory", { index: i, value: state.memories[i].value, summary: state.memories[i].summary });
+                        }
+                        case "irc_add": {
+                            const step = String(args?.step || "").slice(0, 500);
+                            if (step) state.irc.push(step);
+                            renderIRC();
+                            logTool("tool", `irc_add "${step}"`);
+                            return toolResponseContent("irc_add", { ok: true, length: state.irc.length });
+                        }
+                        case "run_js": {
+                            const code = String(args?.code || "");
+                            logTool("tool", `run_js (${code.length} chars)`);
+                            const out = await runUserJS(code);
+                            if (out && out.result && typeof out.result === "object") {
+                                Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v));
+                                renderVars();
+                            }
+                            return toolResponseContent("run_js", out);
+                        }
+                        case "render_html": {
+                            const html = String(args?.html || "");
+                            renderCanvas(html);
+                            return toolResponseContent("render_html", { ok: true });
+                        }
+                        case "set_var": {
+                            const name = String(args?.name || "").trim();
+                            const value = String(args?.value ?? "");
+                            if (!name) throw new Error("name required");
+                            state.variables[name] = value;
+                            renderVars();
+                            logTool("tool", `set_var ${name}`);
+                            return toolResponseContent("set_var", { ok: true });
+                        }
+                        case "get_var": {
+                            const name = String(args?.name || "").trim();
+                            const value = state.variables[name];
+                            logTool("tool", `get_var ${name}`);
+                            return toolResponseContent("get_var", { name, value: value ?? null });
+                        }
+                        default:
+                            logTool("tool", `Unknown tool: ${name}`);
+                            return toolResponseContent(name, { error: `Unknown tool ${name}` });
+                    }
+                } catch (err) {
+                    logTool("tool", `Error in ${name}: ${String(err)}`);
+                    return toolResponseContent(name, { error: String(err) });
+                }
+            }
+
+            /* ========================= CHAT ORCHESTRATION ========================= */
+            function buildUserContent(text) {
+                return { role: "user", parts: [{ text }] };
+            }
+            function buildSystem(text) {
+                return { role: "user", parts: [{ text }] };
+            }
+
+            async function toolIteration(conversation, streamSink) {
+                let iteration = 0;
+                while (iteration++ < MAX_TOOL_ITERATIONS) {
+                    const payload = buildPayload(conversation);
+                    let draft = "";
+                    const { stream, key } = await sseRequestWithRetry(payload, "draft");
+                    for await (const evt of readSSE(stream, key)) {
+                        const { textDelta, toolCalls } = extractParts(evt);
+                        if (textDelta) {
+                            draft += textDelta;
+                            streamSink(textDelta);
+                        }
+                        if (toolCalls && toolCalls.length) {
+                            // Execute tools, then continue with updated conversation
+                            for (const call of toolCalls) {
+                                logTool("intention", `Tool call requested: ${call.name}`);
+                                const toolContent = await execTool(call);
+                                conversation.push(toolContent);
+                            }
+                        }
+                    }
+                    // If we got tool calls, the conversation was extended; loop to let model consume tool responses
+                    if (conversation.length && conversation[conversation.length - 1].role === "tool") {
+                        continue;
+                    }
+                    // No outstanding tool calls; return final draft for this phase
+                    return { draft, conversation };
+                }
+                throw new Error("Maximum tool iterations exceeded.");
+            }
+
+            async function verifyPass() {
+                const verifyPrompt = [
+                    "VERIFY AGAINST GOALS.",
+                    "Given the previous draft answer, STRICTLY check it against the Goals and the IRC (steps).",
+                    "If the draft fully satisfies all goals, return a concise, professional FINAL answer.",
+                    "Otherwise, revise it to satisfy all goals and return only the revised FINAL answer.",
+                    "Do NOT include analysis. Do NOT mention verification.",
+                    "If the draft used variables like {{var:NAME}}, keep those placeholders intact."
+                ].join(" ");
+                const verifyConversation = [
+                    ...state.history,
+                    { role: "user", parts: [{ text: verifyPrompt }] }
+                ];
+                const payload = buildPayload(verifyConversation);
+                const { stream, key } = await sseRequestWithRetry(payload, "verify");
+                let verified = "";
+                for await (const evt of readSSE(stream, key)) {
+                    const { textDelta } = extractParts(evt);
+                    if (textDelta) verified += textDelta;
+                }
+                return verified;
+            }
+
+            async function runChatTurn(userText) {
+                // Push user
+                const userContent = buildUserContent(userText);
+                state.history.push(userContent);
+
+                // DRAFT PHASE (with tools)
+                const modelMsg = addMsg("model", "");
+                const conv = [...state.history, buildSystem("Use tools as needed, then provide a draft.")];
+                let lastText = "";
+                const { draft, conversation } = await toolIteration(conv, (delta) => {
+                    lastText += delta;
+                    modelMsg.set(lastText);
+                });
+
+                state.history.push({ role: "model", parts: [{ text: draft || "" }] });
+
+                // VERIFICATION PHASE
+                const verifyMsg = addMsg("model", "");
+                const verified = await verifyPass();
+
+                // VARIABLE INJECTION
+                const injected = verified.replace(/\{\{var:([\w\-]+)\}\}/g, (_, name) => String(state.variables[name] ?? ""));
+                verifyMsg.set(injected);
+
+                // Save final
+                state.history.push({ role: "model", parts: [{ text: injected }] });
+            }
+
+            /* ========================= EVENT BINDINGS ========================= */
+            function bindUI() {
+                if (els.saveKeys) {
+                    els.saveKeys.onclick = () => {
+                        const keys = els.keyInputs.map((i) => i.value.trim()).filter(Boolean);
+                        setStoredKeys(keys);
+                        logTool("system", `Saved API keys (${keys.length})`);
+                    };
+                }
+
+                if (els.saveGoals) {
+                    els.saveGoals.onclick = () => {
+                        const g = (els.goals && els.goals.value.trim()) || "";
+                        localStorage.setItem(GOALS_STORAGE, g);
+                        logTool("system", "Saved goals");
+                    };
+                }
+                if (els.clearGoals) {
+                    els.clearGoals.onclick = () => {
+                        localStorage.removeItem(GOALS_STORAGE);
+                        if (els.goals) els.goals.value = "";
+                        logTool("system", "Cleared goals");
+                    };
+                }
+
+                if (els.addMemory) {
+                    els.addMemory.onclick = () => {
+                        const s = (els.memSummary && els.memSummary.value.trim()) || "";
+                        const v = (els.memValue && els.memValue.value.trim()) || "";
+                        if (!s || !v) return;
+                        state.memories.push({ summary: s, value: v, ts: now() });
+                        if (els.memSummary) els.memSummary.value = "";
+                        if (els.memValue) els.memValue.value = "";
+                        localStorage.setItem(MEMS_STORAGE, JSON.stringify(state.memories));
+                        renderMemories();
+                    };
+                }
+                if (els.clearMemory) {
+                    els.clearMemory.onclick = () => {
+                        state.memories = [];
+                        localStorage.removeItem(MEMS_STORAGE);
+                        renderMemories();
+                        logTool("system", "Cleared memory store");
+                    };
+                }
+
+                if (els.runJS) {
+                    els.runJS.onclick = async () => {
+                        const code = (els.jsCode && els.jsCode.value) || "";
+                        const out = await runUserJS(code);
+                        if (out && out.result && typeof out.result === "object") {
+                            Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v));
+                            renderVars();
+                        }
+                    };
+                }
+                if (els.clearJS) {
+                    els.clearJS.onclick = () => {
+                        if (els.jsCode) els.jsCode.value = "";
+                        if (els.jsLog) els.jsLog.textContent = "";
+                    };
+                }
+
+                if (els.renderHTML) {
+                    els.renderHTML.onclick = () => {
+                        const html = (els.htmlCanvasInput && els.htmlCanvasInput.value) || "";
+                        renderCanvas(html);
+                    };
+                }
+                if (els.clearCanvas) {
+                    els.clearCanvas.onclick = () => renderCanvas("");
+                }
+
+                // Send / Cancel behavior with AbortController
+                let sending = false;
+                const setSending = (on) => {
+                    sending = on;
+                    if (els.send) {
+                        els.send.textContent = on ? "Cancel" : "Send";
+                    }
+                };
+
+                if (els.send) {
+                    els.send.onclick = async () => {
+                        if (sending && state.inFlight && state.inFlight.aborter) {
+                            state.inFlight.aborter.abort();
+                            logTool("system", "Aborted current request");
+                            setSending(false);
+                            return;
+                        }
+                        const text = (els.prompt && els.prompt.value.trim()) || "";
+                        if (!text) return;
+                        const yourMsg = addMsg("user", text);
+                        if (els.prompt) els.prompt.value = "";
+                        try {
+                            setSending(true);
+                            await runChatTurn(text);
+                        } catch (err) {
+                            addMsg("model", "Error: " + String((err && err.message) || err));
+                        } finally {
+                            setSending(false);
+                        }
+                    };
+                }
+
+                // New thread
+                if (els.newThread) {
+                    els.newThread.onclick = () => {
+                        state.history = [];
+                        state.irc = [];
+                        renderIRC();
+                        if (els.chat) els.chat.innerHTML = "";
+                        logTool("system", "Started a new thread");
+                    };
+                }
+
+                // Temperature sync (optional)
+                if (els.temp) {
+                    els.temp.onchange = () => {
+                        const t = parseFloat(els.temp.value);
+                        state.temperature = isFinite(t) ? clamp(t, 0, 1) : 0.3;
+                    };
+                }
+
+                // ESC to cancel
+                window.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape" && state.inFlight && state.inFlight.aborter) {
+                        state.inFlight.aborter.abort();
+                        logTool("system", "Aborted current request (Esc)");
+                    }
+                });
+            }
+
+            /* ========================= BOOT ========================= */
+            window.addEventListener("load", () => {
+                // Force model
+                if (els.model) {
+                    els.model.value = DEFAULT_MODEL;
+                    els.model.disabled = true;
+                }
+                loadFromStorage();
+                bindUI();
+                logTool("system", `Ready. Model: ${DEFAULT_MODEL}`);
+            });
+        })();
     </script>
 </body>
 </html>
