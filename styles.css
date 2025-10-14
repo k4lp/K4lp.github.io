@@ -1,8 +1,10 @@
 /* styles.css */
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono&display=swap');
 
 :root {
   --font-sans: 'Geist', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
   --bg: #fff;
   --fg: #111;
   --muted: #666;
@@ -95,7 +97,7 @@ body {
 .btn.btn-del { background: var(--danger); color: var(--primary-fg); border-color: var(--danger); }
 
 textarea.mono, .mono {
-  font-family: 'Geist Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   width: 100%;
   padding: 8px;
@@ -124,7 +126,7 @@ textarea.mono, .mono {
 .trace.hidden { display: none; }
 
 .tools-log {
-  font-family: 'Geist Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
   max-height: 200px;
@@ -198,10 +200,12 @@ textarea.mono, .mono {
   justify-content: center;
   align-items: center;
   display: flex;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
 }
 .modal-overlay.open {
   visibility: visible;
-  display: flex;
+  opacity: 1;
 }
 .modal {
   background: var(--bg);

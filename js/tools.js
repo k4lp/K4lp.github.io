@@ -1,91 +1,102 @@
 // js/tools.js
+
 class ExternalTools {
-  constructor({memory, canvas, varsRef, runUserJS}){
+  constructor({ memory, canvas, varsRef, runUserJS }) {
     this.memory = memory;
     this.canvas = canvas;
     this.vars = varsRef; // map
     this.runUserJS = runUserJS;
   }
 
-  async dispatch(call){
+  async dispatch(call) {
     const { name, args } = call;
-    switch(name){
+    switch (name) {
       case 'memory.fetch': {
         const item = this.memory.get(args.index);
-        return { ok:true, data:item };
+        return { ok: true, data: item };
       }
       case 'memory.save': {
-        const idx = this.memory.add(args.summary||"", args.details||"");
-        return { ok:true, index: idx };
+        const idx = this.memory.add(args.summary || "", args.details || "");
+        return { ok: true, index: idx };
       }
       case 'memory.delete': {
         this.memory.del(args.index);
-        return { ok:true };
+        return { ok: true };
       }
       case 'goals.get': {
-        return { ok:true, text:this.memory.getGoals() };
+        return { ok: true, text: this.memory.getGoals() };
       }
       case 'goals.set': {
-        this.memory.setGoals(args.text||"");
-        return { ok:true };
+        this.memory.setGoals(args.text || "");
+        return { ok: true };
       }
       case 'code.run_js': {
-        const result = await this.runUserJS(args.code||"");
-        return { ok:true, output: result.output, lastValue: result.lastValue };
+        const result = await this.runUserJS(args.code || "");
+        return { ok: true, output: result.output, lastValue: result.lastValue };
       }
       case 'canvas.render': {
-        await this.canvas.renderHTML(args.html||"", args.width, args.height, args.scale);
-        return { ok:true };
+        await this.canvas.renderHTML(args.html || "", args.width, args.height, args.scale);
+        return { ok: true };
       }
       case 'canvas.clear': {
         this.canvas.clear();
-        return { ok:true };
+        return { ok: true };
       }
       case 'net.http_request': {
         const res = await fetch(args.url, {
-          method: args.method||'GET',
-          headers: args.headers||{},
-          body: args.body||undefined
+          method: args.method || 'GET',
+          headers: args.headers || {},
+          body: args.body || undefined
         });
         const text = await res.text();
-        return { ok:true, status: res.status, headers: Object.fromEntries(res.headers.entries()), body: text };
+        return { ok: true, status: res.status, headers: Object.fromEntries(res.headers.entries()), body: text };
       }
       case 'vars.set': {
         this.vars[args.name] = args.value || "";
-        return { ok:true };
+        return { ok: true };
       }
       case 'vars.get': {
-        return { ok:true, value: this.vars[args.name]||"" };
+        return { ok: true, value: this.vars[args.name] || "" };
       }
       default:
-        return { ok:false, error:`Unknown tool: ${name}` };
+        return { ok: false, error: `Unknown tool: ${name}` };
     }
   }
 
-  static tryParseToolCall(chunk){
+  static tryParseToolCall(chunk) {
     // Look for fenced json blocks containing {"tool_call":{...}}
-    const fenceStart = chunk.indexOf("```
-    if(fenceStart === -1) return null;
-    const fenceEnd = chunk.indexOf("```", fenceStart+7);
-    if(fenceEnd === -1) return null;
-    const jsonText = chunk.slice(fenceStart+7, fenceEnd).trim();
-    try{
+    const fenceStart = chunk.indexOf("```json");
+    if (fenceStart === -1) return null;
+    const fenceEnd = chunk.indexOf("```", fenceStart + 7);
+    if (fenceEnd === -1) return null;
+    const jsonText = chunk.slice(fenceStart + 7, fenceEnd).trim();
+    try {
       const obj = JSON.parse(jsonText);
-      if(obj && obj.tool_call && obj.tool_call.name){ return obj.tool_call }
-    }catch{}
+      if (obj && obj.tool_call && obj.tool_call.name) {
+        return obj.tool_call;
+      }
+    } catch (e) {
+      // ignore
+    }
     return null;
   }
 
-  static tryParseFinal(chunk){
-    const fenceStart = chunk.indexOf("```
-    if(fenceStart === -1) return null;
-    const fenceEnd = chunk.indexOf("```", fenceStart+7);
-    if(fenceEnd === -1) return null;
-    try{
-      const obj = JSON.parse(chunk.slice(fenceStart+7, fenceEnd).trim());
-      if(obj && obj.final && typeof obj.final.content === 'string'){ return obj.final }
-    }catch{}
+  static tryParseFinal(chunk) {
+    const fenceStart = chunk.indexOf("```json");
+    if (fenceStart === -1) return null;
+    const fenceEnd = chunk.indexOf("```", fenceStart + 7);
+    if (fenceEnd === -1) return null;
+    const jsonText = chunk.slice(fenceStart + 7, fenceEnd).trim();
+    try {
+      const obj = JSON.parse(jsonText);
+      if (obj && obj.final && typeof obj.final.content === 'string') {
+        return obj.final;
+      }
+    } catch (e) {
+      // ignore
+    }
     return null;
   }
 }
+
 window.ExternalTools = ExternalTools;
