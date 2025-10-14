@@ -1,1275 +1,259 @@
-﻿<!doctype html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Gemini Chat • External Tools System</title>
-
-    <!-- Geist Sans & Geist Mono (variable fonts). If these ever 404, update the URLs. -->
-    <style>
-        @font-face {
-            font-family: "Geist";
-            src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistVF.woff2") format("woff2");
-            font-weight: 100 900;
-            font-style: normal;
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: "Geist Mono";
-            src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistMonoVF.woff2") format("woff2");
-            font-weight: 100 900;
-            font-style: normal;
-            font-display: swap;
-        }
-
-        :root {
-            --bg: #fff;
-            --fg: #111;
-            --muted: #6a6a6a;
-            --line: #e7e7e7;
-            --ring: #000;
-        }
-
-        * {
-            box-sizing: border-box
-        }
-
-        html, body {
-            height: 100%
-        }
-
-        body {
-            margin: 0;
-            font-family: "Geist",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-            background: var(--bg);
-            color: var(--fg);
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-        }
-
-        /* Layout */
-        .grid {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            min-height: 100vh;
-        }
-
-        @media (max-width: 1100px) {
-            .grid {
-                grid-template-columns: 1fr
-            }
-
-            aside {
-                order: 2
-            }
-
-            main {
-                order: 1
-            }
-        }
-
-        aside {
-            border-right: 1px solid var(--line);
-            padding: 20px;
-        }
-
-        main {
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        /* Panels */
-        .section {
-            margin-bottom: 24px;
-        }
-
-            .section h2 {
-                font-size: 12px;
-                letter-spacing: .08em;
-                text-transform: uppercase;
-                font-weight: 600;
-                margin: 0 0 12px 0;
-                color: var(--muted);
-            }
-
-        label {
-            display: block;
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 8px;
-        }
-
-        input[type="text"], textarea, select {
-            width: 100%;
-            border: 1px solid var(--line);
-            background: #fff;
-            color: var(--fg);
-            padding: 10px 12px;
-            border-radius: 8px;
-            font: inherit;
-            outline: none;
-        }
-
-        textarea {
-            min-height: 84px;
-            resize: vertical
-        }
-
-        .row {
-            display: flex;
-            gap: 8px
-        }
-
-        .btn {
-            appearance: none;
-            background: #fff;
-            color: #000;
-            border: 1px solid #000;
-            padding: 10px 12px;
-            border-radius: 8px;
-            font: inherit;
-            cursor: pointer;
-        }
-
-            .btn:focus {
-                outline: 2px solid var(--ring);
-                outline-offset: 2px
-            }
-
-            .btn.secondary {
-                border-color: var(--line);
-                color: #111
-            }
-
-            .btn.ghost {
-                border-color: transparent
-            }
-
-        /* Chat */
-        .chat {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 20px;
-            overflow: auto;
-            flex: 1;
-        }
-
-        .msg {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 16px;
-            max-width: 900px;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-
-            .msg.user {
-                margin-left: auto;
-                background: #fafafa
-            }
-
-            .msg.model {
-                margin-right: auto;
-                background: #fff
-            }
-
-        .meta {
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 8px
-        }
-
-        .composer {
-            border-top: 1px solid var(--line);
-            padding: 12px 20px;
-            display: flex;
-            gap: 8px;
-        }
-
-            .composer textarea {
-                min-height: 48px
-            }
-
-        .grow {
-            flex: 1
-        }
-
-        /* Tool panes */
-        .tools {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            border-top: 1px solid var(--line);
-            padding: 20px;
-        }
-
-        @media (max-width:900px) {
-            .tools {
-                grid-template-columns: 1fr
-            }
-        }
-
-        .card {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 16px;
-        }
-
-        .mono {
-            font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        }
-
-        .log {
-            background: #fafafa;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 10px;
-            min-height: 110px;
-            overflow: auto
-        }
-
-        .pill {
-            font-size: 11px;
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            padding: 2px 8px;
-            display: inline-block;
-            color: #333
-        }
-
-        .vars {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px
-        }
-
-            .vars .kv {
-                border: 1px solid var(--line);
-                border-radius: 999px;
-                padding: 4px 10px;
-                font-size: 12px
-            }
-
-        .divider {
-            height: 1px;
-            background: var(--line);
-            margin: 16px 0
-        }
-
-        .small {
-            font-size: 12px;
-            color: var(--muted)
-        }
-
-        .kbd {
-            font-family: "Geist Mono";
-            border: 1px solid var(--line);
-            border-radius: 6px;
-            padding: 2px 6px;
-            font-size: 12px
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Advanced Reasoning Interface</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="grid">
-        <aside>
-            <div class="section">
-                <h2>Model & Keys</h2>
-                <label>
-                    Model
-                    <select id="model">
-                        <option value="gemini-2.5-flash-lite-latest">gemini-2.5-flash-lite-latest</option>
-                        <option value="gemini-2.5-flash-latest">gemini-2.5-flash-latest</option>
-                    </select>
-                </label>
-                <div class="divider"></div>
-                <label>API Keys (rotates on rate limits)</label>
-                <div class="row" style="gap:6px; margin-bottom:8px">
-                    <input id="key1" type="text" placeholder="Key 1" />
-                    <input id="key2" type="text" placeholder="Key 2" />
-                </div>
-                <div class="row" style="gap:6px; margin-bottom:8px">
-                    <input id="key3" type="text" placeholder="Key 3" />
-                    <input id="key4" type="text" placeholder="Key 4" />
-                </div>
-                <div class="row" style="gap:6px">
-                    <input id="key5" type="text" placeholder="Key 5" />
-                    <button class="btn" id="saveKeys">Save</button>
-                </div>
-                <div class="small" style="margin-top:8px">Keys are stored in your browser’s <span class="kbd">localStorage</span>.</div>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">Gemini Advanced Reasoning Interface</h1>
+                <button class="settings-toggle" id="settingsToggle" aria-label="Toggle Settings">
+                    <span class="settings-icon"></span>
+                </button>
+            </div>
+        </header>
+
+        <aside class="settings-panel" id="settingsPanel">
+            <div class="settings-header">
+                <h2>Configuration</h2>
+                <button class="close-settings" id="closeSettings" aria-label="Close Settings">&times;</button>
             </div>
 
-            <div class="section">
-                <h2>Session Goals</h2>
-                <textarea id="goals" placeholder="State goals that must be satisfied by the final answer. These are always provided to the model for verification."></textarea>
-                <div class="row" style="margin-top:8px">
-                    <button class="btn secondary" id="saveGoals">Save</button>
-                    <button class="btn ghost" id="clearGoals">Clear</button>
-                </div>
-            </div>
+            <div class="settings-content">
+                <section class="settings-section">
+                    <h3>API Keys</h3>
+                    <p class="settings-description">Configure multiple API keys for rate limit fallback. Keys are stored locally in your browser.</p>
 
-            <div class="section">
-                <h2>Memory</h2>
-                <label>Summary (short)</label>
-                <input id="memSummary" type="text" placeholder="e.g., 'User prefs'" />
-                <label style="margin-top:8px">Value (detailed)</label>
-                <textarea id="memValue" placeholder="Detailed facts the model may fetch by index."></textarea>
-                <div class="row" style="margin-top:8px">
-                    <button class="btn secondary" id="addMemory">Add Memory</button>
-                    <button class="btn ghost" id="clearMemory">Clear</button>
-                </div>
-                <div id="memoryList" class="small" style="margin-top:10px"></div>
-            </div>
+                    <div class="api-keys-list">
+                        <div class="api-key-item">
+                            <label for="apiKey1">Primary Key</label>
+                            <input type="password" id="apiKey1" class="api-key-input" placeholder="Enter API key 1" autocomplete="off">
+                            <span class="key-status" id="status1"></span>
+                        </div>
 
-            <div class="section">
-                <h2>Run</h2>
-                <label>Temperature</label>
-                <input id="temp" type="text" placeholder="0.0 – 1.0" value="0.3" />
-                <div class="row" style="margin-top:8px">
-                    <button class="btn" id="newThread">New Thread</button>
-                </div>
+                        <div class="api-key-item">
+                            <label for="apiKey2">Secondary Key</label>
+                            <input type="password" id="apiKey2" class="api-key-input" placeholder="Enter API key 2" autocomplete="off">
+                            <span class="key-status" id="status2"></span>
+                        </div>
+
+                        <div class="api-key-item">
+                            <label for="apiKey3">Tertiary Key</label>
+                            <input type="password" id="apiKey3" class="api-key-input" placeholder="Enter API key 3" autocomplete="off">
+                            <span class="key-status" id="status3"></span>
+                        </div>
+
+                        <div class="api-key-item">
+                            <label for="apiKey4">Quaternary Key</label>
+                            <input type="password" id="apiKey4" class="api-key-input" placeholder="Enter API key 4" autocomplete="off">
+                            <span class="key-status" id="status4"></span>
+                        </div>
+
+                        <div class="api-key-item">
+                            <label for="apiKey5">Quinary Key</label>
+                            <input type="password" id="apiKey5" class="api-key-input" placeholder="Enter API key 5" autocomplete="off">
+                            <span class="key-status" id="status5"></span>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="btn-primary" id="saveKeys">Save API Keys</button>
+                        <button class="btn-secondary" id="clearKeys">Clear All Keys</button>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3>Model Configuration</h3>
+                    <div class="config-item">
+                        <label for="modelName">Model</label>
+                        <select id="modelName" class="config-select">
+                            <option value="gemini-2.0-flash-exp" selected>Gemini 2.0 Flash Experimental</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                        </select>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="temperature">Temperature</label>
+                        <input type="range" id="temperature" min="0" max="2" step="0.1" value="1.0" class="config-slider">
+                        <span class="config-value" id="temperatureValue">1.0</span>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="maxTokens">Max Output Tokens</label>
+                        <input type="number" id="maxTokens" min="1" max="8192" value="8192" class="config-input">
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3>Data Management</h3>
+                    <div class="settings-actions">
+                        <button class="btn-secondary" id="exportData">Export Session Data</button>
+                        <button class="btn-secondary" id="importData">Import Session Data</button>
+                        <button class="btn-danger" id="clearSession">Clear Session</button>
+                    </div>
+                </section>
             </div>
         </aside>
 
-        <main>
-            <div class="chat" id="chat"></div>
+        <main class="main-content">
+            <div class="chat-container">
+                <div class="data-structures-panel" id="dataStructuresPanel">
+                    <div class="panel-header">
+                        <h3>Active Data Structures</h3>
+                        <button class="collapse-toggle" id="collapseDataStructures" aria-label="Collapse Panel">−</button>
+                    </div>
 
-            <div class="composer">
-                <textarea id="prompt" class="grow" placeholder="Ask anything… The External Tools system is available."></textarea>
-                <button class="btn" id="send">Send</button>
-            </div>
+                    <div class="panel-content" id="dataStructuresContent">
+                        <div class="data-structure-section">
+                            <div class="section-header">
+                                <h4>Memory</h4>
+                                <span class="count" id="memoryCount">0</span>
+                            </div>
+                            <div class="data-items" id="memoryItems">
+                                <p class="empty-state">No memory items stored</p>
+                            </div>
+                        </div>
 
-            <div class="tools">
-                <div class="card">
-                    <div class="row" style="justify-content:space-between; align-items:center">
-                        <h3 style="margin:0; font-size:14px">JavaScript Execution</h3>
-                        <span class="pill">Tool: run_js</span>
-                    </div>
-                    <div class="small" style="margin:6px 0 10px">Runs directly in your browser. Network requests via <span class="kbd">fetch</span> are allowed.</div>
-                    <textarea id="jsCode" class="mono" placeholder="// Example:
-                              // const res=await fetch('https: //httpbin.org/json').then(r => r.json());
-// console.log(res.slideshow.title);
-// return {title: res.slideshow.title};"></textarea>
-                    <div class="row" style="margin-top:8px">
-                        <button class="btn secondary" id="runJS">Run JS</button>
-                        <button class="btn ghost" id="clearJS">Clear</button>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="small">Console & result:</div>
-                    <div id="jsLog" class="log mono"></div>
-                    <div class="vars" id="varList"></div>
-                </div>
+                        <div class="data-structure-section">
+                            <div class="section-header">
+                                <h4>Reasoning Chain</h4>
+                                <span class="count" id="reasoningCount">0</span>
+                            </div>
+                            <div class="data-items" id="reasoningItems">
+                                <p class="empty-state">No reasoning steps</p>
+                            </div>
+                        </div>
 
-                <div class="card">
-                    <div class="row" style="justify-content:space-between; align-items:center">
-                        <h3 style="margin:0; font-size:14px">Canvas (HTML Renderer)</h3>
-                        <span class="pill">Tool: render_html</span>
-                    </div>
-                    <div class="small" style="margin:6px 0 10px">Render HTML during intermediate reasoning or as part of the answer.</div>
-                    <textarea id="htmlCanvasInput" class="mono" placeholder="<!-- Example -->
-<div style='padding:24px;border:1px solid #ddd;border-radius:12px'>
-  <h1 style='margin:0 0 8px 0;font-size:20px'>Hello Canvas</h1>
-  <p>This is rendered directly into the canvas region.</p>
-</div>"></textarea>
-                    <div class="row" style="margin-top:8px">
-                        <button class="btn secondary" id="renderHTML">Render</button>
-                        <button class="btn ghost" id="clearCanvas">Clear</button>
-                    </div>
-                    <div class="divider"></div>
-                    <div id="canvas" class="log"></div>
-                </div>
+                        <div class="data-structure-section">
+                            <div class="section-header">
+                                <h4>Goals</h4>
+                                <span class="count" id="goalsCount">0</span>
+                            </div>
+                            <div class="data-items" id="goalsItems">
+                                <p class="empty-state">No goals defined</p>
+                            </div>
+                        </div>
 
-                <div class="card">
-                    <div class="row" style="justify-content:space-between; align-items:center">
-                        <h3 style="margin:0; font-size:14px">Tool Log</h3>
-                        <span class="pill">Intention & Calls</span>
-                    </div>
-                    <div id="toolLog" class="log mono"></div>
-                    <div class="small" style="margin-top:8px">
-                        The model can call tools via function calling. All calls and results are recorded here.
+                        <div class="data-structure-section">
+                            <div class="section-header">
+                                <h4>Checkpoints</h4>
+                                <span class="count" id="checkpointsCount">0</span>
+                            </div>
+                            <div class="data-items" id="checkpointsItems">
+                                <p class="empty-state">No checkpoints saved</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="row" style="justify-content:space-between; align-items:center">
-                        <h3 style="margin:0; font-size:14px">Immediate Reasoning Chain</h3>
-                        <span class="pill">IRC (auto-passed)</span>
+                <div class="messages-container" id="messagesContainer">
+                    <div class="welcome-message">
+                        <h2>Welcome to Gemini Advanced Reasoning Interface</h2>
+                        <p>This interface provides advanced reasoning capabilities with persistent memory, goal tracking, and code execution.</p>
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <strong>Memory System:</strong> Stores and retrieves contextual information across conversations
+                            </div>
+                            <div class="feature-item">
+                                <strong>Reasoning Chains:</strong> Maintains step-by-step reasoning for complex problems
+                            </div>
+                            <div class="feature-item">
+                                <strong>Goal Verification:</strong> Tracks objectives and validates outputs against goals
+                            </div>
+                            <div class="feature-item">
+                                <strong>Code Execution:</strong> Execute JavaScript directly in the browser with full internet access
+                            </div>
+                            <div class="feature-item">
+                                <strong>Canvas Display:</strong> Render HTML content for visual outputs
+                            </div>
+                        </div>
+                        <p class="setup-notice">Configure your API keys in the settings panel to begin.</p>
                     </div>
-                    <div id="ircList" class="log mono"></div>
-                    <div class="small" style="margin-top:8px">The model can append steps with <span class="kbd">irc_add</span>. IRC is auto-supplied on each iteration and used in the goals verification pass.</div>
+                </div>
+
+                <div class="canvas-container hidden" id="canvasContainer">
+                    <div class="canvas-header">
+                        <h3>Canvas Output</h3>
+                        <div class="canvas-actions">
+                            <button class="canvas-btn" id="refreshCanvas" aria-label="Refresh Canvas">Refresh</button>
+                            <button class="canvas-btn" id="closeCanvas" aria-label="Close Canvas">Close</button>
+                        </div>
+                    </div>
+                    <div class="canvas-content">
+                        <iframe id="canvasFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups" title="Canvas Output"></iframe>
+                    </div>
+                </div>
+
+                <div class="code-execution-panel hidden" id="codeExecutionPanel">
+                    <div class="execution-header">
+                        <h4>Code Execution</h4>
+                        <button class="close-execution" id="closeExecution" aria-label="Close Execution Panel">&times;</button>
+                    </div>
+                    <div class="execution-content">
+                        <div class="code-display" id="codeDisplay"></div>
+                        <div class="execution-output" id="executionOutput"></div>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <div class="reasoning-indicator hidden" id="reasoningIndicator">
+                        <span class="indicator-dot"></span>
+                        <span class="indicator-text" id="reasoningStatus">Reasoning...</span>
+                    </div>
+
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="userInput" 
+                            class="user-input" 
+                            placeholder="Enter your message..." 
+                            rows="1"
+                            aria-label="Message input"
+                        ></textarea>
+                        <div class="input-actions">
+                            <button class="btn-icon" id="attachBtn" aria-label="Attach file" disabled>
+                                <span class="attach-icon"></span>
+                            </button>
+                            <button class="btn-send" id="sendBtn" aria-label="Send message">
+                                <span class="send-icon"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-footer">
+                        <div class="tool-indicators">
+                            <span class="tool-status" id="memoryStatus" title="Memory System">M</span>
+                            <span class="tool-status" id="reasoningStatus" title="Reasoning Chain">R</span>
+                            <span class="tool-status" id="goalsStatus" title="Goals">G</span>
+                            <span class="tool-status" id="codeStatus" title="Code Execution">C</span>
+                            <span class="tool-status" id="canvasStatus" title="Canvas">V</span>
+                        </div>
+                        <div class="character-count" id="charCount">0 / 32768</div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <script>
-(() => {
-  "use strict";
-
-  /* ========================= DOM HOOKS ========================= */
-  const q = (id) => document.getElementById(id);
-  const els = {
-    aside: document.querySelector('aside'),
-    model: q('model'),
-    keyInputs: [1, 2, 3, 4, 5].map((n) => q('key' + n)).filter(Boolean),
-    saveKeys: q('saveKeys'),
-    temp: q('temp'),
-    send: q('send'),
-    newThread: q('newThread'),
-    chat: q('chat'),
-    prompt: q('prompt'),
-    goals: q('goals'),
-    saveGoals: q('saveGoals'),
-    clearGoals: q('clearGoals'),
-    memSummary: q('memSummary'),
-    memValue: q('memValue'),
-    addMemory: q('addMemory'),
-    clearMemory: q('clearMemory'),
-    memoryList: q('memoryList'),
-    runJS: q('runJS'),
-    clearJS: q('clearJS'),
-    jsCode: q('jsCode'),
-    jsLog: q('jsLog'),
-    renderHTML: q('renderHTML'),
-    clearCanvas: q('clearCanvas'),
-    htmlCanvasInput: q('htmlCanvasInput'),
-    canvas: q('canvas'),
-    toolLog: q('toolLog'),
-    varList: q('varList'),
-    ircList: q('ircList'),
-  };
-
-  /* ========================= CONSTANTS ========================= */
-  const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
-  const MODEL_LIST_PATH = () => `${GEMINI_BASE}/models`;
-  const STREAM_ENDPOINT = (model, key, method) =>
-    `${GEMINI_BASE}/models/${encodeURIComponent(model)}:${method}?alt=sse&key=${encodeURIComponent(key)}`;
-
-  // Fallback options ONLY if live fetch fails
-  const FALLBACK_MODELS = [
-    "gemini-2.5-flash-latest",
-    "gemini-2.5-pro-latest"
-  ];
-
-  // Quotas: local budgets; tune via localStorage key "gemini_quota_config"
-  const DEFAULT_QUOTAS = { rpm: 60, daily: 10000, sessionMax: 5000 };
-
-  // Retry/backoff
-  const MAX_TOOL_ITERATIONS = 8;
-  const MAX_RETRY_PER_CALL = 3;
-  const BASE_BACKOFF_MS = 600;
-  const JITTER_MS = 400;
-  const CIRCUIT_BREAK_MS = 60_000;
-
-  // Storage keys
-  const KEYS_STORAGE = "gemini_keys";
-  const GOALS_STORAGE = "goals";
-  const MEMS_STORAGE = "memories";
-  const QUOTA_STORAGE = "gemini_quota_config";
-  const MODELS_CACHE_STORAGE = "gemini_models_cache";
-
-  /* ========================= STATE ========================= */
-  const state = {
-    history: [],
-    irc: [],
-    memories: [],
-    variables: {},
-
-    model: null,
-    modelsByName: {},                 // name -> meta
-    streamingMethodByModel: {},       // name -> 'streamGenerateContent' | 'generateContent'
-    temperature: 0.3,
-
-    keyIndex: 0,
-    circuit: {}, // key -> { openUntil }
-    usage: {
-      session: { requests: 0, inChars: 0, outChars: 0, startedAt: Date.now() },
-      perKey: {} // keyHash -> { day, dailyRequests, minuteWindowStart, minuteCount, totalRequests, inChars, outChars }
-    },
-    keyStatus: {}, // keyHash -> { lastChecked, ok, http, msg }
-
-    inFlight: null
-  };
-
-  /* ========================= UTILITIES ========================= */
-  const now = () => Date.now();
-  const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const jitter = () => Math.floor(Math.random() * JITTER_MS);
-  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-  const safeJSON = (s) => { try { return JSON.parse(s); } catch { return null; } };
-  const has = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
-
-  function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
-  }
-  function asDisplay(v) { try { return typeof v === "string" ? v : JSON.stringify(v, null, 2); } catch { return String(v); } }
-
-  function hashKey(k) { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return "k" + (h >>> 0).toString(16); }
-
-  // Normalize model name from ListModels:
-  // API returns "models/gemini-…". For endpoints we need only the suffix after "models/".
-  function normalizedModelName(name) {
-    return name.startsWith("models/") ? name.slice("models/".length) : name;
-  }
-
-  /* ========================= LOGGING ========================= */
-  function logTool(who, text) {
-    const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
-    if (els.toolLog) { els.toolLog.textContent += line; els.toolLog.scrollTop = els.toolLog.scrollHeight; }
-    else { console.log(line.trim()); }
-  }
-
-  /* ========================= USAGE PANEL ========================= */
-  function ensureUsagePanel() {
-    if (!els.aside) return null;
-    let panel = q('usagePanel');
-    if (panel) return panel;
-    panel = el('div', 'section');
-    panel.id = 'usagePanel';
-    panel.innerHTML = `
-      <h2>Usage</h2>
-      <div id="usageSummary" class="small mono"></div>
-      <div id="usageKeys" class="small mono" style="margin-top:6px"></div>
-      <div class="divider"></div>
-      <h2>Key Status & Rate Limits</h2>
-      <div id="rateLimits" class="small mono"></div>
-    `;
-    els.aside.appendChild(panel);
-    return panel;
-  }
-
-  function updateUsageUI() {
-    ensureUsagePanel();
-    const session = state.usage.session;
-    const sumEl = q('usageSummary');
-    const keysEl = q('usageKeys');
-    const rateEl = q('rateLimits');
-    const quota = getQuotaConfig();
-    if (sumEl) sumEl.textContent =
-      `Session requests: ${session.requests}/${quota.sessionMax} | In chars: ${session.inChars} | Out chars: ${session.outChars}`;
-    if (keysEl) {
-      const lines = [];
-      for (const [kh, v] of Object.entries(state.usage.perKey)) {
-        lines.push(`${kh}: day ${v.day} | daily ${v.dailyRequests}/${quota.daily} | minute ${v.minuteCount}/${quota.rpm} | total ${v.totalRequests}`);
-      }
-      keysEl.textContent = lines.join('\n') || '(no key usage yet)';
-    }
-    if (rateEl) {
-      const keys = getStoredKeys();
-      if (!keys.length) { rateEl.textContent = '(enter and save API keys to view status)'; return; }
-      const rows = [];
-      for (const k of keys) {
-        const kh = hashKey(k);
-        const st = state.keyStatus[kh] || {};
-        const u = state.usage.perKey[kh];
-        const validity = st.ok ? 'OK' : (st.http ? `HTTP ${st.http}` : 'Unknown');
-        const msg = st.msg ? ` — ${st.msg}` : '';
-        rows.push(`${kh}: ${validity}${msg}`);
-        if (u) rows.push(`  usage → minute ${u.minuteCount}/${getQuotaConfig().rpm}, daily ${u.dailyRequests}/${getQuotaConfig().daily}, total ${u.totalRequests}`);
-      }
-      rateEl.textContent = rows.join('\n');
-    }
-  }
-
-  /* ========================= UI HELPERS ========================= */
-  function addMsg(role, content) {
-    if (!els.chat) return { pre: { textContent: '' }, set: () => {} };
-    const wrap = el("div", "msg " + role);
-    const meta = el("div", "meta"); meta.textContent = role === "user" ? "You" : "Model";
-    const pre = el("div"); pre.className = "mono"; pre.style.whiteSpace = "pre-wrap"; pre.textContent = content || "";
-    wrap.appendChild(meta); wrap.appendChild(pre); els.chat.appendChild(wrap); els.chat.scrollTop = els.chat.scrollHeight;
-    return { pre, set: (t) => { pre.textContent = t; els.chat.scrollTop = els.chat.scrollHeight; } };
-  }
-  function renderIRC() { if (els.ircList) els.ircList.textContent = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)"; }
-  function renderVars() {
-    if (!els.varList) return;
-    const entries = Object.entries(state.variables);
-    els.varList.innerHTML = entries.length ? entries.map(([k, v]) => `<span class="kv mono">${escapeHtml(k)} = ${escapeHtml(String(v))}</span>`).join("") : "";
-  }
-  function renderMemories() {
-    if (!els.memoryList) return;
-    if (!state.memories.length) { els.memoryList.innerHTML = '<div class="small">No memory items yet.</div>'; return; }
-    els.memoryList.innerHTML = state.memories.map((m, i) => `
-      <div style="margin-bottom:10px">
-        <div><span class="pill">#${i}</span> <strong>${escapeHtml(m.summary)}</strong></div>
-        <div class="small mono" style="margin-top:4px; white-space:pre-wrap">${escapeHtml(m.value)}</div>
-      </div>`).join("");
-  }
-
-  /* ========================= STORAGE ========================= */
-  function getStoredKeys() { return JSON.parse(localStorage.getItem(KEYS_STORAGE) || "[]"); }
-  function setStoredKeys(arr) { localStorage.setItem(KEYS_STORAGE, JSON.stringify(arr)); }
-  function getQuotaConfig() {
-    const cfg = JSON.parse(localStorage.getItem(QUOTA_STORAGE) || "null");
-    return {
-      rpm: (cfg && +cfg.rpm) || DEFAULT_QUOTAS.rpm,
-      daily: (cfg && +cfg.daily) || DEFAULT_QUOTAS.daily,
-      sessionMax: (cfg && +cfg.sessionMax) || DEFAULT_QUOTAS.sessionMax
-    };
-  }
-
-  /* ========================= USAGE & QUOTA ========================= */
-  function initKeyUsage(key) {
-    const kh = hashKey(key);
-    const today = toISODate(now());
-    const u = state.usage.perKey[kh];
-    if (!u || u.day !== today) {
-      state.usage.perKey[kh] = {
-        day: today, dailyRequests: 0,
-        minuteWindowStart: now(), minuteCount: 0,
-        totalRequests: (u && u.totalRequests) || 0,
-        inChars: (u && u.inChars) || 0, outChars: (u && u.outChars) || 0
-      };
-    }
-  }
-  function addInChars(key, n) {
-    const kh = hashKey(key); initKeyUsage(key);
-    state.usage.perKey[kh].inChars += n; state.usage.session.inChars += n; updateUsageUI();
-  }
-  function addOutChars(key, n) {
-    const kh = hashKey(key); initKeyUsage(key);
-    state.usage.perKey[kh].outChars += n; state.usage.session.outChars += n; updateUsageUI();
-  }
-  function checkAndConsumeQuota(key) {
-    const quota = getQuotaConfig();
-    if (state.usage.session.requests >= quota.sessionMax) throw new Error("Session request limit reached.");
-    initKeyUsage(key);
-    const kh = hashKey(key);
-    const u = state.usage.perKey[kh];
-    const nowMs = now();
-
-    if (u.dailyRequests >= quota.daily) throw new Error(`Daily quota reached for key ${kh}.`);
-    if (nowMs - u.minuteWindowStart >= 60_000) { u.minuteWindowStart = nowMs; u.minuteCount = 0; }
-    if (u.minuteCount >= quota.rpm) throw new Error(`Per-minute quota reached for key ${kh}.`);
-
-    u.minuteCount++; u.dailyRequests++; u.totalRequests++; state.usage.session.requests++; updateUsageUI();
-  }
-
-  /* ========================= KEY MANAGEMENT ========================= */
-  function getActiveKey() {
-    const keys = getStoredKeys();
-    if (!keys.length) throw new Error("No API key found. Save up to five keys.");
-    let i = 0;
-    while (i < keys.length) {
-      const idx = state.keyIndex % keys.length;
-      const k = keys[idx];
-      const circuit = state.circuit[k];
-      if (!circuit || circuit.openUntil <= now()) return k;
-      state.keyIndex++; i++;
-    }
-    throw new Error("All keys are temporarily paused by circuit breaker.");
-  }
-  function rotateKey(reason) { state.keyIndex++; logTool("system", `Rotating key${reason ? `: ${reason}` : ""}`); }
-  function openCircuitFor(key, ms) { state.circuit[key] = { openUntil: now() + ms }; logTool("system", `Circuit opened for current key for ${Math.round(ms / 1000)}s`); }
-
-  /* ========================= JS EXECUTION & CANVAS ========================= */
-  async function runUserJS(src) {
-    if (els.jsLog) els.jsLog.textContent = "";
-    const originalLog = console.log;
-    let logs = [];
-    console.log = (...args) => { logs.push(args.map((a) => asDisplay(a)).join(" ")); originalLog(...args); };
-    try {
-      const fn = new Function(`return (async ()=>{ ${src}\n })()`);
-      const result = await fn();
-      console.log = originalLog;
-      if (els.jsLog) els.jsLog.textContent = logs.map((l) => "• " + l).join("\n") + (result !== undefined ? `\n\nreturn → ${asDisplay(result)}` : "");
-      logTool("run_js", `Executed (${src.length} chars)`);
-      return { logs, result };
-    } catch (err) {
-      console.log = originalLog;
-      if (els.jsLog) els.jsLog.textContent = (logs.length ? logs.map((l) => "• " + l).join("\n") + "\n\n" : "") + "ERROR → " + String(err && err.stack || err);
-      logTool("run_js", `Error: ${String(err)}`);
-      return { logs, error: String(err) };
-    }
-  }
-  function renderCanvas(html) { if (els.canvas) { els.canvas.innerHTML = html; logTool("render_html", "Updated canvas"); } }
-
-  /* ========================= TOOLS DECLARATIONS ========================= */
-  const functionDeclarations = [
-    { name: "fetch_memory", description: "Fetch a detailed memory by index from provided memory summaries.", parameters: { type: "OBJECT", properties: { index: { type: "INTEGER" } }, required: ["index"] } },
-    { name: "list_memories", description: "List available memory summaries with indices.", parameters: { type: "OBJECT", properties: {} } },
-    { name: "irc_add", description: "Append one step to the Immediate Reasoning Chain for the current reply.", parameters: { type: "OBJECT", properties: { step: { type: "STRING" } }, required: ["step"] } },
-    { name: "run_js", description: "Execute JavaScript in the browser. Use for network fetch, compute, parsing. Return logs and result.", parameters: { type: "OBJECT", properties: { code: { type: "STRING" } }, required: ["code"] } },
-    { name: "render_html", description: "Render HTML into the canvas region for previews or interactive reasoning.", parameters: { type: "OBJECT", properties: { html: { type: "STRING" } }, required: ["html"] } },
-    { name: "set_var", description: "Set a named variable for later injection into the final answer using {{var:NAME}}.", parameters: { type: "OBJECT", properties: { name: { type: "STRING" }, value: { type: "STRING" } }, required: ["name", "value"] } },
-    { name: "get_var", description: "Get a named variable value previously set.", parameters: { type: "OBJECT", properties: { name: { type: "STRING" } }, required: ["name"] } },
-    { name: "list_tools", description: "Return a concise list of available tools and when to use them.", parameters: { type: "OBJECT", properties: {} } }
-  ];
-
-  /* ========================= SYSTEM INSTRUCTION ========================= */
-  function buildSystemInstruction() {
-    const memorySummaries = state.memories.map((m, i) => `#${i}: ${m.summary}`).join("\n") || "(none)";
-    const ircSoFar = state.irc.length ? state.irc.map((s, i) => `${i + 1}. ${s}`).join("\n") : "(empty)";
-    const goals = (els.goals && els.goals.value.trim()) || "(none)";
-    return [
-      "You are a helpful model with access to an External Tools system. Do not reveal chain-of-thought.",
-      "Work in iterations: plan → (optionally call tools) → draft → verify against goals → final. Keep planning brief via irc_add.",
-      "",
-      "DATA STRUCTURES:",
-      "• Memory: You receive only memory summaries; call list_memories then fetch_memory(index) when needed.",
-      "• Immediate Reasoning Chain (IRC): Steps for the current reply only. Append short steps with irc_add(step).",
-      "• Goals: Global constraints to satisfy in the final answer. A verification pass checks your draft with Goals + IRC.",
-      "",
-      "TOOLS:",
-      "• run_js({code}): Executes real JS in the user's browser (network fetch allowed).",
-      "• render_html({html}): Renders HTML into a visible canvas.",
-      "• set_var/get_var: Manage variables for final answer placeholders {{var:NAME}}.",
-      "• list_memories/fetch_memory, list_tools.",
-      "",
-      "OUTPUT PROTOCOL:",
-      "• Do not output chain-of-thought.",
-      "• If you include JS-produced content in the final answer, set a variable via set_var and reference it as {{var:NAME}}.",
-      "",
-      "SUPPLIED CONTEXT:",
-      `• Memory Summaries:\n${memorySummaries}`,
-      `• Immediate Reasoning Chain:\n${ircSoFar}`,
-      `• Goals:\n${goals}`
-    ].join("\n");
-  }
-
-  /* ========================= MODEL LIST (ListModels) ========================= */
-  async function fetchAllModelsWithAnyKey() {
-    const keys = getStoredKeys();
-    if (!keys.length) throw new Error("No API key found to fetch model list.");
-
-    const models = [];
-    let ok = false;
-
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[(state.keyIndex + i) % keys.length];
-      try { checkAndConsumeQuota(key); } catch { continue; }
-
-      let pageToken = null;
-      try {
-        do {
-          const url = new URL(MODEL_LIST_PATH());
-          url.searchParams.set("key", key);
-          url.searchParams.set("pageSize", "100");
-          if (pageToken) url.searchParams.set("pageToken", pageToken);
-
-          const res = await fetch(url.toString(), { method: "GET" });
-          const kh = hashKey(key);
-          state.keyStatus[kh] = { lastChecked: now(), ok: res.ok, http: res.status, msg: res.ok ? "Listed models" : "Failed to list models" };
-
-          if (!res.ok) {
-            if (res.status === 401 || res.status === 403) openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
-            if (res.status === 429 || res.status === 503) openCircuitFor(key, CIRCUIT_BREAK_MS);
-            rotateKey(`ListModels HTTP ${res.status}`);
-            break; // try next key
-          }
-
-          const txt = await res.text();
-          addOutChars(key, txt.length);
-          const json = safeJSON(txt) || {};
-          const pageModels = Array.isArray(json.models) ? json.models : [];
-          models.push(...pageModels);
-          pageToken = json.nextPageToken || null;
-          ok = true;
-        } while (pageToken);
-
-        if (ok) { state.keyIndex = (state.keyIndex + i) % keys.length; break; }
-      } catch (err) {
-        const kh = hashKey(key);
-        state.keyStatus[kh] = { lastChecked: now(), ok: false, http: 0, msg: String(err) };
-        openCircuitFor(key, CIRCUIT_BREAK_MS);
-        continue;
-      }
-    }
-
-    updateUsageUI();
-    if (!ok) throw new Error("Could not fetch models with any available key.");
-    return models;
-  }
-
-  function selectStreamingMethod(meta) {
-    const methods = meta.supportedGenerationMethods || [];
-    if (methods.includes("streamGenerateContent")) return "streamGenerateContent";
-    if (methods.includes("generateContent") || methods.includes("create")) return "generateContent";
-    return null;
-  }
-
-  function populateModelSelect(models) {
-    if (!els.model) return;
-
-    els.model.innerHTML = "";
-    const usable = [];
-
-    for (const m of models) {
-      const method = selectStreamingMethod(m);
-      if (!method) continue;
-      const human = m.displayName || m.name;
-      const canonical = normalizedModelName(m.name);
-      usable.push({ name: canonical, method, displayName: human });
-      state.modelsByName[canonical] = m;
-      state.streamingMethodByModel[canonical] = method;
-    }
-
-    if (usable.length === 0) {
-      // Fallback only if nothing usable came back
-      for (const f of FALLBACK_MODELS) {
-        const opt = el("option");
-        opt.value = f; opt.textContent = f;
-        els.model.appendChild(opt);
-        state.streamingMethodByModel[f] = "streamGenerateContent"; // sensible default
-      }
-      state.model = state.model || FALLBACK_MODELS[0];
-      els.model.value = state.model;
-      logTool("system", "Using fallback model list (live fetch yielded no usable models).");
-      return;
-    }
-
-    usable.sort((a, b) => {
-      const la = a.name.includes("latest") ? 1 : 0;
-      const lb = b.name.includes("latest") ? 1 : 0;
-      if (la !== lb) return lb - la;
-      const fa = a.name.includes("flash") ? 1 : 0;
-      const fb = b.name.includes("flash") ? 1 : 0;
-      if (fa !== fb) return fb - fa;
-      const pa = a.name.includes("pro") ? 1 : 0;
-      const pb = b.name.includes("pro") ? 1 : 0;
-      return pb - pa;
-    });
-
-    for (const u of usable) {
-      const opt = el("option");
-      opt.value = u.name;
-      opt.textContent = u.displayName;
-      els.model.appendChild(opt);
-    }
-
-    if (!state.model || !state.streamingMethodByModel[state.model]) state.model = usable[0].name;
-    els.model.value = state.model;
-    logTool("system", `Model list updated (${usable.length} usable). Selected: ${state.model}`);
-  }
-
-  async function refreshModelList() {
-    if (!els.model) return;
-    els.model.disabled = true;
-    const prev = els.model.value;
-    els.model.innerHTML = "";
-    const loading = el("option"); loading.value = ""; loading.textContent = "Loading models…"; els.model.appendChild(loading);
-
-    try {
-      const cached = safeJSON(localStorage.getItem(MODELS_CACHE_STORAGE));
-      if (cached && Array.isArray(cached.models) && now() - (cached.cachedAt || 0) < 30 * 60 * 1000) {
-        populateModelSelect(cached.models);
-      } else {
-        const live = await fetchAllModelsWithAnyKey();
-        localStorage.setItem(MODELS_CACHE_STORAGE, JSON.stringify({ models: live, cachedAt: now() }));
-        populateModelSelect(live);
-      }
-    } catch (e) {
-      logTool("system", "Model list fetch failed. Using fallback options.");
-      populateModelSelect([]); // triggers fallback list only
-    } finally {
-      els.model.disabled = false;
-      if (prev && state.streamingMethodByModel[prev]) { els.model.value = prev; state.model = prev; }
-      updateUsageUI();
-    }
-  }
-
-  async function recheckKeyStatuses() {
-    const keys = getStoredKeys();
-    if (!keys.length) { updateUsageUI(); return; }
-
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const url = new URL(MODEL_LIST_PATH());
-      url.searchParams.set("key", key);
-      url.searchParams.set("pageSize", "1");
-      try {
-        checkAndConsumeQuota(key);
-        const res = await fetch(url.toString(), { method: "GET" });
-        const kh = hashKey(key);
-        state.keyStatus[kh] = { lastChecked: now(), ok: res.ok, http: res.status, msg: res.ok ? "OK" : "Not authorized or invalid" };
-        if (res.status === 401 || res.status === 403) openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
-        if (res.status === 429 || res.status === 503) openCircuitFor(key, CIRCUIT_BREAK_MS);
-      } catch (err) {
-        const kh = hashKey(key);
-        state.keyStatus[kh] = { lastChecked: now(), ok: false, http: 0, msg: String(err) };
-      }
-    }
-    updateUsageUI();
-  }
-
-  /* ========================= GEMINI STREAMING (snake_case payloads) ========================= */
-  function buildPayload(contents) {
-    return {
-      system_instruction: { parts: [{ text: buildSystemInstruction() }] },
-      tools: [{ function_declarations: functionDeclarations }],
-      contents,
-      generation_config: {
-        temperature: (els.temp && Number(els.temp.value || "0.3")) || state.temperature,
-        candidate_count: 1
-      },
-      safety_settings: []
-    };
-  }
-
-  async function* readSSE(stream, currentKey) {
-    const reader = stream.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buf = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const textChunk = decoder.decode(value, { stream: true });
-      addOutChars(currentKey, textChunk.length);
-      buf += textChunk;
-      let idx;
-      while ((idx = buf.indexOf("\n\n")) >= 0) {
-        const chunk = buf.slice(0, idx).trim();
-        buf = buf.slice(idx + 2);
-        if (!chunk) continue;
-        const lines = chunk.split("\n").map((s) => s.trim());
-        for (const l of lines) {
-          if (!l.startsWith("data:")) continue;
-          const payload = l.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-          const obj = safeJSON(payload);
-          if (obj) yield obj;
-        }
-      }
-    }
-  }
-
-  function extractParts(evt) {
-    const out = { textDelta: "", toolCalls: [] };
-    const cands = evt.candidates || [];
-    for (const c of cands) {
-      const parts = (c.content && c.content.parts) || [];
-      for (const p of parts) {
-        if (p.text) out.textDelta += p.text;
-        // Accept either snake_case or camelCase from API
-        if (p.function_call) out.toolCalls.push(p.function_call);
-        else if (p.functionCall) out.toolCalls.push(p.functionCall);
-      }
-    }
-    return out;
-  }
-
-  async function sseRequestWithRetry(payload, kind) {
-    let attempts = 0;
-    while (attempts < MAX_RETRY_PER_CALL) {
-      const key = getActiveKey();
-      try { checkAndConsumeQuota(key); }
-      catch (quotaErr) { rotateKey(String(quotaErr)); attempts++; continue; }
-
-      const modelName = state.model;
-      const method = state.streamingMethodByModel[modelName] || "streamGenerateContent";
-      const url = STREAM_ENDPOINT(modelName, key, method);
-      const bodyStr = JSON.stringify(payload);
-      addInChars(key, bodyStr.length);
-
-      const aborter = new AbortController();
-      state.inFlight = { aborter, kind };
-      let res;
-      try {
-        res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: bodyStr, signal: aborter.signal });
-      } catch (err) {
-        openCircuitFor(key, CIRCUIT_BREAK_MS);
-        rotateKey("network error");
-        attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
-      } finally {
-        state.inFlight = null;
-      }
-
-      if (res.status === 429 || res.status === 503) {
-        openCircuitFor(key, CIRCUIT_BREAK_MS);
-        rotateKey(`HTTP ${res.status}`);
-        attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
-      }
-      if (res.status === 401 || res.status === 403) {
-        openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
-        rotateKey(`HTTP ${res.status}`);
-        attempts++; continue;
-      }
-      if (!res.ok) {
-        const text = await (async()=>{ try { return await res.text(); } catch { return "(no body)"; }})();
-        logTool("system", `Gemini error ${res.status}: ${text.slice(0, 400)}`);
-        attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
-      }
-      return { stream: res.body, key }; // success
-    }
-    throw new Error("All retries exhausted.");
-  }
-
-  /* ========================= TOOLS RUNTIME (function_response as user) ========================= */
-  function toolResponseContent(name, response) {
-    return {
-      role: "user",
-      parts: [
-        {
-          function_response: {
-            name,
-            response: typeof response === "object" && response !== null ? response : { data: String(response) }
-          }
-        }
-      ]
-    };
-  }
-
-  async function execTool(call) {
-    const { name, args } = call;
-    try {
-      switch (name) {
-        case "list_tools": {
-          const tools = [
-            { name: "fetch_memory(index)", use: "Retrieve detailed memory by index" },
-            { name: "list_memories()", use: "List memory summaries and indices" },
-            { name: "irc_add(step)", use: "Append one planning/validation step" },
-            { name: "run_js(code)", use: "Execute JS in browser; can fetch the internet" },
-            { name: "render_html(html)", use: "Render HTML in canvas" },
-            { name: "set_var(name,value) / get_var(name)", use: "Manage variables for {{var:NAME}} replacement" }
-          ];
-          logTool("tool", "list_tools called");
-          return toolResponseContent("list_tools", { tools });
-        }
-        case "list_memories": {
-          const summaries = state.memories.map((m, i) => ({ index: i, summary: m.summary }));
-          logTool("tool", "list_memories called");
-          return toolResponseContent("list_memories", { summaries });
-        }
-        case "fetch_memory": {
-          const i = Number(args?.index);
-          if (Number.isNaN(i) || i < 0 || i >= state.memories.length) throw new Error("Invalid memory index");
-          logTool("tool", `fetch_memory #${i}`);
-          return toolResponseContent("fetch_memory", { index: i, value: state.memories[i].value, summary: state.memories[i].summary });
-        }
-        case "irc_add": {
-          const step = String(args?.step || "").slice(0, 500);
-          if (step) state.irc.push(step);
-          renderIRC();
-          logTool("tool", `irc_add "${step}"`);
-          return toolResponseContent("irc_add", { ok: true, length: state.irc.length });
-        }
-        case "run_js": {
-          const code = String(args?.code || "");
-          logTool("tool", `run_js (${code.length} chars)`);
-          const out = await runUserJS(code);
-          if (out && out.result && typeof out.result === "object") { Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v)); renderVars(); }
-          return toolResponseContent("run_js", out);
-        }
-        case "render_html": {
-          const html = String(args?.html || "");
-          renderCanvas(html);
-          return toolResponseContent("render_html", { ok: true });
-        }
-        case "set_var": {
-          const name = String(args?.name || "").trim();
-          const value = String(args?.value ?? "");
-          if (!name) throw new Error("name required");
-          state.variables[name] = value; renderVars(); logTool("tool", `set_var ${name}`);
-          return toolResponseContent("set_var", { ok: true });
-        }
-        case "get_var": {
-          const name = String(args?.name || "").trim();
-          const value = state.variables[name];
-          logTool("tool", `get_var ${name}`);
-          return toolResponseContent("get_var", { name, value: value ?? null });
-        }
-        default:
-          logTool("tool", `Unknown tool: ${name}`);
-          return toolResponseContent(name, { error: `Unknown tool ${name}` });
-      }
-    } catch (err) {
-      logTool("tool", `Error in ${name}: ${String(err)}`);
-      return toolResponseContent(name, { error: String(err) });
-    }
-  }
-
-  /* ========================= CHAT LOOP ========================= */
-  function buildUserContent(text) { return { role: "user", parts: [{ text }] }; }
-  function buildSystem(text) { return { role: "user", parts: [{ text }] }; }
-
-  async function toolIteration(conversation, streamSink) {
-    let iteration = 0;
-    while (iteration++ < MAX_TOOL_ITERATIONS) {
-      const payload = buildPayload(conversation);
-      let draft = "";
-      let toolCallsHappened = false;
-
-      const { stream, key } = await sseRequestWithRetry(payload, "draft");
-      for await (const evt of readSSE(stream, key)) {
-        const { textDelta, toolCalls } = extractParts(evt);
-        if (textDelta) { draft += textDelta; streamSink(textDelta); }
-        if (toolCalls && toolCalls.length) {
-          toolCallsHappened = true;
-          for (const call of toolCalls) {
-            logTool("intention", `Tool call requested: ${call.name}`);
-            const toolContent = await execTool(call);
-            conversation.push(toolContent);
-          }
-        }
-      }
-      if (toolCallsHappened) continue; // let the model consume tool results
-      return { draft, conversation };
-    }
-    throw new Error("Maximum tool iterations exceeded.");
-  }
-
-  async function verifyPass() {
-    const verifyPrompt = [
-      "VERIFY AGAINST GOALS.",
-      "Given the previous draft answer, STRICTLY check it against the Goals and the IRC (steps).",
-      "If the draft fully satisfies all goals, return a concise, professional FINAL answer.",
-      "Otherwise, revise it to satisfy all goals and return only the revised FINAL answer.",
-      "Do NOT include analysis. Do NOT mention verification.",
-      "If the draft used variables like {{var:NAME}}, keep those placeholders intact."
-    ].join(" ");
-    const verifyConversation = [...state.history, { role: "user", parts: [{ text: verifyPrompt }] }];
-    const payload = buildPayload(verifyConversation);
-    const { stream, key } = await sseRequestWithRetry(payload, "verify");
-    let verified = "";
-    for await (const evt of readSSE(stream, key)) {
-      const { textDelta } = extractParts(evt);
-      if (textDelta) verified += textDelta;
-    }
-    return verified;
-  }
-
-  async function runChatTurn(userText) {
-    const userContent = buildUserContent(userText);
-    state.history.push(userContent);
-
-    const modelMsg = addMsg("model", "");
-    const conv = [...state.history, buildSystem("Use tools as needed, then provide a draft.")];
-    let lastText = "";
-    const { draft, conversation } = await toolIteration(conv, (delta) => { lastText += delta; modelMsg.set(lastText); });
-
-    state.history.push({ role: "model", parts: [{ text: draft || "" }] });
-
-    const verifyMsg = addMsg("model", "");
-    const verified = await verifyPass();
-    const injected = verified.replace(/\{\{var:([\w\-]+)\}\}/g, (_, name) => String(state.variables[name] ?? ""));
-    verifyMsg.set(injected);
-    state.history.push({ role: "model", parts: [{ text: injected }] });
-  }
-
-  /* ========================= BINDINGS & BOOTSTRAP ========================= */
-  function bindUI() {
-    if (els.saveKeys) {
-      els.saveKeys.onclick = async () => {
-        const keys = els.keyInputs.map((i) => i.value.trim()).filter(Boolean);
-        localStorage.setItem("gemini_keys", JSON.stringify(keys));
-        logTool("system", `Saved API keys (${keys.length})`);
-        await recheckKeyStatuses();
-        await refreshModelList();
-      };
-    }
-
-    if (els.saveGoals) els.saveGoals.onclick = () => { const g = (els.goals && els.goals.value.trim()) || ""; localStorage.setItem(GOALS_STORAGE, g); logTool("system", "Saved goals"); };
-    if (els.clearGoals) els.clearGoals.onclick = () => { localStorage.removeItem(GOALS_STORAGE); if (els.goals) els.goals.value = ""; logTool("system", "Cleared goals"); };
-
-    if (els.addMemory) els.addMemory.onclick = () => {
-      const s = (els.memSummary && els.memSummary.value.trim()) || "";
-      const v = (els.memValue && els.memValue.value.trim()) || "";
-      if (!s || !v) return;
-      state.memories.push({ summary: s, value: v, ts: now() });
-      if (els.memSummary) els.memSummary.value = "";
-      if (els.memValue) els.memValue.value = "";
-      localStorage.setItem(MEMS_STORAGE, JSON.stringify(state.memories));
-      renderMemories();
-    };
-    if (els.clearMemory) els.clearMemory.onclick = () => { state.memories = []; localStorage.removeItem(MEMS_STORAGE); renderMemories(); logTool("system", "Cleared memory store"); };
-
-    if (els.runJS) els.runJS.onclick = async () => { const code = (els.jsCode && els.jsCode.value) || ""; const out = await runUserJS(code); if (out && out.result && typeof out.result === "object") { Object.entries(out.result).forEach(([k, v]) => (state.variables[k] = v)); renderVars(); } };
-    if (els.clearJS) els.clearJS.onclick = () => { if (els.jsCode) els.jsCode.value = ""; if (els.jsLog) els.jsLog.textContent = ""; };
-
-    if (els.renderHTML) els.renderHTML.onclick = () => { const html = (els.htmlCanvasInput && els.htmlCanvasInput.value) || ""; renderCanvas(html); };
-    if (els.clearCanvas) els.clearCanvas.onclick = () => renderCanvas("");
-
-    // Send / Cancel
-    let sending = false;
-    const setSending = (on) => { sending = on; if (els.send) els.send.textContent = on ? "Cancel" : "Send"; };
-    if (els.send) {
-      els.send.onclick = async () => {
-        if (sending && state.inFlight && state.inFlight.aborter) { state.inFlight.aborter.abort(); logTool("system", "Aborted current request"); setSending(false); return; }
-        const text = (els.prompt && els.prompt.value.trim()) || ""; if (!text) return;
-        addMsg("user", text); if (els.prompt) els.prompt.value = "";
-        try { setSending(true); await runChatTurn(text); } catch (err) { addMsg("model", "Error: " + String((err && err.message) || err)); } finally { setSending(false); }
-      };
-    }
-
-    // New thread
-    if (els.newThread) els.newThread.onclick = () => { state.history = []; state.irc = []; renderIRC(); if (els.chat) els.chat.innerHTML = ""; logTool("system", "Started a new thread"); };
-
-    // Model select
-    if (els.model) {
-      els.model.onchange = () => {
-        const sel = els.model.value;
-        state.model = sel;
-        logTool("system", `Selected model: ${sel} (method: ${state.streamingMethodByModel[sel] || 'streamGenerateContent'})`);
-      };
-    }
-
-    // Temperature
-    if (els.temp) els.temp.onchange = () => { const t = parseFloat(els.temp.value); state.temperature = isFinite(t) ? clamp(t, 0, 1) : 0.3; };
-
-    // ESC to cancel
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && state.inFlight && state.inFlight.aborter) { state.inFlight.aborter.abort(); logTool("system", "Aborted current request (Esc)"); }
-    });
-  }
-
-  function loadFromStorage() {
-    const keys = getStoredKeys();
-    keys.forEach((k, i) => { if (els.keyInputs[i]) els.keyInputs[i].value = k; });
-
-    const t = parseFloat((els.temp && els.temp.value) || "0.3"); state.temperature = isFinite(t) ? t : 0.3;
-    state.memories = JSON.parse(localStorage.getItem(MEMS_STORAGE) || "[]"); renderMemories();
-    const g = localStorage.getItem(GOALS_STORAGE) || ""; if (els.goals) els.goals.value = g;
-
-    // Seed model select quickly
-    const cached = safeJSON(localStorage.getItem(MODELS_CACHE_STORAGE));
-    if (cached && Array.isArray(cached.models)) populateModelSelect(cached.models);
-    else populateModelSelect([]); // ensures fallback options until we fetch
-
-    updateUsageUI();
-    renderIRC();
-    renderVars();
-  }
-
-  window.addEventListener("load", async () => {
-    loadFromStorage();
-    bindUI();
-    logTool("system", "Booting… checking keys & fetching model list.");
-    try {
-      await recheckKeyStatuses();
-      await refreshModelList();
-    } catch {}
-    setInterval(refreshModelList, 30 * 60 * 1000);
-  });
-
-  /* ========================= ADDITIONAL NOTES (fonts & favicon) =========================
-   To fix the 404s you saw:
-
-   1) Fonts (Geist URLs 404):
-      - In your <style> @font-face blocks, replace the old URLs with working ones or host your own.
-      - Example (replace in your HTML/CSS, not here in JS):
-        @font-face {
-          font-family: "Geist";
-          src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistVF.woff2") format("woff2");
-          font-weight: 100 900; font-style: normal; font-display: swap;
-        }
-        @font-face {
-          font-family: "Geist Mono";
-          src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistMonoVF.woff2") format("woff2");
-          font-weight: 100 900; font-style: normal; font-display: swap;
-        }
-
-   2) Favicon 404:
-      - Add/replace in <head>:
-        <link rel="icon" href="/favicon.ico">
-      - Or host one at your GitHub Pages path and point to it.
-
-   These two changes are in your HTML/CSS files; this JS does not alter them
-    </script>
+    <input type="file" id="fileInput" accept=".json" class="hidden" aria-hidden="true">
+
+    <script src="js/config.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/dataStructures.js"></script>
+    <script src="js/apiManager.js"></script>
+    <script src="js/promptBuilder.js"></script>
+    <script src="js/responseParser.js"></script>
+    <script src="js/codeExecutor.js"></script>
+    <script src="js/canvasManager.js"></script>
+    <script src="js/uiManager.js"></script>
+    <script src="js/chatManager.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
