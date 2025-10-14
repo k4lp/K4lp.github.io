@@ -9,7 +9,7 @@
     <style>
         @font-face {
             font-family: "Geist";
-            src: url("https://assets.vercel.com/raw/upload/v1699973030/fonts/geist/GeistVF.woff2") format("woff2");
+            src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistVF.woff2") format("woff2");
             font-weight: 100 900;
             font-style: normal;
             font-display: swap;
@@ -17,7 +17,7 @@
 
         @font-face {
             font-family: "Geist Mono";
-            src: url("https://assets.vercel.com/raw/upload/v1699973030/fonts/geist/GeistMonoVF.woff2") format("woff2");
+            src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistMonoVF.woff2") format("woff2");
             font-weight: 100 900;
             font-style: normal;
             font-display: swap;
@@ -410,7 +410,7 @@
 (() => {
   "use strict";
 
-  /* ========================= DOM HOOKS (graceful if absent) ========================= */
+  /* ========================= DOM HOOKS ========================= */
   const q = (id) => document.getElementById(id);
   const els = {
     aside: document.querySelector('aside'),
@@ -451,16 +451,12 @@
 
   // Fallback options ONLY if live fetch fails
   const FALLBACK_MODELS = [
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-latest"
+    "gemini-2.5-flash-latest",
+    "gemini-2.5-pro-latest"
   ];
 
-  // Quotas: local budgets; tune with localStorage key "gemini_quota_config"
-  const DEFAULT_QUOTAS = {
-    rpm: 60,         // requests per minute per key
-    daily: 10000,    // requests per calendar day per key
-    sessionMax: 5000 // per page-load, across all keys
-  };
+  // Quotas: local budgets; tune via localStorage key "gemini_quota_config"
+  const DEFAULT_QUOTAS = { rpm: 60, daily: 10000, sessionMax: 5000 };
 
   // Retry/backoff
   const MAX_TOOL_ITERATIONS = 8;
@@ -474,25 +470,20 @@
   const GOALS_STORAGE = "goals";
   const MEMS_STORAGE = "memories";
   const QUOTA_STORAGE = "gemini_quota_config";
-  const MODELS_CACHE_STORAGE = "gemini_models_cache"; // optional cache
+  const MODELS_CACHE_STORAGE = "gemini_models_cache";
 
   /* ========================= STATE ========================= */
   const state = {
-    // conversation
     history: [],
     irc: [],
     memories: [],
     variables: {},
 
-    // model & streaming method
     model: null,
-    modelsByName: {},  // name -> meta
-    streamingMethodByModel: {}, // name -> 'streamGenerateContent' | 'generateContent'
-
-    // generation
+    modelsByName: {},                 // name -> meta
+    streamingMethodByModel: {},       // name -> 'streamGenerateContent' | 'generateContent'
     temperature: 0.3,
 
-    // keys + usage
     keyIndex: 0,
     circuit: {}, // key -> { openUntil }
     usage: {
@@ -501,7 +492,6 @@
     },
     keyStatus: {}, // keyHash -> { lastChecked, ok, http, msg }
 
-    // control
     inFlight: null
   };
 
@@ -512,6 +502,7 @@
   const jitter = () => Math.floor(Math.random() * JITTER_MS);
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const safeJSON = (s) => { try { return JSON.parse(s); } catch { return null; } };
+  const has = (o,k) => Object.prototype.hasOwnProperty.call(o,k);
 
   function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
   function escapeHtml(s) {
@@ -521,6 +512,12 @@
 
   function hashKey(k) { let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; return "k" + (h >>> 0).toString(16); }
 
+  // Normalize model name from ListModels:
+  // API returns "models/gemini-…". For endpoints we need only the suffix after "models/".
+  function normalizedModelName(name) {
+    return name.startsWith("models/") ? name.slice("models/".length) : name;
+  }
+
   /* ========================= LOGGING ========================= */
   function logTool(who, text) {
     const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
@@ -528,7 +525,7 @@
     else { console.log(line.trim()); }
   }
 
-  /* ========================= PANELS (Usage + Rate Limits) ========================= */
+  /* ========================= USAGE PANEL ========================= */
   function ensureUsagePanel() {
     if (!els.aside) return null;
     let panel = q('usagePanel');
@@ -645,16 +642,12 @@
     initKeyUsage(key);
     const kh = hashKey(key);
     const u = state.usage.perKey[kh];
-
-    // daily
-    if (u.dailyRequests >= quota.daily) throw new Error(`Daily quota reached for key ${kh}.`);
-
-    // rpm
     const nowMs = now();
+
+    if (u.dailyRequests >= quota.daily) throw new Error(`Daily quota reached for key ${kh}.`);
     if (nowMs - u.minuteWindowStart >= 60_000) { u.minuteWindowStart = nowMs; u.minuteCount = 0; }
     if (u.minuteCount >= quota.rpm) throw new Error(`Per-minute quota reached for key ${kh}.`);
 
-    // consume
     u.minuteCount++; u.dailyRequests++; u.totalRequests++; state.usage.session.requests++; updateUsageUI();
   }
 
@@ -740,7 +733,7 @@
     ].join("\n");
   }
 
-  /* ========================= GEMINI: MODEL LIST (ListModels) ========================= */
+  /* ========================= MODEL LIST (ListModels) ========================= */
   async function fetchAllModelsWithAnyKey() {
     const keys = getStoredKeys();
     if (!keys.length) throw new Error("No API key found to fetch model list.");
@@ -750,11 +743,7 @@
 
     for (let i = 0; i < keys.length; i++) {
       const key = keys[(state.keyIndex + i) % keys.length];
-      try {
-        checkAndConsumeQuota(key);
-      } catch (e) {
-        continue; // try next key
-      }
+      try { checkAndConsumeQuota(key); } catch { continue; }
 
       let pageToken = null;
       try {
@@ -769,8 +758,8 @@
           state.keyStatus[kh] = { lastChecked: now(), ok: res.ok, http: res.status, msg: res.ok ? "Listed models" : "Failed to list models" };
 
           if (!res.ok) {
-            if (res.status === 401 || res.status === 403) { openCircuitFor(key, 5 * CIRCUIT_BREAK_MS); }
-            if (res.status === 429 || res.status === 503) { openCircuitFor(key, CIRCUIT_BREAK_MS); }
+            if (res.status === 401 || res.status === 403) openCircuitFor(key, 5 * CIRCUIT_BREAK_MS);
+            if (res.status === 429 || res.status === 503) openCircuitFor(key, CIRCUIT_BREAK_MS);
             rotateKey(`ListModels HTTP ${res.status}`);
             break; // try next key
           }
@@ -784,7 +773,7 @@
           ok = true;
         } while (pageToken);
 
-        if (ok) { state.keyIndex = (state.keyIndex + i) % keys.length; break; } // lock onto the working key
+        if (ok) { state.keyIndex = (state.keyIndex + i) % keys.length; break; }
       } catch (err) {
         const kh = hashKey(key);
         state.keyStatus[kh] = { lastChecked: now(), ok: false, http: 0, msg: String(err) };
@@ -794,18 +783,15 @@
     }
 
     updateUsageUI();
-
     if (!ok) throw new Error("Could not fetch models with any available key.");
     return models;
   }
 
   function selectStreamingMethod(meta) {
     const methods = meta.supportedGenerationMethods || [];
-    // Prefer explicit streaming method if advertised
     if (methods.includes("streamGenerateContent")) return "streamGenerateContent";
-    // Fallback: many models stream via generateContent with alt=sse
     if (methods.includes("generateContent") || methods.includes("create")) return "generateContent";
-    return null; // unsupported for our chat
+    return null;
   }
 
   function populateModelSelect(models) {
@@ -817,9 +803,11 @@
     for (const m of models) {
       const method = selectStreamingMethod(m);
       if (!method) continue;
-      usable.push({ name: m.name, method, displayName: m.displayName || m.name });
-      state.modelsByName[m.name] = m;
-      state.streamingMethodByModel[m.name] = method;
+      const human = m.displayName || m.name;
+      const canonical = normalizedModelName(m.name);
+      usable.push({ name: canonical, method, displayName: human });
+      state.modelsByName[canonical] = m;
+      state.streamingMethodByModel[canonical] = method;
     }
 
     if (usable.length === 0) {
@@ -828,16 +816,14 @@
         const opt = el("option");
         opt.value = f; opt.textContent = f;
         els.model.appendChild(opt);
-        state.streamingMethodByModel[f] = "streamGenerateContent"; // best guess
+        state.streamingMethodByModel[f] = "streamGenerateContent"; // sensible default
       }
-      // If we previously forced a model, keep it; else choose first fallback
       state.model = state.model || FALLBACK_MODELS[0];
       els.model.value = state.model;
       logTool("system", "Using fallback model list (live fetch yielded no usable models).");
       return;
     }
 
-    // Sort a bit: prefer "-latest", then flash/pro
     usable.sort((a, b) => {
       const la = a.name.includes("latest") ? 1 : 0;
       const lb = b.name.includes("latest") ? 1 : 0;
@@ -857,10 +843,7 @@
       els.model.appendChild(opt);
     }
 
-    // Choose currently selected if still present, else first usable
-    if (!state.model || !state.streamingMethodByModel[state.model]) {
-      state.model = usable[0].name;
-    }
+    if (!state.model || !state.streamingMethodByModel[state.model]) state.model = usable[0].name;
     els.model.value = state.model;
     logTool("system", `Model list updated (${usable.length} usable). Selected: ${state.model}`);
   }
@@ -901,7 +884,6 @@
       url.searchParams.set("key", key);
       url.searchParams.set("pageSize", "1");
       try {
-        // We COUNT this as a request so it participates in local quotas.
         checkAndConsumeQuota(key);
         const res = await fetch(url.toString(), { method: "GET" });
         const kh = hashKey(key);
@@ -916,17 +898,17 @@
     updateUsageUI();
   }
 
-  /* ========================= GEMINI STREAMING ========================= */
+  /* ========================= GEMINI STREAMING (snake_case payloads) ========================= */
   function buildPayload(contents) {
     return {
-      systemInstruction: { role: "user", parts: [{ text: buildSystemInstruction() }] },
-      tools: [{ functionDeclarations }],
+      system_instruction: { parts: [{ text: buildSystemInstruction() }] },
+      tools: [{ function_declarations: functionDeclarations }],
       contents,
-      generationConfig: {
+      generation_config: {
         temperature: (els.temp && Number(els.temp.value || "0.3")) || state.temperature,
-        candidateCount: 1
+        candidate_count: 1
       },
-      safetySettings: []
+      safety_settings: []
     };
   }
 
@@ -964,7 +946,9 @@
       const parts = (c.content && c.content.parts) || [];
       for (const p of parts) {
         if (p.text) out.textDelta += p.text;
-        if (p.functionCall) out.toolCalls.push(p.functionCall);
+        // Accept either snake_case or camelCase from API
+        if (p.function_call) out.toolCalls.push(p.function_call);
+        else if (p.functionCall) out.toolCalls.push(p.functionCall);
       }
     }
     return out;
@@ -977,7 +961,6 @@
       try { checkAndConsumeQuota(key); }
       catch (quotaErr) { rotateKey(String(quotaErr)); attempts++; continue; }
 
-      // Choose path based on selected model’s capabilities
       const modelName = state.model;
       const method = state.streamingMethodByModel[modelName] || "streamGenerateContent";
       const url = STREAM_ENDPOINT(modelName, key, method);
@@ -1009,7 +992,7 @@
       }
       if (!res.ok) {
         const text = await (async()=>{ try { return await res.text(); } catch { return "(no body)"; }})();
-        logTool("system", `Gemini error ${res.status}: ${text.slice(0, 200)}`);
+        logTool("system", `Gemini error ${res.status}: ${text.slice(0, 400)}`);
         attempts++; await sleep(BASE_BACKOFF_MS * Math.pow(2, attempts - 1) + jitter()); continue;
       }
       return { stream: res.body, key }; // success
@@ -1017,9 +1000,19 @@
     throw new Error("All retries exhausted.");
   }
 
-  /* ========================= TOOLS RUNTIME ========================= */
+  /* ========================= TOOLS RUNTIME (function_response as user) ========================= */
   function toolResponseContent(name, response) {
-    return { role: "tool", parts: [{ functionResponse: { name, response: typeof response === "object" && response !== null ? response : { data: String(response) } } }] };
+    return {
+      role: "user",
+      parts: [
+        {
+          function_response: {
+            name,
+            response: typeof response === "object" && response !== null ? response : { data: String(response) }
+          }
+        }
+      ]
+    };
   }
 
   async function execTool(call) {
@@ -1100,11 +1093,14 @@
     while (iteration++ < MAX_TOOL_ITERATIONS) {
       const payload = buildPayload(conversation);
       let draft = "";
+      let toolCallsHappened = false;
+
       const { stream, key } = await sseRequestWithRetry(payload, "draft");
       for await (const evt of readSSE(stream, key)) {
         const { textDelta, toolCalls } = extractParts(evt);
         if (textDelta) { draft += textDelta; streamSink(textDelta); }
         if (toolCalls && toolCalls.length) {
+          toolCallsHappened = true;
           for (const call of toolCalls) {
             logTool("intention", `Tool call requested: ${call.name}`);
             const toolContent = await execTool(call);
@@ -1112,7 +1108,7 @@
           }
         }
       }
-      if (conversation.length && conversation[conversation.length - 1].role === "tool") continue;
+      if (toolCallsHappened) continue; // let the model consume tool results
       return { draft, conversation };
     }
     throw new Error("Maximum tool iterations exceeded.");
@@ -1158,11 +1154,10 @@
 
   /* ========================= BINDINGS & BOOTSTRAP ========================= */
   function bindUI() {
-    // Save Keys => persist + recheck + refresh models
     if (els.saveKeys) {
       els.saveKeys.onclick = async () => {
         const keys = els.keyInputs.map((i) => i.value.trim()).filter(Boolean);
-        setStoredKeys(keys);
+        localStorage.setItem("gemini_keys", JSON.stringify(keys));
         logTool("system", `Saved API keys (${keys.length})`);
         await recheckKeyStatuses();
         await refreshModelList();
@@ -1205,7 +1200,7 @@
     // New thread
     if (els.newThread) els.newThread.onclick = () => { state.history = []; state.irc = []; renderIRC(); if (els.chat) els.chat.innerHTML = ""; logTool("system", "Started a new thread"); };
 
-    // Model select: update chosen model
+    // Model select
     if (els.model) {
       els.model.onchange = () => {
         const sel = els.model.value;
@@ -1231,7 +1226,7 @@
     state.memories = JSON.parse(localStorage.getItem(MEMS_STORAGE) || "[]"); renderMemories();
     const g = localStorage.getItem(GOALS_STORAGE) || ""; if (els.goals) els.goals.value = g;
 
-    // If a cached model list exists, seed UI immediately (refresh will update)
+    // Seed model select quickly
     const cached = safeJSON(localStorage.getItem(MODELS_CACHE_STORAGE));
     if (cached && Array.isArray(cached.models)) populateModelSelect(cached.models);
     else populateModelSelect([]); // ensures fallback options until we fetch
@@ -1244,17 +1239,37 @@
   window.addEventListener("load", async () => {
     loadFromStorage();
     bindUI();
-    logTool("system", "Booting… fetching model list & key statuses.");
+    logTool("system", "Booting… checking keys & fetching model list.");
     try {
       await recheckKeyStatuses();
       await refreshModelList();
-    } catch (e) {
-      // Already handled with fallbacks
-    }
-    // Auto-refresh models every 30 minutes
+    } catch {}
     setInterval(refreshModelList, 30 * 60 * 1000);
   });
-})();
+
+  /* ========================= ADDITIONAL NOTES (fonts & favicon) =========================
+   To fix the 404s you saw:
+
+   1) Fonts (Geist URLs 404):
+      - In your <style> @font-face blocks, replace the old URLs with working ones or host your own.
+      - Example (replace in your HTML/CSS, not here in JS):
+        @font-face {
+          font-family: "Geist";
+          src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistVF.woff2") format("woff2");
+          font-weight: 100 900; font-style: normal; font-display: swap;
+        }
+        @font-face {
+          font-family: "Geist Mono";
+          src: url("https://cdn.jsdelivr.net/gh/vercel/geist-font/packages/geist/dist/GeistMonoVF.woff2") format("woff2");
+          font-weight: 100 900; font-style: normal; font-display: swap;
+        }
+
+   2) Favicon 404:
+      - Add/replace in <head>:
+        <link rel="icon" href="/favicon.ico">
+      - Or host one at your GitHub Pages path and point to it.
+
+   These two changes are in your HTML/CSS files; this JS does not alter them
     </script>
 </body>
 </html>
