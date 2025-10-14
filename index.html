@@ -1,258 +1,110 @@
-﻿<!DOCTYPE html>
+﻿<!-- index.html -->
+<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Advanced Reasoning Interface</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <h1 class="title">Gemini Advanced Reasoning Interface</h1>
-                <button class="settings-toggle" id="settingsToggle" aria-label="Toggle Settings">
-                    <span class="settings-icon"></span>
-                </button>
-            </div>
-        </header>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Labs: Gemini Swiss Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="./styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">Labs</div>
+      <div class="spacer"></div>
+      <button id="open-settings" class="icon-btn" aria-label="Settings">⋮</button>
+    </header>
 
-        <aside class="settings-panel" id="settingsPanel">
-            <div class="settings-header">
-                <h2>Configuration</h2>
-                <button class="close-settings" id="closeSettings" aria-label="Close Settings">&times;</button>
-            </div>
-            
-            <div class="settings-content">
-                <section class="settings-section">
-                    <h3>API Keys</h3>
-                    <p class="settings-description">Configure up to 5 Gemini API keys for rate limit fallback. Keys are stored locally in your browser.</p>
-                    
-                    <div class="api-keys-list">
-                        <div class="api-key-item">
-                            <label for="apiKey1">Primary</label>
-                            <input type="password" id="apiKey1" class="api-key-input" placeholder="Enter API key 1" autocomplete="off">
-                            <span class="key-status" id="status1"></span>
-                        </div>
-                        
-                        <div class="api-key-item">
-                            <label for="apiKey2">Secondary</label>
-                            <input type="password" id="apiKey2" class="api-key-input" placeholder="Enter API key 2" autocomplete="off">
-                            <span class="key-status" id="status2"></span>
-                        </div>
-                        
-                        <div class="api-key-item">
-                            <label for="apiKey3">Tertiary</label>
-                            <input type="password" id="apiKey3" class="api-key-input" placeholder="Enter API key 3" autocomplete="off">
-                            <span class="key-status" id="status3"></span>
-                        </div>
-                        
-                        <div class="api-key-item">
-                            <label for="apiKey4">Quaternary</label>
-                            <input type="password" id="apiKey4" class="api-key-input" placeholder="Enter API key 4" autocomplete="off">
-                            <span class="key-status" id="status4"></span>
-                        </div>
-                        
-                        <div class="api-key-item">
-                            <label for="apiKey5">Quinary</label>
-                            <input type="password" id="apiKey5" class="api-key-input" placeholder="Enter API key 5" autocomplete="off">
-                            <span class="key-status" id="status5"></span>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-actions">
-                        <button class="btn-primary" id="saveKeys">Save API Keys</button>
-                        <button class="btn-secondary" id="clearKeys">Clear All Keys</button>
-                    </div>
-                </section>
+    <main class="layout">
+      <aside class="panel left">
+        <section class="block">
+          <h2>Context</h2>
+          <div class="kv">
+            <div>Model</div>
+            <div id="active-model">gemini-1.5-flash</div>
+          </div>
+          <div class="divider"></div>
+          <h3>Memory</h3>
+          <div id="memory-list" class="list"></div>
+          <div class="controls">
+            <button id="add-memory" class="btn">Add Memory</button>
+          </div>
+          <div class="divider"></div>
+          <h3>Goals</h3>
+          <textarea id="goals-text" class="mono" placeholder="Session goals..."></textarea>
+          <div class="controls">
+            <button id="save-goals" class="btn">Save Goals</button>
+          </div>
+          <div class="divider"></div>
+          <h3>Iterative trace</h3>
+          <label class="chk">
+            <input type="checkbox" id="show-trace" />
+            <span>Show intermediate</span>
+          </label>
+          <div id="trace-log" class="trace hidden"></div>
+        </section>
 
-                <section class="settings-section">
-                    <h3>Model Configuration</h3>
-                    <div class="config-item">
-                        <label for="modelName">Model</label>
-                        <select id="modelName" class="config-select">
-                            <option value="gemini-2.5-pro-latest" selected>Gemini 2.5 Pro</option>
-                            <option value="gemini-2.5-flash-latest">Gemini 2.5 Flash</option>
-                        </select>
-                    </div>
-                    
-                    <div class="config-item">
-                        <label for="temperature">Temperature</label>
-                        <input type="range" id="temperature" min="0" max="2" step="0.1" value="1.0" class="config-slider">
-                        <span class="config-value" id="temperatureValue">1.0</span>
-                    </div>
-                    
-                    <div class="config-item">
-                        <label for="maxTokens">Max Output Tokens</label>
-                        <input type="number" id="maxTokens" min="1" max="8192" value="8192" class="config-input">
-                    </div>
-                </section>
+        <section class="block">
+          <h2>External Tools</h2>
+          <div id="tools-log" class="tools-log"></div>
+        </section>
+      </aside>
 
-                <section class="settings-section">
-                    <h3>Data Management</h3>
-                    <div class="settings-actions">
-                        <button class="btn-secondary" id="exportData">Export Session Data</button>
-                        <button class="btn-secondary" id="importData">Import Session Data</button>
-                        <button class="btn-danger" id="clearSession">Clear Session</button>
-                    </div>
-                </section>
-            </div>
-        </aside>
+      <section class="center">
+        <div id="messages" class="messages"></div>
+        <form id="composer" class="composer">
+          <textarea id="prompt" placeholder="Write your prompt..." rows="1"></textarea>
+          <button id="send" class="btn primary" type="submit">Send</button>
+        </form>
+      </section>
 
-        <main class="main-content">
-            <div class="chat-container">
-                <div class="data-structures-panel" id="dataStructuresPanel">
-                    <div class="panel-header">
-                        <h3>Active Data Structures</h3>
-                        <button class="collapse-toggle" id="collapseDataStructures" aria-label="Collapse Panel">−</button>
-                    </div>
-                    
-                    <div class="panel-content" id="dataStructuresContent">
-                        <div class="data-structure-section">
-                            <div class="section-header">
-                                <h4>Memory</h4>
-                                <span class="count" id="memoryCount">0</span>
-                            </div>
-                            <div class="data-items" id="memoryItems">
-                                <p class="empty-state">No memory items stored</p>
-                            </div>
-                        </div>
+      <aside class="panel right">
+        <section class="block">
+          <h2>Canvas</h2>
+          nvas id="html-canvas" width="800" height="600" class="s="canvas"></canvas>
+          <div class="controls">
+            <button id="clear-canvas" class="btn">Clear</button>
+          </div>
+        </section>
 
-                        <div class="data-structure-section">
-                            <div class="section-header">
-                                <h4>Reasoning Chain</h4>
-                                <span class="count" id="reasoningCount">0</span>
-                            </div>
-                            <div class="data-items" id="reasoningItems">
-                                <p class="empty-state">No reasoning steps</p>
-                            </div>
-                        </div>
+        <section class="block">
+          <h2>JS Runner</h2>
+          <textarea id="js-code" class="mono code" placeholder="// Write JavaScript here. Use fetch freely."></textarea>
+          <div class="controls">
+            <button id="run-js" class="btn">Run</button>
+          </div>
+          <pre id="js-output" class="mono output"></pre>
+        </section>
+      </aside>
+    </main>
 
-                        <div class="data-structure-section">
-                            <div class="section-header">
-                                <h4>Goals</h4>
-                                <span class="count" id="goalsCount">0</span>
-                            </div>
-                            <div class="data-items" id="goalsItems">
-                                <p class="empty-state">No goals defined</p>
-                            </div>
-                        </div>
+    <dialog id="settings">
+      <form method="dialog" class="settings-form">
+        <h2>Settings</h2>
+        <label>Model
+          <input id="model" type="text" value="gemini-1.5-flash" />
+        </label>
+        <div class="divider"></div>
+        <h3>API Keys (5)</h3>
+        <label>Key 1 <input id="key-1" type="password" /></label>
+        <label>Key 2 <input id="key-2" type="password" /></label>
+        <label>Key 3 <input id="key-3" type="password" /></label>
+        <label>Key 4 <input id="key-4" type="password" /></label>
+        <label>Key 5 <input id="key-5" type="password" /></label>
+        <div class="controls end">
+          <button id="save-settings" class="btn primary" value="close">Save</button>
+          <button class="btn" value="cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
 
-                        <div class="data-structure-section">
-                            <div class="section-header">
-                                <h4>Checkpoints</h4>
-                                <span class="count" id="checkpointsCount">0</span>
-                            </div>
-                            <div class="data-items" id="checkpointsItems">
-                                <p class="empty-state">No checkpoints saved</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="messages-container" id="messagesContainer">
-                    <div class="welcome-message">
-                        <h2>Welcome to Gemini Advanced Reasoning Interface</h2>
-                        <p>This interface provides advanced reasoning capabilities with persistent memory, goal tracking, and code execution.</p>
-                        <div class="feature-list">
-                            <div class="feature-item">
-                                <strong>Memory System:</strong> Stores and retrieves contextual information across conversations
-                            </div>
-                            <div class="feature-item">
-                                <strong>Reasoning Chains:</strong> Maintains step-by-step reasoning for complex problems
-                            </div>
-                            <div class="feature-item">
-                                <strong>Goal Verification:</strong> Tracks objectives and validates outputs against goals
-                            </div>
-                            <div class="feature-item">
-                                <strong>Code Execution:</strong> Execute JavaScript directly in the browser with full internet access
-                            </div>
-                            <div class="feature-item">
-                                <strong>Canvas Display:</strong> Render HTML content for visual outputs
-                            </div>
-                        </div>
-                        <p class="setup-notice">Configure your API keys in the settings panel to begin.</p>
-                    </div>
-                </div>
-
-                <div class="canvas-container hidden" id="canvasContainer">
-                    <div class="canvas-header">
-                        <h3>Canvas Output</h3>
-                        <div class="canvas-actions">
-                            <button class="canvas-btn" id="refreshCanvas" aria-label="Refresh Canvas">Refresh</button>
-                            <button class="canvas-btn" id="closeCanvas" aria-label="Close Canvas">Close</button>
-                        </div>
-                    </div>
-                    <div class="canvas-content">
-                        <iframe id="canvasFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups" title="Canvas Output"></iframe>
-                    </div>
-                </div>
-
-                <div class="code-execution-panel hidden" id="codeExecutionPanel">
-                    <div class="execution-header">
-                        <h4>Code Execution</h4>
-                        <button class="close-execution" id="closeExecution" aria-label="Close Execution Panel">&times;</button>
-                    </div>
-                    <div class="execution-content">
-                        <div class="code-display" id="codeDisplay"></div>
-                        <div class="execution-output" id="executionOutput"></div>
-                    </div>
-                </div>
-
-                <div class="input-container">
-                    <div class="reasoning-indicator hidden" id="reasoningIndicator">
-                        <span class="indicator-dot"></span>
-                        <span class="indicator-text" id="reasoningStatus">Reasoning...</span>
-                    </div>
-                    
-                    <div class="input-wrapper">
-                        <textarea 
-                            id="userInput" 
-                            class="user-input" 
-                            placeholder="Enter your message..." 
-                            rows="1"
-                            aria-label="Message input"
-                        ></textarea>
-                        <div class="input-actions">
-                            <button class="btn-icon" id="attachBtn" aria-label="Attach file" disabled>
-                                <span class="attach-icon"></span>
-                            </button>
-                            <button class="btn-send" id="sendBtn" aria-label="Send message">
-                                <span class="send-icon"></span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="input-footer">
-                        <div class="tool-indicators">
-                            <span class="tool-status" id="memoryStatusIndicator" title="Memory System">M</span>
-                            <span class="tool-status" id="reasoningStatusIndicator" title="Reasoning Chain">R</span>
-                            <span class="tool-status" id="goalsStatusIndicator" title="Goals">G</span>
-                            <span class="tool-status" id="codeStatusIndicator" title="Code Execution">C</span>
-                            <span class="tool-status" id="canvasStatusIndicator" title="Canvas">V</span>
-                        </div>
-                        <div class="character-count" id="charCount">0 / 32768</div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <input type="file" id="fileInput" accept=".json" class="hidden" aria-hidden="true">
-
-    <script src="js/config.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/dataStructures.js"></script>
-    <script src="js/apiManager.js"></script>
-    <script src="js/promptBuilder.js"></script>
-    <script src="js/responseParser.js"></script>
-    <script src="js/codeExecutor.js"></script>
-    <script src="js/canvasManager.js"></script>
-    <script src="js/uiManager.js"></script>
-    <script src="js/chatManager.js"></script>
-    <script src="js/main.js"></script>
-</body>
+    <script src="./js/keyring.js"></script>
+    <script src="./js/prompts.js"></script>
+    <script src="./js/memory.js"></script>
+    <script src="./js/tools.js"></script>
+    <script src="./js/stream.js"></script>
+    <script src="./js/canvas.js"></script>
+    <script src="./js/editor.js"></script>
+    <script src="./js/gemini.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
 </html>
