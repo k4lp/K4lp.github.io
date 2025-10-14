@@ -1,800 +1,941 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Reasoning Interface</title>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gemini Chat • External Tools System</title>
+
+    <!-- Geist Sans & Geist Mono (variable fonts). If these ever 404, update the URLs. -->
     <style>
+        @font-face {
+            font-family: "Geist";
+            src: url("https://assets.vercel.com/raw/upload/v1699973030/fonts/geist/GeistVF.woff2") format("woff2");
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: "Geist Mono";
+            src: url("https://assets.vercel.com/raw/upload/v1699973030/fonts/geist/GeistMonoVF.woff2") format("woff2");
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --bg: #fff;
+            --fg: #111;
+            --muted: #6a6a6a;
+            --line: #e7e7e7;
+            --ring: #000;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            box-sizing: border-box
+        }
+
+        html, body {
+            height: 100%
         }
 
         body {
-            font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #ffffff;
-            color: #000000;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            margin: 0;
+            font-family: "Geist",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+            background: var(--bg);
+            color: var(--fg);
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
 
-        .header {
-            padding: 16px 24px;
-            border-bottom: 1px solid #e5e5e5;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            min-height: 100vh;
         }
 
-            .header h1 {
-                font-size: 16px;
-                font-weight: 500;
-                letter-spacing: -0.01em;
+        @media (max-width: 1100px) {
+            .grid {
+                grid-template-columns: 1fr
             }
 
-        .header-controls {
+            aside {
+                order: 2
+            }
+
+            main {
+                order: 1
+            }
+        }
+
+        aside {
+            border-right: 1px solid var(--line);
+            padding: 20px;
+        }
+
+        main {
             display: flex;
-            gap: 12px;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        /* Panels */
+        .section {
+            margin-bottom: 24px;
+        }
+
+            .section h2 {
+                font-size: 12px;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                font-weight: 600;
+                margin: 0 0 12px 0;
+                color: var(--muted);
+            }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--fg);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font: inherit;
+            outline: none;
+        }
+
+        textarea {
+            min-height: 84px;
+            resize: vertical
+        }
+
+        .row {
+            display: flex;
+            gap: 8px
         }
 
         .btn {
-            font-family: 'Geist', sans-serif;
-            font-size: 13px;
-            padding: 6px 12px;
-            background: #000000;
-            color: #ffffff;
-            border: 1px solid #000000;
+            appearance: none;
+            background: #fff;
+            color: #000;
+            border: 1px solid #000;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font: inherit;
             cursor: pointer;
-            transition: all 0.2s;
         }
 
-            .btn:hover {
-                background: #ffffff;
-                color: #000000;
+            .btn:focus {
+                outline: 2px solid var(--ring);
+                outline-offset: 2px
             }
 
-        .btn-secondary {
-            background: #ffffff;
-            color: #000000;
-            border: 1px solid #e5e5e5;
-        }
-
-            .btn-secondary:hover {
-                border-color: #000000;
+            .btn.secondary {
+                border-color: var(--line);
+                color: #111
             }
 
-        .main-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
+            .btn.ghost {
+                border-color: transparent
+            }
 
-        .sidebar {
-            width: 280px;
-            border-right: 1px solid #e5e5e5;
+        /* Chat */
+        .chat {
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            gap: 12px;
+            padding: 20px;
+            overflow: auto;
+            flex: 1;
         }
 
-        .sidebar-section {
+        .msg {
+            border: 1px solid var(--line);
+            border-radius: 12px;
             padding: 16px;
-            border-bottom: 1px solid #e5e5e5;
-        }
-
-            .sidebar-section h3 {
-                font-size: 11px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-                margin-bottom: 12px;
-                color: #666666;
-            }
-
-        .sidebar-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-
-        .memory-item, .goal-item {
-            padding: 8px;
-            margin-bottom: 8px;
-            border: 1px solid #e5e5e5;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-            .memory-item:hover, .goal-item:hover {
-                border-color: #000000;
-            }
-
-        .memory-summary {
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .memory-preview {
-            font-size: 11px;
-            color: #666666;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        .message {
-            margin-bottom: 24px;
-            max-width: 800px;
-        }
-
-        .message-header {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-            color: #666666;
-        }
-
-        .message-content {
-            font-size: 14px;
-            line-height: 1.6;
+            max-width: 900px;
             white-space: pre-wrap;
+            line-height: 1.5;
         }
 
-        .reasoning-step {
-            padding: 12px;
-            margin-bottom: 8px;
-            border-left: 2px solid #e5e5e5;
-            font-size: 13px;
-            color: #666666;
-        }
+            .msg.user {
+                margin-left: auto;
+                background: #fafafa
+            }
 
-        .tool-execution {
-            padding: 12px;
-            margin: 8px 0;
-            background: #f5f5f5;
-            border-left: 2px solid #000000;
-            font-family: 'Geist Mono', monospace;
+            .msg.model {
+                margin-right: auto;
+                background: #fff
+            }
+
+        .meta {
             font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 8px
         }
 
-        .canvas-container {
-            margin: 12px 0;
-            border: 1px solid #e5e5e5;
-            min-height: 200px;
-        }
-
-            .canvas-container iframe {
-                width: 100%;
-                height: 400px;
-                border: none;
-            }
-
-        .input-container {
-            padding: 16px 24px;
-            border-top: 1px solid #e5e5e5;
-        }
-
-        .input-wrapper {
+        .composer {
+            border-top: 1px solid var(--line);
+            padding: 12px 20px;
             display: flex;
-            gap: 12px;
+            gap: 8px;
         }
 
-        #userInput {
-            flex: 1;
-            font-family: 'Geist', sans-serif;
-            font-size: 14px;
-            padding: 12px;
-            border: 1px solid #e5e5e5;
-            resize: none;
-            min-height: 44px;
-            max-height: 200px;
-        }
-
-            #userInput:focus {
-                outline: none;
-                border-color: #000000;
+            .composer textarea {
+                min-height: 48px
             }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+        .grow {
+            flex: 1
         }
 
-            .modal.active {
-                display: flex;
+        /* Tool panes */
+        .tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            border-top: 1px solid var(--line);
+            padding: 20px;
+        }
+
+        @media (max-width:900px) {
+            .tools {
+                grid-template-columns: 1fr
             }
-
-        .modal-content {
-            background: #ffffff;
-            width: 90%;
-            max-width: 500px;
-            padding: 24px;
-            border: 1px solid #000000;
         }
 
-        .modal-header {
-            font-size: 16px;
-            font-weight: 500;
-            margin-bottom: 16px;
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
         }
 
-        .input-group {
-            margin-bottom: 16px;
+        .mono {
+            font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         }
 
-            .input-group label {
-                display: block;
-                font-size: 12px;
-                font-weight: 500;
-                margin-bottom: 6px;
-            }
-
-            .input-group input {
-                width: 100%;
-                font-family: 'Geist Mono', monospace;
-                font-size: 13px;
-                padding: 8px;
-                border: 1px solid #e5e5e5;
-            }
-
-                .input-group input:focus {
-                    outline: none;
-                    border-color: #000000;
-                }
-
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
+        .log {
+            background: #fafafa;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 110px;
+            overflow: auto
         }
 
-        .status-bar {
-            padding: 8px 16px;
-            background: #f5f5f5;
+        .pill {
             font-size: 11px;
-            font-family: 'Geist Mono', monospace;
-            color: #666666;
-            border-bottom: 1px solid #e5e5e5;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 2px 8px;
+            display: inline-block;
+            color: #333
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .vars {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px
         }
 
-        ::-webkit-scrollbar-track {
-            background: #f5f5f5;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #cccccc;
-        }
-
-            ::-webkit-scrollbar-thumb:hover {
-                background: #999999;
+            .vars .kv {
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 4px 10px;
+                font-size: 12px
             }
+
+        .divider {
+            height: 1px;
+            background: var(--line);
+            margin: 16px 0
+        }
+
+        .small {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .kbd {
+            font-family: "Geist Mono";
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: 12px
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Gemini Reasoning Interface</h1>
-        <div class="header-controls">
-            <button class="btn btn-secondary" onclick="app.showApiKeys()">API Keys</button>
-            <button class="btn btn-secondary" onclick="app.clearConversation()">Clear</button>
-        </div>
-    </div>
-
-    <div class="status-bar" id="statusBar">Ready</div>
-
-    <div class="main-container">
-        <div class="sidebar">
-            <div class="sidebar-section">
-                <h3>Memory</h3>
-                <button class="btn btn-secondary" style="width: 100%; font-size: 12px;" onclick="app.showAddMemory()">Add Memory</button>
+    <div class="grid">
+        <aside>
+            <div class="section">
+                <h2>Model & Keys</h2>
+                <label>
+                    Model
+                    <select id="model">
+                        <option value="gemini-1.5-pro-latest">gemini-1.5-pro-latest</option>
+                        <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
+                    </select>
+                </label>
+                <div class="divider"></div>
+                <label>API Keys (rotates on rate limits)</label>
+                <div class="row" style="gap:6px; margin-bottom:8px">
+                    <input id="key1" type="text" placeholder="Key 1" />
+                    <input id="key2" type="text" placeholder="Key 2" />
+                </div>
+                <div class="row" style="gap:6px; margin-bottom:8px">
+                    <input id="key3" type="text" placeholder="Key 3" />
+                    <input id="key4" type="text" placeholder="Key 4" />
+                </div>
+                <div class="row" style="gap:6px">
+                    <input id="key5" type="text" placeholder="Key 5" />
+                    <button class="btn" id="saveKeys">Save</button>
+                </div>
+                <div class="small" style="margin-top:8px">Keys are stored in your browser’s <span class="kbd">localStorage</span>.</div>
             </div>
-            <div class="sidebar-content" id="memoriesContainer"></div>
 
-            <div class="sidebar-section">
-                <h3>Goals</h3>
-                <button class="btn btn-secondary" style="width: 100%; font-size: 12px;" onclick="app.showAddGoal()">Add Goal</button>
-            </div>
-            <div class="sidebar-content" id="goalsContainer"></div>
-        </div>
-
-        <div class="chat-container">
-            <div class="messages" id="messages"></div>
-
-            <div class="input-container">
-                <div class="input-wrapper">
-                    <textarea id="userInput" placeholder="Enter your message..."></textarea>
-                    <button class="btn" onclick="app.sendMessage()">Send</button>
+            <div class="section">
+                <h2>Session Goals</h2>
+                <textarea id="goals" placeholder="State goals that must be satisfied by the final answer. These are always provided to the model for verification."></textarea>
+                <div class="row" style="margin-top:8px">
+                    <button class="btn secondary" id="saveGoals">Save</button>
+                    <button class="btn ghost" id="clearGoals">Clear</button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="modal" id="apiKeysModal">
-        <div class="modal-content">
-            <div class="modal-header">Configure API Keys</div>
-            <div class="input-group">
-                <label>API Key 1</label>
-                <input type="password" id="apiKey1" placeholder="Enter Gemini API Key">
+            <div class="section">
+                <h2>Memory</h2>
+                <label>Summary (short)</label>
+                <input id="memSummary" type="text" placeholder="e.g., 'User prefs'" />
+                <label style="margin-top:8px">Value (detailed)</label>
+                <textarea id="memValue" placeholder="Detailed facts the model may fetch by index."></textarea>
+                <div class="row" style="margin-top:8px">
+                    <button class="btn secondary" id="addMemory">Add Memory</button>
+                    <button class="btn ghost" id="clearMemory">Clear</button>
+                </div>
+                <div id="memoryList" class="small" style="margin-top:10px"></div>
             </div>
-            <div class="input-group">
-                <label>API Key 2</label>
-                <input type="password" id="apiKey2" placeholder="Enter Gemini API Key">
-            </div>
-            <div class="input-group">
-                <label>API Key 3</label>
-                <input type="password" id="apiKey3" placeholder="Enter Gemini API Key">
-            </div>
-            <div class="input-group">
-                <label>API Key 4</label>
-                <input type="password" id="apiKey4" placeholder="Enter Gemini API Key">
-            </div>
-            <div class="input-group">
-                <label>API Key 5</label>
-                <input type="password" id="apiKey5" placeholder="Enter Gemini API Key">
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="app.closeModal('apiKeysModal')">Cancel</button>
-                <button class="btn" onclick="app.saveApiKeys()">Save</button>
-            </div>
-        </div>
-    </div>
 
-    <div class="modal" id="addMemoryModal">
-        <div class="modal-content">
-            <div class="modal-header">Add Memory</div>
-            <div class="input-group">
-                <label>Summary</label>
-                <input type="text" id="memorySummary" placeholder="Brief summary">
+            <div class="section">
+                <h2>Run</h2>
+                <label>Temperature</label>
+                <input id="temp" type="text" placeholder="0.0 – 1.0" value="0.3" />
+                <div class="row" style="margin-top:8px">
+                    <button class="btn" id="newThread">New Thread</button>
+                </div>
             </div>
-            <div class="input-group">
-                <label>Detailed Information</label>
-                <textarea id="memoryDetail" style="min-height: 100px; resize: vertical;"></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="app.closeModal('addMemoryModal')">Cancel</button>
-                <button class="btn" onclick="app.addMemory()">Add</button>
-            </div>
-        </div>
-    </div>
+        </aside>
 
-    <div class="modal" id="addGoalModal">
-        <div class="modal-content">
-            <div class="modal-header">Add Goal</div>
-            <div class="input-group">
-                <label>Goal Description</label>
-                <textarea id="goalDescription" style="min-height: 100px; resize: vertical;"></textarea>
+        <main>
+            <div class="chat" id="chat"></div>
+
+            <div class="composer">
+                <textarea id="prompt" class="grow" placeholder="Ask anything… The External Tools system is available."></textarea>
+                <button class="btn" id="send">Send</button>
             </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="app.closeModal('addGoalModal')">Cancel</button>
-                <button class="btn" onclick="app.addGoal()">Add</button>
+
+            <div class="tools">
+                <div class="card">
+                    <div class="row" style="justify-content:space-between; align-items:center">
+                        <h3 style="margin:0; font-size:14px">JavaScript Execution</h3>
+                        <span class="pill">Tool: run_js</span>
+                    </div>
+                    <div class="small" style="margin:6px 0 10px">Runs directly in your browser. Network requests via <span class="kbd">fetch</span> are allowed.</div>
+                    <textarea id="jsCode" class="mono" placeholder="// Example:
+                              // const res=await fetch('https: //httpbin.org/json').then(r => r.json());
+// console.log(res.slideshow.title);
+// return {title: res.slideshow.title};"></textarea>
+                    <div class="row" style="margin-top:8px">
+                        <button class="btn secondary" id="runJS">Run JS</button>
+                        <button class="btn ghost" id="clearJS">Clear</button>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="small">Console & result:</div>
+                    <div id="jsLog" class="log mono"></div>
+                    <div class="vars" id="varList"></div>
+                </div>
+
+                <div class="card">
+                    <div class="row" style="justify-content:space-between; align-items:center">
+                        <h3 style="margin:0; font-size:14px">Canvas (HTML Renderer)</h3>
+                        <span class="pill">Tool: render_html</span>
+                    </div>
+                    <div class="small" style="margin:6px 0 10px">Render HTML during intermediate reasoning or as part of the answer.</div>
+                    <textarea id="htmlCanvasInput" class="mono" placeholder="<!-- Example -->
+<div style='padding:24px;border:1px solid #ddd;border-radius:12px'>
+  <h1 style='margin:0 0 8px 0;font-size:20px'>Hello Canvas</h1>
+  <p>This is rendered directly into the canvas region.</p>
+</div>"></textarea>
+                    <div class="row" style="margin-top:8px">
+                        <button class="btn secondary" id="renderHTML">Render</button>
+                        <button class="btn ghost" id="clearCanvas">Clear</button>
+                    </div>
+                    <div class="divider"></div>
+                    <div id="canvas" class="log"></div>
+                </div>
+
+                <div class="card">
+                    <div class="row" style="justify-content:space-between; align-items:center">
+                        <h3 style="margin:0; font-size:14px">Tool Log</h3>
+                        <span class="pill">Intention & Calls</span>
+                    </div>
+                    <div id="toolLog" class="log mono"></div>
+                    <div class="small" style="margin-top:8px">
+                        The model can call tools via function calling. All calls and results are recorded here.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="row" style="justify-content:space-between; align-items:center">
+                        <h3 style="margin:0; font-size:14px">Immediate Reasoning Chain</h3>
+                        <span class="pill">IRC (auto-passed)</span>
+                    </div>
+                    <div id="ircList" class="log mono"></div>
+                    <div class="small" style="margin-top:8px">The model can append steps with <span class="kbd">irc_add</span>. IRC is auto-supplied on each iteration and used in the goals verification pass.</div>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script>
-        const app = {
-            apiKeys: [],
-            currentKeyIndex: 0,
-            memories: [],
-            goals: [],
-            reasoningChain: [],
-            conversationHistory: [],
-
-            init() {
-                this.loadApiKeys();
-                this.loadMemories();
-                this.loadGoals();
-                this.renderMemories();
-                this.renderGoals();
-
-                document.getElementById('userInput').addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        this.sendMessage();
-                    }
-                });
-            },
-
-            loadApiKeys() {
-                for (let i = 1; i <= 5; i++) {
-                    const key = localStorage.getItem(`gemini_api_key_${i}`);
-                    if (key) this.apiKeys.push(key);
-                }
-            },
-
-            saveApiKeys() {
-                this.apiKeys = [];
-                for (let i = 1; i <= 5; i++) {
-                    const key = document.getElementById(`apiKey${i}`).value.trim();
-                    if (key) {
-                        this.apiKeys.push(key);
-                        localStorage.setItem(`gemini_api_key_${i}`, key);
-                    }
-                }
-                this.closeModal('apiKeysModal');
-                this.updateStatus('API keys saved');
-            },
-
-            showApiKeys() {
-                for (let i = 1; i <= 5; i++) {
-                    const key = localStorage.getItem(`gemini_api_key_${i}`) || '';
-                    document.getElementById(`apiKey${i}`).value = key;
-                }
-                document.getElementById('apiKeysModal').classList.add('active');
-            },
-
-            closeModal(id) {
-                document.getElementById(id).classList.remove('active');
-            },
-
-            loadMemories() {
-                const stored = localStorage.getItem('gemini_memories');
-                if (stored) this.memories = JSON.parse(stored);
-            },
-
-            saveMemories() {
-                localStorage.setItem('gemini_memories', JSON.stringify(this.memories));
-            },
-
-            loadGoals() {
-                const stored = localStorage.getItem('gemini_goals');
-                if (stored) this.goals = JSON.parse(stored);
-            },
-
-            saveGoals() {
-                localStorage.setItem('gemini_goals', JSON.stringify(this.goals));
-            },
-
-            showAddMemory() {
-                document.getElementById('memorySummary').value = '';
-                document.getElementById('memoryDetail').value = '';
-                document.getElementById('addMemoryModal').classList.add('active');
-            },
-
-            addMemory() {
-                const summary = document.getElementById('memorySummary').value.trim();
-                const detail = document.getElementById('memoryDetail').value.trim();
-
-                if (summary && detail) {
-                    this.memories.push({ summary, detail, index: this.memories.length });
-                    this.saveMemories();
-                    this.renderMemories();
-                    this.closeModal('addMemoryModal');
-                }
-            },
-
-            showAddGoal() {
-                document.getElementById('goalDescription').value = '';
-                document.getElementById('addGoalModal').classList.add('active');
-            },
-
-            addGoal() {
-                const description = document.getElementById('goalDescription').value.trim();
-
-                if (description) {
-                    this.goals.push({ description, index: this.goals.length });
-                    this.saveGoals();
-                    this.renderGoals();
-                    this.closeModal('addGoalModal');
-                }
-            },
-
-            renderMemories() {
-                const container = document.getElementById('memoriesContainer');
-                container.innerHTML = this.memories.map((mem, idx) => `
-                    <div class="memory-item" onclick="app.showMemoryDetail(${idx})">
-                        <div class="memory-summary">${mem.summary}</div>
-                        <div class="memory-preview">${mem.detail.substring(0, 50)}...</div>
-                    </div>
-                `).join('');
-            },
-
-            renderGoals() {
-                const container = document.getElementById('goalsContainer');
-                container.innerHTML = this.goals.map((goal, idx) => `
-                    <div class="goal-item">
-                        <div style="font-size: 12px;">${goal.description}</div>
-                    </div>
-                `).join('');
-            },
-
-            showMemoryDetail(idx) {
-                const mem = this.memories[idx];
-                alert(`${mem.summary}\n\n${mem.detail}`);
-            },
-
-            updateStatus(msg) {
-                document.getElementById('statusBar').textContent = msg;
-            },
-
-            clearConversation() {
-                this.conversationHistory = [];
-                this.reasoningChain = [];
-                document.getElementById('messages').innerHTML = '';
-                this.updateStatus('Conversation cleared');
-            },
-
-            addMessage(role, content, type = 'message') {
-                const messagesDiv = document.getElementById('messages');
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message';
-
-                const header = role === 'user' ? 'USER' : type === 'reasoning' ? 'REASONING' : type === 'tool' ? 'TOOL EXECUTION' : 'ASSISTANT';
-
-                if (type === 'reasoning') {
-                    messageDiv.innerHTML = `<div class="reasoning-step">${content}</div>`;
-                } else if (type === 'tool') {
-                    messageDiv.innerHTML = `<div class="tool-execution">${content}</div>`;
-                } else if (type === 'canvas') {
-                    messageDiv.innerHTML = `
-                        <div class="message-header">${header}</div>
-                        <div class="canvas-container">
-                            <iframe srcdoc="${content.replace(/"/g, '&quot;')}"></iframe>
-                        </div>
-                    `;
-                } else {
-                    messageDiv.innerHTML = `
-                        <div class="message-header">${header}</div>
-                        <div class="message-content" id="msg-${Date.now()}">${content}</div>
-                    `;
-                }
-
-                messagesDiv.appendChild(messageDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                return messageDiv;
-            },
-
-            async sendMessage() {
-                const input = document.getElementById('userInput');
-                const message = input.value.trim();
-
-                if (!message) return;
-                if (this.apiKeys.length === 0) {
-                    alert('Please configure at least one API key');
-                    return;
-                }
-
-                input.value = '';
-                this.addMessage('user', message);
-                this.conversationHistory.push({ role: 'user', content: message });
-                this.reasoningChain = [];
-
-                await this.processWithReasoning(message);
-            },
-
-            async processWithReasoning(userMessage) {
-                this.updateStatus('Starting reasoning process...');
-
-                // Step 1: Initial reasoning
-                await this.reasoningStep(userMessage);
-
-                // Step 2: Tool usage if needed
-                const toolsNeeded = await this.detectTools();
-
-                if (toolsNeeded.length > 0) {
-                    for (const tool of toolsNeeded) {
-                        await this.executeTool(tool);
-                    }
-                }
-
-                // Step 3: Generate draft response
-                const draftResponse = await this.generateDraft();
-
-                // Step 4: Verification against goals
-                const verified = await this.verifyAgainstGoals(draftResponse);
-
-                // Step 5: Final output
-                this.addMessage('assistant', verified);
-                this.conversationHistory.push({ role: 'assistant', content: verified });
-                this.updateStatus('Ready');
-            },
-
-            async reasoningStep(userMessage) {
-                const systemPrompt = this.buildSystemPrompt('reasoning');
-                const prompt = `User message: ${userMessage}\n\nProvide your chain of thought reasoning for this query. Break down your thinking step by step.`;
-
-                const response = await this.callGemini(systemPrompt, prompt);
-                this.reasoningChain.push({ step: 'initial_reasoning', content: response });
-                this.addMessage('assistant', response, 'reasoning');
-            },
-
-            async detectTools() {
-                const systemPrompt = this.buildSystemPrompt('tool_detection');
-                const prompt = `Based on the conversation and reasoning chain, identify which external tools are needed:
-
-Available tools in External Tools System:
-- CODE_EXECUTION: Execute JavaScript code in browser
-- CANVAS: Display HTML/CSS content
-- MEMORY_FETCH: Retrieve detailed memory by index
-
-Respond with a JSON array of tools needed. Format: [{"tool": "TOOL_NAME", "params": {...}}]
-
-If no tools needed, respond with: []`;
-
-                try {
-                    const response = await this.callGemini(systemPrompt, prompt);
-                    const tools = JSON.parse(response.replace(/```json\n?/g, '').replace(/```\n?/g, ''));
-                    return Array.isArray(tools) ? tools : [];
-                } catch (e) {
-                    return [];
-                }
-            },
-
-            async executeTool(tool) {
-                this.updateStatus(`Executing tool: ${tool.tool}`);
-                let result = '';
-
-                switch (tool.tool) {
-                    case 'CODE_EXECUTION':
-                        result = await this.executeCode(tool.params.code);
-                        this.addMessage('assistant', `Code:\n${tool.params.code}\n\nOutput:\n${result}`, 'tool');
-                        break;
-
-                    case 'CANVAS':
-                        this.addMessage('assistant', tool.params.html, 'canvas');
-                        result = 'Canvas displayed';
-                        break;
-
-                    case 'MEMORY_FETCH':
-                        const mem = this.memories[tool.params.index];
-                        result = mem ? mem.detail : 'Memory not found';
-                        this.addMessage('assistant', `Fetched memory: ${result}`, 'tool');
-                        break;
-                }
-
-                this.reasoningChain.push({ step: 'tool_execution', tool: tool.tool, result });
-            },
-
-            async executeCode(code) {
-                try {
-                    const logs = [];
-                    const originalLog = console.log;
-                    console.log = (...args) => {
-                        logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-                        originalLog.apply(console, args);
-                    };
-
-                    const result = eval(code);
-                    console.log = originalLog;
-
-                    return logs.length > 0 ? logs.join('\n') : String(result);
-                } catch (error) {
-                    return `Error: ${error.message}`;
-                }
-            },
-
-            async generateDraft() {
-                const systemPrompt = this.buildSystemPrompt('draft');
-                const prompt = `Generate a comprehensive response to the user's query. You have completed reasoning and tool execution. Provide the final answer.
-
-If you used CODE_EXECUTION and want to include its output in your response, use the placeholder {{CODE_OUTPUT}} where you want it inserted.`;
-
-                const response = await this.callGemini(systemPrompt, prompt);
-
-                // Replace placeholders with actual outputs
-                let finalResponse = response;
-                const codeOutputs = this.reasoningChain.filter(r => r.step === 'tool_execution' && r.tool === 'CODE_EXECUTION');
-                if (codeOutputs.length > 0 && finalResponse.includes('{{CODE_OUTPUT}}')) {
-                    finalResponse = finalResponse.replace('{{CODE_OUTPUT}}', codeOutputs[codeOutputs.length - 1].result);
-                }
-
-                return finalResponse;
-            },
-
-            async verifyAgainstGoals(draft) {
-                if (this.goals.length === 0) return draft;
-
-                const systemPrompt = this.buildSystemPrompt('verification');
-                const prompt = `Verify this draft response against the goals:
-
-Draft: ${draft}
-
-Goals:
-${this.goals.map((g, i) => `${i + 1}. ${g.description}`).join('\n')}
-
-Reasoning chain summary:
-${this.reasoningChain.map(r => `- ${r.step}: ${r.content ? r.content.substring(0, 100) : r.result}`).join('\n')}
-
-Does the draft meet all goals? If yes, return the draft as-is. If no, provide an improved version.`;
-
-                return await this.callGemini(systemPrompt, prompt);
-            },
-
-            buildSystemPrompt(phase) {
-                const memorySummaries = this.memories.map((m, i) => `[${i}] ${m.summary}`).join('\n');
-                const goalsText = this.goals.map((g, i) => `${i + 1}. ${g.description}`).join('\n');
-
-                const basePrompt = `You are a highly capable AI assistant with access to an External Tools System. You use iterative reasoning to solve problems.
-
-AVAILABLE MEMORIES (use MEMORY_FETCH tool with index to get details):
-${memorySummaries || 'None'}
-
-CURRENT GOALS:
-${goalsText || 'None'}
-
-REASONING CHAIN SO FAR:
-${this.reasoningChain.map(r => `- ${r.step}: ${JSON.stringify(r).substring(0, 200)}`).join('\n') || 'Just started'}`;
-
-                const phasePrompts = {
-                    reasoning: basePrompt + '\n\nPHASE: INITIAL REASONING\nYour task: Think through the problem step by step. Consider what information you need and what tools might help.',
-
-                    tool_detection: basePrompt + '\n\nPHASE: TOOL DETECTION\nYour task: Analyze if you need any external tools. Respond with valid JSON only.',
-
-                    draft: basePrompt + '\n\nPHASE: DRAFT GENERATION\nYour task: Create a comprehensive response based on all reasoning and tool outputs. Be helpful and thorough.',
-
-                    verification: basePrompt + '\n\nPHASE: VERIFICATION\nYour task: Verify the draft meets all stated goals. If it does, return it unchanged. If not, improve it.'
-                };
-
-                return phasePrompts[phase] || basePrompt;
-            },
-
-            async callGemini(systemPrompt, userPrompt, streaming = false) {
-                const apiKey = this.apiKeys[this.currentKeyIndex];
-
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
-                            }],
-                            generationConfig: {
-                                temperature: 0.7,
-                                maxOutputTokens: 8192,
-                            }
-                        })
-                    });
-
-                    if (response.status === 429) {
-                        this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
-                        this.updateStatus(`Rate limited, switching to key ${this.currentKeyIndex + 1}`);
-                        return this.callGemini(systemPrompt, userPrompt, streaming);
-                    }
-
-                    const data = await response.json();
-                    return data.candidates[0].content.parts[0].text;
-
-                } catch (error) {
-                    this.updateStatus(`Error: ${error.message}`);
-                    throw error;
-                }
-            }
-        };
-
-        window.onload = () => app.init();
+/* ============ Storage & State ============ */
+const els = {
+  model: document.getElementById('model'),
+  keyInputs: [1,2,3,4,5].map(n=>document.getElementById('key'+n)),
+  saveKeys: document.getElementById('saveKeys'),
+  temp: document.getElementById('temp'),
+  send: document.getElementById('send'),
+  newThread: document.getElementById('newThread'),
+  chat: document.getElementById('chat'),
+  prompt: document.getElementById('prompt'),
+  goals: document.getElementById('goals'),
+  saveGoals: document.getElementById('saveGoals'),
+  clearGoals: document.getElementById('clearGoals'),
+  memSummary: document.getElementById('memSummary'),
+  memValue: document.getElementById('memValue'),
+  addMemory: document.getElementById('addMemory'),
+  clearMemory: document.getElementById('clearMemory'),
+  memoryList: document.getElementById('memoryList'),
+  runJS: document.getElementById('runJS'),
+  clearJS: document.getElementById('clearJS'),
+  jsCode: document.getElementById('jsCode'),
+  jsLog: document.getElementById('jsLog'),
+  renderHTML: document.getElementById('renderHTML'),
+  clearCanvas: document.getElementById('clearCanvas'),
+  htmlCanvasInput: document.getElementById('htmlCanvasInput'),
+  canvas: document.getElementById('canvas'),
+  toolLog: document.getElementById('toolLog'),
+  varList: document.getElementById('varList'),
+  ircList: document.getElementById('ircList'),
+};
+
+const state = {
+  history: [], // [{role:'user'|'model'|'tool', parts:[{text}|{functionResponse}|{functionCall}] }]
+  irc: [],     // Immediate Reasoning Chain (per thread)
+  memories: [],// [{summary, value, ts}]
+  variables: {}, // name -> value
+  goals: '',
+  keyIndex: 0
+};
+
+function loadFromStorage(){
+  const keys = JSON.parse(localStorage.getItem('gemini_keys')||'[]');
+  keys.forEach((k,i)=>{ if(els.keyInputs[i]) els.keyInputs[i].value = k; });
+  state.goals = localStorage.getItem('goals') || '';
+  els.goals.value = state.goals;
+  state.memories = JSON.parse(localStorage.getItem('memories')||'[]');
+  renderMemories();
+  renderVars();
+  renderIRC();
+}
+function saveKeys(){
+  const keys = els.keyInputs.map(i=>i.value.trim()).filter(Boolean);
+  localStorage.setItem('gemini_keys', JSON.stringify(keys));
+  logTool('system','Saved API keys ('+keys.length+')');
+}
+function saveGoals(){
+  state.goals = els.goals.value.trim();
+  localStorage.setItem('goals', state.goals);
+  logTool('system','Saved goals');
+}
+function clearGoals(){
+  state.goals = '';
+  els.goals.value = '';
+  localStorage.removeItem('goals');
+  logTool('system','Cleared goals');
+}
+function addMemory(){
+  const s = els.memSummary.value.trim();
+  const v = els.memValue.value.trim();
+  if(!s || !v) return;
+  state.memories.push({summary:s, value:v, ts:Date.now()});
+  els.memSummary.value=''; els.memValue.value='';
+  localStorage.setItem('memories', JSON.stringify(state.memories));
+  renderMemories();
+}
+function clearMemory(){
+  state.memories = [];
+  localStorage.removeItem('memories');
+  renderMemories();
+  logTool('system','Cleared memory store');
+}
+function renderMemories(){
+  if(!state.memories.length){ els.memoryList.innerHTML = '<div class="small">No memory items yet.</div>'; return; }
+  els.memoryList.innerHTML = state.memories.map((m,i)=>(
+    `<div style="margin-bottom:10px">
+      <div><span class="pill">#${i}</span> <strong>${escapeHtml(m.summary)}</strong></div>
+      <div class="small mono" style="margin-top:4px; white-space:pre-wrap">${escapeHtml(m.value)}</div>
+    </div>`
+  )).join('');
+}
+function renderIRC(){
+  els.ircList.textContent = state.irc.length ? state.irc.map((s,i)=>`${i+1}. ${s}`).join('\n') : '(empty)';
+}
+function renderVars(){
+  const entries = Object.entries(state.variables);
+  els.varList.innerHTML = entries.length ? entries.map(([k,v])=>`<span class="kv mono">${escapeHtml(k)} = ${escapeHtml(String(v))}</span>`).join('') : '';
+}
+
+/* ============ UI Helpers ============ */
+function el(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function addMsg(role, content, streaming=false){
+  const wrap = el('div','msg '+role);
+  const meta = el('div','meta'); meta.textContent = role==='user'?'You':'Model';
+  const pre = el('div'); pre.className = 'mono'; pre.style.whiteSpace='pre-wrap';
+  pre.textContent = content || '';
+  wrap.appendChild(meta); wrap.appendChild(pre);
+  els.chat.appendChild(wrap);
+  els.chat.scrollTop = els.chat.scrollHeight;
+  return {wrap, pre, set:(t)=>{ pre.textContent=t; }};
+}
+function updateLastMsg(pre, text){ pre.textContent = text; els.chat.scrollTop = els.chat.scrollHeight; }
+function logTool(who, text){
+  const line = `[${new Date().toLocaleTimeString()}] ${who.toUpperCase()}: ${text}\n`;
+  els.toolLog.textContent += line;
+  els.toolLog.scrollTop = els.toolLog.scrollHeight;
+}
+
+/* ============ JS Execution Env (no sandbox, full browser JS) ============ */
+async function runUserJS(src, fromTool=false){
+  els.jsLog.textContent = ''; // reset for clarity
+  const originalLog = console.log;
+  let logs=[];
+  console.log = (...args)=>{ logs.push(args.map(a=>toDisplay(a)).join(' ')); originalLog(...args); };
+  try{
+    // Support top-level await: wrap in async function
+    const fn = new Function(`return (async ()=>{ ${src}\n })()`);
+    const result = await fn();
+    console.log = originalLog;
+    const out = { logs, result };
+    els.jsLog.textContent = logs.map(l=>'• '+l).join('\n') + (result!==undefined?`\n\nreturn → ${toDisplay(result)}`:'');
+    logTool('run_js', `Executed (${src.length} chars)`);
+    return out;
+  }catch(err){
+    console.log = originalLog;
+    els.jsLog.textContent = (logs.length?logs.map(l=>'• '+l).join('\n')+'\n\n':'') + 'ERROR → ' + String(err && err.stack || err);
+    logTool('run_js', `Error: ${String(err)}`);
+    return { logs, error: String(err) };
+  }
+}
+els.runJS.onclick = async ()=>{
+  const code = els.jsCode.value;
+  const out = await runUserJS(code);
+  // If the JS returns an object, allow promoting keys to variables
+  if(out && out.result && typeof out.result === 'object'){
+    Object.entries(out.result).forEach(([k,v])=>{ state.variables[k]=v; });
+    renderVars();
+  }
+};
+els.clearJS.onclick = ()=>{ els.jsCode.value=''; els.jsLog.textContent=''; };
+
+/* Canvas HTML renderer */
+function renderCanvas(html){
+  els.canvas.innerHTML = html;
+  logTool('render_html','Updated canvas');
+}
+els.renderHTML.onclick = ()=> renderCanvas(els.htmlCanvasInput.value);
+els.clearCanvas.onclick = ()=> renderCanvas('');
+
+/* ============ Gemini Function Declarations (Tools) ============ */
+const functionDeclarations = [
+  {
+    name: "fetch_memory",
+    description: "Fetch a detailed memory by index from provided memory summaries.",
+    parameters: { type:"OBJECT", properties:{ index:{type:"INTEGER"} }, required:["index"] }
+  },
+  {
+    name: "list_memories",
+    description: "List available memory summaries with indices.",
+    parameters: { type:"OBJECT", properties:{} }
+  },
+  {
+    name: "irc_add",
+    description: "Append one step to the Immediate Reasoning Chain for the current reply.",
+    parameters: { type:"OBJECT", properties:{ step:{type:"STRING"} }, required:["step"] }
+  },
+  {
+    name: "run_js",
+    description: "Execute JavaScript in the user's browser. Return logs and result. Use for browsing the web via fetch, parsing, compute, etc.",
+    parameters: { type:"OBJECT", properties:{ code:{type:"STRING"} }, required:["code"] }
+  },
+  {
+    name: "render_html",
+    description: "Render HTML into the canvas region for previews or interactive reasoning.",
+    parameters: { type:"OBJECT", properties:{ html:{type:"STRING"} }, required:["html"] }
+  },
+  {
+    name: "set_var",
+    description: "Set a named variable for later injection into the final answer using {{var:NAME}} placeholders.",
+    parameters: { type:"OBJECT", properties:{ name:{type:"STRING"}, value:{type:"STRING"} }, required:["name","value"] }
+  },
+  {
+    name: "get_var",
+    description: "Get a named variable value previously set.",
+    parameters: { type:"OBJECT", properties:{ name:{type:"STRING"} }, required:["name"] }
+  },
+  {
+    name: "list_tools",
+    description: "Return a short list of available tools and when to use them.",
+    parameters: { type:"OBJECT", properties:{} }
+  }
+];
+
+/* ============ System Instruction ============ */
+function buildSystemInstruction(){
+  const memorySummaries = state.memories.map((m,i)=>`#${i}: ${m.summary}`).join('\n') || '(none)';
+  const ircSoFar = state.irc.length ? state.irc.map((s,i)=>`${i+1}. ${s}`).join('\n') : '(empty)';
+  const goals = state.goals || '(none)';
+
+  return [
+`You are a helpful model with access to an External Tools system. You must *not* reveal chain-of-thought. Use the provided tools when helpful. Work iteratively: plan → (optionally call tools) → draft → verify against goals → final.`,
+`DATA STRUCTURES:
+• Memory: You are given only memory *summaries*. If a memory is needed, call fetch_memory({index}). You may first call list_memories() to see indices. Do NOT assume details you haven’t fetched.
+• Immediate Reasoning Chain (IRC): For the current reply only. When you plan or refine steps, append short steps with irc_add({step}). IRC is automatically supplied on subsequent iterations and in the verification pass.
+• Goals: Global constraints to satisfy in the final answer. The system runs your draft through a verification pass with these Goals plus the IRC. Treat your initial draft as provisional.
+
+TOOLS:
+• run_js({code}): Executes real JavaScript in the user's browser (with network access via fetch). Use for web requests, data processing, etc. Return value becomes available to you.
+• render_html({html}): Render HTML into a visible canvas to aid intermediate reasoning or previews.
+• set_var({name,value}) / get_var({name}): Manage variables for final answer injection. Use placeholders in your text like {{var:NAME}}.
+• fetch_memory({index}), list_memories(), irc_add({step}), list_tools().
+
+OUTPUT PROTOCOL:
+• Do not output chain-of-thought. Summarize reasoning at a high level if needed.
+• If you want to include JS-produced content in your final answer, store it into a variable (set_var) and reference it via {{var:NAME}}.
+
+SUPPLIED CONTEXT (ALWAYS):
+• Memory Summaries:
+${memorySummaries}
+
+• Immediate Reasoning Chain (IRC) so far:
+${ircSoFar}
+
+• Goals:
+${goals}
+
+Follow the above exactly.`
+  ].join('\n\n');
+}
+
+/* ============ Gemini Streaming ============ */
+function getKeys(){ return JSON.parse(localStorage.getItem('gemini_keys')||'[]'); }
+function getActiveKey(){ const keys=getKeys(); if(!keys.length) throw new Error('No API key found'); return keys[state.keyIndex % keys.length]; }
+function rotateKey(){ state.keyIndex = (state.keyIndex+1) % Math.max(1,getKeys().length); }
+
+async function sseRequest(payload){
+  const model = els.model.value;
+  let attempts = 0, maxAttempts = Math.max(1, getKeys().length);
+
+  while(attempts < maxAttempts){
+    const key = getActiveKey();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+    const res = await fetch(url, {
+      method:'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    if(res.status===429 || res.status===503){
+      logTool('system', `Rate limit or service busy (HTTP ${res.status}). Rotating key...`);
+      rotateKey(); attempts++; continue;
+    }
+    if(!res.ok){
+      const text = await res.text();
+      throw new Error(`Gemini error ${res.status}: ${text}`);
+    }
+
+    return res.body; // ReadableStream (SSE)
+  }
+  throw new Error('All API keys exhausted due to rate limits.');
+}
+
+async function* readSSE(stream){
+  const reader = stream.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buf = '';
+  while(true){
+    const {value, done} = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, {stream:true});
+    let idx;
+    while((idx = buf.indexOf('\n\n'))>=0){
+      const chunk = buf.slice(0, idx).trim();
+      buf = buf.slice(idx+2);
+      const lines = chunk.split('\n').map(s=>s.trim());
+      const dataLines = lines.filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trim());
+      for(const dl of dataLines){
+        if(dl === '[DONE]' || dl === '') continue;
+        try{ yield JSON.parse(dl); }catch(e){ /* ignore */ }
+      }
+    }
+  }
+}
+
+/* Extract text and tool calls from a streamed event object */
+function extractParts(evt){
+  const out = { textDelta:'', toolCalls:[] };
+  const cands = evt.candidates || [];
+  for(const c of cands){
+    const parts = (c.content && c.content.parts) || [];
+    for(const p of parts){
+      if(p.text) out.textDelta += p.text;
+      if(p.functionCall) out.toolCalls.push(p.functionCall);
+    }
+  }
+  return out;
+}
+
+/* ============ Tool Execution (Browser-side) ============ */
+function toolResponseContent(name, response){
+  return {
+    role: "tool",
+    parts: [
+      {
+        functionResponse: {
+          name,
+          response: (typeof response === 'object' && response!==null) ? response : { data: String(response) }
+        }
+      }
+    ]
+  };
+}
+
+async function execTool(call){
+  const {name, args} = call;
+  try{
+    switch(name){
+      case 'list_tools': {
+        const tools = [
+          {name:'fetch_memory(index)', use:'Retrieve detailed memory by index'},
+          {name:'list_memories()', use:'List memory summaries and indices'},
+          {name:'irc_add(step)', use:'Append one planning/validation step'},
+          {name:'run_js(code)', use:'Execute JS in browser; can fetch the internet'},
+          {name:'render_html(html)', use:'Render HTML in canvas'},
+          {name:'set_var(name,value) / get_var(name)', use:'Manage variables for {{var:NAME}} replacement'}
+        ];
+        logTool('tool', 'list_tools called');
+        return toolResponseContent('list_tools', { tools });
+      }
+      case 'list_memories': {
+        const summaries = state.memories.map((m,i)=>({index:i, summary:m.summary}));
+        logTool('tool','list_memories called');
+        return toolResponseContent('list_memories', { summaries });
+      }
+      case 'fetch_memory': {
+        const i = Number(args?.index);
+        if(Number.isNaN(i) || i<0 || i>=state.memories.length) throw new Error('Invalid memory index');
+        logTool('tool',`fetch_memory #${i}`);
+        return toolResponseContent('fetch_memory', { index:i, value: state.memories[i].value, summary: state.memories[i].summary });
+      }
+      case 'irc_add': {
+        const step = String(args?.step||'').slice(0, 500);
+        if(step) state.irc.push(step);
+        renderIRC();
+        logTool('tool',`irc_add "${step}"`);
+        return toolResponseContent('irc_add', { ok:true, length: state.irc.length });
+      }
+      case 'run_js': {
+        const code = String(args?.code||'');
+        logTool('tool',`run_js (${code.length} chars)`);
+        const out = await runUserJS(code, true);
+        // promote any object keys to variables for convenience?
+        if(out && out.result && typeof out.result === 'object'){
+          Object.entries(out.result).forEach(([k,v])=>{ state.variables[k]=v; });
+          renderVars();
+        }
+        return toolResponseContent('run_js', out);
+      }
+      case 'render_html': {
+        const html = String(args?.html||'');
+        renderCanvas(html);
+        return toolResponseContent('render_html', { ok:true });
+      }
+      case 'set_var': {
+        const name = String(args?.name||'').trim();
+        const value = String(args?.value ?? '');
+        if(!name) throw new Error('name required');
+        state.variables[name] = value;
+        renderVars();
+        logTool('tool',`set_var ${name}`);
+        return toolResponseContent('set_var', { ok:true });
+      }
+      case 'get_var': {
+        const name = String(args?.name||'').trim();
+        const value = state.variables[name];
+        logTool('tool',`get_var ${name}`);
+        return toolResponseContent('get_var', { name, value: value ?? null });
+      }
+      default:
+        logTool('tool',`Unknown tool: ${name}`);
+        return toolResponseContent(name, { error:`Unknown tool ${name}` });
+    }
+  }catch(err){
+    logTool('tool',`Error in ${name}: ${String(err)}`);
+    return toolResponseContent(name, { error:String(err) });
+  }
+}
+
+/* ============ Chat Loop (tool-using, then verification) ============ */
+function buildUserContent(text){
+  return {
+    role: "user",
+    parts: [{ text }]
+  };
+}
+function buildSystem(systemText){
+  return { role:"user", parts:[{text: systemText}] }; // systemInstruction is separate, but we also include a lightweight reminder in contents.
+}
+function buildPayload(contents){
+  return {
+    systemInstruction: { role:"user", parts:[{text: buildSystemInstruction()}] },
+    tools: [{ functionDeclarations }],
+    contents,
+    generationConfig: {
+      temperature: Number(els.temp.value || '0.3'),
+      candidateCount: 1
+    },
+    safetySettings: [] // allow caller to decide; keep empty for neutral defaults
+  };
+}
+
+async function toolIteration(conversation){
+  // One iteration: request, stream text, collect tool calls; if tool calls, execute and return {updatedConversation, draftText}
+  const payload = buildPayload(conversation);
+  const stream = await sseRequest(payload);
+  let draft = '';
+  for await (const evt of readSSE(stream)){
+    const {textDelta, toolCalls} = extractParts(evt);
+    if(textDelta){ draft += textDelta; yield { type:'delta', text: textDelta }; }
+    if(toolCalls && toolCalls.length){
+      // Finish current stream and execute tools sequentially
+      for(const call of toolCalls){
+        yield { type:'tool_call', call };
+        const toolContent = await execTool(call);
+        conversation.push(toolContent);
+      }
+    }
+  }
+  yield { type:'done', draft, conversation };
+}
+
+async function runChatTurn(userText){
+  // 1) Push user
+  const userContent = buildUserContent(userText);
+  state.history.push(userContent);
+
+  // 2) Tool loop until we have a complete draft with no outstanding tool calls
+  let conversation = [...state.history, buildSystem('Use tools as needed, then provide a draft.')];
+  const modelMsg = addMsg('model',''); // streaming target
+
+  for await (const event of toolIteration(conversation)){
+    if(event.type==='delta'){ modelMsg.set((modelMsg.pre.textContent||'') + event.text); }
+    if(event.type==='tool_call'){ /* already logged */ }
+    if(event.type==='done'){
+      // done streaming for this iteration; update conversation and draft
+      conversation = event.conversation;
+      var draftText = event.draft;
+    }
+  }
+
+  // Append model draft to history
+  state.history.push({ role:'model', parts:[{text:draftText||''}] });
+
+  // 3) Verification pass against Goals + IRC
+  const verifyMsg = addMsg('model',''); // show verification result as the *final* message
+  const verifyPrompt = [
+    'VERIFY AGAINST GOALS.',
+    'Given the previous draft answer, STRICTLY check it against the Goals and the IRC (steps).',
+    'If the draft fully satisfies all goals, return a concise, professional FINAL answer.',
+    'Otherwise, revise it to satisfy all goals and return only the revised FINAL answer.',
+    'Do NOT include analysis. Do NOT mention verification.',
+    'If the draft used variables like {{var:NAME}}, keep those placeholders intact.'
+  ].join(' ');
+  const verifyConversation = [
+    ...state.history,
+    { role:'user', parts:[{text: verifyPrompt}] }
+  ];
+
+  // Stream verification result
+  const payload = buildPayload(verifyConversation);
+  const verifyStream = await sseRequest(payload);
+  let verified = '';
+  for await (const evt of readSSE(verifyStream)){
+    const {textDelta} = extractParts(evt);
+    if(textDelta){ verified += textDelta; verifyMsg.set((verifyMsg.pre.textContent||'') + textDelta); }
+  }
+
+  // 4) Perform variable injection on the verified text and replace the rendered bubble
+  const injected = verified.replace(/\{\{var:([\w\-]+)\}\}/g, (_,name)=> String(state.variables[name] ?? ''));
+  verifyMsg.set(injected);
+
+  // 5) Save final model message
+  state.history.push({ role:'model', parts:[{text: injected}] });
+}
+
+/* ============ Actions ============ */
+els.send.onclick = async ()=>{
+  const text = els.prompt.value.trim();
+  if(!text) return;
+  const yourMsg = addMsg('user', text);
+  els.prompt.value='';
+  try{
+    await runChatTurn(text);
+  }catch(err){
+    const e = addMsg('model', 'Error: ' + String(err && err.message || err));
+  }
+};
+
+els.newThread.onclick = ()=>{
+  state.history = [];
+  state.irc = [];
+  renderIRC();
+  els.chat.innerHTML = '';
+  logTool('system','Started a new thread');
+};
+
+els.saveKeys.onclick = saveKeys;
+els.saveGoals.onclick = saveGoals;
+els.clearGoals.onclick = clearGoals;
+els.addMemory.onclick = addMemory;
+els.clearMemory.onclick = clearMemory;
+
+window.addEventListener('load', loadFromStorage);
+
+/* ============ Utility ============ */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])); }
+function toDisplay(v){
+  try{ if(typeof v==='string') return v; return JSON.stringify(v, null, 2); }
+  catch{ return String(v); }
+}
     </script>
 </body>
 </html>
