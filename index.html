@@ -12,9 +12,9 @@
         <header class="header">
             <h1>Gemini Advanced Reasoning Interface</h1>
             <div class="api-config">
-                <input type="password" id="apiKey" placeholder="Enter Gemini API Key" />
-                <button id="saveKey">Save</button>
-                <span id="keyStatus"></span>
+                <input type="password" id="newApiKey" placeholder="Enter new Gemini API Key" />
+                <button id="addKey">Add Key</button>
+                <div id="keyList" class="key-list"></div>
             </div>
         </header>
 
@@ -56,7 +56,7 @@
 
                 <!-- Code Execution Area -->
                 <div id="codeSection" class="code-section hidden">
-                    <h3>JavaScript Execution Environment</h3>
+                    <h3>JavaScript Execution Environment (No Sandbox - Insecure!)</h3>
                     <textarea id="codeInput" placeholder="Enter JavaScript code..."></textarea>
                     <button id="runCode">Run Code</button>
                     <div id="codeOutput" class="code-output"></div>
@@ -79,6 +79,22 @@
                         <div class="status-item">
                             <span>API Status:</span>
                             <span id="apiStatus">Disconnected</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Total API Keys:</span>
+                            <span id="keyCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Active Keys:</span>
+                            <span id="activeKeyCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Rate Limited Keys:</span>
+                            <span id="rateLimitedCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span>Total Requests:</span>
+                            <span id="totalRequests">0</span>
                         </div>
                         <div class="status-item">
                             <span>Memory Items:</span>
