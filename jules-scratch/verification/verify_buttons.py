@@ -6,9 +6,8 @@ def run(playwright):
     page.goto("file:///app/index.html")
     page.screenshot(path="jules-scratch/verification/initial_page.png")
 
-    # Directly call the function to open the settings modal
-    page.evaluate("document.getElementById('open-settings').click()")
-
+    # Click the settings button and take a screenshot
+    page.click("#open-settings")
     settings_modal = page.locator("#settings")
     expect(settings_modal).to_be_visible()
     page.screenshot(path="jules-scratch/verification/settings_modal.png")
