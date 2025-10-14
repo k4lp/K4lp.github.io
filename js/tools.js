@@ -1,9 +1,10 @@
 // js/tools.js
 class ExternalTools {
-  constructor({memory, canvas, varsRef}){
+  constructor({memory, canvas, varsRef, runUserJS}){
     this.memory = memory;
     this.canvas = canvas;
     this.vars = varsRef; // map
+    this.runUserJS = runUserJS;
   }
 
   async dispatch(call){
@@ -29,7 +30,7 @@ class ExternalTools {
         return { ok:true };
       }
       case 'code.run_js': {
-        const result = await runUserJS(args.code||"");
+        const result = await this.runUserJS(args.code||"");
         return { ok:true, output: result.output, lastValue: result.lastValue };
       }
       case 'canvas.render': {
@@ -88,24 +89,3 @@ class ExternalTools {
   }
 }
 window.ExternalTools = ExternalTools;
-
-async function runUserJS(code){
-  // WARNING: This uses eval() and can execute arbitrary code.
-  // This is a major security risk in a real application.
-  // It is implemented here as per the user's specific request.
-  console.log(`Executing JS:`, code);
-  let output = '';
-  let lastValue = undefined;
-  try {
-    const oldLog = console.log;
-    console.log = (...args) => {
-      output += args.map(a => JSON.stringify(a)).join(' ') + '\n';
-      oldLog.apply(console, args);
-    };
-    lastValue = await eval(code);
-    console.log = oldLog; // Restore original console.log
-  } catch (e) {
-    output += `Execution Error: ${e.message}\nStack: ${e.stack}`;
-  }
-  return { output, lastValue };
-}

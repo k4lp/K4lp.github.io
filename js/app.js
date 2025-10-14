@@ -37,9 +37,29 @@
   els.goalsText.value = memory.getGoals();
   const htmlCanvas = new HTMLCanvas(els.canvasEl);
   const varsRef = {};
-  const tools = new ExternalTools({memory, canvas: htmlCanvas, varsRef});
+  async function runUserJS(code){
+    // WARNING: This uses eval() and can execute arbitrary code.
+    // This is a major security risk in a real application.
+    // It is implemented here as per the user's specific request.
+    console.log(`Executing JS:`, code);
+    let output = '';
+    let lastValue = undefined;
+    try {
+      const oldLog = console.log;
+      console.log = (...args) => {
+        output += args.map(a => JSON.stringify(a)).join(' ') + '\n';
+        oldLog.apply(console, args);
+      };
+      lastValue = await eval(code);
+      console.log = oldLog; // Restore original console.log
+    } catch (e) {
+      output += `Execution Error: ${e.message}\nStack: ${e.stack}`;
+    }
+    return { output, lastValue };
+  }
+  const tools = new ExternalTools({memory, canvas: htmlCanvas, varsRef, runUserJS});
 
-  function getModel(){ return els.model.value || 'gemini-1.5-flash' }
+  function getModel(){ return els.model.value || 'gemini-2.5-flash-latest' }
   function systemPrompt(){ return SYSTEM_PROMPT }
 
   const client = new GeminiClient({ keyring, getModel, systemPromptProvider: systemPrompt });
@@ -86,24 +106,30 @@
   els.clearCanvas.addEventListener('click', ()=> htmlCanvas.clear());
 
   els.openSettings.addEventListener('click', ()=>{
+    console.log('--- OPEN SETTINGS CLICKED ---');
     // load keys
     keyring.state.keys.forEach((k, i)=> els.keyInputs[i].value = k);
     els.model.value = getModel();
-    els.settings.classList.add('open');
+    els.settings.style.display = 'flex';
+    console.log('Settings modal display style set to flex.');
   });
   els.saveSettings.addEventListener('click', ()=>{
+    console.log('Saving settings...');
     keyring.setKey(0, els.keyInputs[0].value);
     keyring.setKey(1, els.keyInputs[1].value);
     keyring.setKey(2, els.keyInputs[2].value);
     keyring.setKey(3, els.keyInputs[3].value);
     keyring.setKey(4, els.keyInputs[4].value);
     els.activeModel.textContent = getModel();
-    els.settings.classList.remove('open');
+    els.settings.style.display = 'none';
+    console.log('Settings saved and modal closed.');
   });
 
   els.cancelSettings.addEventListener('click', (e)=>{
+    console.log('Canceling settings...');
     e.preventDefault();
-    els.settings.classList.remove('open');
+    els.settings.style.display = 'none';
+    console.log('Settings modal closed without saving.');
   });
 
   function addMessage(role, content){
@@ -150,6 +176,7 @@
   }
 
   async function orchestrate(userText){
+    console.log('Orchestration started for user text:', userText);
     // Show user
     addMessage('user', userText);
     chatState.iterative = [];
@@ -218,9 +245,11 @@
   }
 
   async function executeToolCall(tc){
+    console.log('Executing tool call:', tc);
     logTool(`→ ${tc.name}`);
     const res = await tools.dispatch(tc);
     logTool(`← ${tc.name} ${res.ok ? 'ok' : 'error'}`);
+    console.log('Tool call result:', res);
     // Feed observation back as a hidden assistant message to inform next iteration
     chatState.history.push({ role:'user', content: `Tool observation for ${tc.name}:\n${JSON.stringify(res).slice(0,4000)}` });
   }
