@@ -77,25 +77,27 @@
       </aside>
     </main>
 
-    <dialog id="settings">
-      <form method="dialog" class="settings-form">
-        <h2>Settings</h2>
-        <label>Model
-          <input id="model" type="text" value="gemini-1.5-flash" />
-        </label>
-        <div class="divider"></div>
-        <h3>API Keys (5)</h3>
-        <label>Key 1 <input id="key-1" type="password" /></label>
-        <label>Key 2 <input id="key-2" type="password" /></label>
-        <label>Key 3 <input id="key-3" type="password" /></label>
-        <label>Key 4 <input id="key-4" type="password" /></label>
-        <label>Key 5 <input id="key-5" type="password" /></label>
-        <div class="controls end">
-          <button id="save-settings" class="btn primary" value="close">Save</button>
-          <button class="btn" value="cancel">Cancel</button>
-        </div>
-      </form>
-    </dialog>
+    <div id="settings" class="modal-overlay">
+      <div class="modal">
+        <form class="settings-form">
+          <h2>Settings</h2>
+          <label>Model
+            <input id="model" type="text" value="gemini-1.5-flash" />
+          </label>
+          <div class="divider"></div>
+          <h3>API Keys (5)</h3>
+          <label>Key 1 <input id="key-1" type="password" /></label>
+          <label>Key 2 <input id="key-2" type="password" /></label>
+          <label>Key 3 <input id="key-3" type="password" /></label>
+          <label>Key 4 <input id="key-4" type="password" /></label>
+          <label>Key 5 <input id="key-5" type="password" /></label>
+          <div class="controls end">
+            <button id="cancel-settings" class="btn">Cancel</button>
+            <button id="save-settings" class="btn primary" value="close">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script src="./js/keyring.js"></script>
     <script src="./js/prompts.js"></script>

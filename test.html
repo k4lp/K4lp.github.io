@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Core Logic Tests</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Core Logic Tests</h1>
+    <div id="results"></div>
+
+    <script src="js/keyring.js"></script>
+    <script src="js/memory.js"></script>
+    <script src="js/tools.js"></script>
+    <script src="js/core.test.js"></script>
+    <script>
+        const resultsContainer = document.getElementById('results');
+        const results = runTests();
+        results.forEach(result => {
+            const resultEl = document.createElement('div');
+            resultEl.className = result.passed ? 'test-passed' : 'test-failed';
+            resultEl.innerHTML = `<strong>${result.name}</strong>: ${result.passed ? 'Passed' : 'Failed'}`;
+            if (!result.passed) {
+                const errorEl = document.createElement('pre');
+                errorEl.textContent = result.error;
+                resultEl.appendChild(errorEl);
+            }
+            resultsContainer.appendChild(resultEl);
+        });
+    </script>
+    <style>
+        .test-passed {
+            color: green;
+        }
+        .test-failed {
+            color: red;
+        }
+    </style>
+</body>
+</html>

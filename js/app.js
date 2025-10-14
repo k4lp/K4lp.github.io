@@ -20,6 +20,7 @@
     settings: document.getElementById('settings'),
     openSettings: document.getElementById('open-settings'),
     saveSettings: document.getElementById('save-settings'),
+    cancelSettings: document.getElementById('cancel-settings'),
     model: document.getElementById('model'),
     activeModel: document.getElementById('active-model'),
     keyInputs: [
@@ -88,7 +89,7 @@
     // load keys
     keyring.state.keys.forEach((k, i)=> els.keyInputs[i].value = k);
     els.model.value = getModel();
-    els.settings.showModal();
+    els.settings.classList.add('open');
   });
   els.saveSettings.addEventListener('click', ()=>{
     keyring.setKey(0, els.keyInputs[0].value);
@@ -97,6 +98,11 @@
     keyring.setKey(3, els.keyInputs[3].value);
     keyring.setKey(4, els.keyInputs[4].value);
     els.activeModel.textContent = getModel();
+    els.settings.classList.remove('open');
+  });
+
+  els.cancelSettings.addEventListener('click', ()=>{
+    els.settings.classList.remove('open');
   });
 
   function addMessage(role, content){
