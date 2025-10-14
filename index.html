@@ -77,12 +77,20 @@
       </aside>
     </main>
 
+    <div id="console" class="console">
+      <div class="console-header">
+        <span>Console</span>
+        <button id="clear-console" class="btn">Clear</button>
+      </div>
+      <div id="console-output" class="console-output"></div>
+    </div>
+
     <div id="settings" class="modal-overlay">
       <div class="modal">
         <form class="settings-form">
           <h2>Settings</h2>
           <label>Model
-            <input id="model" type="text" value="gemini-1.5-flash" />
+            <input id="model" type="text" value="gemini-flash-latest" />
           </label>
           <div class="divider"></div>
           <h3>API Keys (5)</h3>
