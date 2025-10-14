@@ -2,7 +2,7 @@
 class GeminiAPI {
     constructor() {
         this.apiKey = null;
-        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+        this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
         this.isConnected = false;
         this.requestCount = 0;
     }
