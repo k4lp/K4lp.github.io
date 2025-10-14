@@ -1,1 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K4LP - Development Tools</title>
+    <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="nav-brand">K4LP</a>
+            <div class="nav-links">
+                <a href="#tools">Tools</a>
+                <a href="#gemini-chat">Gemini AI</a>
+                <a href="contact.html">Contact</a>
+            </div>
+        </div>
+    </nav>
 
+    <main class="main-content">
+        <section class="hero">
+            <div class="container">
+                <h1>Development Tools</h1>
+                <p>Professional utilities for developers and engineers</p>
+            </div>
+        </section>
+
+        <section id="tools" class="tools-section">
+            <div class="container">
+                <h2>Available Tools</h2>
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <h3>Digikey Tool</h3>
+                        <p>BOM management and component sourcing with Digikey API integration</p>
+                        <a href="digikey-tool.html" class="tool-link">Access Tool</a>
+                    </div>
+                    <div class="tool-card">
+                        <h3>QR Scanner</h3>
+                        <p>Fast QR code scanning and processing utility</p>
+                        <a href="qr-scanner.html" class="tool-link">Access Tool</a>
+                    </div>
+                    <div class="tool-card">
+                        <h3>Salary Calculator</h3>
+                        <p>Comprehensive CTC to in-hand salary calculator for Indian tax structure</p>
+                        <a href="salary-calculator.html" class="tool-link">Access Tool</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="gemini-chat" class="gemini-section">
+            <div class="container">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <h3>Gemini Reasoning Interface</h3>
+                        <div class="chat-controls">
+                            <select id="model-selector" class="model-select">
+                                <option value="pro">Gemini 2.5 Pro (Complex Reasoning)</option>
+                                <option value="flash" selected>Gemini 2.5 Flash (Standard)</option>
+                                <option value="lite">Gemini 2.5 Flash Lite (Fast)</option>
+                            </select>
+                            <button id="clear-chat" class="btn-clear">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages" id="messages"></div>
+
+                    <div class="reasoning-panel" id="reasoning" style="display:none">
+                        <div class="reasoning-header">
+                            <h4>Internal Reasoning Chain</h4>
+                            <span class="iteration-counter">Iteration: <span id="iteration-count">0</span>/10</span>
+                        </div>
+                        <div id="reasoning-steps" class="reasoning-content"></div>
+                    </div>
+
+                    <div class="canvas-container" id="canvas-container" style="display:none">
+                        <div class="canvas-header">
+                            <h4>Canvas Output</h4>
+                            <button id="canvas-toggle" class="btn-toggle">Hide</button>
+                        </div>
+                        <iframe id="canvas" sandbox="allow-scripts allow-same-origin"></iframe>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <div class="chat-status" id="chat-status">
+                            <span class="status-text">Ready</span>
+                            <div class="status-indicators">
+                                <span id="memory-count">Memory: 0</span>
+                                <span id="goal-status">Goals: -</span>
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <textarea id="user-input" placeholder="Ask me anything... I'll use iterative reasoning to provide comprehensive answers." rows="3"></textarea>
+                            <div class="input-controls">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="show-reasoning"> Show reasoning process
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enable-canvas"> Enable canvas output
+                                </label>
+                                <button id="send-btn" class="btn-send" disabled>Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 K4LP. Professional development tools.</p>
+        </div>
+    </footer>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h3>Gemini API Configuration</h3>
+            <p>Enter your Google AI API key to use the Gemini chat interface:</p>
+            <input type="password" id="api-key-input" placeholder="Enter API key...">
+            <div class="modal-actions">
+                <button id="save-api-key" class="btn-primary">Save</button>
+                <button id="cancel-api-key" class="btn-secondary">Cancel</button>
+            </div>
+            <p class="modal-note">Your API key is stored locally and never transmitted to our servers.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/libs/gemini-ai.min.js"></script>
+    <script src="js/common/data-structures.js"></script>
+    <script src="js/common/persistence.js"></script>
+    <script src="js/common/gemini-client.js"></script>
+    <script src="js/common/canvas-renderer.js"></script>
+    <script src="js/chat/prompt-templates.js"></script>
+    <script src="js/chat/verification-system.js"></script>
+    <script src="js/chat/reasoning-engine.js"></script>
+    <script src="js/chat/chat-ui.js"></script>
+    <script src="js/pages/index.js"></script>
+</body>
+</html>
