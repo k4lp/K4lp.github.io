@@ -1,14 +1,9 @@
-console.log('app.js script started');
 const keyring = new KeyRing();
-console.log('KeyRing instantiated:', keyring);
 const memory = new MemoryStore();
-console.log('MemoryStore instantiated:', memory);
 
-// Wrap everything in DOMContentLoaded to ensure DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM fully loaded and parsed');
 
-  // Get all DOM element references
   const els = {
     settings: document.getElementById('settings'),
     openSettings: document.getElementById('open-settings'),
@@ -20,103 +15,337 @@ document.addEventListener('DOMContentLoaded', function() {
     userInput: document.getElementById('user-input'),
     sendButton: document.getElementById('send-button'),
     clearButton: document.getElementById('clear-chat'),
-    newChatButton: document.getElementById('new-chat')
+    newChatButton: document.getElementById('new-chat'),
+    addMemory: document.getElementById('add-memory'),
+    memoryList: document.getElementById('memory-list'),
+    goalsText: document.getElementById('goals-text'),
+    saveGoals: document.getElementById('save-goals'),
+    jsCode: document.getElementById('js-code'),
+    runJS: document.getElementById('run-js'),
+    jsOutput: document.getElementById('js-output'),
+    canvasEl: document.getElementById('html-canvas'),
+    clearCanvas: document.getElementById('clear-canvas'),
+    consoleOutput: document.getElementById('console-output'),
+    clearConsole: document.getElementById('clear-console'),
+    showTrace: document.getElementById('show-trace'),
+    traceLog: document.getElementById('trace-log'),
+    toolsLog: document.getElementById('tools-log'),
+    activeModel: document.getElementById('active-model'),
+    messages: document.getElementById('chat-messages'),
+    prompt: document.getElementById('user-input'),
+    composer: document.getElementById('composer'),
   };
 
-  // Verify all elements exist
-  console.log('Element references:', Object.keys(els).map(key => ({
-    key,
-    exists: els[key] !== null
-  })));
+  const htmlCanvas = new HTMLCanvas(els.canvasEl);
+  const varsRef = {};
 
-  // Check if any critical elements are missing
-  const missingElements = Object.keys(els).filter(key => els[key] === null);
-  if (missingElements.length > 0) {
-    console.error('Missing elements:', missingElements);
-    alert('Critical UI elements are missing. Please check the HTML structure.');
-    return;
+  async function runUserJS(code) {
+    // WARNING: This uses eval() and can execute arbitrary code.
+    // This is a major security risk in a real application.
+    // It is implemented here as per the user's specific request.
+    console.log(`Executing JS:`, code);
+    let output = '';
+    let lastValue = undefined;
+    try {
+      const oldLog = console.log;
+      console.log = (...args) => {
+        output += args.map(a => JSON.stringify(a)).join(' ') + '\n';
+        oldLog.apply(console, args);
+      };
+      lastValue = await eval(code);
+      console.log = oldLog; // Restore original console.log
+    } catch (e) {
+      output += `Execution Error: ${e.message}\nStack: ${e.stack}`;
+    }
+    return { output, lastValue };
   }
 
-  // Settings Modal Handlers
-  if (els.openSettings) {
-    els.openSettings.addEventListener('click', function(e) {
-      console.log('--- OPEN SETTINGS CLICKED ---');
-      e.preventDefault();
+  const tools = new ExternalTools({memory, canvas: htmlCanvas, varsRef, runUserJS});
 
-      // Load saved API key and model
-      try {
-        console.log('Accessing keyring in openSettings:', keyring);
-        const savedKey = keyring.get('gemini-api-key');
-        const savedModel = localStorage.getItem('gemini-model') || 'gemini-2.0-flash';
+  function getModel() {
+    const model = els.modelSelect.value || 'gemini-2.0-flash';
+    console.log(`Using model: ${model}`);
+    return model;
+  }
 
-        if (savedKey) {
-          els.apiKeyInput.value = savedKey;
+  function systemPrompt() {
+    console.log('Getting system prompt');
+    return SYSTEM_PROMPT;
+  }
+
+  const client = new GeminiClient({ keyring, getModel, systemPromptProvider: systemPrompt });
+
+  const chatState = {
+    history: [], // {role:'user'|'model', content:string}
+    iterative: [], // per-turn steps
+  };
+
+  // UI wiring
+  function renderMemory() {
+    els.memoryList.innerHTML = '';
+    memory.list().forEach((m, i) => {
+      const div = document.createElement('div');
+      div.className = 'memory-item';
+      div.innerHTML = `<div><strong>${escapeHTML(m.summary)}</strong></div><div class="muted">${truncate(m.details, 120)}</div>
+        <div class="controls"><button data-i="${i}" class="btn btn-del">Delete</button></div>`;
+      els.memoryList.appendChild(div);
+    });
+    els.memoryList.querySelectorAll('.btn-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        memory.del(Number(btn.dataset.i));
+        renderMemory();
+      });
+    });
+  }
+  renderMemory();
+
+  els.addMemory.addEventListener('click', () => {
+    console.log('Add memory button clicked');
+    const summary = prompt('Summary:') || '';
+    const details = prompt('Details:') || '';
+    if (summary) {
+      console.log('Adding new memory:', { summary, details });
+      memory.add(summary, details);
+      renderMemory();
+    } else {
+      console.log('Add memory cancelled');
+    }
+  });
+
+  els.saveGoals.addEventListener('click', () => {
+    console.log('Saving goals');
+    memory.setGoals(els.goalsText.value || "");
+  });
+
+  els.showTrace.addEventListener('change', () => {
+    els.traceLog.classList.toggle('hidden', !els.showTrace.checked);
+  });
+
+  els.runJS.addEventListener('click', async () => {
+    console.log('Run JS button clicked');
+    const res = await runUserJS(els.jsCode.value);
+    els.jsOutput.textContent = res.output + (res.lastValue ? `\n[return] ${res.lastValue}` : '');
+    console.log('JS execution complete');
+  });
+
+  els.clearCanvas.addEventListener('click', () => {
+    console.log('Clear canvas button clicked');
+    htmlCanvas.clear();
+  });
+
+  els.openSettings.addEventListener('click', (e) => {
+    console.log('--- OPEN SETTINGS CLICKED ---');
+    e.preventDefault();
+    const savedKey = keyring.get('gemini-api-key');
+    const savedModel = localStorage.getItem('gemini-model') || 'gemini-2.0-flash';
+    if (savedKey) {
+      els.apiKeyInput.value = savedKey;
+    }
+    els.modelSelect.value = savedModel;
+    els.settings.classList.add('open');
+    console.log('Settings modal opened.');
+  });
+
+  els.saveSettings.addEventListener('click', (e) => {
+    console.log('Saving settings...');
+    e.preventDefault();
+    const apiKey = els.apiKeyInput.value.trim();
+    const model = els.modelSelect.value;
+    if (!apiKey) {
+      alert('Please enter an API key');
+      return;
+    }
+    keyring.set('gemini-api-key', apiKey);
+    localStorage.setItem('gemini-model', model);
+    els.activeModel.textContent = getModel();
+    els.settings.classList.remove('open');
+    console.log('Settings saved and modal closed.');
+  });
+
+  els.cancelSettings.addEventListener('click', (e) => {
+    console.log('Canceling settings...');
+    e.preventDefault();
+    els.settings.classList.remove('open');
+    console.log('Settings modal closed without saving.');
+  });
+
+  els.clearConsole.addEventListener('click', () => {
+    els.consoleOutput.innerHTML = '';
+  });
+
+  function addMessage(role, content) {
+    const row = document.createElement('div');
+    row.className = `msg ${role}`;
+    row.innerHTML = `<div class="role">${role}</div><div class="bubble"></div>`;
+    row.querySelector('.bubble').textContent = content;
+    els.messages.appendChild(row);
+    els.messages.scrollTop = els.messages.scrollHeight;
+    return row.querySelector('.bubble');
+  }
+
+  function appendToBubble(bubble, text) {
+    bubble.textContent += text;
+    els.messages.scrollTop = els.messages.scrollHeight;
+  }
+
+  function logTool(msg) {
+    const line = document.createElement('div');
+    line.textContent = msg;
+    els.toolsLog.appendChild(line);
+    els.toolsLog.scrollTop = els.toolsLog.scrollHeight;
+  }
+
+  function logTrace(msg) {
+    chatState.iterative.push(msg);
+    const line = document.createElement('div');
+    line.textContent = msg;
+    els.traceLog.appendChild(line);
+    els.traceLog.scrollTop = els.traceLog.scrollHeight;
+  }
+
+  function assembleContextPrefix() {
+    // Pack Memory summaries, selected details on demand via tool calls
+    const memSummaries = memory.list().map((m, i) => `[${i}] ${m.summary}`).join('\n');
+    const goals = memory.getGoals();
+    return [
+      { role: 'user', content: `Session Memory Index:\n${memSummaries}\n\nGoals:\n${goals}\n\nImmediate Reasoning Chain (for this reply):\n- ` }
+    ];
+  }
+
+  function applyPlaceholders(text) {
+    return text.replace(/\{\{var:([a-zA-Z0-9_\-]+)\}\}/g, (_, name) => varsRef[name] ?? '');
+  }
+
+  async function orchestrate(userText) {
+    console.log('Orchestration started for user text:', userText);
+    // Show user
+    addMessage('user', userText);
+    chatState.iterative = [];
+    els.traceLog.innerHTML = '';
+    const bubble = addMessage('assistant', '');
+
+    // Prepare messages
+    const prefix = assembleContextPrefix();
+    const messages = [
+      ...prefix,
+      ...chatState.history,
+      { role: 'user', content: userText }
+    ];
+
+    let buffer = '';
+    let finalized = false;
+
+    await client.streamChat({
+      messages,
+      onText: (t) => {
+        buffer += t;
+        // Try to avoid showing tool protocol publicly; show only safe prose until final.
+        const finalBlock = ExternalTools.tryParseFinal(buffer);
+        if (finalBlock) {
+          finalized = true;
+          const rendered = applyPlaceholders(finalBlock.content);
+          // Replace bubble with final content
+          bubble.textContent = rendered;
+          return;
         }
-        els.modelSelect.value = savedModel;
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-
-      // Open modal
-      els.settings.classList.add('open');
-      console.log('Settings modal opened.');
-    });
-  }
-
-  if (els.cancelSettings) {
-    els.cancelSettings.addEventListener('click', function(e) {
-      console.log('--- CANCEL SETTINGS CLICKED ---');
-      e.preventDefault();
-      els.settings.classList.remove('open');
-      console.log('Settings modal closed.');
-    });
-  }
-
-  if (els.saveSettings) {
-    els.saveSettings.addEventListener('click', function(e) {
-      console.log('--- SAVE SETTINGS CLICKED ---');
-      e.preventDefault();
-
-      const apiKey = els.apiKeyInput.value.trim();
-      const model = els.modelSelect.value;
-
-      if (!apiKey) {
-        alert('Please enter an API key');
-        return;
-      }
-
-      try {
-        // Save API key and model
-        keyring.set('gemini-api-key', apiKey);
-        localStorage.setItem('gemini-model', model);
-
-        // Close modal
-        els.settings.classList.remove('open');
-
-        console.log('Settings saved:', { model });
-        alert('Settings saved successfully!');
-      } catch (error) {
-        console.error('Error saving settings:', error);
-        alert('Failed to save settings: ' + error.message);
+        const tc = ExternalTools.tryParseToolCall(buffer);
+        if (tc) {
+          // Hide tool call from the chat, execute and continue (no append)
+          executeToolCall(tc).catch(err => logTool(`Tool error: ${err}`));
+          // Clear the buffer after processing the tool call
+          buffer = '';
+          return;
+        }
+        // Otherwise, append visible prose incrementally (but keep minimal until final)
+        appendToBubble(bubble, t);
+      },
+      onPartialJSON: (t) => {
+        // Lightly parse iterative reasoning markers if the model emits them as plain text
+        if (t.includes('"iterative_reasoning"')) {
+          try {
+            const reasoning = JSON.parse(t);
+            if (reasoning.iterative_reasoning) {
+              logTrace(reasoning.iterative_reasoning);
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
       }
     });
+
+    // Done streaming
+    if (!finalized) {
+      // If no final block arrived, accept the streamed text as-is (after placeholders)
+      bubble.textContent = applyPlaceholders(bubble.textContent);
+    }
+
+    // Update chat history with final visible text
+    chatState.history.push({ role: 'user', content: userText });
+    chatState.history.push({ role: 'model', content: bubble.textContent });
   }
 
-  // Send Message Handler
-  if (els.sendButton) {
-    els.sendButton.addEventListener('click', function(e) {
-      console.log('--- SEND BUTTON CLICKED ---');
+  async function executeToolCall(tc) {
+    console.log('Executing tool call:', tc);
+    logTool(`→ ${tc.name}`);
+    const res = await tools.dispatch(tc);
+    logTool(`← ${tc.name} ${res.ok ? 'ok' : 'error'}`);
+    console.log('Tool call result:', res);
+    // Feed observation back as a hidden assistant message to inform next iteration
+    chatState.history.push({ role: 'user', content: `Tool observation for ${tc.name}:\n${JSON.stringify(res).slice(0, 4000)}` });
+  }
+
+  async function handleSubmit() {
+    console.log('Handling submit');
+    const text = els.prompt.value.trim();
+    if (!text) {
+      console.log('Empty prompt, not submitting');
+      return;
+    }
+    console.log('Prompt text:', text);
+    els.prompt.value = '';
+    try {
+      await orchestrate(text);
+    } catch (err) {
+      console.error('Error during orchestration:', err);
+      const b = addMessage('assistant', '');
+      appendToBubble(b, `Error: ${err.message || String(err)}`);
+    }
+  }
+
+  els.composer.addEventListener('submit', (e) => {
+    console.log('Composer submit event');
+    e.preventDefault();
+    handleSubmit();
+  });
+
+  els.sendButton.addEventListener('click', (e) => {
+    console.log('Send button click event');
+    e.preventDefault();
+    handleSubmit();
+  });
+
+  function escapeHTML(s) { return s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])) }
+  function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s }
+
+  // Auto-resize textarea
+  const initialHeight = els.prompt.scrollHeight;
+  els.prompt.addEventListener('input', () => {
+    els.prompt.style.height = 'auto';
+    els.prompt.style.height = `${Math.max(initialHeight, els.prompt.scrollHeight)}px`;
+  });
+
+  // New Chat Handler
+  if (els.newChatButton) {
+    els.newChatButton.addEventListener('click', function(e) {
+      console.log('--- NEW CHAT CLICKED ---');
       e.preventDefault();
-      sendMessage();
-    });
-  }
 
-  // Enter key handler for input
-  if (els.userInput) {
-    els.userInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+      if (confirm('Start a new chat? Current conversation will be cleared.')) {
+        els.chatMessages.innerHTML = '';
+        els.userInput.value = '';
+        chatState.history = [];
+        console.log('New chat started.');
       }
     });
   }
@@ -129,275 +358,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (confirm('Are you sure you want to clear the chat history?')) {
         els.chatMessages.innerHTML = '';
-        // Clear any chat history from memory/storage if applicable
-        if (typeof memory !== 'undefined' && memory.clear) {
-          memory.clear();
-        }
+        chatState.history = [];
         console.log('Chat cleared.');
       }
     });
   }
 
-  // New Chat Handler
-  if (els.newChatButton) {
-    els.newChatButton.addEventListener('click', function(e) {
-      console.log('--- NEW CHAT CLICKED ---');
-      e.preventDefault();
-
-      if (confirm('Start a new chat? Current conversation will be cleared.')) {
-        els.chatMessages.innerHTML = '';
-        els.userInput.value = '';
-        // Reset conversation state if applicable
-        if (typeof memory !== 'undefined' && memory.reset) {
-          memory.reset();
-        }
-        console.log('New chat started.');
-      }
-    });
-  }
-
-  // Function to send message
-  async function sendMessage() {
-    const message = els.userInput.value.trim();
-
-    if (!message) {
-      console.log('Empty message, not sending');
-      return;
-    }
-
-    console.log('Sending message:', message);
-
-    // Check if API key is set
-    const apiKey = typeof keyring !== 'undefined' ? keyring.get('gemini-api-key') : null;
-    if (!apiKey) {
-      alert('Please set your API key in settings first');
-      els.openSettings.click();
-      return;
-    }
-
-    // Add user message to chat
-    addMessageToChat('user', message);
-
-    // Clear input
-    els.userInput.value = '';
-
-    // Disable send button while processing
-    els.sendButton.disabled = true;
-
-    try {
-      // Get selected model
-      const model = localStorage.getItem('gemini-model') || 'gemini-2.0-flash';
-
-      // Send to Gemini API (assuming gemini.js provides this functionality)
-      if (typeof sendToGemini === 'function') {
-        const response = await sendToGemini(message, model, apiKey);
-        addMessageToChat('assistant', response);
-      } else {
-        console.error('sendToGemini function not found');
-        addMessageToChat('assistant', 'Error: Chat functionality not properly initialized');
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      addMessageToChat('assistant', 'Error: ' + error.message);
-    } finally {
-      // Re-enable send button
-      els.sendButton.disabled = false;
-    }
-  }
-
-  // Function to add message to chat UI
-  function addMessageToChat(role, content) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${role}-message`;
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    contentDiv.textContent = content;
-
-    messageDiv.appendChild(contentDiv);
-    els.chatMessages.appendChild(messageDiv);
-
-    // Scroll to bottom
-    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-  }
-
-  // Initialize the app
   console.log('App initialized successfully');
-
-  // Load any saved state
-  try {
-    const savedModel = localStorage.getItem('gemini-model');
-    if (savedModel) {
-      console.log('Loaded saved model:', savedModel);
-    }
-  } catch (error) {
-    console.error('Error loading saved state:', error);
-  }
 });
-
-
-// Test script to verify Gemini model names
-// Run this in your browser console or as a separate test file
-
-const GEMINI_MODELS = {
-  // Gemini 2.0 series (Latest)
-  'gemini-2.0-flash': {
-    name: 'Gemini 2.0 Flash',
-    description: 'Latest fast model with multimodal capabilities',
-    recommended: true
-  },
-  'gemini-2.0-flash-exp': {
-    name: 'Gemini 2.0 Flash (Experimental)',
-    description: 'Experimental version with latest features'
-  },
-
-  // Gemini 1.5 series
-  'gemini-1.5-flash': {
-    name: 'Gemini 1.5 Flash',
-    description: 'Fast and efficient model'
-  },
-  'gemini-1.5-flash-8b': {
-    name: 'Gemini 1.5 Flash 8B',
-    description: 'Smaller, faster variant'
-  },
-  'gemini-1.5-pro': {
-    name: 'Gemini 1.5 Pro',
-    description: 'More capable model with larger context'
-  },
-
-  // Legacy aliases (may still work)
-  'gemini-flash-latest': {
-    name: 'Gemini Flash Latest',
-    description: 'Alias for latest flash model',
-    alias: true
-  },
-  'gemini-pro-latest': {
-    name: 'Gemini Pro Latest',
-    description: 'Alias for latest pro model',
-    alias: true
-  }
-};
-
-// Function to test a model name with the API
-async function testModelName(modelName, apiKey) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: 'Hello, respond with just "OK" to confirm you are working.'
-          }]
-        }]
-      })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`✓ ${modelName}: WORKS`);
-      return { success: true, modelName, data };
-    } else {
-      const error = await response.text();
-      console.log(`✗ ${modelName}: FAILED - ${response.status}`);
-      return { success: false, modelName, error, status: response.status };
-    }
-  } catch (error) {
-    console.log(`✗ ${modelName}: ERROR - ${error.message}`);
-    return { success: false, modelName, error: error.message };
-  }
-}
-
-// Function to list available models
-async function listAvailableModels(apiKey) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-
-  try {
-    const response = await fetch(url);
-    if (response.ok) {
-      const data = await response.json();
-      console.log('\n=== Available Models ===');
-      data.models.forEach(model => {
-        console.log(`- ${model.name}`);
-        if (model.displayName) console.log(`  Display: ${model.displayName}`);
-        if (model.description) console.log(`  Description: ${model.description}`);
-      });
-      return data.models;
-    } else {
-      console.error('Failed to list models:', response.status);
-      return null;
-    }
-  } catch (error) {
-    console.error('Error listing models:', error);
-    return null;
-  }
-}
-
-// Main test function
-async function testAllModels(apiKey) {
-  if (!apiKey) {
-    console.error('Please provide an API key');
-    return;
-  }
-
-  console.log('Testing Gemini model names...\n');
-
-  // First, list all available models
-  await listAvailableModels(apiKey);
-
-  console.log('\n=== Testing Model Names ===');
-
-  // Test each model
-  const results = [];
-  for (const [modelId, modelInfo] of Object.entries(GEMINI_MODELS)) {
-    const result = await testModelName(modelId, apiKey);
-    results.push({ ...result, info: modelInfo });
-
-    // Small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
-  // Summary
-  console.log('\n=== Summary ===');
-  const working = results.filter(r => r.success);
-  const failed = results.filter(r => !r.success);
-
-  console.log(`Working models: ${working.length}`);
-  working.forEach(r => console.log(`  ✓ ${r.modelName}`));
-
-  console.log(`\nFailed models: ${failed.length}`);
-  failed.forEach(r => console.log(`  ✗ ${r.modelName}`));
-
-  // Recommended model
-  const recommended = working.find(r => r.info.recommended);
-  if (recommended) {
-    console.log(`\nRecommended: ${recommended.modelName}`);
-  }
-
-  return results;
-}
-
-// Export for use in browser console
-if (typeof window !== 'undefined') {
-  window.testGeminiModels = testAllModels;
-  window.listGeminiModels = listAvailableModels;
-  window.GEMINI_MODELS = GEMINI_MODELS;
-
-  console.log('Gemini Model Tester loaded!');
-  console.log('Usage:');
-  console.log('  testGeminiModels("YOUR_API_KEY") - Test all models');
-  console.log('  listGeminiModels("YOUR_API_KEY") - List available models');
-}
-
-// For Node.js
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    testAllModels,
-    listAvailableModels,
-    GEMINI_MODELS
-  };
-}
