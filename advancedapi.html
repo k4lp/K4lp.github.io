@@ -20,19 +20,10 @@
 
     <footer id="footer-container"></footer>
 
-    <!-- Libraries -->
+    <!-- Libraries (xlsx.full.min.js is a UMD module, so it will attach XLSX to the global scope) -->
     <script src="js/libs/xlsx.full.min.js"></script>
 
-    <!-- Common Scripts -->
-    <script src="js/common/storage.js" defer></script>
-    <script src="js/common/apiManager.js" defer></script>
-    <script src="js/common/settings.js" defer></script>
-    <script src="js/common/navbar.js" defer></script>
-    <script src="js/common/footer.js" defer></script>
-    <script src="js/common/excelCore.js" defer></script>
-    <script src="js/common/tableRenderer.js" defer></script>
-
-    <!-- Page-Specific Scripts -->
-    <script src="js/advancedapi/main.js" defer></script>
+    <!-- Main Entry Point -->
+    <script type="module" src="js/advancedapi/main.js"></script>
 </body>
 </html>

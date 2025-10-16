@@ -1,7 +1,11 @@
+import { initNavbar } from '/js/common/navbar.js';
+import { initFooter } from '/js/common/footer.js';
+import { initSettingsModal } from '/js/common/settings.js';
+
 /*!
  * Renders the list of available tools on the homepage.
  */
-document.addEventListener('DOMContentLoaded', () => {
+function renderToolsList() {
     const mainContent = document.getElementById('main-content');
     if (!mainContent) {
         console.error('Main content container not found.');
@@ -38,4 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     mainContent.innerHTML = toolsHTML;
+}
+
+// Initialize all components for the index page
+document.addEventListener('DOMContentLoaded', () => {
+    initNavbar();
+    initFooter();
+    initSettingsModal();
+    renderToolsList();
 });
