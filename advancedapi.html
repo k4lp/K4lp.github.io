@@ -3,27 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced API Processor - PCB Tools</title>
+    <title>Advanced BOM Processor - PCB Tools</title>
     <link rel="stylesheet" href="site.css">
 </head>
 <body>
     <header id="navbar-container"></header>
-
     <main id="main-content">
         <h1>Advanced BOM Processor</h1>
-        <div id="wizard-container">
-            <!-- The multi-step wizard will be rendered here by main.js -->
-        </div>
+        <div id="wizard-container"></div>
     </main>
-
     <div id="settings-modal-container"></div>
-
     <footer id="footer-container"></footer>
-
-    <!-- Libraries (xlsx.full.min.js is a UMD module, so it will attach XLSX to the global scope) -->
-    <script src="js/libs/xlsx.full.min.js"></script>
-
-    <!-- Main Entry Point -->
-    <script type="module" src="js/advancedapi/main.js"></script>
+    <script src="/js/libs/xlsx.full.min.js"></script>
+    <script type="module" src="/js/advancedapi/main.js"></script>
 </body>
 </html>

@@ -1,477 +1,76 @@
 /* ==========================================================================
    1. FONT & GLOBAL STYLES
    ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;500&family=Geist+Mono:wght@400;500&display=swap');
 
 :root {
-    --font-main: 'Geist Mono', monospace;
-
+    --font-sans: 'Geist Sans', sans-serif;
+    --font-mono: 'Geist Mono', monospace;
     --color-white: #ffffff;
     --color-black: #111111;
-    --color-gray-100: #f1f1f1; /* Lightest Gray for backgrounds */
-    --color-gray-300: #e0e0e0; /* Light Gray for borders */
-    --color-gray-500: #999999; /* Medium Gray for secondary text */
-    --color-gray-700: #444444; /* Dark Gray for hover effects */
-    --color-gray-900: #222222; /* Darkest Gray */
-
-    --spacing-xs: 0.25rem; /* 4px */
-    --spacing-sm: 0.5rem;  /* 8px */
-    --spacing-md: 1rem;    /* 16px */
-    --spacing-lg: 1.5rem;  /* 24px */
-    --spacing-xl: 2rem;    /* 32px */
-    --spacing-xxl: 4rem;   /* 64px */
+    --color-gray-100: #f1f1f1;
+    --color-gray-300: #e0e0e0;
+    --color-gray-500: #999999;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-xxl: 4rem;
 }
 
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-html {
-    font-size: 16px;
-    scroll-behavior: smooth;
-}
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
 body {
-    font-family: var(--font-main);
+    font-family: var(--font-sans);
     background-color: var(--color-white);
     color: var(--color-black);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    padding-top: 60px; /* Adjust this value based on the final navbar height */
+    padding-top: 60px;
 }
-
-/* ==========================================================================
-   2. LAYOUT
-   ========================================================================== */
-#main-content {
-    flex-grow: 1;
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: var(--spacing-xl);
-}
-
-/* ==========================================================================
-   3. TYPOGRAPHY
-   ========================================================================== */
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 400;
-    line-height: 1.2;
-    margin-bottom: var(--spacing-md);
-}
-
-h1 {
-    font-size: 3rem;
-    font-weight: 500;
-    margin-bottom: var(--spacing-xl);
-    letter-spacing: -1px;
-}
-h2 {
-    font-size: 1.75rem;
-    font-weight: 500;
-    margin-bottom: var(--spacing-lg);
-}
+#main-content { flex-grow: 1; width: 100%; max-width: 1100px; margin: 0 auto; padding: var(--spacing-xl); }
+h1, h2, h3 { font-weight: 500; line-height: 1.2; }
+h1 { font-size: 3rem; margin-bottom: var(--spacing-xl); }
+h2 { font-size: 1.75rem; margin-bottom: var(--spacing-lg); }
 h3 { font-size: 1.25rem; }
-p { margin-bottom: var(--spacing-md); }
-a {
-    color: var(--color-black);
-    text-decoration: none;
-    border-bottom: 1px solid var(--color-gray-300);
-    transition: all 0.2s ease-in-out;
-}
-a:hover {
-    color: var(--color-gray-700);
-    border-bottom-color: var(--color-gray-700);
-}
 
 /* ==========================================================================
-   4. COMPONENTS
+   Components
    ========================================================================== */
+.navbar { position: fixed; top: 0; left: 0; width: 100%; background-color: var(--color-white); border-bottom: 1px solid var(--color-gray-300); z-index: 1000; padding: var(--spacing-sm) 0; }
+.navbar-content { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 var(--spacing-xl); }
+.navbar-brand { font-size: 1.2rem; text-decoration: none; border-bottom: none; }
 
-/* --- Navbar --- */
-.navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: var(--color-white);
-    border-bottom: 1px solid var(--color-gray-300);
-    z-index: 1000;
-    padding: var(--spacing-sm) 0;
-}
+.footer { width: 100%; padding: var(--spacing-lg) 0; border-top: 1px solid var(--color-gray-300); }
+.footer p { text-align: center; color: var(--color-gray-500); font-size: 0.9rem; margin: 0; }
 
-.navbar-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 var(--spacing-xl);
-}
+.btn { display: inline-block; font-size: 0.9rem; padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-gray-300); border-radius: 6px; background-color: var(--color-white); cursor: pointer; transition: all 0.2s ease-in-out; }
+.btn:hover { border-color: var(--color-black); box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-.navbar-brand {
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: var(--color-black);
-    text-decoration: none;
-    border-bottom: none;
-}
+.wizard-step { display: none; opacity: 0; transition: opacity 0.4s ease-in-out; }
+.wizard-step.is-active { display: block; opacity: 1; }
 
-.navbar-brand:hover {
-    color: var(--color-gray-700);
-}
-
-/* --- Footer --- */
-#footer-container {
-    width: 100%;
-    padding: var(--spacing-lg) 0;
-    border-top: 1px solid var(--color-gray-300);
-    background-color: var(--color-white);
-}
-
-.footer-content {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 var(--spacing-xl);
-    text-align: center;
-    color: var(--color-gray-500);
-}
-
-.footer-content p {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-/* --- Settings Modal --- */
-.modal-overlay {
-    display: none; /* Hidden by default */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 2000;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-overlay.is-active {
-    display: flex; /* Show when active */
-}
-
-.modal {
-    background-color: var(--color-white);
-    border-radius: 8px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
+#step-3.is-active {
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--color-gray-300);
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 1.4rem;
-}
-
-.close-button {
-    background: none;
-    border: none;
-    font-size: 2rem;
-    font-weight: 300;
-    line-height: 1;
-    cursor: pointer;
-    color: var(--color-gray-500);
-}
-
-.close-button:hover {
-    color: var(--color-black);
-}
-
-.modal-body {
-    padding: var(--spacing-lg);
-    overflow-y: auto;
-}
-
-.form-section {
-    margin-bottom: var(--spacing-lg);
-}
-
-.form-section h3 {
-    font-size: 1.1rem;
-    border-bottom: 1px solid var(--color-gray-300);
-    padding-bottom: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
-}
-
-.form-group {
-    margin-bottom: var(--spacing-md);
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: var(--spacing-sm);
-    font-weight: 500;
-}
-
-.form-group input[type="text"],
-.form-group input[type="password"] {
-    width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--color-gray-300);
-    border-radius: 6px;
-    font-family: var(--font-main);
-    font-size: 1rem;
-}
-
-.form-group input:focus {
-    outline: none;
-    border-color: var(--color-black);
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-}
-
-.modal-footer {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-top: 1px solid var(--color-gray-300);
-    text-align: right;
-}
-
-/* --- Buttons --- */
-.btn {
-    display: inline-block;
-    font-family: var(--font-main);
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--color-gray-300);
-    border-radius: 6px;
-    background-color: var(--color-white);
-    color: var(--color-black);
-    cursor: pointer;
-    text-align: center;
-    text-decoration: none;
-    transition: all 0.2s ease-in-out;
-}
-
-.btn:hover {
-    background-color: var(--color-white);
-    border-color: var(--color-black);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-}
-
-.btn:active {
-    background-color: var(--color-gray-100);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    transform: translateY(0);
-}
-
-/* ==========================================================================
-   5. PAGE-SPECIFIC STYLES
-   ========================================================================== */
-/* --- Tool List (index.html) --- */
-.tool-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--spacing-lg);
-}
-
-.tool-card {
-    display: block;
-    border: 1px solid var(--color-gray-300);
-    border-radius: 8px;
-    padding: var(--spacing-lg);
-    text-decoration: none;
-    color: var(--color-black);
-    transition: all 0.2s ease-in-out;
-}
-
-.tool-card:hover {
-    border-color: var(--color-black);
-    transform: translateY(-3px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-}
-
-.tool-card h3 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-sm);
-}
-
-.tool-card .tags {
-    margin-top: var(--spacing-md);
-}
-
-.tool-card .tags span {
-    display: inline-block;
-    background-color: var(--color-gray-100);
-    color: var(--color-gray-700);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: 4px;
-    font-size: 0.8rem;
-    margin-right: var(--spacing-sm);
-}
-
-/* --- Wizard (advancedapi.html) --- */
-.wizard-step {
-    display: none;
-    border: 1px solid var(--color-gray-300);
-    padding: var(--spacing-xl);
-    border-radius: 8px;
-    opacity: 0;
-    transition: opacity 0.4s ease-in-out;
-}
-
-.wizard-step.is-active {
-    display: block;
     opacity: 1;
 }
 
-.file-drop-zone {
-    border: 2px dashed var(--color-gray-300);
-    border-radius: 8px;
-    padding: var(--spacing-xxl) var(--spacing-xl);
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
+.file-drop-zone { border: 2px dashed var(--color-gray-300); border-radius: 8px; padding: var(--spacing-xxl) var(--spacing-xl); text-align: center; cursor: pointer; transition: all 0.2s ease-in-out; }
+.file-drop-zone:hover { border-color: var(--color-black); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
 
-.file-drop-zone:hover,
-.file-drop-zone.is-dragover {
-    border-color: var(--color-black);
-    background-color: var(--color-white);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-}
+.table-preview-container { overflow: auto; border: 1px solid var(--color-gray-300); border-radius: 8px; }
+.data-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); }
+.data-table th, .data-table td { padding: var(--spacing-sm) var(--spacing-md); text-align: left; border-bottom: 1px solid var(--color-gray-300); }
+.data-table thead th { background-color: var(--color-gray-100); position: sticky; top: 0; }
 
-.file-info {
-    margin-top: var(--spacing-md);
-    font-size: 0.9rem;
-}
+.mapping-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--spacing-md); }
+.mapping-card { border: 1px solid var(--color-gray-300); border-radius: 6px; padding: var(--spacing-md); }
+.mapping-select { width: 100%; padding: var(--spacing-sm); border-radius: 4px; font-family: var(--font-mono); }
+.wizard-footer { margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-gray-300); text-align: right; }
 
-.sheet-list button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    margin-bottom: var(--spacing-sm);
-}
-
-/* --- Table Preview --- */
-.table-preview-container {
-    margin-top: var(--spacing-lg);
-    max-height: 500px;
-    overflow: auto;
-    border: 1px solid var(--color-gray-300);
-    border-radius: 8px;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th,
-.data-table td {
-    padding: var(--spacing-sm) var(--spacing-md);
-    text-align: left;
-    border-bottom: 1px solid var(--color-gray-300);
-    white-space: nowrap;
-}
-
-.data-table thead th {
-    background-color: var(--color-gray-100);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.data-table tbody tr:nth-child(even) {
-    background-color: var(--color-gray-100);
-}
-
-.data-table tbody tr:hover {
-    background-color: #e9e9e9; /* A slightly different gray for hover */
-}
-
-/* --- Mapping Interface --- */
-.mapping-interface {
-    margin-bottom: var(--spacing-lg);
-}
-
-.mapping-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: var(--spacing-md);
-}
-
-.mapping-card {
-    border: 1px solid var(--color-gray-300);
-    border-radius: 6px;
-    padding: var(--spacing-md);
-}
-
-.mapping-card label {
-    display: block;
-    font-weight: 500;
-    margin-bottom: var(--spacing-sm);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.mapping-select {
-    width: 100%;
-    padding: var(--spacing-sm);
-    border: 1px solid var(--color-gray-300);
-    border-radius: 4px;
-    background-color: var(--color-white);
-    font-family: var(--font-main);
-}
-
-/* --- Contact Page --- */
-.contact-page h1, .contact-page h2 {
-    border-bottom: 1px solid var(--color-gray-300);
-    padding-bottom: var(--spacing-sm);
-}
-
-.contact-page ul {
-    list-style: none;
-    padding: 0;
-}
-
-.contact-page li {
-    margin-bottom: var(--spacing-sm);
-}
-
-/* ==========================================================================
-   6. UTILITIES
-   ========================================================================== */
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }

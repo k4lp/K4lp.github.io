@@ -1,13 +1,7 @@
-/*!
- * Navbar Component
- *
- * Injects a consistent navigation bar at the top of every page.
- */
 export function initNavbar() {
-    const navbarContainer = document.getElementById('navbar-container');
-
-    if (navbarContainer) {
-        const navbarHTML = `
+    const container = document.getElementById('navbar-container');
+    if (container) {
+        container.innerHTML = `
             <nav class="navbar">
                 <div class="navbar-content">
                     <a href="index.html" class="navbar-brand">PCB Assembly Tools</a>
@@ -15,8 +9,5 @@ export function initNavbar() {
                 </div>
             </nav>
         `;
-        navbarContainer.innerHTML = navbarHTML;
-    } else {
-        console.error('Fatal Error: Navbar container not found. The page cannot be rendered correctly.');
     }
 }
