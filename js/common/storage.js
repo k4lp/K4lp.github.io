@@ -71,6 +71,5 @@ class StorageManager {
     }
 }
 
-// Create a single, global instance for the application to use.
-const storage = new StorageManager();
-window.storage = storage;
+// Create and export a single instance for the application to use.
+export const storage = new StorageManager();

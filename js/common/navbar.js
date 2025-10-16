@@ -2,9 +2,8 @@
  * Navbar Component
  *
  * Injects a consistent navigation bar at the top of every page.
- * It includes a link to the homepage and a settings button.
  */
-document.addEventListener('DOMContentLoaded', () => {
+export function initNavbar() {
     const navbarContainer = document.getElementById('navbar-container');
 
     if (navbarContainer) {
@@ -20,4 +19,4 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.error('Fatal Error: Navbar container not found. The page cannot be rendered correctly.');
     }
-});
+}

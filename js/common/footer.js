@@ -3,7 +3,7 @@
  *
  * Injects a consistent footer at the bottom of every page.
  */
-document.addEventListener('DOMContentLoaded', () => {
+export function initFooter() {
     const footerContainer = document.getElementById('footer-container');
 
     if (footerContainer) {
@@ -17,4 +17,4 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.error('Error: Footer container not found.');
     }
-});
+}

@@ -3,7 +3,7 @@
  *
  * Handles file parsing and data extraction using the xlsx.js library.
  */
-const excelCore = {
+export const excelCore = {
     /**
      * Parses an uploaded file (Excel or CSV).
      * @param {File} file - The file object from a file input or drag-drop event.
@@ -37,5 +37,3 @@ const excelCore = {
         });
     }
 };
-
-window.excelCore = excelCore;

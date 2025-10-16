@@ -1,3 +1,5 @@
+import { storage } from '/js/common/storage.js';
+
 /*!
  * API Manager
  *
@@ -90,13 +92,4 @@ class ApiManager {
     }
 }
 
-// Create a single, global instance for the application to use.
-// It depends on the global 'storage' instance.
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.storage) {
-        const apiManager = new ApiManager(window.storage);
-        window.apiManager = apiManager;
-    } else {
-        console.error("StorageManager not found. ApiManager could not be initialized.");
-    }
-});
+export const apiManager = new ApiManager(storage);

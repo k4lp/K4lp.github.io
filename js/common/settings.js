@@ -4,7 +4,7 @@
  * Renders and controls the settings modal, which allows users to manage
  * API credentials.
  */
-document.addEventListener('DOMContentLoaded', () => {
+export function initSettingsModal() {
     const modalContainer = document.getElementById('settings-modal-container');
     const navbarContainer = document.getElementById('navbar-container');
 
@@ -57,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Get references to the elements
     const settingsOverlay = document.getElementById('settings-overlay');
-    const openSettingsButton = document.getElementById('settings-button');
     const closeSettingsButton = document.getElementById('close-settings-button');
     const saveSettingsButton = document.getElementById('save-settings-button');
 
@@ -92,4 +91,4 @@ document.addEventListener('DOMContentLoaded', () => {
         // Future logic to save credentials via ApiManager will go here.
         closeModal();
     });
-});
+}

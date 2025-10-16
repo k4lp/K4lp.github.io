@@ -3,7 +3,7 @@
  *
  * Renders data from an Excel worksheet into an HTML table.
  */
-const tableRenderer = {
+export const tableRenderer = {
     /**
      * Renders a worksheet into an HTML table inside a given container.
      * @param {Object} worksheet - The worksheet object from the xlsx library.
@@ -59,5 +59,3 @@ const tableRenderer = {
         container.appendChild(table);
     }
 };
-
-window.tableRenderer = tableRenderer;
