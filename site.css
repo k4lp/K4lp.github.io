@@ -1,10 +1,10 @@
 /* ==========================================================================
    1. FONT & GLOBAL STYLES
    ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
 
 :root {
-    --font-main: 'Geist Sans', sans-serif;
+    --font-main: 'Geist Mono', monospace;
 
     --color-white: #ffffff;
     --color-black: #111111;
@@ -63,7 +63,7 @@ body {
    3. TYPOGRAPHY
    ========================================================================== */
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 500;
+    font-weight: 400;
     line-height: 1.2;
     margin-bottom: var(--spacing-md);
 }
@@ -111,7 +111,7 @@ a:hover {
 
 .navbar-brand {
     font-size: 1.2rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--color-black);
     text-decoration: none;
     border-bottom: none;
@@ -275,7 +275,163 @@ a:hover {
 }
 
 /* ==========================================================================
-   5. UTILITIES
+   5. PAGE-SPECIFIC STYLES
+   ========================================================================== */
+/* --- Tool List (index.html) --- */
+.tool-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.tool-card {
+    display: block;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 8px;
+    padding: var(--spacing-lg);
+    text-decoration: none;
+    color: var(--color-black);
+    transition: all 0.2s ease-in-out;
+}
+
+.tool-card:hover {
+    border-color: var(--color-black);
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.tool-card h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-sm);
+}
+
+.tool-card .tags {
+    margin-top: var(--spacing-md);
+}
+
+.tool-card .tags span {
+    display: inline-block;
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-700);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-right: var(--spacing-sm);
+}
+
+/* --- Wizard (advancedapi.html) --- */
+.wizard-step {
+    display: none;
+    border: 1px solid var(--color-gray-300);
+    padding: var(--spacing-xl);
+    border-radius: 8px;
+}
+
+.wizard-step.is-active {
+    display: block;
+}
+
+.file-drop-zone {
+    border: 2px dashed var(--color-gray-300);
+    border-radius: 8px;
+    padding: var(--spacing-xxl) var(--spacing-xl);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.is-dragover {
+    border-color: var(--color-black);
+    background-color: var(--color-gray-100);
+}
+
+.file-info {
+    margin-top: var(--spacing-md);
+    font-size: 0.9rem;
+}
+
+.sheet-list button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* --- Table Preview --- */
+.table-preview-container {
+    margin-top: var(--spacing-lg);
+    max-height: 500px;
+    overflow: auto;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 8px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--color-gray-300);
+    white-space: nowrap;
+}
+
+.data-table thead th {
+    background-color: var(--color-gray-100);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: var(--color-gray-100);
+}
+
+.data-table tbody tr:hover {
+    background-color: #e9e9e9; /* A slightly different gray for hover */
+}
+
+/* --- Mapping Interface --- */
+.mapping-interface {
+    margin-bottom: var(--spacing-lg);
+}
+
+.mapping-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.mapping-card {
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    padding: var(--spacing-md);
+}
+
+.mapping-card label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mapping-select {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-gray-300);
+    border-radius: 4px;
+    background-color: var(--color-white);
+    font-family: var(--font-main);
+}
+
+/* ==========================================================================
+   6. UTILITIES
    ========================================================================== */
 .visually-hidden {
     position: absolute;
