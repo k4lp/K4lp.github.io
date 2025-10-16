@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced API Processor - PCB Tools</title>
+    <link rel="stylesheet" href="site.css">
+</head>
+<body>
+    <header id="navbar-container"></header>
+
+    <main id="main-content">
+        <h1>Advanced BOM Processor</h1>
+        <div id="wizard-container">
+            <!-- The multi-step wizard will be rendered here by main.js -->
+        </div>
+    </main>
+
+    <div id="settings-modal-container"></div>
+
+    <footer id="footer-container"></footer>
+
+    <!-- Libraries -->
+    <script src="js/libs/xlsx.full.min.js"></script>
+
+    <!-- Common Scripts -->
+    <script src="js/common/storage.js" defer></script>
+    <script src="js/common/apiManager.js" defer></script>
+    <script src="js/common/settings.js" defer></script>
+    <script src="js/common/navbar.js" defer></script>
+    <script src="js/common/footer.js" defer></script>
+    <script src="js/common/excelCore.js" defer></script>
+    <script src="js/common/tableRenderer.js" defer></script>
+
+    <!-- Page-Specific Scripts -->
+    <script src="js/advancedapi/main.js" defer></script>
+</body>
+</html>
