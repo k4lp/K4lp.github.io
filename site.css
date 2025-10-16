@@ -1,0 +1,290 @@
+/* ==========================================================================
+   1. FONT & GLOBAL STYLES
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@100..900&display=swap');
+
+:root {
+    --font-main: 'Geist Sans', sans-serif;
+
+    --color-white: #ffffff;
+    --color-black: #111111;
+    --color-gray-100: #f1f1f1; /* Lightest Gray for backgrounds */
+    --color-gray-300: #e0e0e0; /* Light Gray for borders */
+    --color-gray-500: #999999; /* Medium Gray for secondary text */
+    --color-gray-700: #444444; /* Dark Gray for hover effects */
+    --color-gray-900: #222222; /* Darkest Gray */
+
+    --spacing-xs: 0.25rem; /* 4px */
+    --spacing-sm: 0.5rem;  /* 8px */
+    --spacing-md: 1rem;    /* 16px */
+    --spacing-lg: 1.5rem;  /* 24px */
+    --spacing-xl: 2rem;    /* 32px */
+    --spacing-xxl: 4rem;   /* 64px */
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--color-white);
+    color: var(--color-black);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-top: 60px; /* Adjust this value based on the final navbar height */
+}
+
+/* ==========================================================================
+   2. LAYOUT
+   ========================================================================== */
+#main-content {
+    flex-grow: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-xl);
+}
+
+/* ==========================================================================
+   3. TYPOGRAPHY
+   ========================================================================== */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: var(--spacing-md);
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+p { margin-bottom: var(--spacing-md); }
+a {
+    color: var(--color-black);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-gray-300);
+    transition: all 0.2s ease-in-out;
+}
+a:hover {
+    color: var(--color-gray-700);
+    border-bottom-color: var(--color-gray-700);
+}
+
+/* ==========================================================================
+   4. COMPONENTS
+   ========================================================================== */
+
+/* --- Navbar --- */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--color-white);
+    border-bottom: 1px solid var(--color-gray-300);
+    z-index: 1000;
+    padding: var(--spacing-sm) 0;
+}
+
+.navbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+}
+
+.navbar-brand {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--color-black);
+    text-decoration: none;
+    border-bottom: none;
+}
+
+.navbar-brand:hover {
+    color: var(--color-gray-700);
+}
+
+/* --- Footer --- */
+#footer-container {
+    width: 100%;
+    padding: var(--spacing-lg) 0;
+    border-top: 1px solid var(--color-gray-300);
+    background-color: var(--color-white);
+}
+
+.footer-content {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+    text-align: center;
+    color: var(--color-gray-500);
+}
+
+.footer-content p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* --- Settings Modal --- */
+.modal-overlay {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-overlay.is-active {
+    display: flex; /* Show when active */
+}
+
+.modal {
+    background-color: var(--color-white);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-gray-300);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--color-gray-500);
+}
+
+.close-button:hover {
+    color: var(--color-black);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+}
+
+.form-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-section h3 {
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--color-gray-300);
+    padding-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    font-family: var(--font-main);
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--color-black);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+}
+
+.modal-footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--color-gray-300);
+    text-align: right;
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-block;
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-gray-300);
+    border-radius: 6px;
+    background-color: var(--color-white);
+    color: var(--color-black);
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-500);
+}
+
+.btn:active {
+    background-color: var(--color-gray-300);
+    transform: translateY(1px);
+}
+
+/* ==========================================================================
+   5. UTILITIES
+   ========================================================================== */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
