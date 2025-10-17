@@ -15,11 +15,17 @@ export const excelCore = {
             reader.readAsArrayBuffer(file);
         });
     },
-    extractData: (worksheet, mapping) => {
+    extractData: (worksheet, mapping, range = null) => {
         const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-        const extracted = [];
-        const rows = data.slice(1);
+        let rows = data.slice(1); // Default to all rows except header
 
+        if (range && range.start && range.end) {
+            const startRow = parseInt(range.start.substring(1), 10) - 1;
+            const endRow = parseInt(range.end.substring(1), 10) - 1;
+            rows = data.slice(startRow, endRow + 1);
+        }
+
+        const extracted = [];
         const columnIndexMap = {};
         for (const key in mapping) {
             const colLetter = mapping[key];

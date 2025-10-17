@@ -3,6 +3,8 @@ import { initFooter } from '/js/common/footer.js';
 import { initSettingsModal } from '/js/common/settings.js';
 import { excelCore } from '/js/common/excelCore.js';
 import { tableRenderer } from '/js/common/tableRenderer.js';
+import { CellSelector } from '/js/common/cellSelector.js';
+import { RangeSelector } from '/js/common/rangeSelector.js';
 
 function initAdvancedApiTool() {
     const wizardContainer = document.getElementById('wizard-container');
@@ -23,8 +25,19 @@ function initAdvancedApiTool() {
                 <div id="sheet-list" class="sheet-list"></div>
             </div>
             <div id="step-3" class="wizard-step">
-                <h2>Step 3: Map Columns & Process</h2>
+                <h2>Step 3: Map Columns, Define Range & Process</h2>
                 <div class="mapping-grid" id="mapping-interface"></div>
+                <div class="range-selection-ui">
+                    <div class="form-group">
+                        <label for="start-cell">Start Cell</label>
+                        <input type="text" id="start-cell" class="cell-input" placeholder="e.g., A1">
+                    </div>
+                    <div class="form-group">
+                        <label for="end-cell">End Cell</label>
+                        <input type="text" id="end-cell" class="cell-input" placeholder="e.g., B50">
+                    </div>
+                    <button id="visual-select-toggle" class="btn">Enable Visual Selection</button>
+                </div>
                 <div class="table-preview-container" id="table-preview-container"></div>
                 <div class="wizard-footer">
                     <button id="process-data-button" class="btn" disabled>Process Data</button>
@@ -58,8 +71,46 @@ function initAdvancedApiTool() {
 
     const handleSheetSelection = (sheetName) => {
         currentWorksheet = workbook.Sheets[sheetName];
-        tableRenderer.render(currentWorksheet, document.getElementById('table-preview-container'));
+        const tableContainer = document.getElementById('table-preview-container');
+        tableRenderer.render(currentWorksheet, tableContainer);
         renderMappingInterface(currentWorksheet);
+
+        const cellSelector = new CellSelector(tableContainer);
+        const rangeSelector = new RangeSelector(tableContainer);
+        const startCellInput = document.getElementById('start-cell');
+        const endCellInput = document.getElementById('end-cell');
+        const toggleButton = document.getElementById('visual-select-toggle');
+        let visualSelectionEnabled = false;
+
+        cellSelector.onSelect(cellAddress => {
+            if (!visualSelectionEnabled) {
+                startCellInput.value = cellAddress;
+            }
+        });
+
+        rangeSelector.onRangeChange(({ start, end }) => {
+            startCellInput.value = start;
+            endCellInput.value = end;
+        });
+
+        toggleButton.addEventListener('click', () => {
+            visualSelectionEnabled = !visualSelectionEnabled;
+            if (visualSelectionEnabled) {
+                toggleButton.textContent = 'Disable Visual Selection';
+                toggleButton.classList.add('is-active');
+                cellSelector.disable();
+                rangeSelector.enable();
+            } else {
+                toggleButton.textContent = 'Enable Visual Selection';
+                toggleButton.classList.remove('is-active');
+                rangeSelector.disable();
+                cellSelector.enable();
+            }
+        });
+
+        // Initially enable cell selector for single clicks
+        cellSelector.enable();
+
         goToStep(3);
     };
 
@@ -91,7 +142,11 @@ function initAdvancedApiTool() {
 
     const processData = () => {
         const mapping = getColumnMapping();
-        const data = excelCore.extractData(currentWorksheet, mapping);
+        const range = {
+            start: document.getElementById('start-cell').value,
+            end: document.getElementById('end-cell').value
+        };
+        const data = excelCore.extractData(currentWorksheet, mapping, range);
         console.log("--- Extracted Data ---");
         console.table(data);
         alert(`Processed ${data.length} rows. See console for details.`);
