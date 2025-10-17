@@ -1,20 +1,7 @@
-/*!
- * Footer Component
- *
- * Injects a consistent footer at the bottom of every page.
- */
 export function initFooter() {
-    const footerContainer = document.getElementById('footer-container');
-
-    if (footerContainer) {
-        // The container itself is the footer, so we just set its class and inner HTML
-        footerContainer.className = 'footer';
-        footerContainer.innerHTML = `
-            <div class="footer-content">
-                <p>&copy; ${new Date().getFullYear()} Kalp Pariya. All Rights Reserved.</p>
-            </div>
-        `;
-    } else {
-        console.error('Error: Footer container not found.');
+    const container = document.getElementById('footer-container');
+    if (container) {
+        container.className = 'footer';
+        container.innerHTML = `<p>&copy; ${new Date().getFullYear()} Kalp Pariya. All Rights Reserved.</p>`;
     }
 }

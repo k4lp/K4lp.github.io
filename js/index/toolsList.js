@@ -2,49 +2,16 @@ import { initNavbar } from '/js/common/navbar.js';
 import { initFooter } from '/js/common/footer.js';
 import { initSettingsModal } from '/js/common/settings.js';
 
-/*!
- * Renders the list of available tools on the homepage.
- */
 function renderToolsList() {
     const mainContent = document.getElementById('main-content');
-    if (!mainContent) {
-        console.error('Main content container not found.');
-        return;
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <h1>Tool Directory</h1>
+            <a href="advancedapi.html" class="btn">Advanced BOM Processor</a>
+        `;
     }
-
-    const tools = [
-        {
-            name: 'Advanced BOM Processor',
-            description: 'Upload, map, and process Bill of Materials files with API integration.',
-            link: 'advancedapi.html',
-            tags: ['BOM', 'Excel', 'API']
-        },
-        {
-            name: 'Coming Soon',
-            description: 'More tools for PCB assembly are under development.',
-            link: '#',
-            tags: ['Future']
-        }
-    ];
-
-    const toolsHTML = `
-        <div class="tool-list">
-            ${tools.map(tool => `
-                <a href="${tool.link}" class="tool-card">
-                    <h3>${tool.name}</h3>
-                    <p>${tool.description}</p>
-                    <div class="tags">
-                        ${tool.tags.map(tag => `<span>${tag}</span>`).join('')}
-                    </div>
-                </a>
-            `).join('')}
-        </div>
-    `;
-
-    mainContent.innerHTML = toolsHTML;
 }
 
-// Initialize all components for the index page
 document.addEventListener('DOMContentLoaded', () => {
     initNavbar();
     initFooter();

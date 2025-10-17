@@ -3,159 +3,175 @@ import { initFooter } from '/js/common/footer.js';
 import { initSettingsModal } from '/js/common/settings.js';
 import { excelCore } from '/js/common/excelCore.js';
 import { tableRenderer } from '/js/common/tableRenderer.js';
+import { CellSelector } from '/js/common/cellSelector.js';
+import { RangeSelector } from '/js/common/rangeSelector.js';
 
-/*!
- * Main script for the Advanced API tool page.
- * Manages the step-by-step workflow for uploading and processing Excel files.
- */
 function initAdvancedApiTool() {
     const wizardContainer = document.getElementById('wizard-container');
-    if (!wizardContainer) {
-        console.error('Wizard container not found.');
-        return;
-    }
+    if (!wizardContainer) return;
 
-    // --- STATE ---
     let workbook;
+    let currentWorksheet;
 
-    // --- WIZARD HTML ---
-    const wizardHTML = `
-        <div id="wizard" class="wizard">
-            <!-- Step 1: File Upload -->
+    wizardContainer.innerHTML = `
+        <div class="wizard">
             <div id="step-1" class="wizard-step">
                 <h2>Step 1: Upload Your BOM File</h2>
-                <p>Select an Excel (.xlsx, .xls) or CSV (.csv) file to begin.</p>
-                <div id="file-drop-zone" class="file-drop-zone">
-                    <p>Drag & drop your file here, or click to select a file.</p>
-                    <input type="file" id="file-input" class="visually-hidden" accept=".xlsx, .xls, .csv">
-                </div>
-                <div id="file-info" class="file-info"></div>
+                <div id="file-drop-zone" class="file-drop-zone"><p>Drag & drop, or click to select.</p></div>
+                <input type="file" id="file-input" class="visually-hidden" accept=".xlsx, .xls, .csv">
             </div>
-            <!-- Step 2: Sheet Selection -->
             <div id="step-2" class="wizard-step">
                 <h2>Step 2: Select a Sheet</h2>
-                <p>The following sheets were found in your workbook. Please select one to process.</p>
                 <div id="sheet-list" class="sheet-list"></div>
             </div>
-            <!-- Step 3: Column Mapping & Preview -->
             <div id="step-3" class="wizard-step">
-                <h2>Step 3: Map Columns and Preview Data</h2>
-                <p>Define which columns contain the part number, quantity, and other relevant data.</p>
-                <div id="mapping-interface"></div>
-                <div id="table-preview-container"></div>
+                <h2>Step 3: Map Columns, Define Range & Process</h2>
+                <div class="mapping-grid" id="mapping-interface"></div>
+                <div class="range-selection-ui">
+                    <div class="form-group">
+                        <label for="start-cell">Start Cell</label>
+                        <input type="text" id="start-cell" class="cell-input" placeholder="e.g., A1">
+                    </div>
+                    <div class="form-group">
+                        <label for="end-cell">End Cell</label>
+                        <input type="text" id="end-cell" class="cell-input" placeholder="e.g., B50">
+                    </div>
+                    <button id="visual-select-toggle" class="btn">Enable Visual Selection</button>
+                </div>
+                <div class="table-preview-container" id="table-preview-container"></div>
+                <div class="wizard-footer">
+                    <button id="process-data-button" class="btn" disabled>Process Data</button>
+                </div>
             </div>
         </div>
     `;
-    wizardContainer.innerHTML = wizardHTML;
 
-    // --- DOM ELEMENTS ---
-    const dropZone = document.getElementById('file-drop-zone');
-    const fileInput = document.getElementById('file-input');
-    const fileInfo = document.getElementById('file-info');
-
-    // --- FUNCTIONS ---
-    const goToStep = (stepNumber) => {
-        document.querySelectorAll('.wizard-step').forEach(step => step.classList.remove('is-active'));
-        document.getElementById(`step-${stepNumber}`).classList.add('is-active');
+    const goToStep = (step) => {
+        document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('is-active'));
+        document.getElementById(`step-${step}`).classList.add('is-active');
     };
 
     const handleFile = async (file) => {
-        if (!file) {
-            fileInfo.textContent = 'No file selected.';
-            return;
-        }
-        fileInfo.textContent = `Selected file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
-
         try {
             workbook = await excelCore.parseFile(file);
-            populateSheetList(workbook);
+            const sheetList = document.getElementById('sheet-list');
+            sheetList.innerHTML = '';
+            workbook.SheetNames.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.textContent = name;
+                btn.addEventListener('click', () => handleSheetSelection(name));
+                sheetList.appendChild(btn);
+            });
             goToStep(2);
         } catch (error) {
-            fileInfo.textContent = `Error: ${error.message}`;
-            console.error(error);
+            alert(error.message);
         }
-    };
-
-    const populateSheetList = (workbook) => {
-        const sheetListContainer = document.getElementById('sheet-list');
-        sheetListContainer.innerHTML = '';
-        workbook.SheetNames.forEach(sheetName => {
-            const button = document.createElement('button');
-            button.className = 'btn';
-            button.textContent = sheetName;
-            button.addEventListener('click', () => handleSheetSelection(sheetName));
-            sheetListContainer.appendChild(button);
-        });
     };
 
     const handleSheetSelection = (sheetName) => {
-        const worksheet = workbook.Sheets[sheetName];
-        if (worksheet) {
-            const previewContainer = document.getElementById('table-preview-container');
-            const mappingContainer = document.getElementById('mapping-interface');
-            tableRenderer.render(worksheet, previewContainer);
-            renderMappingInterface(worksheet);
-        } else {
-            console.error(`Sheet "${sheetName}" not found in workbook.`);
-        }
+        currentWorksheet = workbook.Sheets[sheetName];
+        const tableContainer = document.getElementById('table-preview-container');
+        tableRenderer.render(currentWorksheet, tableContainer);
+        renderMappingInterface(currentWorksheet);
+
+        const cellSelector = new CellSelector(tableContainer);
+        const rangeSelector = new RangeSelector(tableContainer);
+        const startCellInput = document.getElementById('start-cell');
+        const endCellInput = document.getElementById('end-cell');
+        const toggleButton = document.getElementById('visual-select-toggle');
+        let visualSelectionEnabled = false;
+
+        cellSelector.onSelect(cellAddress => {
+            if (!visualSelectionEnabled) {
+                startCellInput.value = cellAddress;
+            }
+        });
+
+        rangeSelector.onRangeChange(({ start, end }) => {
+            startCellInput.value = start;
+            endCellInput.value = end;
+        });
+
+        toggleButton.addEventListener('click', () => {
+            visualSelectionEnabled = !visualSelectionEnabled;
+            if (visualSelectionEnabled) {
+                toggleButton.textContent = 'Disable Visual Selection';
+                toggleButton.classList.add('is-active');
+                cellSelector.disable();
+                rangeSelector.enable();
+            } else {
+                toggleButton.textContent = 'Enable Visual Selection';
+                toggleButton.classList.remove('is-active');
+                rangeSelector.disable();
+                cellSelector.enable();
+            }
+        });
+
+        // Initially enable cell selector for single clicks
+        cellSelector.enable();
+
         goToStep(3);
     };
 
     const renderMappingInterface = (worksheet) => {
-        const mappingContainer = document.getElementById('mapping-interface');
-        mappingContainer.innerHTML = '';
-        const headers = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })[0];
-        const mappingOptions = ['Ignore', 'Part Number', 'Quantity', 'Description'];
-        const grid = document.createElement('div');
-        grid.className = 'mapping-grid';
+        const container = document.getElementById('mapping-interface');
+        container.innerHTML = '';
+        const headers = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0];
+        const options = ['Ignore', 'Part Number', 'Quantity', 'Description'];
 
-        headers.forEach((header, index) => {
+        headers.forEach((header, i) => {
+            const colLetter = String.fromCharCode(65 + i);
             const card = document.createElement('div');
             card.className = 'mapping-card';
-            const label = document.createElement('label');
-            label.htmlFor = `map-col-${index}`;
-            label.textContent = `Column ${String.fromCharCode(65 + index)}: ${header}`;
+            card.innerHTML = `<label>${colLetter}: ${header}</label>`;
             const select = document.createElement('select');
-            select.id = `map-col-${index}`;
             select.className = 'mapping-select';
-            mappingOptions.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt.toLowerCase().replace(' ', '-');
-                option.textContent = opt;
-                select.appendChild(option);
+            select.dataset.columnIndex = colLetter;
+            options.forEach(opt => {
+                const optionEl = document.createElement('option');
+                optionEl.value = opt.toLowerCase().replace(' ', '-');
+                optionEl.textContent = opt;
+                select.appendChild(optionEl);
             });
-            card.appendChild(label);
+            select.addEventListener('change', checkMappingCompleteness);
             card.appendChild(select);
-            grid.appendChild(card);
+            container.appendChild(card);
         });
-        mappingContainer.appendChild(grid);
     };
 
-    // --- EVENT LISTENERS ---
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('is-dragover');
-    });
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('is-dragover');
-    });
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('is-dragover');
-        const files = e.dataTransfer.files;
-        if (files.length) {
-            handleFile(files[0]);
-        }
-    });
+    const processData = () => {
+        const mapping = getColumnMapping();
+        const range = {
+            start: document.getElementById('start-cell').value,
+            end: document.getElementById('end-cell').value
+        };
+        const data = excelCore.extractData(currentWorksheet, mapping, range);
+        console.log("--- Extracted Data ---");
+        console.table(data);
+        alert(`Processed ${data.length} rows. See console for details.`);
+    };
 
-    // --- INITIALIZATION ---
+    const getColumnMapping = () => {
+        const mapping = {};
+        document.querySelectorAll('.mapping-select').forEach(s => {
+            if (s.value !== 'ignore') mapping[s.value] = s.dataset.columnIndex;
+        });
+        return mapping;
+    };
+
+    const checkMappingCompleteness = () => {
+        const mapping = getColumnMapping();
+        document.getElementById('process-data-button').disabled = !(mapping['part-number'] && mapping['quantity']);
+    };
+
+    document.getElementById('file-drop-zone').addEventListener('click', () => document.getElementById('file-input').click());
+    document.getElementById('file-input').addEventListener('change', (e) => handleFile(e.target.files[0]));
+    document.getElementById('process-data-button').addEventListener('click', processData);
+
     goToStep(1);
 }
 
-// Initialize all components for the page
 document.addEventListener('DOMContentLoaded', () => {
     initNavbar();
     initFooter();

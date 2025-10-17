@@ -1,39 +1,49 @@
-/*!
- * Excel Core Engine
- *
- * Handles file parsing and data extraction using the xlsx.js library.
- */
 export const excelCore = {
-    /**
-     * Parses an uploaded file (Excel or CSV).
-     * @param {File} file - The file object from a file input or drag-drop event.
-     * @returns {Promise<Object>} A promise that resolves with the XLSX workbook object.
-     */
     parseFile: (file) => {
         return new Promise((resolve, reject) => {
-            if (!file) {
-                return reject(new Error('No file provided.'));
-            }
-
+            if (!file) return reject(new Error('No file provided.'));
             const reader = new FileReader();
-
             reader.onload = (e) => {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                     resolve(workbook);
                 } catch (err) {
-                    console.error('Error parsing file:', err);
-                    reject(new Error('Failed to parse the file. It might be corrupt or in an unsupported format.'));
+                    reject(new Error('Failed to parse file.'));
                 }
             };
-
-            reader.onerror = (err) => {
-                console.error('FileReader error:', err);
-                reject(new Error('Failed to read the file.'));
-            };
-
+            reader.onerror = () => reject(new Error('Failed to read file.'));
             reader.readAsArrayBuffer(file);
         });
+    },
+    extractData: (worksheet, mapping, range = null) => {
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        let rows = data.slice(1); // Default to all rows except header
+
+        if (range && range.start && range.end) {
+            const startRow = parseInt(range.start.substring(1), 10) - 1;
+            const endRow = parseInt(range.end.substring(1), 10) - 1;
+            rows = data.slice(startRow, endRow + 1);
+        }
+
+        const extracted = [];
+        const columnIndexMap = {};
+        for (const key in mapping) {
+            const colLetter = mapping[key];
+            columnIndexMap[key.replace('-', '')] = colLetter.charCodeAt(0) - 65;
+        }
+
+        rows.forEach(row => {
+            const newObj = {};
+            let hasData = false;
+            for (const key in columnIndexMap) {
+                const colIndex = columnIndexMap[key];
+                if (row[colIndex]) {
+                    newObj[key] = row[colIndex];
+                    hasData = true;
+                }
+            }
+            if (hasData) extracted.push(newObj);
+        });
+        return extracted;
     }
 };
