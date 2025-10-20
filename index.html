@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalp Electronics Toolkit</title>
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <header class="navbar">
+      <a class="navbar__brand" href="index.html">Kalp Toolkit</a>
+      <nav class="navbar__links" aria-label="Primary">
+        <a href="index.html">Toolkit</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <div class="navbar__settings">
+        <button class="icon-button" type="button" data-settings-toggle>
+          Settings
+        </button>
+      </div>
+    </header>
+
+    <aside class="settings-panel" data-settings-panel aria-hidden="true">
+      <div class="settings-panel__header">
+        <span>Integration Control</span>
+        <button class="icon-button icon-button--ghost" type="button" data-settings-close>
+          Close
+        </button>
+      </div>
+      <div class="settings-panel__content">
+        <section class="settings-panel__section">
+          <h2 class="settings-panel__title">Vendor Credentials</h2>
+          <form class="settings-form" data-credentials-form>
+            <fieldset class="settings-form__group">
+              <legend>DigiKey</legend>
+              <label for="digikey-client-id">Client ID</label>
+              <input
+                id="digikey-client-id"
+                name="digikey.clientId"
+                type="text"
+                autocomplete="off"
+                placeholder="Enter Client ID"
+              />
+              <label for="digikey-client-secret">Client Secret</label>
+              <input
+                id="digikey-client-secret"
+                name="digikey.clientSecret"
+                type="password"
+                autocomplete="off"
+                placeholder="Enter Client Secret"
+              />
+              <label for="digikey-status">Status</label>
+              <select id="digikey-status" name="digikey.status"></select>
+            </fieldset>
+            <fieldset class="settings-form__group">
+              <legend>Mouser</legend>
+              <label for="mouser-api-key">API Key</label>
+              <input
+                id="mouser-api-key"
+                name="mouser.apiKey"
+                type="text"
+                autocomplete="off"
+                placeholder="Enter API Key"
+              />
+              <label for="mouser-status">Status</label>
+              <select id="mouser-status" name="mouser.status"></select>
+            </fieldset>
+          </form>
+        </section>
+        <section class="settings-panel__section">
+          <h2 class="settings-panel__title">Storage Policy</h2>
+          <p class="settings-panel__description">
+            Credentials and run-state are held in browser storage indefinitely for rapid workstation recovery.
+          </p>
+        </section>
+      </div>
+      <div class="settings-panel__footer">
+        <span class="status-indicator" data-settings-status data-status="Inactive">
+          Inactive
+        </span>
+        <button class="icon-button" type="button" data-settings-save>
+          Save
+        </button>
+      </div>
+    </aside>
+
+    <main>
+      <section id="tools" class="tools">
+        <h1 class="tools__title">Operations Toolkit</h1>
+        <div class="tool-grid" data-tool-cards></div>
+      </section>
+    </main>
+
+    <footer>
+      &copy; Kalp Pariya - 2025
+    </footer>
+
+    <script type="module" src="js/index/main.js"></script>
+  </body>
+</html>
