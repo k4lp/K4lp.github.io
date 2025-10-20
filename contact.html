@@ -9,18 +9,35 @@
   <body>
     <header class="navbar">
       <a class="navbar__brand" href="index.html">Kalp Toolkit</a>
+      <div class="navbar__settings">
+        <button
+          class="icon-button icon-button--settings"
+          type="button"
+          data-settings-toggle
+          aria-label="Open integration settings"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-controls="settings-drawer"
+        >
+          <svg class="icon icon--gear" viewBox="0 0 24 24" role="img" aria-hidden="true">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Zm7.5-3.75a7.5 7.5 0 0 1-.3 2.094l2.089 1.208-1.5 2.598-2.094-1.209a7.501 7.501 0 0 1-3.608 2.088l-.317 2.4h-3l-.317-2.4a7.501 7.501 0 0 1-3.608-2.089l-2.094 1.21-1.5-2.598 2.09-1.209A7.502 7.502 0 0 1 4.5 12a7.5 7.5 0 0 1 .3-2.094L2.711 8.698l1.5-2.598 2.094 1.209A7.501 7.501 0 0 1 9.913 5.22l.317-2.4h3l.317 2.4a7.5 7.5 0 0 1 3.608 2.088l2.094-1.209 1.5 2.598-2.089 1.209A7.503 7.503 0 0 1 19.5 12Z"
+            />
+          </svg>
+        </button>
+      </div>
       <nav class="navbar__links" aria-label="Primary">
         <a href="index.html">Index</a>
         <a href="contact.html">Contact</a>
       </nav>
-      <div class="navbar__settings">
-        <button class="icon-button" type="button" data-settings-toggle>
-          Settings
-        </button>
-      </div>
     </header>
 
-    <aside class="settings-panel" data-settings-panel aria-hidden="true">
+    <aside class="settings-panel" id="settings-drawer" data-settings-panel aria-hidden="true">
       <div class="settings-panel__header">
         <span>Integration Control</span>
         <button class="icon-button" type="button" data-settings-close>

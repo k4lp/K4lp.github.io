@@ -1,10 +1,5 @@
 import { getCredentials, getStatuses, updateVendorCredentials, vendorFieldMap, deriveStatusSummary } from './credentials.js';
 
-const toggleClass = (element, shouldOpen) => {
-  element.classList.toggle('settings-panel--open', shouldOpen);
-  element.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
-};
-
 const fillSelectOptions = (select, options) => {
   select.innerHTML = '';
   options.forEach((option) => {
@@ -68,12 +63,23 @@ export const initialiseSettingsPanel = () => {
   populateFields(form, credentials);
   setStatusIndicator(statusIndicator, deriveStatusSummary());
 
-  toggleButton.addEventListener('click', () => toggleClass(panel, true));
-  closeButton.addEventListener('click', () => toggleClass(panel, false));
+  const setPanelState = (shouldOpen) => {
+    panel.classList.toggle('settings-panel--open', shouldOpen);
+    panel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+    toggleButton.classList.toggle('is-open', shouldOpen);
+    toggleButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  };
+
+  toggleButton.addEventListener('click', () => {
+    const nextState = !panel.classList.contains('settings-panel--open');
+    setPanelState(nextState);
+  });
+
+  closeButton.addEventListener('click', () => setPanelState(false));
 
   panel.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      toggleClass(panel, false);
+      setPanelState(false);
     }
   });
 
@@ -83,6 +89,6 @@ export const initialiseSettingsPanel = () => {
       updateVendorCredentials(vendor, values);
     });
     setStatusIndicator(statusIndicator, deriveStatusSummary());
-    toggleClass(panel, false);
+    setPanelState(false);
   });
 };
