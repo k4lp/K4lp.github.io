@@ -8,12 +8,16 @@ const VENDOR_DEFAULTS = {
     clientId: '',
     clientSecret: '',
     status: 'Inactive',
+    statusDetail: '',
     updatedAt: null,
+    lastCheckedAt: null,
   },
   mouser: {
     apiKey: '',
     status: 'Inactive',
+    statusDetail: '',
     updatedAt: null,
+    lastCheckedAt: null,
   },
 };
 
@@ -27,11 +31,11 @@ const sanitiseVendor = (vendor, record = {}) => {
   }, {});
 };
 
-export const getStatuses = () => [...STATUSES];
+export const getVendors = () => Object.keys(VENDOR_DEFAULTS);
 
 export const getCredentials = () => {
   const stored = read(CREDENTIALS_KEY, {});
-  return Object.keys(VENDOR_DEFAULTS).reduce((acc, vendor) => {
+  return getVendors().reduce((acc, vendor) => {
     acc[vendor] = sanitiseVendor(vendor, stored[vendor]);
     return acc;
   }, cloneDefaults());
@@ -52,6 +56,17 @@ export const updateVendorCredentials = (vendor, updates) => {
 
   write(CREDENTIALS_KEY, next);
   return next[vendor];
+};
+
+export const setVendorStatus = (vendor, status, statusDetail = '') => {
+  if (!STATUSES.includes(status) && status !== 'Inactive') {
+    throw new Error(`Unsupported status "${status}" supplied for ${vendor}`);
+  }
+  return updateVendorCredentials(vendor, {
+    status,
+    statusDetail,
+    lastCheckedAt: new Date().toISOString(),
+  });
 };
 
 export const deriveStatusSummary = () => {
@@ -76,10 +91,8 @@ export const vendorFieldMap = {
   digikey: {
     clientId: 'digikey-client-id',
     clientSecret: 'digikey-client-secret',
-    status: 'digikey-status',
   },
   mouser: {
     apiKey: 'mouser-api-key',
-    status: 'mouser-status',
   },
 };

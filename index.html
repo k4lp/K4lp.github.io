@@ -56,17 +56,29 @@
               <label for="digikey-client-secret">DigiKey Client Secret</label>
               <input id="digikey-client-secret" name="digikey.clientSecret" type="password" autocomplete="off" placeholder="Enter Client Secret" />
             </div>
-            <div>
-              <label for="digikey-status">DigiKey Status</label>
-              <select id="digikey-status" name="digikey.status"></select>
+            <div class="settings-form__status">
+              <div class="settings-form__status-header">
+                <span class="settings-form__status-label">DigiKey Status</span>
+                <span class="status-chip" data-vendor-status="digikey">Not checked</span>
+                <button type="button" class="status-refresh" data-status-refresh="digikey" aria-label="Recheck DigiKey status">
+                  Check
+                </button>
+              </div>
+              <p class="settings-form__status-detail" data-vendor-status-detail="digikey"></p>
             </div>
             <div>
               <label for="mouser-api-key">Mouser API Key</label>
               <input id="mouser-api-key" name="mouser.apiKey" type="text" autocomplete="off" placeholder="Enter API Key" />
             </div>
-            <div>
-              <label for="mouser-status">Mouser Status</label>
-              <select id="mouser-status" name="mouser.status"></select>
+            <div class="settings-form__status">
+              <div class="settings-form__status-header">
+                <span class="settings-form__status-label">Mouser Status</span>
+                <span class="status-chip" data-vendor-status="mouser">Not checked</span>
+                <button type="button" class="status-refresh" data-status-refresh="mouser" aria-label="Recheck Mouser status">
+                  Check
+                </button>
+              </div>
+              <p class="settings-form__status-detail" data-vendor-status-detail="mouser"></p>
             </div>
           </form>
         </section>

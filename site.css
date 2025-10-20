@@ -329,6 +329,101 @@ main {
   opacity: 0.5;
 }
 
+.settings-form__status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.settings-form__status-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-form__status-label {
+  font-family: 'Geist Mono', 'Geist', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  font-family: 'Geist Mono', 'Geist', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.status-chip--active {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+}
+
+.status-chip--inactive {
+  background: transparent;
+  color: var(--ink-muted);
+  border-style: dashed;
+}
+
+.status-chip--error {
+  background: rgba(16, 16, 16, 0.08);
+  color: var(--ink);
+  border-color: rgba(16, 16, 16, 0.45);
+  border-style: dashed;
+}
+
+.status-chip--connecting {
+  background: rgba(16, 16, 16, 0.06);
+  color: var(--ink);
+  border-color: rgba(16, 16, 16, 0.18);
+}
+
+.status-refresh {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--ink);
+  font-family: 'Geist Mono', 'Geist', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.status-refresh:hover,
+.status-refresh:focus-visible {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+  outline: none;
+}
+
+.status-refresh.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.settings-form__status-detail {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+}
+
 .status-indicator {
   font-family: 'Geist Mono', 'Geist', monospace;
   font-size: 0.7rem;
@@ -338,6 +433,21 @@ main {
   border-radius: 999px;
   border: 1px solid var(--border-strong);
   background: linear-gradient(120deg, var(--surface-elevated) 0%, #ffffff 100%);
+}
+
+.status-indicator[data-status='Active'] {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.status-indicator[data-status='Error'] {
+  border-style: dashed;
+  color: var(--ink);
+}
+
+.status-indicator[data-status='Connecting'] {
+  border-color: rgba(16, 16, 16, 0.2);
+  color: var(--ink);
 }
 
 /* Tools Catalog */
