@@ -1,3 +1,4 @@
+import { mountLayout } from './layout.js';
 import { initialiseSettingsPanel } from './settingsPanel.js';
 
 const initialiseNavigation = () => {
@@ -13,6 +14,7 @@ const initialiseNavigation = () => {
 };
 
 export const bootstrapShell = () => {
+  mountLayout();
   initialiseNavigation();
   initialiseSettingsPanel();
 };

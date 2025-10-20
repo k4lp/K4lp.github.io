@@ -5,7 +5,7 @@ import {
   deriveStatusSummary,
   getVendors,
 } from './credentials.js';
-import { evaluateAllVendorStatuses, evaluateSelectedStatuses } from './statusChecks.js';
+import { evaluateSelectedStatuses } from './statusChecks.js';
 
 const STATUS_CLASS_MAP = {
   Active: 'status-chip--active',
@@ -18,7 +18,7 @@ const populateFields = (form, credentials) => {
   Object.entries(vendorFieldMap).forEach(([vendor, fields]) => {
     const vendorData = credentials[vendor] ?? {};
     Object.entries(fields).forEach(([fieldKey, elementId]) => {
-      const input = form.querySelector(`#${elementId}`);
+      const input = form.querySelector('#' + elementId);
       if (!input) return;
       input.value = vendorData[fieldKey] ?? '';
     });
@@ -47,13 +47,30 @@ const setStatusIndicator = (indicator, status) => {
   indicator.textContent = status;
 };
 
+const summariseStatuses = (statusMap) => {
+  const statuses = Object.values(statusMap);
+  if (statuses.every((status) => status === 'Active')) {
+    return 'Active';
+  }
+  if (statuses.some((status) => status === 'Error')) {
+    return 'Error';
+  }
+  if (statuses.some((status) => status === 'Connecting')) {
+    return 'Connecting';
+  }
+  if (statuses.some((status) => status === 'Active')) {
+    return 'Active';
+  }
+  return 'Inactive';
+};
+
 const collectVendorNodes = (form) => {
   const nodes = {};
   getVendors().forEach((vendor) => {
     nodes[vendor] = {
-      chip: form.querySelector(`[data-vendor-status="${vendor}"]`),
-      detail: form.querySelector(`[data-vendor-status-detail="${vendor}"]`),
-      refresh: form.querySelector(`[data-status-refresh="${vendor}"]`),
+      chip: form.querySelector('[data-vendor-status="' + vendor + '"]'),
+      detail: form.querySelector('[data-vendor-status-detail="' + vendor + '"]'),
+      refresh: form.querySelector('[data-status-refresh="' + vendor + '"]'),
     };
   });
   return nodes;
@@ -87,8 +104,9 @@ const renderStoredStatuses = (nodes) => {
   });
 };
 
-const setRefreshButtonsState = (nodes, isDisabled) => {
-  getVendors().forEach((vendor) => {
+const setRefreshButtonsState = (nodes, isDisabled, vendors) => {
+  const targets = vendors ?? getVendors();
+  targets.forEach((vendor) => {
     const button = nodes[vendor]?.refresh;
     if (!button) return;
     button.disabled = isDisabled;
@@ -96,27 +114,46 @@ const setRefreshButtonsState = (nodes, isDisabled) => {
   });
 };
 
-const evaluateAndRenderStatuses = async (nodes, indicator, vendors) => {
+const buildStatusSnapshot = () => {
+  const credentials = getCredentials();
+  const snapshot = {};
+  getVendors().forEach((vendor) => {
+    snapshot[vendor] = credentials[vendor]?.status ?? 'Inactive';
+  });
+  return snapshot;
+};
+
+const evaluateAndRenderStatuses = async (nodes, indicator, vendors, options = {}) => {
   const targetVendors = vendors ?? getVendors();
+  const { overrides = {}, persist = true } = options;
 
   targetVendors.forEach((vendor) => {
     applyStatusToChip(nodes[vendor]?.chip, 'Connecting');
-    applyStatusDetail(nodes[vendor]?.detail, 'Validating credentials…');
+    applyStatusDetail(nodes[vendor]?.detail, 'Validating credentials...');
   });
   setStatusIndicator(indicator, 'Connecting');
-  setRefreshButtonsState(nodes, true);
+  setRefreshButtonsState(nodes, true, targetVendors);
 
-  const results = vendors
-    ? await evaluateSelectedStatuses(targetVendors)
-    : await evaluateAllVendorStatuses();
+  const results = await evaluateSelectedStatuses(targetVendors, {
+    overrides,
+    persist,
+  });
 
   results.forEach(({ vendor, status, detail }) => {
     applyStatusToChip(nodes[vendor]?.chip, status);
     applyStatusDetail(nodes[vendor]?.detail, detail);
   });
 
-  setRefreshButtonsState(nodes, false);
-  setStatusIndicator(indicator, deriveStatusSummary());
+  setRefreshButtonsState(nodes, false, targetVendors);
+  if (persist) {
+    setStatusIndicator(indicator, deriveStatusSummary());
+  } else {
+    const previewSnapshot = buildStatusSnapshot();
+    results.forEach(({ vendor, status }) => {
+      previewSnapshot[vendor] = status;
+    });
+    setStatusIndicator(indicator, summariseStatuses(previewSnapshot));
+  }
 };
 
 export const initialiseSettingsPanel = () => {
@@ -137,11 +174,32 @@ export const initialiseSettingsPanel = () => {
   renderStoredStatuses(vendorNodes);
   setStatusIndicator(statusIndicator, deriveStatusSummary());
 
+  const hasStoredCredentials = getVendors().some((vendor) => {
+    const fields = vendorFieldMap[vendor];
+    const record = credentialSnapshot[vendor] ?? {};
+    return Object.keys(fields).some((fieldKey) => (record[fieldKey] ?? '').trim().length > 0);
+  });
+
   const setPanelState = (shouldOpen) => {
+    if (!shouldOpen && panel.contains(document.activeElement)) {
+      toggleButton.focus({ preventScroll: true });
+    }
+
     panel.classList.toggle('settings-panel--open', shouldOpen);
     panel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+    panel.toggleAttribute('inert', !shouldOpen);
+
     toggleButton.classList.toggle('is-open', shouldOpen);
     toggleButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+
+    if (shouldOpen) {
+      requestAnimationFrame(() => {
+        const focusTarget = panel.querySelector('[data-settings-close]');
+        if (focusTarget) {
+          focusTarget.focus({ preventScroll: true });
+        }
+      });
+    }
   };
 
   toggleButton.addEventListener('click', () => {
@@ -165,7 +223,11 @@ export const initialiseSettingsPanel = () => {
     const button = vendorNodes[vendor]?.refresh;
     if (!button) return;
     button.addEventListener('click', async () => {
-      await evaluateAndRenderStatuses(vendorNodes, statusIndicator, [vendor]);
+      const payload = extractFormPayload(form);
+      await evaluateAndRenderStatuses(vendorNodes, statusIndicator, [vendor], {
+        overrides: { [vendor]: payload[vendor] ?? {} },
+        persist: false,
+      });
     });
   });
 
@@ -179,8 +241,9 @@ export const initialiseSettingsPanel = () => {
     setPanelState(false);
   });
 
-  // Run an initial evaluation on load to keep statuses current.
-  evaluateAndRenderStatuses(vendorNodes, statusIndicator).catch(() => {
-    // Any errors are already captured and shown via evaluateAndRenderStatuses.
-  });
+  if (hasStoredCredentials) {
+    evaluateAndRenderStatuses(vendorNodes, statusIndicator).catch(() => {
+      // Errors are surfaced through inline messaging.
+    });
+  }
 };

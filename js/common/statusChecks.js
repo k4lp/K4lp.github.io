@@ -136,15 +136,21 @@ const CHECKERS = {
   mouser: checkMouser,
 };
 
-export const evaluateVendorStatus = async (vendor) => {
-  const credentials = getCredentials();
+const runVendorCheck = async (vendor, credentialsOverride = {}) => {
+  const snapshot = getCredentials();
   const checker = CHECKERS[vendor];
   if (!checker) {
     throw new Error(`No status evaluator registered for vendor "${vendor}"`);
   }
+  const baseCredentials = snapshot[vendor] ?? {};
+  return checker({ ...baseCredentials, ...credentialsOverride });
+};
 
-  const result = await checker(credentials[vendor] ?? {});
-  setVendorStatus(vendor, result.status, result.detail);
+export const evaluateVendorStatus = async (vendor, { overrides, persist = true } = {}) => {
+  const result = await runVendorCheck(vendor, overrides);
+  if (persist) {
+    setVendorStatus(vendor, result.status, result.detail);
+  }
   return result;
 };
 
@@ -165,17 +171,22 @@ export const evaluateAllVendorStatuses = async () => {
   return results;
 };
 
-export const evaluateSelectedStatuses = async (vendors) => {
+export const evaluateSelectedStatuses = async (vendors, { overrides = {}, persist = true } = {}) => {
   const uniqueVendors = [...new Set(vendors)];
   const results = [];
 
   for (const vendor of uniqueVendors) {
     try {
-      const outcome = await evaluateVendorStatus(vendor);
+      const outcome = await evaluateVendorStatus(vendor, {
+        overrides: overrides[vendor],
+        persist,
+      });
       results.push({ vendor, ...outcome });
     } catch (error) {
       const detail = error?.message ?? 'Unexpected error.';
-      setVendorStatus(vendor, 'Error', detail);
+      if (persist) {
+        setVendorStatus(vendor, 'Error', detail);
+      }
       results.push({ vendor, status: 'Error', detail });
     }
   }

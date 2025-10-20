@@ -1,0 +1,128 @@
+const createElement = (markup) => {
+  const template = document.createElement('template');
+  template.innerHTML = markup.trim();
+  return template.content.firstElementChild;
+};
+
+const headerTemplate = `
+  <header class="navbar">
+    <a class="navbar__brand" href="index.html">Kalp Toolkit</a>
+    <div class="navbar__settings">
+      <button
+        class="icon-button icon-button--settings"
+        type="button"
+        data-settings-toggle
+        aria-label="Open integration settings"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="settings-drawer"
+      >
+        <svg class="icon icon--gear" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Zm7.5-3.75a7.5 7.5 0 0 1-.3 2.094l2.089 1.208-1.5 2.598-2.094-1.209a7.501 7.501 0 0 1-3.608 2.088l-.317 2.4h-3l-.317-2.4a7.501 7.501 0 0 1-3.608-2.089l-2.094 1.21-1.5-2.598 2.09-1.209A7.502 7.502 0 0 1 4.5 12a7.5 7.5 0 0 1 .3-2.094L2.711 8.698l1.5-2.598 2.094 1.209A7.501 7.501 0 0 1 9.913 5.22l.317-2.4h3l.317 2.4a7.5 7.5 0 0 1 3.608 2.088l2.094-1.209 1.5 2.598-2.089 1.209A7.503 7.503 0 0 1 19.5 12Z"
+          />
+        </svg>
+      </button>
+    </div>
+    <nav class="navbar__links" aria-label="Primary">
+      <a href="index.html">Index</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
+`;
+
+const settingsPanelTemplate = `
+  <aside class="settings-panel" id="settings-drawer" data-settings-panel aria-hidden="true" inert>
+    <div class="settings-panel__header">
+      <span>Integration Control</span>
+      <button class="icon-button" type="button" data-settings-close>
+        Close
+      </button>
+    </div>
+    <div class="settings-panel__content">
+      <section>
+        <h2 class="section-heading">Vendor Credentials</h2>
+        <form class="settings-form" data-credentials-form>
+          <div>
+            <label for="digikey-client-id">DigiKey Client ID</label>
+            <input id="digikey-client-id" name="digikey.clientId" type="text" autocomplete="off" placeholder="Enter Client ID" />
+          </div>
+          <div>
+            <label for="digikey-client-secret">DigiKey Client Secret</label>
+            <input id="digikey-client-secret" name="digikey.clientSecret" type="password" autocomplete="off" placeholder="Enter Client Secret" />
+          </div>
+          <div class="settings-form__status">
+            <div class="settings-form__status-header">
+              <span class="settings-form__status-label">DigiKey Status</span>
+              <span class="status-chip" data-vendor-status="digikey">Inactive</span>
+              <button type="button" class="status-refresh" data-status-refresh="digikey" aria-label="Recheck DigiKey status">
+                Check
+              </button>
+            </div>
+            <p class="settings-form__status-detail" data-vendor-status-detail="digikey"></p>
+          </div>
+          <div>
+            <label for="mouser-api-key">Mouser API Key</label>
+            <input id="mouser-api-key" name="mouser.apiKey" type="text" autocomplete="off" placeholder="Enter API Key" />
+          </div>
+          <div class="settings-form__status">
+            <div class="settings-form__status-header">
+              <span class="settings-form__status-label">Mouser Status</span>
+              <span class="status-chip" data-vendor-status="mouser">Inactive</span>
+              <button type="button" class="status-refresh" data-status-refresh="mouser" aria-label="Recheck Mouser status">
+                Check
+              </button>
+            </div>
+            <p class="settings-form__status-detail" data-vendor-status-detail="mouser"></p>
+          </div>
+        </form>
+      </section>
+      <section>
+        <h2 class="section-heading">Storage Policy</h2>
+        <p class="card__description">
+          Credentials and settings live entirely in the browser. Nothing expires automatically
+          so production teams can rely on a consistent setup across sessions.
+        </p>
+      </section>
+    </div>
+    <div class="settings-panel__footer">
+      <span class="status-indicator" data-settings-status data-status="Inactive">
+        Inactive
+      </span>
+      <button class="icon-button" type="button" data-settings-save>
+        Save
+      </button>
+    </div>
+  </aside>
+`;
+
+const footerTemplate = `
+  <footer>
+    &copy; Kalp Pariya - 2025
+  </footer>
+`;
+
+export const mountLayout = () => {
+  if (document.querySelector('.navbar')) {
+    return;
+  }
+
+  const main = document.querySelector('main');
+  if (!main) {
+    return;
+  }
+
+  const header = createElement(headerTemplate);
+  main.insertAdjacentElement('beforebegin', header);
+
+  const settingsPanel = createElement(settingsPanelTemplate);
+  document.body.appendChild(settingsPanel);
+
+  const footer = createElement(footerTemplate);
+  document.body.appendChild(footer);
+};

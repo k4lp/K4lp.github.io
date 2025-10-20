@@ -5,13 +5,13 @@ const injectTimeline = () => {
   if (!canvasSection) return;
 
   const sessionCard = document.createElement('article');
-  sessionCard.className = 'card';
+  sessionCard.className = 'card card--surface';
   sessionCard.innerHTML = `
     <h3 class="card__title">Session Blueprint</h3>
     <p class="card__description">
       Modular sprint schedule for onboarding manufacturing teams and enabling rapid prototype runs.
     </p>
-    <div class="feature-list">
+    <div class="feature-list feature-list--column">
       <div class="feature-item">
         <span class="feature-item__title">Week 1</span>
         <span class="feature-item__description">Credential setup, sandbox BOM import, DigiKey API handshake.</span>
