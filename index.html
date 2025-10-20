@@ -10,9 +10,8 @@
     <header class="navbar">
       <a class="navbar__brand" href="index.html">Kalp Toolkit</a>
       <nav class="navbar__links" aria-label="Primary">
-        <a href="index.html#tools">Tools</a>
-        <a href="index.html#workflows">Workflows</a>
-        <a href="index.html#scanners">Scanners</a>
+        <a href="index.html">Index</a>
+        <a href="contact.html">Contact</a>
       </nav>
       <div class="navbar__settings">
         <button class="icon-button" type="button" data-settings-toggle>
@@ -33,12 +32,12 @@
           <h2 class="section-heading">Vendor Credentials</h2>
           <form class="settings-form" data-credentials-form>
             <div>
-              <label for="digikey-api-key">DigiKey API Key</label>
-              <input id="digikey-api-key" name="digikey.apiKey" type="text" autocomplete="off" placeholder="Enter API Key" />
+              <label for="digikey-client-id">DigiKey Client ID</label>
+              <input id="digikey-client-id" name="digikey.clientId" type="text" autocomplete="off" placeholder="Enter Client ID" />
             </div>
             <div>
-              <label for="digikey-api-secret">DigiKey API Secret</label>
-              <input id="digikey-api-secret" name="digikey.apiSecret" type="password" autocomplete="off" placeholder="Enter API Secret" />
+              <label for="digikey-client-secret">DigiKey Client Secret</label>
+              <input id="digikey-client-secret" name="digikey.clientSecret" type="password" autocomplete="off" placeholder="Enter Client Secret" />
             </div>
             <div>
               <label for="digikey-status">DigiKey Status</label>
@@ -47,10 +46,6 @@
             <div>
               <label for="mouser-api-key">Mouser API Key</label>
               <input id="mouser-api-key" name="mouser.apiKey" type="text" autocomplete="off" placeholder="Enter API Key" />
-            </div>
-            <div>
-              <label for="mouser-partner-id">Mouser Partner ID</label>
-              <input id="mouser-partner-id" name="mouser.partnerId" type="text" autocomplete="off" placeholder="Enter Partner ID" />
             </div>
             <div>
               <label for="mouser-status">Mouser Status</label>
@@ -77,81 +72,12 @@
     </aside>
 
     <main>
-      <section id="tools">
-        <h1 class="section-heading">Operations Toolkit</h1>
+      <section id="tools" class="tools-catalog">
+        <header class="tools-catalog__header">
+          <p class="eyebrow">Kalp Electronics Toolkit</p>
+          <h1 class="tools-catalog__title">Operations tools built for real production floors.</h1>
+        </header>
         <div class="grid grid--tools" data-tool-cards></div>
-      </section>
-
-      <section id="workflows">
-        <h2 class="section-heading">Workflow Previews</h2>
-        <div class="grid">
-          <article class="card">
-            <h3 class="card__title">Interactive BOM Mapping</h3>
-            <p class="card__description">
-              Outline of how users will upload spreadsheets, align columns, and validate supplier
-              pricing against DigiKey and Mouser simultaneously.
-            </p>
-            <div class="table-preview">
-              <div class="table-preview__header">Sample BOM Sheet</div>
-              <div class="table-preview__body">
-                <div class="table-preview__cell table-preview__cell--active">RefDes</div>
-                <div class="table-preview__cell">Quantity</div>
-                <div class="table-preview__cell">Manufacturer</div>
-                <div class="table-preview__cell">MPN</div>
-                <div class="table-preview__cell">R1</div>
-                <div class="table-preview__cell table-preview__cell--active">25</div>
-                <div class="table-preview__cell">Texas Instruments</div>
-                <div class="table-preview__cell">TPS7A4700</div>
-                <div class="table-preview__cell">C1</div>
-                <div class="table-preview__cell">10</div>
-                <div class="table-preview__cell">Murata</div>
-                <div class="table-preview__cell">GRM21</div>
-                <div class="table-preview__cell">U2</div>
-                <div class="table-preview__cell">1</div>
-                <div class="table-preview__cell">Analog Devices</div>
-                <div class="table-preview__cell">LTC6811</div>
-              </div>
-            </div>
-          </article>
-          <article class="card">
-            <h3 class="card__title">Lifecycle Intelligence</h3>
-            <p class="card__description">
-              Placeholder for lifecycle tracking, obsolescence monitoring, and automated supplier
-              cross-reference audits.
-            </p>
-            <div class="feature-list" data-lifecycle-features></div>
-          </article>
-        </div>
-      </section>
-
-      <section id="scanners">
-        <h2 class="section-heading">Scanner Environment</h2>
-        <article class="card">
-          <h3 class="card__title">Vision &amp; Barcode Suite</h3>
-          <p class="card__description">
-            Skeleton for camera calibration, barcode/qrcode acquisition, and surface-mount reel
-            adjustments for receiving bays.
-          </p>
-          <div class="scanner-overlay">
-            <div class="scanner-overlay__viewport" data-scanner-viewport>
-              Live Feed Placeholder
-            </div>
-            <div class="scanner-overlay__controls" data-scanner-controls>
-              <label>
-                Exposure
-                <input type="range" name="exposure" min="0" max="100" value="60" />
-              </label>
-              <label>
-                Focus
-                <input type="range" name="focus" min="0" max="100" value="45" />
-              </label>
-              <label>
-                Zoom
-                <input type="range" name="zoom" min="0" max="100" value="30" />
-              </label>
-            </div>
-          </div>
-        </article>
       </section>
     </main>
 

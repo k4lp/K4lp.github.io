@@ -21,15 +21,7 @@ const populateFields = (form, credentials) => {
     Object.entries(fields).forEach(([fieldKey, elementId]) => {
       const input = form.querySelector(`#${elementId}`);
       if (!input) return;
-      if (fieldKey === 'status') {
-        input.value = vendorData.status ?? 'Inactive';
-      } else if (fieldKey === 'partnerId') {
-        input.value = vendorData.partnerId ?? '';
-      } else if (fieldKey === 'apiSecret') {
-        input.value = vendorData.apiSecret ?? '';
-      } else {
-        input.value = vendorData[fieldKey] ?? '';
-      }
+      input.value = fieldKey === 'status' ? vendorData.status ?? 'Inactive' : vendorData[fieldKey] ?? '';
     });
   });
 };

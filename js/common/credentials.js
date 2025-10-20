@@ -2,41 +2,49 @@ import { read, write } from './storage.js';
 
 const CREDENTIALS_KEY = 'vendor.credentials';
 const STATUSES = ['Active', 'Inactive', 'Error', 'Connecting'];
-const VENDORS = ['digikey', 'mouser'];
 
-const defaultCredentials = () =>
-  VENDORS.reduce((acc, vendor) => {
-    acc[vendor] = {
-      apiKey: '',
-      apiSecret: '',
-      partnerId: '',
-      status: 'Inactive',
-      updatedAt: null,
-    };
+const VENDOR_DEFAULTS = {
+  digikey: {
+    clientId: '',
+    clientSecret: '',
+    status: 'Inactive',
+    updatedAt: null,
+  },
+  mouser: {
+    apiKey: '',
+    status: 'Inactive',
+    updatedAt: null,
+  },
+};
+
+const cloneDefaults = () => JSON.parse(JSON.stringify(VENDOR_DEFAULTS));
+
+const sanitiseVendor = (vendor, record = {}) => {
+  const template = VENDOR_DEFAULTS[vendor];
+  return Object.keys(template).reduce((acc, key) => {
+    acc[key] = record[key] ?? template[key];
     return acc;
   }, {});
+};
 
 export const getStatuses = () => [...STATUSES];
 
 export const getCredentials = () => {
-  const stored = read(CREDENTIALS_KEY);
-  return stored ? { ...defaultCredentials(), ...stored } : defaultCredentials();
+  const stored = read(CREDENTIALS_KEY, {});
+  return Object.keys(VENDOR_DEFAULTS).reduce((acc, vendor) => {
+    acc[vendor] = sanitiseVendor(vendor, stored[vendor]);
+    return acc;
+  }, cloneDefaults());
 };
 
 export const updateVendorCredentials = (vendor, updates) => {
   const credentials = getCredentials();
-  const vendorRecord = credentials[vendor] ?? {
-    apiKey: '',
-    apiSecret: '',
-    partnerId: '',
-    status: 'Inactive',
-    updatedAt: null,
-  };
+  const current = sanitiseVendor(vendor, credentials[vendor]);
 
   const next = {
     ...credentials,
     [vendor]: {
-      ...vendorRecord,
+      ...current,
       ...updates,
       updatedAt: new Date().toISOString(),
     },
@@ -66,13 +74,12 @@ export const deriveStatusSummary = () => {
 
 export const vendorFieldMap = {
   digikey: {
-    apiKey: 'digikey-api-key',
-    apiSecret: 'digikey-api-secret',
+    clientId: 'digikey-client-id',
+    clientSecret: 'digikey-client-secret',
     status: 'digikey-status',
   },
   mouser: {
     apiKey: 'mouser-api-key',
-    partnerId: 'mouser-partner-id',
     status: 'mouser-status',
   },
 };
