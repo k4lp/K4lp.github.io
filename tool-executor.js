@@ -435,10 +435,11 @@ class ToolExecutor {
             vaultId: null,
             vaultPreview: null
         };
-
+    
         let primaryText = '';
         let logsSection = logs;
-
+    
+        // FIX: Vault ANY result that should be vaulted, even if not explicitly a vault token
         if (typeof result === 'string' && dataVault.isReferenceToken(result)) {
             const entry = dataVault.getEntryByReference(result);
             if (entry) {
@@ -450,6 +451,7 @@ class ToolExecutor {
                 primaryText = result;
             }
         } else if (dataVault.shouldVault(result)) {
+            // FIX: Always vault large results
             const entry = dataVault.store(result, {
                 source: 'execute_js:result',
                 execId,
@@ -462,9 +464,27 @@ class ToolExecutor {
                 primaryText = `${entry.reference} (${entry.label || entry.type || 'Stored data'})`;
             }
         } else if (typeof result !== 'undefined') {
-            primaryText = this.stringifyValue(result);
+            // FIX: Even small results should be checked for length
+            const stringified = this.stringifyValue(result);
+            if (stringified.length > 800) {
+                const entry = dataVault.store(result, {
+                    source: 'execute_js:result',
+                    execId,
+                    notes: 'Large return value from execute_js'
+                });
+                if (entry) {
+                    meta.vaultReference = entry.reference;
+                    meta.vaultId = entry.id;
+                    meta.vaultPreview = entry.preview || null;
+                    primaryText = `${entry.reference} (${entry.label || entry.type})`;
+                } else {
+                    primaryText = stringified;
+                }
+            } else {
+                primaryText = stringified;
+            }
         }
-
+    
         if (!primaryText) {
             if (logs.length > 0) {
                 primaryText = logs.join('\n');
@@ -473,22 +493,21 @@ class ToolExecutor {
                 primaryText = 'Success';
             }
         }
-
+    
         const sections = [primaryText];
-
+    
         if (logsSection.length > 0) {
             sections.push(`Logs:\n${logsSection.join('\n')}`);
         }
-
+    
         const output = sections.join('\n\n').trim();
-
+    
         return {
             outputForStorage: output || 'Success',
             outputForReference: output || 'Success',
             meta
         };
     }
-
     stringifyValue(value) {
         if (value === null) return 'null';
         if (value === undefined) return 'undefined';
