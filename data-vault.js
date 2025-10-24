@@ -118,7 +118,8 @@ class DataVault {
         if (match) {
             return match[1].trim();
         }
-        if (reference.startsWith('vault_')) {
+        // FIX: Also handle bare IDs starting with 'vault-' or 'data-'
+        if (reference.startsWith('vault-') || reference.startsWith('data-')) {
             return reference;
         }
         return null;
@@ -566,3 +567,4 @@ class DataVault {
 }
 
 export const dataVault = new DataVault();
+
