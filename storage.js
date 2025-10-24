@@ -30,17 +30,42 @@ class StorageManager {
 
     setItem(key, value) {
         try {
-            localStorage.setItem(key, JSON.stringify(value));
+            const serialized = JSON.stringify(value);
+            
+            // FIX: Check quota before writing
+            const currentSize = this.estimateStorageSize();
+            const newItemSize = new Blob([serialized]).size;
+            const QUOTA_LIMIT = 5 * 1024 * 1024; // 5MB
+            const WARNING_THRESHOLD = 0.8; // 80%
+            
+            if ((currentSize + newItemSize) / QUOTA_LIMIT > WARNING_THRESHOLD) {
+                console.warn(`⚠️ LocalStorage usage at ${Math.round((currentSize + newItemSize) / QUOTA_LIMIT * 100)}%`);
+                console.warn('Consider clearing old reasoning steps, code executions, or vault entries.');
+            }
+            
+            localStorage.setItem(key, serialized);
             return true;
         } catch (error) {
             if (error.name === 'QuotaExceededError') {
-                console.error('localStorage quota exceeded');
+                console.error('❌ localStorage quota exceeded');
+                alert('Storage quota exceeded. Please click "Reset All" to clear data or close some reasoning history.');
             } else {
                 console.error(`Error writing to localStorage key "${key}":`, error);
             }
             return false;
         }
     }
+
+// FIX: Add helper method to estimate storage size
+estimateStorageSize() {
+    let total = 0;
+    for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+            total += (localStorage[key].length + key.length) * 2; // UTF-16 = 2 bytes per char
+        }
+    }
+    return total;
+}
 
     removeItem(key) {
         localStorage.removeItem(key);
