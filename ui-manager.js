@@ -1469,31 +1469,25 @@ class UIManager {
     }
 
     handleFreezeToggle() {
+        // FIX: Prevent race conditions by disabling button during transition
+        const btn = this.elements.freezeBtn;
+        if (btn.disabled) return;
+        
         const state = this.freezeState.mode || 'inactive';
-
+    
         if (state === 'inactive') {
             this.requestFreeze();
         } else if (state === 'pending') {
             this.cancelFreezeRequest();
-        } else {
-            void this.resumeFromFreeze();
+        } else if (state === 'active') {
+            // FIX: Disable button during resume to prevent double-clicks
+            btn.disabled = true;
+            void this.resumeFromFreeze().finally(() => {
+                if (this.freezeState.mode === 'inactive') {
+                    btn.disabled = false;
+                }
+            });
         }
-    }
-
-    requestFreeze() {
-        const hasActiveSession = this.sessionContext && !this.sessionContext.finished && !this.sessionContext.paused;
-
-        if (hasActiveSession && this.isProcessing) {
-            this.freezeState = {
-                mode: 'pending',
-                requestedAt: Date.now()
-            };
-            this.setStatus('Freeze requested — waiting for the next safe turn…');
-        } else {
-            this.activateFreeze(this.sessionContext || null);
-        }
-
-        this.updateFreezeUi();
     }
 
     cancelFreezeRequest() {
@@ -1959,6 +1953,7 @@ If no, output <continue_reasoning> and explain what's missing.`;
 
 export const uiManager = new UIManager();
 window.uiManager = uiManager; // Make available for inline onclick handlers
+
 
 
 
