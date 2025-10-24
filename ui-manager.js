@@ -1170,14 +1170,19 @@ class UIManager {
                 if (result.error) {
                     return `execute_js -> Execution failed: ${result.error}`;
                 }
+                // FIX: Always reference vault entries, never inline large outputs
                 const entry = result.vaultId
                     ? dataVault.getEntry(result.vaultId)
                     : (result.vaultReference ? dataVault.getEntryByReference(result.vaultReference) : null);
-                const storedNote = entry
-                    ? ` Stored as ${entry.reference} (${entry.label || entry.type}).`
-                    : (result.vaultReference ? ` Stored as ${result.vaultReference}.` : '');
+                
+                if (entry) {
+                    const preview = entry.preview ? this.truncateText(entry.preview, 200) : '';
+                    return `execute_js -> Success. Result stored as ${entry.reference} (${entry.label || entry.type})${preview ? '\nPreview: ' + preview : ''}`;
+                }
+                
+                // FIX: For non-vaulted results, still truncate
                 const output = result.output || result.result || 'Execution succeeded.';
-                return `execute_js -> Execution succeeded.${storedNote}\n${this.truncateText(output)}`;
+                return `execute_js -> Success.\n${this.truncateText(output, 400)}`;
             }
             case 'canvas_create':
                 return `canvas_html -> Created canvas ${result.id}`;
@@ -1186,9 +1191,10 @@ class UIManager {
                     return `vault_read -> Entry ${result.id} not found.`;
                 }
                 if (result.mode === 'full') {
-                    return `vault_read -> Retrieved full content for ${result.id} (${this.truncateText(result.result || '', 200)}).`;
+                    // FIX: Never inline full content in tool result summary
+                    return `vault_read -> Retrieved full content for ${result.id}. Use in next execute_js with Lab.value()`;
                 }
-                return `vault_read -> Preview for ${result.id}:\n${this.truncateText(result.result || '', 200)}`;
+                return `vault_read -> Preview for ${result.id}:\n${this.truncateText(result.result || '', 300)}`;
             case 'vault_delete':
                 return result.deleted
                     ? `vault_delete -> Removed ${result.id}`
@@ -1197,7 +1203,6 @@ class UIManager {
                 return `${toolName} -> Completed.`;
         }
     }
-
     sanitizeReasoningText(text) {
         if (!text) return '';
 
@@ -1953,6 +1958,7 @@ If no, output <continue_reasoning> and explain what's missing.`;
 
 export const uiManager = new UIManager();
 window.uiManager = uiManager; // Make available for inline onclick handlers
+
 
 
 
