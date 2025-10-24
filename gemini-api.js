@@ -227,18 +227,28 @@ class GeminiAPI {
         return null;
     }
 
-    markKeyRateLimited(slotIndex, waitTimeMs = 60000) {
+    markKeyRateLimited(slotIndex, waitTimeMs = null) {
         const status = this.ensureStatus(slotIndex);
+        
+        // FIX: Implement exponential backoff based on previous attempts
+        const previousCooldown = status.cooldownMs || 0;
+        const baseWait = 60000; // 1 minute
+        const calculatedWait = waitTimeMs !== null 
+            ? waitTimeMs 
+            : (previousCooldown > 0 
+                ? Math.min(previousCooldown * 2, 900000) // Double up to 15min max
+                : baseWait);
+        
         status.rateLimited = true;
-        status.limitedAt = Date.now() + waitTimeMs;
-        status.cooldownMs = waitTimeMs;
+        status.limitedAt = Date.now() + calculatedWait;
+        status.cooldownMs = calculatedWait;
         status.invalid = false;
         status.invalidMessage = '';
-        const seconds = Math.max(1, Math.ceil(waitTimeMs / 1000));
+        const seconds = Math.max(1, Math.ceil(calculatedWait / 1000));
         status.lastError = `Rate limited by API. Waiting ~${seconds}s before retry.`;
         status.lastErrorAt = Date.now();
         status.willRetry = true;
-
+    
         this.advanceCurrentIndex();
         this.saveKeyStatus();
     }
