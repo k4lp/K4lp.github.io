@@ -69,19 +69,26 @@ class DataVault {
     shouldVault(value, options = {}) {
         if (options.force) return true;
         const type = this.detectType(value);
-
+    
         if (type === 'string') {
-            return value.length > this.INLINE_STRING_LIMIT || /\n/.test(value);
+            // FIX: Use consistent threshold - vault strings over 500 chars OR with newlines
+            return value.length > 500 || /\n/.test(value);
         }
-
+    
         if (type === 'array' || type === 'object') {
-            return true;
+            // FIX: Only vault if serialized size is large
+            try {
+                const serialized = JSON.stringify(value);
+                return serialized.length > 500;
+            } catch {
+                return true; // Vault if can't serialize
+            }
         }
-
+    
         if (type === 'function' || type === 'map' || type === 'set' || type === 'buffer' || type === 'date') {
             return true;
         }
-
+    
         return false;
     }
 
@@ -567,4 +574,5 @@ class DataVault {
 }
 
 export const dataVault = new DataVault();
+
 
