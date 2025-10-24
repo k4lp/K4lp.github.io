@@ -1839,15 +1839,32 @@ ${userMessage}\n\n`;
             const recentSteps = reasoning.slice(-3);
             prompt += `## Recent Lab Activity (most recent last):\n`;
             recentSteps.forEach(r => {
-                prompt += `Step ${r.step} Thought:\n${this.truncateText(r.content || '', 600)}\n`;
+                // FIX: Sanitize thought text before including
+                const sanitized = this.sanitizeReasoningText(r.content || '');
+                prompt += `Step ${r.step} Thought:\n${this.truncateText(sanitized, 600)}\n`;
+                
                 if (Array.isArray(r.toolResults) && r.toolResults.length > 0) {
                     prompt += `Tool Results:\n`;
                     r.toolResults.forEach(tool => {
-                        prompt += `- ${this.truncateText(tool.summary || '', 400)}\n`;
+                        // FIX: Tool summaries should be compact
+                        const summary = tool.summary || '';
+                        prompt += `- ${this.truncateText(summary, 300)}\n`;
                     });
                 }
                 prompt += `\n`;
             });
+            
+            // FIX: Add vault context if there are many entries
+            const vaultEntries = dataVault.listEntries();
+            if (vaultEntries.length > 0) {
+                prompt += `## Data Vault Status:\n`;
+                prompt += `You have ${vaultEntries.length} stored items. Use Lab.list() to see them all.\n`;
+                prompt += `Recent vault entries:\n`;
+                vaultEntries.slice(-5).forEach(entry => {
+                    prompt += `- ${entry.reference}: ${entry.label || entry.type} (${this.formatBytes(entry.bytes)})\n`;
+                });
+                prompt += `\n`;
+            }
         }
 
         prompt += `Continue your reasoning and use tools as needed. Fetch all the tasks, memories and goals to know the current status. When completely done, output <final_output>.`;
@@ -1958,6 +1975,7 @@ If no, output <continue_reasoning> and explain what's missing.`;
 
 export const uiManager = new UIManager();
 window.uiManager = uiManager; // Make available for inline onclick handlers
+
 
 
 
