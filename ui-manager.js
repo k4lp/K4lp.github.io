@@ -1700,53 +1700,57 @@ Continue reasoning until truly done. Current context follows...`;
         });
         const reasoning = storageManager.getReasoning();
 
-        let prompt = `## Operating Reminder:
-- Use the XML tools exactly as defined (no JavaScript helpers for memory, goals, or tasks).
-- Wait for the system-provided "Tool Activity" summaries before relying on tool results.
-- Keep task progress current with <update_task id="..."> using the IDs shown below.
-- When you encounter [[vault:...]] references, inspect them with <vault_read id="vault_id" mode="preview" limit="1200" /> (or mode="full") and continue using the token instead of copying raw data.
-- Wrap all narrative thoughts inside <reasoning_text>...</reasoning_text> and run any actual code through <execute_js>; do not inline commented code in the reasoning channel.
-
-## User Request:
-${userMessage}\n\n`;
+        const lines = [
+            '## Operating Reminder:',
+            '- Use the XML tools exactly as defined (no JavaScript helpers for memory, goals, or tasks).',
+            '- Wait for the system-provided "Tool Activity" summaries before relying on tool results.',
+            '- Keep task progress current with <update_task id="..."> using the IDs shown below.',
+            '- When you encounter [[vault:...]] references, inspect them with <vault_read id="vault_id" mode="preview" limit="1200" /> (or mode="full") and continue using the token instead of copying raw data.',
+            '- Wrap all narrative thoughts inside <reasoning_text>...</reasoning_text> and run any actual code through <execute_js>; do not inline commented code in the reasoning channel.',
+            '',
+            '## User Request:',
+            userMessage,
+            ''
+        ];
 
         if (iteration === 1) {
-            prompt += `This is your first iteration. Please break down the task and create initial tasks.\n\n`;
+            lines.push('This is your first iteration. Please break down the task and create initial tasks.', '');
         }
 
         if (memories.length > 0) {
-            prompt += `## Memories Available (summaries only):\n`;
+            lines.push('## Memories Available (summaries only):');
             memories.slice(-10).forEach(m => {
-                prompt += `- ${m.id}: ${m.summary}\n`;
+                lines.push(`- ${m.id}: ${m.summary}`);
             });
-            prompt += `\n`;
+            lines.push('');
         }
 
         if (goals.length > 0) {
-            prompt += `## Active Goals:\n`;
+            lines.push('## Active Goals:');
             goals.forEach(g => {
-                prompt += `- ${g.content}\n`;
+                lines.push(`- ${g.content}`);
             });
-            prompt += `\n`;
+            lines.push('');
         }
 
         if (tasks.length > 0) {
-            prompt += `## Task List:\n`;
+            lines.push('## Task List:');
             tasks.forEach(t => {
-                prompt += `- [${t.status}] (id: ${t.id}) ${t.description}\n`;
-                if (t.notes) prompt += `  Notes: ${t.notes}\n`;
+                lines.push(`- [${t.status}] (id: ${t.id}) ${t.description}`);
+                if (t.notes) {
+                    lines.push(`  Notes: ${t.notes}`);
+                }
             });
-            prompt += `\n`;
+            lines.push('');
         }
 
         if (reasoning.length > 0) {
-            const recentSteps = reasoning.slice(-3);
-            prompt += `## Recent Lab Activity:\n`;
-            recentSteps.forEach(r => {
+            lines.push('## Recent Lab Activity:');
+            reasoning.slice(-3).forEach(r => {
                 const sanitized = this.sanitizeReasoningText(r.content || '');
                 const thought = this.truncateText(sanitized, 300);
                 if (thought) {
-                    prompt += `Step ${r.step}: ${thought}\n`;
+                    lines.push(`Step ${r.step}: ${thought}`);
                 }
 
                 if (Array.isArray(r.toolResults) && r.toolResults.length > 0) {
@@ -1758,30 +1762,26 @@ ${userMessage}\n\n`;
                         }
                         return `${tool} -> ${this.truncateText(t.summary || 'completed', 80)}`;
                     }).join(', ');
-                    prompt += `  Tools: ${toolSummary}\n`;
+                    lines.push(`  Tools: ${toolSummary}`);
                 }
             });
-            prompt += `\n`;
+            lines.push('');
         }
-                prompt += `\n`;
+
+        const vaultEntries = dataVault.listEntries();
+        if (vaultEntries.length > 0) {
+            lines.push('## Data Vault Status:');
+            lines.push(`You have ${vaultEntries.length} stored items. Use Lab.list() to see them all.`);
+            lines.push('Recent vault entries:');
+            vaultEntries.slice(-5).forEach(entry => {
+                lines.push(`- ${entry.reference}: ${entry.label || entry.type} (${this.formatBytes(entry.bytes)})`);
             });
-            
-            // FIX: Add vault context if there are many entries
-            const vaultEntries = dataVault.listEntries();
-            if (vaultEntries.length > 0) {
-                prompt += `## Data Vault Status:\n`;
-                prompt += `You have ${vaultEntries.length} stored items. Use Lab.list() to see them all.\n`;
-                prompt += `Recent vault entries:\n`;
-                vaultEntries.slice(-5).forEach(entry => {
-                    prompt += `- ${entry.reference}: ${entry.label || entry.type} (${this.formatBytes(entry.bytes)})\n`;
-                });
-                prompt += `\n`;
-            }
+            lines.push('');
         }
 
-        prompt += `Continue your reasoning and use tools as needed. Fetch all the tasks, memories and goals to know the current status. When completely done, output <final_output>.`;
+        lines.push('Continue your reasoning and use tools as needed. Fetch all the tasks, memories and goals to know the current status. When completely done, output <final_output>.');
 
-        return prompt;
+        return lines.join('\n');
     }
 
     async verifyOutput(output, systemPrompt, model) {
@@ -1887,10 +1887,6 @@ If no, output <continue_reasoning> and explain what's missing.`;
 
 export const uiManager = new UIManager();
 window.uiManager = uiManager; // Make available for inline onclick handlers
-
-
-
-
 
 
 
