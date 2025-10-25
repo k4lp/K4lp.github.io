@@ -18,6 +18,7 @@ class UIManager {
         this.freezeState = { mode: 'inactive' };
         this.vaultPreviewLimit = 1200;
         this.editingTaskId = null;
+        this.vaultChipListenerRegistered = false;
     }
 
     init() {
@@ -134,14 +135,19 @@ class UIManager {
             });
         }
 
-        const registerVaultChipListener = (container) => {
-            if (!container) return;
-            container.addEventListener('click', (event) => this.handleVaultChipClick(event));
-        };
-
-        registerVaultChipListener(this.elements.reasoningContainer);
-        registerVaultChipListener(this.elements.chatContainer);
-        registerVaultChipListener(this.elements.codeOutputContainer);
+        if (!this.vaultChipListenerRegistered) {
+            document.addEventListener('click', (event) => {
+                const chip = event.target.closest('.vault-chip');
+                if (!chip || chip.disabled) {
+                    return;
+                }
+                const id = chip.getAttribute('data-vault-id');
+                if (id) {
+                    void this.openVaultPreview(id, 'preview');
+                }
+            });
+            this.vaultChipListenerRegistered = true;
+        }
     }
 
     handleApiKeyChange(index) {
@@ -1168,21 +1174,19 @@ class UIManager {
                 return `create_goal -> Added goal ${result.id} (${result.name || 'unnamed'})`;
             case 'js_execution': {
                 if (result.error) {
-                    return `execute_js -> Execution failed: ${result.error}`;
+                    return `execute_js -> Execution failed: ${this.truncateText(result.error, 200)}`;
                 }
-                // FIX: Always reference vault entries, never inline large outputs
+
                 const entry = result.vaultId
                     ? dataVault.getEntry(result.vaultId)
                     : (result.vaultReference ? dataVault.getEntryByReference(result.vaultReference) : null);
-                
+
                 if (entry) {
-                    const preview = entry.preview ? this.truncateText(entry.preview, 200) : '';
-                    return `execute_js -> Success. Result stored as ${entry.reference} (${entry.label || entry.type})${preview ? '\nPreview: ' + preview : ''}`;
+                    return `execute_js -> Success. Result stored as ${entry.reference} (${entry.label || entry.type}). Use Lab.read() or Lab.value() to access it.`;
                 }
-                
-                // FIX: For non-vaulted results, still truncate
+
                 const output = result.output || result.result || 'Execution succeeded.';
-                return `execute_js -> Success.\n${this.truncateText(output, 400)}`;
+                return `execute_js -> Success.\n${this.truncateText(output, 200)}`;
             }
             case 'canvas_create':
                 return `canvas_html -> Created canvas ${result.id}`;
@@ -1474,25 +1478,39 @@ class UIManager {
     }
 
     handleFreezeToggle() {
-        // FIX: Prevent race conditions by disabling button during transition
         const btn = this.elements.freezeBtn;
-        if (btn.disabled) return;
-        
+        if (!btn || btn.disabled) {
+            return;
+        }
+
+        btn.disabled = true;
         const state = this.freezeState.mode || 'inactive';
-    
+
         if (state === 'inactive') {
             this.requestFreeze();
+            btn.disabled = false;
         } else if (state === 'pending') {
             this.cancelFreezeRequest();
+            btn.disabled = false;
         } else if (state === 'active') {
-            // FIX: Disable button during resume to prevent double-clicks
-            btn.disabled = true;
             void this.resumeFromFreeze().finally(() => {
-                if (this.freezeState.mode === 'inactive') {
-                    btn.disabled = false;
-                }
+                btn.disabled = false;
             });
+        } else {
+            btn.disabled = false;
         }
+    }
+
+    requestFreeze() {
+        if (!this.isProcessing) {
+            this.addChatMessage('model', 'Lab is not currently processing. Nothing to freeze.');
+            return;
+        }
+        this.freezeState = {
+            mode: 'pending',
+            requestedAt: Date.now()
+        };
+        this.updateFreezeUi();
     }
 
     cancelFreezeRequest() {

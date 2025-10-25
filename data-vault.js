@@ -69,14 +69,13 @@ class DataVault {
     shouldVault(value, options = {}) {
         if (options.force) return true;
         const type = this.detectType(value);
-    
+
         if (type === 'string') {
-            // FIX: Use consistent threshold - vault strings over 500 chars OR with newlines
-            return value.length > 500 || /\n/.test(value);
+            // Vault strings only when they exceed the length threshold
+            return value.length > 500;
         }
-    
+
         if (type === 'array' || type === 'object') {
-            // FIX: Only vault if serialized size is large
             try {
                 const serialized = JSON.stringify(value);
                 return serialized.length > 500;
@@ -125,9 +124,9 @@ class DataVault {
         if (match) {
             return match[1].trim();
         }
-        // FIX: Also handle bare IDs starting with 'vault-' or 'data-'
-        if (reference.startsWith('vault-') || reference.startsWith('data-')) {
-            return reference;
+        const trimmed = reference.trim();
+        if (trimmed.startsWith('vault-') || trimmed.startsWith('data-')) {
+            return trimmed;
         }
         return null;
     }
