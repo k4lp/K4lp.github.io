@@ -1753,11 +1753,11 @@ const names = adults.map(p => p.name);
 
 // Check what's in vault
 const allEntries = Lab.list();
-console.log(`Vault contains \${allEntries.length} items`);
+console.log(\`Vault contains \${allEntries.length} items\`);
 
 // Get metadata without loading full content
 const info = Lab.info('data-XYZ');
-console.log(`Type: \${info.type}, Size: \${info.bytes} bytes`);
+console.log(\`Type: \${info.type}, Size: \${info.bytes} bytes\`);
 
 **Helper Function Storage:**
 Functions are stored as metadata objects. To use them:
@@ -1940,72 +1940,6 @@ Proceed with disciplined reasoning. The current workspace state follows.`;
         lines.push('Continue your reasoning and use tools as needed.');
         lines.push('**Remember: Use EXACT task IDs from "CURRENT TASK IDs" section at the top**');
         lines.push('When completely done, output <final_output>.');
-
-        return lines.join('\n');
-    }
-        if (memories.length > 0) {
-            lines.push('## Memories Available (summaries only):');
-            memories.slice(-10).forEach(m => {
-                lines.push(`- ${m.id}: ${m.summary}`);
-            });
-            lines.push('');
-        }
-
-        if (goals.length > 0) {
-            lines.push('## Active Goals:');
-            goals.forEach(g => {
-                lines.push(`- ${g.content}`);
-            });
-            lines.push('');
-        }
-
-        if (tasks.length > 0) {
-            lines.push('## Task List:');
-            tasks.forEach(t => {
-                lines.push(`- [${t.status}] (id: ${t.id}) ${t.description}`);
-                if (t.notes) {
-                    lines.push(`  Notes: ${t.notes}`);
-                }
-            });
-            lines.push('');
-        }
-
-        if (reasoning.length > 0) {
-            lines.push('## Recent Lab Activity:');
-            reasoning.slice(-3).forEach(r => {
-                const sanitized = this.sanitizeReasoningText(r.content || '');
-                const thought = this.truncateText(sanitized, 300);
-                if (thought) {
-                    lines.push(`Step ${r.step}: ${thought}`);
-                }
-
-                if (Array.isArray(r.toolResults) && r.toolResults.length > 0) {
-                    const toolSummary = r.toolResults.map(t => {
-                        const tool = t.tool || 'tool';
-                        if (t.summary && t.summary.includes('[[vault:')) {
-                            const vaultMatch = t.summary.match(/\[\[vault:[^\]]+\]\]/);
-                            return `${tool} -> ${vaultMatch ? vaultMatch[0] : 'completed'}`;
-                        }
-                        return `${tool} -> ${this.truncateText(t.summary || 'completed', 80)}`;
-                    }).join(', ');
-                    lines.push(`  Tools: ${toolSummary}`);
-                }
-            });
-            lines.push('');
-        }
-
-        const vaultEntries = dataVault.listEntries();
-        if (vaultEntries.length > 0) {
-            lines.push('## Data Vault Status:');
-            lines.push(`You have ${vaultEntries.length} stored items. Use Lab.list() to see them all.`);
-            lines.push('Recent vault entries:');
-            vaultEntries.slice(-5).forEach(entry => {
-                lines.push(`- ${entry.reference}: ${entry.label || entry.type} (${this.formatBytes(entry.bytes)})`);
-            });
-            lines.push('');
-        }
-
-        lines.push('Continue your reasoning and use tools as needed. Fetch all the tasks, memories and goals to know the current status. When completely done, output <final_output>.');
 
         return lines.join('\n');
     }
