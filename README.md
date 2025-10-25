@@ -1,26 +1,19 @@
 # Gemini Advanced Reasoning Lab
 
-A vanilla JavaScript implementation of a multi-agent iterative reasoning system powered by Google's Gemini API with advanced data vault capabilities.
-
-## 🆕 Enhanced Version Available!
-
-**[Try the Enhanced Version →](enhanced-index.html)** featuring:
-- Advanced Data Vault System with `{{<tag>}}` recognition
-- Modular architecture for better maintainability  
-- Rigorous reasoning guidelines and procedures
-- Enhanced UI with vault browser and statistics
-- Improved error handling and debugging
+A vanilla JavaScript implementation of a multi-agent iterative reasoning system powered by Google's Gemini API with enhanced data vault capabilities.
 
 ## Features
 
 - **Multi-Agent Architecture**: Single Gemini instance acts as persistent reasoning agent
-- **Unlimited Iterations**: Continues reasoning until task completion
-- **External Tools**: Memory system, code execution, canvas rendering, task management
+- **Unlimited Iterations**: Continues reasoning until task completion with rigorous analysis
+- **Enhanced Data Vault**: Intelligent content storage with `{{<vault_store>}}` tags for better LLM recognition
+- **Code Execution**: Full JavaScript execution with complete browser capabilities
+- **Memory System**: Persistent storage for complex reasoning chains
+- **Task Management**: Automatic task breakdown and progress tracking
+- **Goal-Oriented**: Verification system ensures outputs meet all objectives
 - **API Key Rotation**: Automatic rotation of up to 5 API keys with rate limit handling
 - **Real-time Streaming**: Character-by-character response display
-- **Swiss Minimalist Design**: Clean, professional interface
-- **Full Browser Access**: Execute JavaScript with complete browser capabilities
-- **Enhanced Data Vault**: Intelligent content storage and retrieval system
+- **Swiss Design**: Clean, professional minimalist interface
 
 ## Quick Start
 
@@ -43,20 +36,15 @@ npx http-server -p 8000
 php -S localhost:8000
 ```
 
-### 3. Choose Your Version
-- **Enhanced**: Open `enhanced-index.html` for the new vault system
-- **Original**: Open `index.html` for the classic interface
-- **Both**: Use `index.html?enhanced=true` to switch modes
-
-### 4. Configure and Start
-1. Enter your API key(s) in the interface (up to 5 keys supported)
-2. Select your preferred model
-3. Optionally add user goals
-4. Start chatting with rigorous reasoning!
+### 3. Configure and Start
+1. Open `index.html` in your browser
+2. Enter your API key(s) (up to 5 keys supported)
+3. Select your preferred model
+4. Start reasoning with rigorous analysis!
 
 ## Enhanced Data Vault System
 
-### Advanced Tag Patterns
+### Better Tag Recognition
 ```
 {{<vault_store id="unique_id" label="Description" tags="tag1,tag2">}}
 Your large content here...
@@ -65,11 +53,11 @@ Your large content here...
 {{<vault_retrieve id="unique_id" mode="preview|full|summary" />}}
 
 {{<function_def name="functionName" params="param1,param2">}}
-function code here...
+function calculateSum(a, b) { return a + b; }
 {{</function_def>}}
 
 {{<reasoning_text>}}
-Long reasoning chain...
+Long reasoning chain that gets automatically vaulted...
 {{</reasoning_text>}}
 ```
 
@@ -82,28 +70,16 @@ Long reasoning chain...
 
 ## Project Structure
 
-### Enhanced System
 ```
-enhanced-index.html          # Enhanced entry point
-data-vault-enhanced.js        # Advanced vault system
-vault-tag-processor.js        # Modular tag processing
-vault-llm-procedures.js       # LLM interaction procedures
-tool-executor-enhanced.js     # Enhanced tool execution
-ui-manager-enhanced.js        # Complete enhanced UI
-main-enhanced.js             # Enhanced application entry
-```
-
-### Legacy System  
-```
-index.html                   # Original entry point (now references enhanced)
-ui-manager.js               # Original UI manager
-main.js                     # Backward compatible entry point
-```
-
-### Shared Components
-```
+index.html                   # Main entry point
+data-vault-enhanced.js       # Enhanced vault with {{<tag>}} processing
+vault-tag-processor.js       # Modular tag processing engine
+vault-llm-procedures.js      # LLM interaction procedures
+tool-executor-enhanced.js    # Enhanced tool execution
+ui-manager.js               # UI manager (uses enhanced backend)
+main.js                     # Application entry point
 storage.js                  # localStorage management
-gemini-api.js              # Gemini API integration with rate limiting
+gemini-api.js              # API integration with rate limiting
 styles.css                 # Swiss minimalist styling
 ```
 
@@ -144,6 +120,15 @@ return data;
 </execute_js>
 ```
 
+#### Enhanced Vault Operations
+```xml
+{{<vault_store id="data_123" label="Analysis Results" tags="analysis,results">}}
+Large content that gets stored with better LLM recognition...
+{{</vault_store>}}
+
+{{<vault_retrieve id="data_123" mode="preview" limit="500" />}}
+```
+
 #### Canvas Rendering
 ```xml
 <canvas_html>
@@ -177,6 +162,12 @@ Final answer with optional {{exec_id}} variable replacements
    - Check for final output or continuation
 4. **Verification call** → Ensures output meets all goals
 5. **Display result** → Show to user with variable replacements
+
+### Enhanced Data Vault Features
+- **Better Tag Recognition**: `{{<tag>}}` patterns that LLMs recognize more reliably
+- **Modular Processors**: Separate handling for different content types
+- **Intelligent Storage**: Automatic classification and metadata handling
+- **Standardized Procedures**: Built-in guidelines for consistent LLM interaction
 
 ### Rate Limiting Strategy
 - Supports up to 5 API keys with sequential rotation
@@ -244,36 +235,14 @@ Tested on Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
 - System preserves all progress during freezes
 
 ### Enhanced vault errors
-- Use vault browser to inspect entries
 - Check console for detailed error messages
-- Refer to enhanced documentation for tag syntax
+- Ensure content is properly formatted in vault tags
+- Use `{{<vault_retrieve>}}` with correct syntax
 
 ### Module loading errors
 - Ensure files are served via HTTP (not file://)
 - Check browser console for specific errors
-- Verify all enhanced system files are present
-
-## Documentation
-
-- **[Enhanced System Guide](README-ENHANCED.md)** - Complete enhanced features
-- **[Original Documentation](README.md)** - This file
-- **Vault Help** - Available in enhanced interface
-
-## Version History
-
-### v2.0 Enhanced (Current)
-- Advanced vault system with `{{<tag>}}` processing
-- Modular architecture with separate processors
-- Rigorous reasoning guidelines and procedures
-- Enhanced UI with vault browser and statistics
-- Improved error handling and debugging
-
-### v1.0 Original
-- Basic vault system with simple XML tags
-- Monolithic architecture
-- Core reasoning and tool execution
-- Swiss minimalist design
-- Multi-API key rotation
+- Verify all system files are present
 
 ## License
 
@@ -282,11 +251,11 @@ This is a demonstration project for advanced AI reasoning capabilities. Use at y
 ## Credits
 
 - Built for Google Gemini API
-- Enhanced with rigorous reasoning principles
+- Enhanced with rigorous reasoning principles and better LLM recognition
 - Font: Geist by Vercel
-- Design: Swiss minimalism with enhanced functionality
+- Design: Swiss minimalism
 - Inspired by advanced multi-agent reasoning systems
 
 ---
 
-**Ready to reason rigorously?** [Start with Enhanced Version →](enhanced-index.html)
+**Ready for rigorous reasoning?** Open `index.html` and start exploring!
