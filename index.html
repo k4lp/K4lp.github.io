@@ -27,6 +27,11 @@
             <strong>Security Notice:</strong> This lab executes JavaScript directly in your browser without isolation. Use only trusted Gemini API keys.
         </div>
 
+        <div class="upgrade-notice" style="background: #e3f2fd; border: 1px solid #90caf9; padding: 12px 16px; margin: 16px 24px; border-radius: 4px; text-align: center;">
+            <strong>🆕 Enhanced Version Available!</strong> 
+            <a href="enhanced-index.html" style="color: #1976d2; text-decoration: none; font-weight: 500;">Try the new Enhanced Data Vault System →</a>
+        </div>
+
         <div class="top-grid">
             <section class="panel">
                 <h2>API Keys</h2>
@@ -178,10 +183,16 @@
         </div>
     </div>
 
+    <!-- Load shared dependencies first -->
     <script type="module" src="storage.js"></script>
     <script type="module" src="gemini-api.js"></script>
-    <script type="module" src="tool-executor.js"></script>
+    <!-- Load enhanced system components -->
+    <script type="module" src="data-vault-enhanced.js"></script>
+    <script type="module" src="vault-tag-processor.js"></script>
+    <script type="module" src="vault-llm-procedures.js"></script>
+    <script type="module" src="tool-executor-enhanced.js"></script>
     <script type="module" src="ui-manager.js"></script>
+    <!-- Load main entry point -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
