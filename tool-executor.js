@@ -147,6 +147,33 @@ class ToolExecutor {
 
         for (const tag of taskUpdates) {
             const id = tag.attributes.id;
+
+            // VALIDATION: Check if task exists before attempting update
+            const tasks = storageManager.getTasks();
+            const taskExists = tasks.some(t => t.id === id);
+
+            if (!taskExists) {
+                // Provide helpful error with available IDs
+                const availableIds = tasks.map(t => ({
+                    id: t.id,
+                    desc: (t.description || t.name || '').slice(0, 40)
+                })).slice(0, 10);
+
+                results.push({
+                    type: 'task_update',
+                    tool: 'update_task',
+                    id,
+                    success: false,
+                    error: 'TASK_NOT_FOUND',
+                    availableIds: availableIds.map(t => `${t.id} (${t.desc})`),
+                    suggestion: availableIds.length > 0
+                        ? `Task ${id} does not exist. Check "CURRENT TASK IDs" section for valid IDs.`
+                        : 'No tasks exist yet. Create one first with <create_task>.'
+                });
+                continue;
+            }
+
+            // Existing update logic
             const updates = {};
             if (typeof tag.attributes.name === 'string') {
                 updates.name = tag.attributes.name;
@@ -299,9 +326,77 @@ class ToolExecutor {
         return attributes;
     }
 
+    validateLabApiUsage(code) {
+        // Scan for Lab.read() being used with object methods
+        const problematicPatterns = [
+            {
+                pattern: /Lab\.read\([^)]+\)\s*\.\s*(filter|map|find|reduce|forEach|some|every|includes|push|pop|shift|unshift|splice|sort|reverse)/g,
+                message: 'Detected Lab.read() used with array methods. Lab.read() returns a STRING. Use Lab.value() to get the actual array/object.'
+            },
+            {
+                pattern: /Lab\.read\([^)]+\)\s*\[\s*\d+\s*\]/g,
+                message: 'Detected Lab.read() with array indexing []. Lab.read() returns a STRING. Use Lab.value() to access array elements.'
+            },
+            {
+                pattern: /Lab\.read\([^)]+\)\s*\.\s*length/g,
+                message: 'Detected Lab.read().length for counting. Lab.read() returns STRING length, not array length. Use Lab.value() for actual data.'
+            },
+            {
+                pattern: /await\s+Lab\.(read|value|store|info|list|drop)/g,
+                message: 'Detected "await" with Lab API. Lab helpers are SYNCHRONOUS - never use await with them.'
+            },
+            {
+                pattern: /Lab\.value\([^)]+\)\s*\.\s*then\(/g,
+                message: 'Detected .then() with Lab.value(). Lab helpers return values immediately, not Promises.'
+            }
+        ];
+
+        const warnings = [];
+        problematicPatterns.forEach(({ pattern, message }) => {
+            if (pattern.test(code)) {
+                warnings.push(message);
+            }
+        });
+
+        return warnings;
+    }
+
+    /**
+     * Executes JavaScript code in the browser context with Lab API access.
+     * 
+     * Lab API available inside execute_js:
+     * - Lab.value(id)  → Returns actual JavaScript object (USE THIS for data manipulation)
+     * - Lab.read(id)   → Returns string preview (for display only, NOT for .filter/.map)
+     * - Lab.store(val) → Saves data and returns [[vault:id]] token
+     * - Lab.info(id)   → Returns metadata about stored item
+     * - Lab.list()     → Lists all vault entries
+     * - Lab.drop(id)   → Deletes vault entry
+     * 
+     * CRITICAL: All Lab helpers are SYNCHRONOUS - never use await
+     * 
+     * Common mistake: Using Lab.read() result with .filter() or .map()
+     * Fix: Use Lab.value() instead when you need the actual object/array
+     * 
+     * Example:
+     *   WRONG: const data = Lab.read('data-XYZ'); data.filter(x => x.age > 18);
+     *   RIGHT: const data = Lab.value('data-XYZ'); data.filter(x => x.age > 18);
+     */
     async executeJavaScript(code) {
         const execId = storageManager.generateId('exec');
         const logs = [];
+        // VALIDATION: Check for common Lab API misuse
+        const warnings = this.validateLabApiUsage(code);
+        if (warnings.length > 0) {
+            logs.push('⚠️  POTENTIAL ISSUES DETECTED IN YOUR CODE:');
+            logs.push('');
+            warnings.forEach((w, idx) => {
+                logs.push(`${idx + 1}. ${w}`);
+            });
+            logs.push('');
+            logs.push('The code will still execute, but may fail. Review the warnings above.');
+            logs.push('═══════════════════════════════════════════════════════════════');
+            logs.push('');
+        }
         const originalLog = console.log;
         const originalError = console.error;
         const runtime = dataVault.createRuntimeApi({ source: 'execute_js', execId });
@@ -360,7 +455,55 @@ class ToolExecutor {
             };
 
         } catch (error) {
-            const errorMsg = (error && error.message) ? error.message : String(error);
+            let errorMsg = (error && error.message) ? error.message : String(error);
+
+            // Enhanced error messages for common Lab API mistakes
+            if (errorMsg.includes('Cannot read properties of null') ||
+                errorMsg.includes('Cannot read property') ||
+                errorMsg.includes('is not a function') ||
+                errorMsg.includes('is not iterable')) {
+
+                // Check if code uses Lab.read with object methods
+                if (/Lab\.read\([^)]+\)\s*\./.test(code)) {
+                    errorMsg += '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+                    errorMsg += '\n💡 DIAGNOSIS: You used Lab.read() with object/array methods.';
+                    errorMsg += '\n';
+                    errorMsg += '\nPROBLEM:';
+                    errorMsg += '\n   Lab.read() returns a STRING preview of the data.';
+                    errorMsg += '\n   You cannot call .filter(), .map(), .find(), etc. on strings.';
+                    errorMsg += '\n';
+                    errorMsg += '\nSOLUTION:';
+                    errorMsg += '\n   Use Lab.value() instead to get the actual JavaScript object.';
+                    errorMsg += '\n';
+                    errorMsg += '\nEXAMPLE:';
+                    errorMsg += '\n   ❌ WRONG:  let data = Lab.read("data-XYZ"); data.filter(...)';
+                    errorMsg += '\n   ✓ CORRECT: let data = Lab.value("data-XYZ"); data.filter(...)';
+                    errorMsg += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+                }
+
+                // Check for other Lab API misuse
+                if (/Lab\.read/.test(code) && !(/Lab\.read\([^)]+\)\s*\./.test(code))) {
+                    errorMsg += '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+                    errorMsg += '\n💡 TIP: You used Lab.read() in your code.';
+                    errorMsg += '\n   - Lab.read(id) returns a STRING (for display/preview)';
+                    errorMsg += '\n   - Lab.value(id) returns the actual OBJECT/ARRAY (for processing)';
+                    errorMsg += '\n';
+                    errorMsg += '\n   If you need to manipulate data, use Lab.value() instead.';
+                    errorMsg += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+                }
+            }
+
+            // Check for await misuse
+            if (errorMsg.includes('await') || /await\s+Lab\./.test(code)) {
+                errorMsg += '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+                errorMsg += '\n💡 TIP: Lab API helpers are SYNCHRONOUS.';
+                errorMsg += '\n   Never use "await" with Lab.read(), Lab.value(), Lab.store(), etc.';
+                errorMsg += '\n';
+                errorMsg += '\n   ❌ WRONG:  const data = await Lab.value("data-XYZ");';
+                errorMsg += '\n   ✓ CORRECT: const data = Lab.value("data-XYZ");';
+                errorMsg += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+            }
+
             const formattedError = `Error: ${errorMsg}`;
 
             this.executions.set(execId, formattedError);
