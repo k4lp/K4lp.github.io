@@ -1,7 +1,7 @@
 // ui-manager-enhanced.js - Enhanced UI Manager with Vault System Integration
 
 import { storageManager } from './storage.js';
-import { geminiApi } from './gemini-api.js';
+import { geminiAPI } from './gemini-api.js';  // Fixed: was geminiApi, now geminiAPI
 import { enhancedToolExecutor } from './tool-executor-enhanced.js';
 import { enhancedDataVault } from './data-vault-enhanced.js';
 import { vaultTagProcessor } from './vault-tag-processor.js';
@@ -238,7 +238,7 @@ class EnhancedUIManager {
 
     async loadAvailableModels() {
         try {
-            const models = await geminiApi.getAvailableModels();
+            const models = await geminiAPI.fetchModels();
             const modelSelect = document.getElementById('model-select');
             modelSelect.innerHTML = '';
             
@@ -249,17 +249,17 @@ class EnhancedUIManager {
 
             models.forEach(model => {
                 const option = document.createElement('option');
-                option.value = model.name;
-                option.textContent = model.displayName || model.name;
+                option.value = model;
+                option.textContent = model;
                 modelSelect.appendChild(option);
             });
 
             const savedModel = storageManager.getSelectedModel();
-            if (savedModel && models.some(m => m.name === savedModel)) {
+            if (savedModel && models.includes(savedModel)) {
                 modelSelect.value = savedModel;
             } else {
-                modelSelect.value = models[0].name;
-                storageManager.setSelectedModel(models[0].name);
+                modelSelect.value = models[0];
+                storageManager.setSelectedModel(models[0]);
             }
         } catch (error) {
             console.error('Failed to load models:', error);
@@ -408,7 +408,7 @@ class EnhancedUIManager {
         const keys = storageManager.getApiKeys();
         keys[keyNumber - 1] = value;
         storageManager.setApiKeys(keys);
-        geminiApi.updateApiKeys(keys.filter(k => k));
+        geminiAPI.updateApiKeys(keys.filter(k => k));
     }
 
     validateApiKey(keyNumber) {
@@ -417,16 +417,16 @@ class EnhancedUIManager {
     }
 
     updateApiKeyStatuses() {
-        const keyStatus = geminiApi.getKeyStatuses();
+        const keyStatus = geminiAPI.getKeyStatusForUI();
         for (let i = 1; i <= 5; i++) {
             const statusElement = document.getElementById(`status-${i}`);
-            const status = keyStatus.statuses[i - 1];
+            const status = keyStatus[i - 1];
             
             statusElement.className = 'key-status';
-            if (status === 'active') {
+            if (status.active) {
                 statusElement.className += ' status-active';
                 statusElement.title = 'Key is active';
-            } else if (status === 'rate-limited') {
+            } else if (status.rateLimited) {
                 statusElement.className += ' status-rate-limited';
                 statusElement.title = 'Key is rate limited';
             } else {
@@ -710,16 +710,17 @@ class EnhancedUIManager {
                 
                 // Call Gemini API with streaming
                 let responseContent = '';
-                await geminiApi.generateResponse(
+                for await (const chunk of geminiAPI.streamGenerateContent(
                     context,
-                    (chunk) => {
-                        responseContent += chunk;
-                        this.streamingContent = responseContent;
-                        
-                        // Update UI with streaming content
-                        this.updateStreamingReasoning(iteration, responseContent);
-                    }
-                );
+                    '',
+                    storageManager.getSelectedModel()
+                )) {
+                    responseContent += chunk;
+                    this.streamingContent = responseContent;
+                    
+                    // Update UI with streaming content
+                    this.updateStreamingReasoning(iteration, responseContent);
+                }
                 
                 // Store reasoning step
                 const toolResults = await enhancedToolExecutor.executeTools(responseContent);
@@ -941,12 +942,13 @@ Verify this output meets all goals and is complete. If yes, output it as the fin
 `;
 
             let verifiedOutput = '';
-            await geminiApi.generateResponse(
+            for await (const chunk of geminiAPI.streamGenerateContent(
                 verificationContext,
-                (chunk) => {
-                    verifiedOutput += chunk;
-                }
-            );
+                '',
+                storageManager.getSelectedModel()
+            )) {
+                verifiedOutput += chunk;
+            }
             
             // Check if verification failed
             if (verifiedOutput.includes('<continue_reasoning>')) {
