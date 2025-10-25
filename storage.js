@@ -31,42 +31,53 @@ class StorageManager {
     setItem(key, value) {
         try {
             const serialized = JSON.stringify(value);
-            
-            // FIX: Check quota before writing
-            const currentSize = this.estimateStorageSize();
-            const newItemSize = new Blob([serialized]).size;
+
+            const newItemSize = serialized.length * 2;
             const QUOTA_LIMIT = 5 * 1024 * 1024; // 5MB
-            const WARNING_THRESHOLD = 0.8; // 80%
-            
-            if ((currentSize + newItemSize) / QUOTA_LIMIT > WARNING_THRESHOLD) {
-                console.warn(`⚠️ LocalStorage usage at ${Math.round((currentSize + newItemSize) / QUOTA_LIMIT * 100)}%`);
-                console.warn('Consider clearing old reasoning steps, code executions, or vault entries.');
+            const WARNING_THRESHOLD = 0.8;
+
+            if (newItemSize > 100000) {
+                const currentSize = this.estimateStorageSize();
+                const futureUsage = (currentSize + newItemSize) / QUOTA_LIMIT;
+
+                if (futureUsage > WARNING_THRESHOLD) {
+                    console.warn(`Warning: LocalStorage usage will be ${Math.round(futureUsage * 100)}%`);
+                    console.warn('Consider clearing old reasoning steps, code executions, or vault entries.');
+                }
+
+                if (futureUsage > 0.95) {
+                    const proceed = confirm(`Storage is ${Math.round(futureUsage * 100)}% full. Continue anyway?`);
+                    if (!proceed) {
+                        return false;
+                    }
+                }
             }
-            
+
             localStorage.setItem(key, serialized);
             return true;
         } catch (error) {
             if (error.name === 'QuotaExceededError') {
-                console.error('❌ localStorage quota exceeded');
-                alert('Storage quota exceeded. Please click "Reset All" to clear data or close some reasoning history.');
+                console.error('localStorage quota exceeded');
+                const currentSize = this.estimateStorageSize();
+                alert(`Storage quota exceeded (${Math.round(currentSize / 1024 / 1024)}MB used). Please click "Reset All" to clear data.`);
             } else {
                 console.error(`Error writing to localStorage key "${key}":`, error);
             }
             return false;
         }
     }
-
-// FIX: Add helper method to estimate storage size
-estimateStorageSize() {
-    let total = 0;
-    for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
-            total += (localStorage[key].length + key.length) * 2; // UTF-16 = 2 bytes per char
+    estimateStorageSize() {
+        let total = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith('gemini_lab_')) {
+                continue;
+            }
+            const value = localStorage.getItem(key) || '';
+            total += (value.length + key.length) * 2;
         }
+        return total;
     }
-    return total;
-}
-
     removeItem(key) {
         localStorage.removeItem(key);
     }
@@ -504,3 +515,5 @@ estimateStorageSize() {
 }
 
 export const storageManager = new StorageManager();
+
+
