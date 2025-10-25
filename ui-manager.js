@@ -1704,37 +1704,37 @@ I will now update it.
 When inside <execute_js>, use these Lab helpers to interact with the vault:
 
 **Reading Data:**
-- Lab.value(referenceOrId) ? Returns the actual JavaScript object (arrays, objects, etc.)
+- Lab.value(referenceOrId) → Returns the actual JavaScript object (arrays, objects, etc.)
   Use this when you need to manipulate data with .filter(), .map(), .find(), etc.
   
-- Lab.read(referenceOrId, mode='preview', {limit: 1200}) ? Returns string preview
+- Lab.read(referenceOrId, mode='preview', {limit: 1200}) → Returns string preview
   Use this for inspecting data or displaying summaries. Returns text, not objects.
   
-- Lab.info(referenceOrId) ? Returns metadata object (label, type, bytes, etc.)
+- Lab.info(referenceOrId) → Returns metadata object (label, type, bytes, etc.)
   Use this to check what kind of data is stored without loading it.
 
 **Writing Data:**
-- Lab.store(value, {label, tags, notes}) ? Stores data and returns [[vault:id]] token
+- Lab.store(value, {label, tags, notes}) → Stores data and returns [[vault:id]] token
   Always provide descriptive labels. Returns reference token immediately.
   
-- Lab.drop(referenceOrId) ? Deletes vault entry
+- Lab.drop(referenceOrId) → Deletes vault entry
   Use when data is no longer needed.
 
 **Listing Data:**
-- Lab.list() ? Returns array of all vault entries (metadata only, not full content)
+- Lab.list() → Returns array of all vault entries (metadata only, not full content)
   Use this to see what's available in the vault.
 
 **CRITICAL DISTINCTIONS:**
-? WRONG: let data = Lab.read('data-ABC'); data.filter(...) 
+❌ WRONG: let data = Lab.read('data-ABC'); data.filter(...) 
    Problem: Lab.read() returns a STRING, not an object
    
-? CORRECT: let data = Lab.value('data-ABC'); data.filter(...)
+✓ CORRECT: let data = Lab.value('data-ABC'); data.filter(...)
    This retrieves the actual JavaScript object
 
-? WRONG: await Lab.value('data-ABC')
+❌ WRONG: await Lab.value('data-ABC')
    Problem: Lab helpers are synchronous, never use await
    
-? CORRECT: const data = Lab.value('data-ABC');
+✓ CORRECT: const data = Lab.value('data-ABC');
 
 **Common Patterns:**
 // Load and process data
@@ -1753,11 +1753,11 @@ const names = adults.map(p => p.name);
 
 // Check what's in vault
 const allEntries = Lab.list();
-console.log(`Vault contains ${allEntries.length} items`);
+console.log(`Vault contains \${allEntries.length} items`);
 
 // Get metadata without loading full content
 const info = Lab.info('data-XYZ');
-console.log(`Type: ${info.type}, Size: ${info.bytes} bytes`);
+console.log(`Type: \${info.type}, Size: \${info.bytes} bytes`);
 
 **Helper Function Storage:**
 Functions are stored as metadata objects. To use them:
