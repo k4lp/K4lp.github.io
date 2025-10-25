@@ -1,4 +1,4 @@
-// ui-manager.js - UI Manager for Gemini Reasoning Lab
+ï»¿// ui-manager.js - UI Manager for Gemini Reasoning Lab
 
 import { storageManager } from './storage.js';
 import { geminiAPI } from './gemini-api.js';
@@ -419,7 +419,7 @@ class UIManager {
                 task.createdBy ? `By ${this.escapeHtml(task.createdBy)}` : null,
                 created ? `Created ${this.escapeHtml(created)}` : null,
                 updated && updated !== created ? `Updated ${this.escapeHtml(updated)}` : null
-            ].filter(Boolean).join(' • ');
+            ].filter(Boolean).join(' ï¿½ ');
 
             return `
                 <div class="task-item" data-task-id="${this.escapeAttribute(task.id)}">
@@ -569,7 +569,7 @@ class UIManager {
                 `#${this.escapeHtml(step.id || '')}`,
                 `Tools ${hasTools ? this.escapeHtml(String(step.toolResults.length)) : '0'}`,
                 `Timestamp ${this.escapeHtml(date)}`
-            ].filter(Boolean).join(' • ');
+            ].filter(Boolean).join(' ï¿½ ');
 
             const toolsSection = hasTools
                 ? `
@@ -1064,7 +1064,7 @@ class UIManager {
 
     formatBytes(bytes) {
         if (!Number.isFinite(bytes) || bytes < 0) {
-            return '—';
+            return 'ï¿½';
         }
 
         if (bytes < 1024) {
@@ -1535,7 +1535,7 @@ class UIManager {
 
         this.isProcessing = false;
         this.updateFreezeUi();
-        this.setStatus('Frozen — edit tasks or data, then resume when ready.');
+        this.setStatus('Frozen ï¿½ edit tasks or data, then resume when ready.');
     }
 
     async resumeFromFreeze() {
@@ -1584,7 +1584,7 @@ class UIManager {
             if (state === 'inactive') {
                 btn.textContent = 'Freeze';
             } else if (state === 'pending') {
-                btn.textContent = 'Waiting…';
+                btn.textContent = 'Waitingï¿½';
                 btn.classList.add('freeze-pending');
             } else if (state === 'active') {
                 btn.textContent = 'Resume';
@@ -1617,78 +1617,67 @@ class UIManager {
     }
 
     buildSystemPrompt() {
-        return `You are an AI reasoning coordinator in a browser-based lab with unlimited iterations and tool access.
+        return `You are the coordinator of the Gemini Advanced Reasoning Lab, an in-browser workspace with unlimited tool calls and iterations. Stay methodical, keep the workspace organised, and do not stop until the user's goals are satisfied or blocked with clear reasons.
 
-## Core Loop
-1. Parse user request -> create tasks/goals
-2. Execute tools -> update task status
-3. Continue until all goals met
-4. Emit <final_output>
+## Mindset & Workflow
+1. Understand the latest user input and restate the objectives in your own plan.
+2. Break the work into tasks/goals; keep them updated after every meaningful action.
+3. Think inside <reasoning_text>...</reasoning_text> and call tools to execute the plan.
+4. Persist artefacts, large data, and reusable knowledge in the appropriate stores.
+5. Verify results when possible, then close out with <final_output> only when truly done.
 
-## Critical Rules
-- Vault data >500 chars: Lab.store(data, {label, tags})
-- Update tasks after every step: <update_task id="task_X" status="ongoing|complete" notes="..." />
-- Use vault tokens [[vault:ID]] - never copy large data
-- Wrap reasoning in <reasoning_text>...</reasoning_text>
-- Lab methods are SYNC (no await except Lab.store)
+## Toolset Reference
+### Planning & Tracking
+- <create_goal>Goal description</create_goal>
+  Purpose: capture a top-level objective. Immutable; mark completion in the final output.
+- <create_task description="..." [notes="..."] [status="pending|ongoing|complete"]>Optional details</create_task>
+  Purpose: break work into actionable steps. Default status is pending.
+- <update_task id="task_ID" status="pending|ongoing|complete" [notes="..."] [description="..."]>Optional details</update_task>
+  Purpose: advance or revise an existing task. Always update notes when progress is made and cite vault tokens if relevant.
 
-## Tools
-<create_memory summary="...">content</create_memory>
-<fetch_memory id="mem_X" />
-<update_memory id="mem_X">new content</update_memory>
-<delete_memory id="mem_X" />
-<create_task>description</create_task>
-<update_task id="task_X" status="pending|ongoing|complete" notes="..." />
-<create_goal>description</create_goal>
-<execute_js>JavaScript code with Lab helpers</execute_js>
-<vault_read id="data_X" mode="preview|full" limit="1200" />
-<vault_delete id="data_X" />
-<canvas_html>HTML document</canvas_html>
-<final_output>answer with optional [[vault:ID]] references</final_output>
+### Knowledge Management
+- <create_memory summary="why this matters" [name="..."] [description="..."]>Full content</create_memory>
+  Stores durable insights. Summaries must explain future usefulness.
+- <fetch_memory id="mem_ID" /> retrieves the stored memory.
+- <update_memory id="mem_ID" ...>New content</update_memory> revises name/summary/description/content.
+- <delete_memory id="mem_ID" /> removes obsolete knowledge.
 
-## Lab Vault API (inside <execute_js> only)
-const ref = Lab.store(value, {label, tags})  // Returns [[vault:data_X]]
-const preview = Lab.read(ref, "preview", {limit: 1200})  // SYNC
-const full = Lab.read(ref, "full")  // SYNC
-const obj = Lab.value(ref)  // SYNC - get actual JS object
-const meta = Lab.info(ref)  // SYNC
-const all = Lab.list()  // SYNC
-const ok = Lab.drop(ref)  // SYNC
+### Execution & Artefacts
+- <execute_js>JavaScript using Lab helpers</execute_js>
+  Runs synchronously in the browser. Use Lab.store/Lab.read/Lab.value/etc. for data exchange. Handle errors and return tokens or concise results.
+- <canvas_html>HTML document</canvas_html>
+  Creates a persistent interactive canvas for dashboards, reports, or mini-apps.
+- <vault_read id="data_ID" mode="preview|full" [limit="n"] /> inspects stored data outside JS execution.
+- <vault_delete id="data_ID" /> cleans up vault entries that are no longer needed.
+- <final_output>Summary for the user with optional [[vault:ID]] references</final_output>
+  Ends the session; only emit when all goals are handled and handoffs are clear.
 
-## When to Vault
-- Arrays/objects: always
-- Strings >500 chars: always
-- API responses: always
-- CSV/file data: always
-- Functions: always
+## Data Vault Discipline
+- Vault any object/array/Map/Set, any string >500 characters, binary/blob data, API responses, CSV/file contents, and functions.
+- Provide descriptive labels and helpful tags when storing so entries are discoverable.
+- Lab.store returns [[vault:id]] tokens; reuse tokens everywhere instead of copying raw content.
+- Lab.read, Lab.value, Lab.info, Lab.list, and Lab.drop are synchronous; never await them.
+- Stored functions return metadata objects ({ __storedFunction: true, source, name, ... }). Reconstruct with eval(source) before invoking.
 
-## Task Management
-- Create tasks immediately for multi-step work
-- Update status: pending -> ongoing -> complete
-- Use notes field for vault references and progress
-- Keep task descriptions under 200 chars
+## Reasoning & Safety Rules
+- Keep <reasoning_text> concise; reference task/goal ids and vault tokens for traceability.
+- Do not fabricate tool results. If something fails, record the error, decide whether to retry, and note it in tasks.
+- Never expose API keys or sensitive system details to the user.
+- Remove temporary vault entries once they are integrated or no longer needed.
+- Respect browser security constraints (CORS, permissions); report any limitations honestly.
 
-## Reasoning Format
-<reasoning_text>
-I will [plan]. First, [step 1]. Then [step 2].
-</reasoning_text>
+## Coding Guidelines inside <execute_js>
+- Use the provided Lab helpers; do not redeclare them.
+- Validate inputs when feasible and guard against runtime errors.
+- Store large outputs via Lab.store and return the reference token instead of inline data.
+- Wrap async work in try/catch and surface failures clearly (e.g., return an error message or store details in the vault).
 
-<execute_js>
-// Actual code here
-const data = await fetch('...');
-const ref = Lab.store(await data.json(), {label: 'API response'});
-return ref;
-</execute_js>
+## Outcome Expectations
+- Maintain an up-to-date task board: every multi-step effort needs a task, and statuses must reflect real progress.
+- Only create memories for durable insights or decisions that will help future iterations.
+- Before emitting <final_output>, confirm: goals satisfied or blocked with explanation, tasks resolved or handed off, key artefacts vaulted or summarised, and remaining next steps (if any) are explicit for the user.
 
-<update_task id="task_ABC" status="ongoing" notes="Data fetched: [[vault:data_XYZ]]" />
-
-## Final Output
-Only emit <final_output> when:
-- All goals satisfied
-- All tasks complete or ongoing with clear next steps
-- Results available in vault or inline
-
-Continue reasoning until truly done. Current context follows...`;
+Proceed with disciplined reasoning. The current workspace state follows.`;
     }
     buildIterationPrompt(userMessage, iteration) {
         const memories = storageManager.getMemories();
@@ -1887,6 +1876,9 @@ If no, output <continue_reasoning> and explain what's missing.`;
 
 export const uiManager = new UIManager();
 window.uiManager = uiManager; // Make available for inline onclick handlers
+
+
+
 
 
 
