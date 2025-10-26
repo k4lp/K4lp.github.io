@@ -21,7 +21,8 @@
     VAULT: 'gdrs_vault',
     FINAL_OUTPUT: 'gdrs_final_output',
     REASONING_LOG: 'gdrs_reasoning_log',
-    CURRENT_QUERY: 'gdrs_current_query'
+    CURRENT_QUERY: 'gdrs_current_query',
+    EXECUTION_LOG: 'gdrs_execution_log'
   };
 
   // Default data structures
@@ -41,7 +42,7 @@
   };
 
   /**
-   * SYSTEM PROMPT - Enhanced for better LLM interaction
+   * ENHANCED SYSTEM PROMPT with JS Execution and Vault Instructions
    */
   const SYSTEM_PROMPT = `# GEMINI DEEP RESEARCH SYSTEM - LLM INTERFACE
 
@@ -50,7 +51,7 @@ You are the core reasoning engine of the Gemini Deep Research System (GDRS), a b
 ## CRITICAL RULES
 
 1. **ALL STORAGE OPERATIONS MUST BE WRAPPED IN REASONING BLOCKS**:
-   All memory, task, goal, and vault operations MUST occur within:
+   All memory, task, goal, vault, and JavaScript execution operations MUST occur within:
    
    {{<reasoning_text>}}
    ... your operations here ...
@@ -113,11 +114,59 @@ function processData(input) {
 Types: "code" | "text" | "data"
 For limit: use number for character limit or "full-length" for complete content
 
+### **JAVASCRIPT EXECUTION - CRITICAL FEATURE**
+You can execute JavaScript code directly in the browser environment using:
+\`\`\`
+{{<reasoning_text>}}
+{{<js_execute>}}
+// Unrestricted JavaScript execution
+console.log("Analyzing data...");
+
+// You can access vault content using references
+const code = {{<vaultref id="my-algorithm" />}};
+
+// You can make network requests, manipulate DOM, use any Web APIs
+fetch('https://api.example.com/data')
+  .then(res => res.json())
+  .then(data => console.log(data));
+
+// Access local storage, execute complex calculations
+const results = localStorage.getItem('gdrs_tasks');
+const analysis = JSON.parse(results || '[]');
+
+// Return data for the system to process
+return { 
+  success: true, 
+  results: analysis,
+  timestamp: new Date().toISOString() 
+};
+{{</js_execute>}}
+{{</reasoning_text>}}
+\`\`\`
+
+**JavaScript Execution Features:**
+- Full browser JavaScript environment (no sandboxing)
+- Complete Web API access (fetch, localStorage, DOM manipulation)
+- Network requests allowed to any endpoint
+- Can import external libraries via dynamic imports or script tags
+- Vault references ({{<vaultref id="..." />}}) are automatically substituted
+- Execution results and console output are returned to you in the next iteration
+- Use this extensively for data processing, API calls, complex calculations
+- **MAXIMIZE USE** - JavaScript execution is encouraged for accuracy and data handling
+
 ### Vault References (Use anywhere)
 \`\`\`
 {{<vaultref id="dv_unique_id" />}}
 \`\`\`
 This gets substituted with actual vault content during code execution and final output.
+
+### Vault Read Requests
+To read large vault content in reasoning:
+\`\`\`
+{{<reasoning_text>}}
+{{<datavault id="large_data" action="request_read" limit="full-length" />}}
+{{</reasoning_text>}}
+\`\`\`
 
 ## REASONING WORKFLOW
 
@@ -126,16 +175,32 @@ This gets substituted with actual vault content during code execution and final 
 3. **Context Building**: Establish memories for important information and goals for success criteria
 4. **Iterative Processing**: 
    - Work through tasks systematically
+   - **USE JAVASCRIPT EXECUTION** frequently for calculations, data processing, API calls
    - Update task status and notes as you progress
    - Store important findings in memory
    - Use vault for large code/data that needs to be reused
 5. **Goal Verification**: Ensure all goals are met before completion
 6. **Final Output**: Provide comprehensive results using vault references as needed
 
-Always make concrete progress each iteration. Focus on moving tasks from "pending" to "ongoing" to "finished" while building toward goal completion.`;
+**CRITICAL INSTRUCTION**: Always make concrete progress each iteration. Focus on moving tasks from "pending" to "ongoing" to "finished" while building toward goal completion. Use JavaScript execution liberally to maintain accuracy in calculations and handle large data efficiently.
+
+## FINAL OUTPUT GENERATION
+
+When all goals are complete, generate a comprehensive final output using:
+\`\`\`
+{{<reasoning_text>}}
+{{<final_output>}}
+<h1>Research Analysis Results</h1>
+<p>Comprehensive findings with vault references: {{<vaultref id="results_summary" />}}</p>
+<div>{{<vaultref id="detailed_analysis" />}}</div>
+{{</final_output>}}
+{{</reasoning_text>}}
+\`\`\`
+
+The final output will be rendered as HTML in the user interface.`;
 
   /**
-   * STORAGE LAYER
+   * STORAGE LAYER - Enhanced with Execution Log
    */
   const Storage = {
     // Keypool management
@@ -236,6 +301,23 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
     },
     saveCurrentQuery(query) {
       localStorage.setItem(LS_KEYS.CURRENT_QUERY, query || '');
+    },
+
+    // NEW: Execution log storage
+    loadExecutionLog() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.EXECUTION_LOG), []) || [];
+    },
+    saveExecutionLog(log) {
+      localStorage.setItem(LS_KEYS.EXECUTION_LOG, JSON.stringify(log));
+    },
+    
+    appendExecutionResult(result) {
+      const log = this.loadExecutionLog();
+      log.push({
+        timestamp: nowISO(),
+        ...result
+      });
+      this.saveExecutionLog(log);
     }
   };
 
@@ -355,7 +437,7 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
   };
 
   /**
-   * REASONING TEXT PARSER
+   * ENHANCED REASONING TEXT PARSER with JS Execution Support
    */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
@@ -368,12 +450,36 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
       return blocks;
     },
 
+    // NEW: Extract JavaScript execution blocks
+    extractJSExecutionBlocks(text) {
+      const blocks = [];
+      const regex = /{{<js_execute>}}([\s\S]*?){{<\/js_execute>}}/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        blocks.push(match[1].trim());
+      }
+      return blocks;
+    },
+
+    // NEW: Extract final output blocks  
+    extractFinalOutputBlocks(text) {
+      const blocks = [];
+      const regex = /{{<final_output>}}([\s\S]*?){{<\/final_output>}}/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        blocks.push(match[1].trim());
+      }
+      return blocks;
+    },
+
     parseOperations(blockText) {
       const operations = {
         memories: [],
         tasks: [],
         goals: [],
-        vault: []
+        vault: [],
+        jsExecute: [],
+        finalOutput: []
       };
 
       // Parse memory operations
@@ -411,6 +517,14 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
         attrs.content = match[2].trim();
         operations.vault.push(attrs);
       }
+
+      // NEW: Parse JavaScript execution blocks
+      const jsExecuteBlocks = this.extractJSExecutionBlocks(blockText);
+      operations.jsExecute = jsExecuteBlocks;
+
+      // NEW: Parse final output blocks
+      const finalOutputBlocks = this.extractFinalOutputBlocks(blockText);
+      operations.finalOutput = finalOutputBlocks;
 
       return operations;
     },
@@ -505,6 +619,22 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
         if (op.delete) {
           const vault = Storage.loadVault().filter(v => v.identifier !== op.id);
           Storage.saveVault(vault);
+        } else if (op.action === 'request_read') {
+          // Handle vault read requests
+          const vault = Storage.loadVault();
+          const entry = vault.find(v => v.identifier === op.id);
+          if (entry) {
+            let content = entry.content;
+            if (op.limit && op.limit !== 'full-length') {
+              const limit = parseInt(op.limit) || 100;
+              content = content.substring(0, limit) + (content.length > limit ? '...' : '');
+            }
+            // Store read result for next iteration context
+            const readResult = `VAULT_READ[${op.id}]: ${content}`;
+            const logEntries = Storage.loadReasoningLog();
+            logEntries.push(`=== VAULT READ ===\n${readResult}`);
+            Storage.saveReasoningLog(logEntries);
+          }
         } else if (op.id && op.content !== undefined) {
           const vault = Storage.loadVault();
           const existing = vault.find(v => v.identifier === op.id);
@@ -524,11 +654,22 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
           Storage.saveVault(vault);
         }
       });
+
+      // NEW: Execute JavaScript blocks
+      operations.jsExecute.forEach(code => {
+        JSExecutor.executeCode(code);
+      });
+
+      // NEW: Handle final output
+      operations.finalOutput.forEach(htmlContent => {
+        const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
+        Storage.saveFinalOutput(processedHTML);
+      });
     }
   };
 
   /**
-   * VAULT MANAGER
+   * ENHANCED VAULT MANAGER with Read Request Support
    */
   const VaultManager = {
     resolveVaultRefsInText(inputText) {
@@ -548,6 +689,114 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
     getVaultSummary() {
       const vault = Storage.loadVault();
       return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description}`).join('\n');
+    },
+
+    // NEW: Get vault entry for read operations
+    getVaultEntry(id, limit = null) {
+      const vault = Storage.loadVault();
+      const entry = vault.find(v => v.identifier === id);
+      if (!entry) return null;
+      
+      let content = entry.content;
+      if (limit && limit !== 'full-length') {
+        const limitNum = parseInt(limit) || 100;
+        content = content.substring(0, limitNum) + (content.length > limitNum ? '...' : '');
+      }
+      
+      return { ...entry, content };
+    }
+  };
+
+  /**
+   * NEW: JAVASCRIPT EXECUTOR for LLM-generated code
+   */
+  const JSExecutor = {
+    executeCode(rawCode) {
+      try {
+        // Resolve vault references in the code
+        const expandedCode = VaultManager.resolveVaultRefsInText(rawCode);
+        
+        // Capture console output
+        const logs = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = (...args) => {
+          const message = args.map(arg => {
+            if (typeof arg === 'object') {
+              try { return JSON.stringify(arg, null, 2); } catch { return String(arg); }
+            }
+            return String(arg);
+          }).join(' ');
+          logs.push({ type: 'log', message });
+          originalLog.apply(console, args);
+        };
+        
+        console.error = (...args) => {
+          const message = args.map(arg => String(arg)).join(' ');
+          logs.push({ type: 'error', message });
+          originalError.apply(console, args);
+        };
+        
+        console.warn = (...args) => {
+          const message = args.map(arg => String(arg)).join(' ');
+          logs.push({ type: 'warn', message });
+          originalWarn.apply(console, args);
+        };
+
+        // Execute the code
+        const fn = new Function(expandedCode);
+        const result = fn();
+        
+        // Restore console functions
+        console.log = originalLog;
+        console.error = originalError;
+        console.warn = originalWarn;
+        
+        // Store execution result
+        const executionResult = {
+          success: true,
+          code: expandedCode,
+          result: result,
+          logs: logs,
+          timestamp: nowISO()
+        };
+        
+        Storage.appendExecutionResult(executionResult);
+        
+        // Add to reasoning log for LLM feedback
+        const logEntries = Storage.loadReasoningLog();
+        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`);
+        Storage.saveReasoningLog(logEntries);
+        
+        console.log('✓ JavaScript execution completed successfully');
+        return executionResult;
+        
+      } catch (error) {
+        // Restore console functions on error
+        console.log = console.log;
+        console.error = console.error;
+        console.warn = console.warn;
+        
+        const executionResult = {
+          success: false,
+          code: rawCode,
+          error: error.message,
+          stack: error.stack,
+          timestamp: nowISO()
+        };
+        
+        Storage.appendExecutionResult(executionResult);
+        
+        // Add to reasoning log for LLM feedback
+        const logEntries = Storage.loadReasoningLog();
+        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: false\nERROR: ${error.message}\nSTACK: ${error.stack}`);
+        Storage.saveReasoningLog(logEntries);
+        
+        console.error('✗ JavaScript execution failed:', error);
+        return executionResult;
+      }
     }
   };
 
@@ -687,7 +936,7 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
   };
 
   /**
-   * REASONING ENGINE
+   * ENHANCED REASONING ENGINE with Execution Log Integration
    */
   const ReasoningEngine = {
     buildContextPrompt(query, iteration) {
@@ -696,6 +945,7 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
       const memory = Storage.loadMemory();
       const vaultSummary = VaultManager.getVaultSummary();
       const reasoningLog = Storage.loadReasoningLog();
+      const executionLog = Storage.loadExecutionLog();
 
       const tasksText = tasks.map(t => 
         `- [${t.identifier}] ${t.heading} (${t.status}): ${t.content}${t.notes ? ` | Notes: ${t.notes}` : ''}`
@@ -710,6 +960,11 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
       ).join('\n');
 
       const recentLog = reasoningLog.slice(-3).join('\n\n---\n\n');
+      
+      // NEW: Include recent execution results
+      const recentExecutions = executionLog.slice(-2).map(exec => 
+        `[${exec.timestamp}] SUCCESS: ${exec.success}, ${exec.success ? 'RESULT: ' + JSON.stringify(exec.result) : 'ERROR: ' + exec.error}`
+      ).join('\n');
 
       return `${SYSTEM_PROMPT}
 
@@ -729,6 +984,9 @@ ${memoryText || 'None yet'}
 **Vault Index:**
 ${vaultSummary || 'Empty'}
 
+**Recent JavaScript Executions:**
+${recentExecutions || 'None yet'}
+
 **Recent Reasoning Log:**
 ${recentLog || 'None yet'}
 
@@ -736,7 +994,7 @@ ${recentLog || 'None yet'}
 
 ---
 
-Analyze the current state and take concrete action to advance toward goal completion. Use the reasoning block format for all storage operations. Focus on making measurable progress this iteration.`;
+Analyze the current state and take concrete action to advance toward goal completion. Use JavaScript execution frequently for calculations, data processing, and API calls. Use the reasoning block format for all storage operations. Focus on making measurable progress this iteration.`;
     },
 
     checkGoalsComplete() {
@@ -752,7 +1010,7 @@ Analyze the current state and take concrete action to advance toward goal comple
   };
 
   /**
-   * CODE EXECUTOR
+   * CODE EXECUTOR (Manual execution UI)
    */
   const CodeExecutor = {
     run() {
@@ -903,6 +1161,13 @@ Analyze the current state and take concrete action to advance toward goal comple
       const memory = Storage.loadMemory();
       const vault = Storage.loadVault();
 
+      // Check if there's already a final output from LLM
+      const currentOutput = Storage.loadFinalOutput();
+      if (currentOutput.html && currentOutput.html !== '<p>Report will render here after goal validation.</p>') {
+        // LLM has already provided final output
+        return;
+      }
+
       // Build comprehensive final output
       const completedTasks = tasks.filter(t => t.status === 'finished');
       const goalsSummary = goals.map(g => `**${g.heading}**: ${g.content}`).join('\n');
@@ -1012,6 +1277,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       Storage.saveTasks(initialTasks);
       Storage.saveGoals([initialGoal]);
       Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nDecomposed into ${subtasks.length} tasks`]);
+      Storage.saveExecutionLog([]); // Clear execution log
 
       // Clear final output
       Storage.saveFinalOutput('');
@@ -1407,6 +1673,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       Storage.saveFinalOutput('');
       Storage.saveReasoningLog([]);
       Storage.saveCurrentQuery('');
+      Storage.saveExecutionLog([]);
       console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
     }
 
@@ -1452,6 +1719,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       CodeExecutor,
       LoopController,
       Renderer,
+      JSExecutor, // NEW
       boot
     });
   }
