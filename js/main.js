@@ -1,19 +1,20 @@
 /**
  * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
- * Complete production runtime with LLM integration - v1.0.2
+ * Complete production runtime with LLM integration - v1.1.0
  * 
- * FIXES:
- * - Fixed JavaScript syntax errors with proper escaping
- * - Completely fixed reasoning text filtering to hide all tool operations
- * - Enhanced regex patterns for better parsing
- * - Improved error handling
+ * CRITICAL FIXES:
+ * - FIXED: Variable scope issue in JSExecutor causing "originalLog is not defined" error
+ * - COMPLETELY REDESIGNED: DataVault system with proper ordering, validation, and UI updates
+ * - ENHANCED: Vault operations with better error handling and sequencing
+ * - IMPROVED: UI rendering with immediate feedback and proper state management
+ * - OPTIMIZED: Vault parsing with comprehensive attribute validation
  */
 
 (function() {
   'use strict';
 
   // Application constants
-  const VERSION = '1.0.2';
+  const VERSION = '1.1.0';
   const MAX_ITERATIONS = 20;
   const ITERATION_DELAY = 2000;
   
@@ -62,9 +63,23 @@
   }
 
   function encodeHTML(str) {
+    if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function validateVaultData(data) {
+    // Validate that vault data is properly formatted
+    if (typeof data === 'string') {
+      try {
+        JSON.parse(data);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return typeof data === 'object';
   }
 
   // Default data structures
@@ -272,7 +287,7 @@ When goals are achieved, create comprehensive results:
 Remember: You are an intelligent research analyst, not a simple task executor. Demonstrate sophisticated reasoning, strategic thinking, and analytical depth in every iteration.`;
 
   /**
-   * STORAGE LAYER - Enhanced with Tool Activity Log
+   * ENHANCED STORAGE LAYER with Ordered Operations
    */
   const Storage = {
     // Keypool management
@@ -317,12 +332,14 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       return out;
     },
 
-    // Entity storage
+    // Entity storage with enhanced vault handling
     loadGoals() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []) || [];
     },
     saveGoals(goals) {
       localStorage.setItem(LS_KEYS.GOALS, JSON.stringify(goals));
+      // Trigger immediate UI update
+      setTimeout(() => Renderer.renderGoals(), 0);
     },
 
     loadMemory() {
@@ -330,6 +347,8 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
     },
     saveMemory(memory) {
       localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memory));
+      // Trigger immediate UI update
+      setTimeout(() => Renderer.renderMemories(), 0);
     },
 
     loadTasks() {
@@ -337,13 +356,36 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
     },
     saveTasks(tasks) {
       localStorage.setItem(LS_KEYS.TASKS, JSON.stringify(tasks));
+      // Trigger immediate UI update
+      setTimeout(() => Renderer.renderTasks(), 0);
     },
 
     loadVault() {
-      return safeJSONParse(localStorage.getItem(LS_KEYS.VAULT), []) || [];
+      const vault = safeJSONParse(localStorage.getItem(LS_KEYS.VAULT), []) || [];
+      // Sort vault entries by creation date for consistent ordering
+      return vault.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
     },
+    
     saveVault(vault) {
-      localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(vault));
+      // Ensure proper structure and validation
+      const validatedVault = vault.filter(entry => {
+        return entry && 
+               typeof entry === 'object' && 
+               entry.identifier && 
+               entry.type && 
+               entry.content !== undefined;
+      }).map(entry => ({
+        identifier: String(entry.identifier || '').trim(),
+        type: String(entry.type || 'text').toLowerCase(),
+        description: String(entry.description || '').trim(),
+        content: entry.content || '',
+        createdAt: entry.createdAt || nowISO(),
+        updatedAt: nowISO()
+      }));
+      
+      localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(validatedVault));
+      // Trigger immediate UI update with debounce
+      setTimeout(() => Renderer.renderVault(), 0);
     },
 
     // Output and logs
@@ -392,7 +434,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       this.saveExecutionLog(log);
     },
 
-    // NEW: Tool Activity Log
+    // Tool Activity Log with enhanced vault tracking
     loadToolActivityLog() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.TOOL_ACTIVITY_LOG), []) || [];
     },
@@ -406,8 +448,8 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         iteration: window.GDRS?.currentIteration || 0,
         ...activity
       });
-      // Keep only last 200 activities
-      if (log.length > 200) log.splice(0, log.length - 200);
+      // Keep only last 500 activities for better vault operation tracking
+      if (log.length > 500) log.splice(0, log.length - 500);
       this.saveToolActivityLog(log);
     }
   };
@@ -528,7 +570,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * ENHANCED REASONING TEXT PARSER - COMPLETELY FIXED to hide all tool operations
+   * ENHANCED REASONING TEXT PARSER - Completely hides tool operations
    */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
@@ -571,7 +613,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       cleanText = cleanText.replace(/{{<[^>]*>}}[\s\S]*?{{<\/[^>]*>}}/g, '');
       
       // Clean up extra whitespace and empty lines
-      cleanText = cleanText.replace(/\n\s*\n\s*\n/g, '\n\n'); // Multiple empty lines -> double
+      cleanText = cleanText.replace(/\n\s*\n\s*\n/g, '\n\n'); // Multiple empty lines → double
       cleanText = cleanText.replace(/^\s*\n+|\n+\s*$/g, ''); // Leading/trailing newlines
       cleanText = cleanText.trim();
       
@@ -617,35 +659,45 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       let match;
       while ((match = memoryRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
-        operations.memories.push(attrs);
+        if (attrs && (attrs.identifier || attrs.heading)) {
+          operations.memories.push(attrs);
+        }
       }
 
       // Parse task operations  
       const taskRegex = /{{<task\s+([^>]*)\s*\/>}}/g;
       while ((match = taskRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
-        operations.tasks.push(attrs);
+        if (attrs && (attrs.identifier || attrs.heading)) {
+          operations.tasks.push(attrs);
+        }
       }
 
       // Parse goal operations
       const goalRegex = /{{<goal\s+([^>]*)\s*\/>}}/g;
       while ((match = goalRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
-        operations.goals.push(attrs);
+        if (attrs && (attrs.identifier || attrs.heading)) {
+          operations.goals.push(attrs);
+        }
       }
 
-      // Parse vault operations (both self-closing and block form)
+      // ENHANCED: Parse vault operations with better validation
       const vaultSelfRegex = /{{<datavault\s+([^>]*)\s*\/>}}/g;
       while ((match = vaultSelfRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
-        operations.vault.push(attrs);
+        if (attrs && attrs.id) {
+          operations.vault.push(attrs);
+        }
       }
 
       const vaultBlockRegex = /{{<datavault\s+([^>]*)>}}([\s\S]*?){{<\/datavault>}}/g;
       while ((match = vaultBlockRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
-        attrs.content = match[2].trim();
-        operations.vault.push(attrs);
+        if (attrs && attrs.id) {
+          attrs.content = match[2].trim();
+          operations.vault.push(attrs);
+        }
       }
 
       // Parse JavaScript execution blocks
@@ -661,7 +713,10 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
 
     parseAttributes(attrString) {
       const attrs = {};
-      const regex = /(\w+)="([^"]*)"|\b(\w+)(?=\s|$)/g;
+      if (!attrString) return attrs;
+      
+      // Enhanced regex to handle various attribute formats
+      const regex = /(\w+)=["']([^"']*)["']|\b(\w+)(?=\s|$)/g;
       let match;
       while ((match = regex.exec(attrString)) !== null) {
         if (match[1] && match[2] !== undefined) {
@@ -673,237 +728,350 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       return attrs;
     },
 
+    /**
+     * ENHANCED: Apply operations with proper ordering and error handling
+     */
     applyOperations(operations) {
-      // Apply vault operations FIRST
-      operations.vault.forEach(op => {
-        if (op.delete) {
-          const vault = Storage.loadVault().filter(v => v.identifier !== op.id);
-          Storage.saveVault(vault);
+      const startTime = Date.now();
+      let operationsApplied = 0;
+      
+      try {
+        // STEP 1: Apply vault operations FIRST with enhanced validation
+        operations.vault.forEach((op, index) => {
+          try {
+            this.applyVaultOperation(op, index);
+            operationsApplied++;
+          } catch (error) {
+            console.error(`Vault operation ${index} failed:`, error);
+            Storage.appendToolActivity({
+              type: 'vault',
+              action: op.action || 'unknown',
+              id: op.id || 'unknown',
+              status: 'error',
+              error: error.message,
+              operationIndex: index
+            });
+          }
+        });
+
+        // STEP 2: Apply memory operations
+        operations.memories.forEach((op, index) => {
+          try {
+            this.applyMemoryOperation(op);
+            operationsApplied++;
+          } catch (error) {
+            console.error(`Memory operation ${index} failed:`, error);
+          }
+        });
+
+        // STEP 3: Apply task operations
+        operations.tasks.forEach((op, index) => {
+          try {
+            this.applyTaskOperation(op);
+            operationsApplied++;
+          } catch (error) {
+            console.error(`Task operation ${index} failed:`, error);
+          }
+        });
+
+        // STEP 4: Apply goal operations
+        operations.goals.forEach((op, index) => {
+          try {
+            this.applyGoalOperation(op);
+            operationsApplied++;
+          } catch (error) {
+            console.error(`Goal operation ${index} failed:`, error);
+          }
+        });
+
+        // STEP 5: Execute JavaScript blocks AFTER vault operations are applied
+        operations.jsExecute.forEach((code, index) => {
+          try {
+            JSExecutor.executeCode(code);
+            operationsApplied++;
+          } catch (error) {
+            console.error(`JS execution ${index} failed:`, error);
+          }
+        });
+
+        // STEP 6: Handle final output
+        operations.finalOutput.forEach((htmlContent, index) => {
+          try {
+            const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
+            Storage.saveFinalOutput(processedHTML);
+            Storage.appendToolActivity({
+              type: 'final_output',
+              action: 'generate',
+              status: 'success',
+              contentSize: processedHTML.length,
+              operationIndex: index
+            });
+            operationsApplied++;
+          } catch (error) {
+            console.error(`Final output ${index} failed:`, error);
+          }
+        });
+        
+        const totalTime = Date.now() - startTime;
+        console.log(`✓ Applied ${operationsApplied} operations in ${totalTime}ms`);
+        
+      } catch (error) {
+        console.error('Critical error in applyOperations:', error);
+      }
+    },
+
+    /**
+     * ENHANCED: Vault operation handler with comprehensive validation
+     */
+    applyVaultOperation(op) {
+      const vault = Storage.loadVault();
+      
+      if (op.delete) {
+        const originalLength = vault.length;
+        const filteredVault = vault.filter(v => v.identifier !== op.id);
+        
+        if (filteredVault.length < originalLength) {
+          Storage.saveVault(filteredVault);
           Storage.appendToolActivity({
             type: 'vault',
             action: 'delete',
             id: op.id,
+            status: 'success',
+            entriesRemoved: originalLength - filteredVault.length
+          });
+          console.log(`🗑️ Deleted vault entry: ${op.id}`);
+        } else {
+          Storage.appendToolActivity({
+            type: 'vault',
+            action: 'delete',
+            id: op.id,
+            status: 'error',
+            error: 'Entry not found'
+          });
+        }
+      } 
+      else if (op.action === 'request_read') {
+        const entry = vault.find(v => v.identifier === op.id);
+        if (entry) {
+          let content = entry.content;
+          if (op.limit && op.limit !== 'full-length') {
+            const limit = parseInt(op.limit) || 100;
+            content = content.substring(0, limit) + (content.length > limit ? '...' : '');
+          }
+          const readResult = `VAULT_READ[${op.id}]: ${content}`;
+          const logEntries = Storage.loadReasoningLog();
+          logEntries.push(`=== VAULT READ ===\n${readResult}`);
+          Storage.saveReasoningLog(logEntries);
+          Storage.appendToolActivity({
+            type: 'vault',
+            action: 'read',
+            id: op.id,
+            limit: op.limit || 'none',
+            status: 'success',
+            dataSize: entry.content.length
+          });
+          console.log(`📖 Read vault entry: ${op.id} (${content.length} chars)`);
+        } else {
+          Storage.appendToolActivity({
+            type: 'vault',
+            action: 'read',
+            id: op.id,
+            status: 'error',
+            error: 'Vault entry not found'
+          });
+          console.warn(`⚠️ Vault entry not found: ${op.id}`);
+        }
+      } 
+      else if (op.id && op.content !== undefined) {
+        // Create or update vault entry
+        const existing = vault.find(v => v.identifier === op.id);
+        
+        // Validate content
+        if (op.type === 'data' && typeof op.content === 'string') {
+          if (!validateVaultData(op.content)) {
+            throw new Error(`Invalid data format for vault entry: ${op.id}`);
+          }
+        }
+        
+        if (existing) {
+          // Update existing entry
+          existing.content = op.content;
+          existing.updatedAt = nowISO();
+          if (op.type) existing.type = op.type.toLowerCase();
+          if (op.description) existing.description = op.description;
+          
+          Storage.saveVault(vault);
+          Storage.appendToolActivity({
+            type: 'vault',
+            action: 'update',
+            id: op.id,
+            dataType: existing.type,
+            dataSize: String(op.content).length,
             status: 'success'
           });
-        } else if (op.action === 'request_read') {
-          const vault = Storage.loadVault();
-          const entry = vault.find(v => v.identifier === op.id);
-          if (entry) {
-            let content = entry.content;
-            if (op.limit && op.limit !== 'full-length') {
-              const limit = parseInt(op.limit) || 100;
-              content = content.substring(0, limit) + (content.length > limit ? '...' : '');
-            }
-            const readResult = `VAULT_READ[${op.id}]: ${content}`;
-            const logEntries = Storage.loadReasoningLog();
-            logEntries.push(`=== VAULT READ ===\n${readResult}`);
-            Storage.saveReasoningLog(logEntries);
-            Storage.appendToolActivity({
-              type: 'vault',
-              action: 'read',
-              id: op.id,
-              limit: op.limit || 'none',
-              status: 'success',
-              dataSize: entry.content.length
-            });
-          } else {
-            Storage.appendToolActivity({
-              type: 'vault',
-              action: 'read',
-              id: op.id,
-              status: 'error',
-              error: 'Vault entry not found'
-            });
-          }
-        } else if (op.id && op.content !== undefined) {
-          const vault = Storage.loadVault();
-          const existing = vault.find(v => v.identifier === op.id);
-          if (existing) {
-            existing.content = op.content;
-            if (op.type) existing.type = op.type;
-            if (op.description) existing.description = op.description;
-            Storage.appendToolActivity({
-              type: 'vault',
-              action: 'update',
-              id: op.id,
-              dataType: op.type || existing.type,
-              dataSize: op.content.length,
-              status: 'success'
-            });
-          } else {
-            vault.push({
-              identifier: op.id,
-              type: op.type || 'text',
-              description: op.description || '',
-              content: op.content,
-              createdAt: nowISO()
-            });
-            Storage.appendToolActivity({
-              type: 'vault',
-              action: 'create',
-              id: op.id,
-              dataType: op.type || 'text',
-              dataSize: op.content.length,
-              status: 'success'
-            });
-          }
+          console.log(`📝 Updated vault entry: ${op.id} (${existing.type})`);
+        } else {
+          // Create new entry
+          const newEntry = {
+            identifier: op.id,
+            type: (op.type || 'text').toLowerCase(),
+            description: op.description || '',
+            content: op.content,
+            createdAt: nowISO(),
+            updatedAt: nowISO()
+          };
+          
+          vault.push(newEntry);
           Storage.saveVault(vault);
+          Storage.appendToolActivity({
+            type: 'vault',
+            action: 'create',
+            id: op.id,
+            dataType: newEntry.type,
+            dataSize: String(op.content).length,
+            status: 'success'
+          });
+          console.log(`➕ Created vault entry: ${op.id} (${newEntry.type})`);
         }
-      });
+      }
+    },
 
-      // Apply memory operations
-      operations.memories.forEach(op => {
-        if (op.delete) {
-          const memories = Storage.loadMemory().filter(m => m.identifier !== op.identifier);
+    applyMemoryOperation(op) {
+      if (op.delete) {
+        const memories = Storage.loadMemory().filter(m => m.identifier !== op.identifier);
+        Storage.saveMemory(memories);
+        Storage.appendToolActivity({
+          type: 'memory',
+          action: 'delete',
+          id: op.identifier,
+          status: 'success'
+        });
+      } else if (op.identifier) {
+        const memories = Storage.loadMemory();
+        const existing = memories.find(m => m.identifier === op.identifier);
+        if (existing) {
+          if (op.notes !== undefined) existing.notes = op.notes;
           Storage.saveMemory(memories);
           Storage.appendToolActivity({
             type: 'memory',
-            action: 'delete',
+            action: 'update',
             id: op.identifier,
             status: 'success'
           });
-        } else if (op.identifier) {
-          const memories = Storage.loadMemory();
-          const existing = memories.find(m => m.identifier === op.identifier);
-          if (existing) {
-            if (op.notes !== undefined) existing.notes = op.notes;
-            Storage.appendToolActivity({
-              type: 'memory',
-              action: 'update',
-              id: op.identifier,
-              status: 'success'
-            });
-          } else if (op.heading && op.content) {
-            memories.push({
-              identifier: op.identifier,
-              heading: op.heading,
-              content: op.content,
-              notes: op.notes || '',
-              createdAt: nowISO()
-            });
-            Storage.appendToolActivity({
-              type: 'memory',
-              action: 'create',
-              id: op.identifier,
-              heading: op.heading,
-              status: 'success'
-            });
-          }
+        } else if (op.heading && op.content) {
+          memories.push({
+            identifier: op.identifier,
+            heading: op.heading,
+            content: op.content,
+            notes: op.notes || '',
+            createdAt: nowISO()
+          });
           Storage.saveMemory(memories);
+          Storage.appendToolActivity({
+            type: 'memory',
+            action: 'create',
+            id: op.identifier,
+            heading: op.heading,
+            status: 'success'
+          });
         }
-      });
+      }
+    },
 
-      // Apply task operations
-      operations.tasks.forEach(op => {
-        if (op.identifier) {
-          const tasks = Storage.loadTasks();
-          const existing = tasks.find(t => t.identifier === op.identifier);
-          if (existing) {
-            if (op.notes !== undefined) existing.notes = op.notes;
-            if (op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status)) {
-              existing.status = op.status;
-            }
-            Storage.appendToolActivity({
-              type: 'task',
-              action: 'update',
-              id: op.identifier,
-              status: 'success',
-              newStatus: op.status
-            });
-          } else if (op.heading && op.content) {
-            tasks.push({
-              identifier: op.identifier,
-              heading: op.heading,
-              content: op.content,
-              status: op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status) ? op.status : 'pending',
-              notes: op.notes || '',
-              createdAt: nowISO()
-            });
-            Storage.appendToolActivity({
-              type: 'task',
-              action: 'create',
-              id: op.identifier,
-              heading: op.heading,
-              status: 'success'
-            });
+    applyTaskOperation(op) {
+      if (op.identifier) {
+        const tasks = Storage.loadTasks();
+        const existing = tasks.find(t => t.identifier === op.identifier);
+        if (existing) {
+          if (op.notes !== undefined) existing.notes = op.notes;
+          if (op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status)) {
+            existing.status = op.status;
           }
           Storage.saveTasks(tasks);
+          Storage.appendToolActivity({
+            type: 'task',
+            action: 'update',
+            id: op.identifier,
+            status: 'success',
+            newStatus: op.status
+          });
+        } else if (op.heading && op.content) {
+          tasks.push({
+            identifier: op.identifier,
+            heading: op.heading,
+            content: op.content,
+            status: op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status) ? op.status : 'pending',
+            notes: op.notes || '',
+            createdAt: nowISO()
+          });
+          Storage.saveTasks(tasks);
+          Storage.appendToolActivity({
+            type: 'task',
+            action: 'create',
+            id: op.identifier,
+            heading: op.heading,
+            status: 'success'
+          });
         }
-      });
+      }
+    },
 
-      // Apply goal operations
-      operations.goals.forEach(op => {
-        if (op.delete) {
-          const goals = Storage.loadGoals().filter(g => g.identifier !== op.identifier);
+    applyGoalOperation(op) {
+      if (op.delete) {
+        const goals = Storage.loadGoals().filter(g => g.identifier !== op.identifier);
+        Storage.saveGoals(goals);
+        Storage.appendToolActivity({
+          type: 'goal',
+          action: 'delete',
+          id: op.identifier,
+          status: 'success'
+        });
+      } else if (op.identifier) {
+        const goals = Storage.loadGoals();
+        const existing = goals.find(g => g.identifier === op.identifier);
+        if (existing) {
+          if (op.notes !== undefined) existing.notes = op.notes;
           Storage.saveGoals(goals);
           Storage.appendToolActivity({
             type: 'goal',
-            action: 'delete',
+            action: 'update',
             id: op.identifier,
             status: 'success'
           });
-        } else if (op.identifier) {
-          const goals = Storage.loadGoals();
-          const existing = goals.find(g => g.identifier === op.identifier);
-          if (existing) {
-            if (op.notes !== undefined) existing.notes = op.notes;
-            Storage.appendToolActivity({
-              type: 'goal',
-              action: 'update',
-              id: op.identifier,
-              status: 'success'
-            });
-          } else if (op.heading && op.content) {
-            goals.push({
-              identifier: op.identifier,
-              heading: op.heading,
-              content: op.content,
-              notes: op.notes || '',
-              createdAt: nowISO()
-            });
-            Storage.appendToolActivity({
-              type: 'goal',
-              action: 'create',
-              id: op.identifier,
-              heading: op.heading,
-              status: 'success'
-            });
-          }
+        } else if (op.heading && op.content) {
+          goals.push({
+            identifier: op.identifier,
+            heading: op.heading,
+            content: op.content,
+            notes: op.notes || '',
+            createdAt: nowISO()
+          });
           Storage.saveGoals(goals);
+          Storage.appendToolActivity({
+            type: 'goal',
+            action: 'create',
+            id: op.identifier,
+            heading: op.heading,
+            status: 'success'
+          });
         }
-      });
-
-      // Execute JavaScript blocks AFTER vault operations are applied
-      operations.jsExecute.forEach(code => {
-        JSExecutor.executeCode(code);
-      });
-
-      // Handle final output
-      operations.finalOutput.forEach(htmlContent => {
-        const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
-        Storage.saveFinalOutput(processedHTML);
-        Storage.appendToolActivity({
-          type: 'final_output',
-          action: 'generate',
-          status: 'success',
-          contentSize: processedHTML.length
-        });
-      });
+      }
     }
   };
 
   /**
-   * ENHANCED VAULT MANAGER with Read Request Support
+   * ENHANCED VAULT MANAGER with improved reference resolution
    */
   const VaultManager = {
     resolveVaultRefsInText(inputText) {
       if (!isNonEmptyString(inputText)) return inputText;
-      const regex = /{{<vaultref\s+id="([^"]+)"\s*\/>}}/g;
+      const regex = /{{<vaultref\s+id=["']([^"']+)["']\s*\/>}}/g;
       const vault = Storage.loadVault();
 
       return inputText.replace(regex, (match, vaultId) => {
         const entry = vault.find(v => v.identifier === vaultId);
         if (!entry) {
+          console.warn(`⚠️ Missing vault reference: ${vaultId}`);
           return `/* [MISSING_VAULT:${vaultId}] */`;
         }
         return entry.content || '';
@@ -912,7 +1080,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
 
     getVaultSummary() {
       const vault = Storage.loadVault();
-      return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description}`).join('\n');
+      return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description || 'No description'}`).join('\n');
     },
 
     getVaultEntry(id, limit = null) {
@@ -927,16 +1095,40 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       }
       
       return { ...entry, content };
+    },
+
+    validateVaultIntegrity() {
+      const vault = Storage.loadVault();
+      const issues = [];
+      
+      vault.forEach((entry, index) => {
+        if (!entry.identifier) {
+          issues.push(`Entry ${index}: Missing identifier`);
+        }
+        if (!entry.type) {
+          issues.push(`Entry ${index}: Missing type`);
+        }
+        if (entry.content === undefined) {
+          issues.push(`Entry ${index}: Missing content`);
+        }
+      });
+      
+      return issues;
     }
   };
 
   /**
-   * ENHANCED JAVASCRIPT EXECUTOR with Activity Logging
+   * FIXED JAVASCRIPT EXECUTOR - Resolved variable scope issue
    */
   const JSExecutor = {
     executeCode(rawCode) {
       const startTime = Date.now();
       const executionId = generateId('exec');
+      
+      // FIXED: Declare console function variables at function level to avoid scope issues
+      const originalLog = console.log;
+      const originalError = console.error;
+      const originalWarn = console.warn;
       
       try {
         // Resolve vault references in the code
@@ -944,7 +1136,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         
         // Track vault references used
         const vaultRefsUsed = [];
-        const vaultRefRegex = /{{<vaultref\s+id="([^"]+)"\s*\/>}}/g;
+        const vaultRefRegex = /{{<vaultref\s+id=["']([^"']+)["']\s*\/>}}/g;
         let vaultMatch;
         while ((vaultMatch = vaultRefRegex.exec(rawCode)) !== null) {
           vaultRefsUsed.push(vaultMatch[1]);
@@ -952,9 +1144,6 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         
         // Capture console output
         const logs = [];
-        const originalLog = console.log;
-        const originalError = console.error;
-        const originalWarn = console.warn;
         
         console.log = (...args) => {
           const message = args.map(arg => {
@@ -983,11 +1172,6 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         const fn = new Function(expandedCode);
         const result = fn();
         const executionTime = Date.now() - startTime;
-        
-        // Restore console functions
-        console.log = originalLog;
-        console.error = originalError;
-        console.warn = originalWarn;
         
         // Store execution result
         const executionResult = {
@@ -1025,11 +1209,6 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       } catch (error) {
         const executionTime = Date.now() - startTime;
         
-        // Restore console functions on error
-        console.log = originalLog;
-        console.error = originalError;
-        console.warn = originalWarn;
-        
         const executionResult = {
           id: executionId,
           success: false,
@@ -1058,6 +1237,11 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         
         console.error('✗ JavaScript execution failed:', error);
         return executionResult;
+      } finally {
+        // FIXED: Always restore console functions in finally block
+        console.log = originalLog;
+        console.error = originalError;
+        console.warn = originalWarn;
       }
     }
   };
@@ -1397,8 +1581,8 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
           ReasoningParser.applyOperations(operations);
         });
 
-        // Re-render everything
-        Renderer.renderAll();
+        // Re-render everything with a slight delay to ensure all operations are complete
+        setTimeout(() => Renderer.renderAll(), 100);
 
         // Check if goals are complete
         if (ReasoningEngine.checkGoalsComplete()) {
@@ -1532,6 +1716,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       Storage.saveTasks([]); // Start with no tasks
       Storage.saveGoals([]); // Start with no goals
       Storage.saveMemory([]);
+      Storage.saveVault([]); // Clear vault for new session
       Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nWaiting for intelligent analysis and strategic task/goal generation...`]);
       Storage.saveExecutionLog([]); // Clear execution log
       Storage.saveToolActivityLog([]); // Clear tool activity log
@@ -1568,7 +1753,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   })();
 
   /**
-   * ENHANCED RENDERER with Tool Activity Display
+   * ENHANCED RENDERER with improved vault display
    */
   const Renderer = {
     renderKeys() {
@@ -1716,15 +1901,23 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         return;
       }
 
-      vaultEl.innerHTML = vault.map(v => `
-        <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
-          <div>
-            <div class="mono">${encodeHTML(v.identifier)}</div>
-            <div class="pm">${encodeHTML(v.description)}</div>
+      // ENHANCED: Better vault rendering with type indicators and timestamps
+      vaultEl.innerHTML = vault.map((v, index) => {
+        const timestamp = v.createdAt ? new Date(v.createdAt).toLocaleTimeString() : '—';
+        const dataSize = v.content ? String(v.content).length : 0;
+        return `
+          <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
+            <div>
+              <div class="mono">${encodeHTML(v.identifier)}</div>
+              <div class="pm">${encodeHTML(v.description || 'No description')}</div>
+              <div class="pm" style="font-size: 0.8em; color: #666;">Created: ${timestamp} • Size: ${dataSize} chars</div>
+            </div>
+            <div class="status" style="background: ${v.type === 'data' ? '#e3f2fd' : v.type === 'code' ? '#f3e5f5' : '#e8f5e8'}">
+              ${encodeHTML(v.type.toUpperCase())}
+            </div>
           </div>
-          <div class="status">${encodeHTML(v.type.toUpperCase())}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       // Add click handlers for vault modal
       qsa('[data-vault-id]', vaultEl).forEach(el => {
@@ -1862,11 +2055,10 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     if (clearMemoryBtn) {
       clearMemoryBtn.addEventListener('click', () => {
         if (confirm('Clear ALL memories? This cannot be undone.')) {
-          localStorage.setItem('gdrs_memory', JSON.stringify([]));
+          Storage.saveMemory([]);
           const log = Storage.loadReasoningLog();
           log.push('=== ACTION ===\nCleared all memories');
           Storage.saveReasoningLog(log);
-          Renderer.renderMemories();
         }
       });
     }
@@ -1875,11 +2067,10 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     if (clearGoalsBtn) {
       clearGoalsBtn.addEventListener('click', () => {
         if (confirm('Clear ALL goals? This cannot be undone.')) {
-          localStorage.setItem('gdrs_goals', JSON.stringify([]));
+          Storage.saveGoals([]);
           const log = Storage.loadReasoningLog();
           log.push('=== ACTION ===\nCleared all goals');
           Storage.saveReasoningLog(log);
-          Renderer.renderGoals();
         }
       });
     }
@@ -1888,11 +2079,10 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     if (clearVaultBtn) {
       clearVaultBtn.addEventListener('click', () => {
         if (confirm('Clear ALL data vault entries? This cannot be undone.')) {
-          localStorage.setItem('gdrs_vault', JSON.stringify([]));
+          Storage.saveVault([]);
           const log = Storage.loadReasoningLog();
           log.push('=== ACTION ===\nCleared all data vault entries');
           Storage.saveReasoningLog(log);
-          Renderer.renderVault();
         }
       });
     }
@@ -2018,6 +2208,12 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
     }
 
+    // Check vault integrity on boot
+    const vaultIssues = VaultManager.validateVaultIntegrity();
+    if (vaultIssues.length > 0) {
+      console.warn('Vault integrity issues:', vaultIssues);
+    }
+
     // Initial render
     Renderer.renderAll();
 
@@ -2036,7 +2232,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     }, 1000);
 
     console.log('%cGDRS Runtime Core - Ready for Intelligent Deep Research', 'color: #00ff00; font-weight: bold;');
-    console.log('%cAdd API keys, select a model, and enter your research query to begin strategic analysis.', 'color: #aaaaaa;');
+    console.log('%cEnhanced DataVault System - Ordered operations, validation, and immediate UI updates', 'color: #aaaaaa;');
   }
 
   // Boot when DOM is ready
