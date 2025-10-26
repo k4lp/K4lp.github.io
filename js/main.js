@@ -544,6 +544,50 @@ The final output will be rendered as HTML in the user interface.`;
     },
 
     applyOperations(operations) {
+      // CRITICAL FIX: Apply vault operations FIRST before JavaScript execution
+      // This ensures vault entries are persisted before vault references are resolved
+      
+      // Apply vault operations FIRST
+      operations.vault.forEach(op => {
+        if (op.delete) {
+          const vault = Storage.loadVault().filter(v => v.identifier !== op.id);
+          Storage.saveVault(vault);
+        } else if (op.action === 'request_read') {
+          // Handle vault read requests
+          const vault = Storage.loadVault();
+          const entry = vault.find(v => v.identifier === op.id);
+          if (entry) {
+            let content = entry.content;
+            if (op.limit && op.limit !== 'full-length') {
+              const limit = parseInt(op.limit) || 100;
+              content = content.substring(0, limit) + (content.length > limit ? '...' : '');
+            }
+            // Store read result for next iteration context
+            const readResult = `VAULT_READ[${op.id}]: ${content}`;
+            const logEntries = Storage.loadReasoningLog();
+            logEntries.push(`=== VAULT READ ===\n${readResult}`);
+            Storage.saveReasoningLog(logEntries);
+          }
+        } else if (op.id && op.content !== undefined) {
+          const vault = Storage.loadVault();
+          const existing = vault.find(v => v.identifier === op.id);
+          if (existing) {
+            existing.content = op.content;
+            if (op.type) existing.type = op.type;
+            if (op.description) existing.description = op.description;
+          } else {
+            vault.push({
+              identifier: op.id,
+              type: op.type || 'text',
+              description: op.description || '',
+              content: op.content,
+              createdAt: nowISO()
+            });
+          }
+          Storage.saveVault(vault);
+        }
+      });
+
       // Apply memory operations
       operations.memories.forEach(op => {
         if (op.delete) {
@@ -614,53 +658,12 @@ The final output will be rendered as HTML in the user interface.`;
         }
       });
 
-      // Apply vault operations
-      operations.vault.forEach(op => {
-        if (op.delete) {
-          const vault = Storage.loadVault().filter(v => v.identifier !== op.id);
-          Storage.saveVault(vault);
-        } else if (op.action === 'request_read') {
-          // Handle vault read requests
-          const vault = Storage.loadVault();
-          const entry = vault.find(v => v.identifier === op.id);
-          if (entry) {
-            let content = entry.content;
-            if (op.limit && op.limit !== 'full-length') {
-              const limit = parseInt(op.limit) || 100;
-              content = content.substring(0, limit) + (content.length > limit ? '...' : '');
-            }
-            // Store read result for next iteration context
-            const readResult = `VAULT_READ[${op.id}]: ${content}`;
-            const logEntries = Storage.loadReasoningLog();
-            logEntries.push(`=== VAULT READ ===\n${readResult}`);
-            Storage.saveReasoningLog(logEntries);
-          }
-        } else if (op.id && op.content !== undefined) {
-          const vault = Storage.loadVault();
-          const existing = vault.find(v => v.identifier === op.id);
-          if (existing) {
-            existing.content = op.content;
-            if (op.type) existing.type = op.type;
-            if (op.description) existing.description = op.description;
-          } else {
-            vault.push({
-              identifier: op.id,
-              type: op.type || 'text',
-              description: op.description || '',
-              content: op.content,
-              createdAt: nowISO()
-            });
-          }
-          Storage.saveVault(vault);
-        }
-      });
-
-      // NEW: Execute JavaScript blocks
+      // Execute JavaScript blocks AFTER vault operations are applied
       operations.jsExecute.forEach(code => {
         JSExecutor.executeCode(code);
       });
 
-      // NEW: Handle final output
+      // Handle final output
       operations.finalOutput.forEach(htmlContent => {
         const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
         Storage.saveFinalOutput(processedHTML);
