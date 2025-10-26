@@ -1,123 +1,230 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Gemini Deep Research System</title>
-  <meta name="color-scheme" content="dark light" />
-  <style>
-    :root{--bg-app:#0a0a0a;--bg-panel:#111;--bg-alt:#1a1a1a;--border:#2a2a2a;--border-soft:#1f1f1f;--text:#fafafa;--dim:#8a8a8a;--xdim:#555;--r-lg:12px;--r-md:8px;--r-sm:6px;--p-lg:16px;--p-md:12px;--p-sm:8px;--fs: "Geist","Inter","system-ui",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--fm: "Geist Mono","ui-monospace","SFMono-Regular",Menlo,Consolas,monospace;--shadow:0 20px 60px rgba(0,0,0,.8)}
-    *{box-sizing:border-box;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-    body{margin:0;background:var(--bg-app);color:var(--text);font-family:var(--fs);line-height:1.4;display:grid;grid-template-rows:auto 1fr;min-height:100vh}
-    header{border-bottom:1px solid var(--border);background:var(--bg-panel);padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start;box-shadow:var(--shadow)}
-    .title{font-size:12px;font-weight:600;letter-spacing:-.04em;display:flex;gap:8px;flex-wrap:wrap}
-    .label{font-family:var(--fm);background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:10px;color:var(--dim)}
-    .sub{font-size:11px;color:var(--dim);margin-top:4px;max-width:640px}
-    main{display:grid;grid-template-columns:320px 1fr 360px;gap:16px;padding:16px;min-height:0;overflow:hidden}
-    .col{display:flex;flex-direction:column;gap:16px;min-height:0}
-    .panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0}
-    .ph{padding:12px 16px 8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
-    .pt{font-size:11px;font-weight:600}
-    .pm{font-size:10px;color:var(--dim)}
-    .pb{padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px;min-height:0;overflow:hidden}
-    .mono{font-family:var(--fm)}
-    .pill{display:inline-flex;align-items:center;border-radius:6px;border:1px solid var(--border);background:var(--bg-alt);font:500 10px/1.1 var(--fm);padding:4px 6px;text-transform:uppercase;gap:4px;white-space:nowrap}
-    select,input,textarea,button{background:var(--bg-app);color:var(--text);border:1px solid var(--border);border-radius:6px;font:400 11px var(--fm)}
-    textarea{min-height:72px;resize:vertical;padding:8px 10px}
-    .grid-keys{display:grid;gap:8px}
-    .keyrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--bg-app)}
-    .keymeta{display:grid;grid-template-columns:repeat(3,auto);gap:8px 12px;font:10px var(--fm);color:var(--dim)}
-    .list{border:1px solid var(--border);border-radius:8px;overflow:hidden;min-height:80px;max-height:200px;display:flex;flex-direction:column}
-    .list>.head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:8px 10px;border-bottom:1px solid var(--border)}
-    .list>.body{min-height:0;overflow:auto;font:10px var(--fm)}
-    .li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:8px 10px;border-bottom:1px solid var(--border-soft)}
-    .li:last-child{border-bottom:0}
-    .id{font:10px var(--fm);color:var(--dim);background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:2px 4px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-    .status{border:1px solid var(--border);border-radius:6px;background:var(--bg-panel);font:500 9px var(--fm);padding:2px 4px;text-transform:uppercase}
-    .console{border:1px solid var(--border);border-radius:8px;min-height:120px;max-height:200px;display:flex;flex-direction:column;overflow:hidden}
-    .consoles{flex:1;overflow:auto;padding:10px;font:10px var(--fm);white-space:pre-wrap}
-    .code{display:grid;grid-template-rows:1fr auto;min-height:160px;max-height:220px;overflow:hidden;border:1px solid var(--border);border-radius:8px}
-    .code textarea{min-height:100px;max-height:140px}
-    .final{border:1px solid var(--border);border-radius:8px;min-height:120px;max-height:200px;overflow:hidden}
-    @media (max-width:1200px){main{grid-template-columns:300px 1fr}.col.right{display:none}}
-    @media (max-width:800px){main{grid-template-columns:1fr}.col.left,.col.right{order:2}.col.center{order:1}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Deep Research System</title>
+    <meta name="description" content="Browser-based research assistant with iterative reasoning and unlimited code execution">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <div>
-      <div class="title">GEMINI DEEP RESEARCH SYSTEM <span class="label">UNRESTRICTED LOOP</span><span class="label">LOCAL FIRST</span><span class="label">NO SANDBOX</span></div>
-      <div class="sub">Iterative analysis • Unlimited JS execution • Persistent Goals/Memory/Tasks • Data Vault substitution</div>
+    <!-- Main Application Container -->
+    <div id="app" class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <h1 class="app-title">Gemini Deep Research System</h1>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="main-grid">
+            
+            <!-- Left Panel: Configuration -->
+            <section class="left-panel">
+                
+                <!-- API Keys Section -->
+                <div class="config-section">
+                    <div class="section-header">
+                        <h2>API KEYS</h2>
+                        <span class="section-desc">5-key pool • Sequential rotation • Local only</span>
+                    </div>
+                    
+                    <div id="keysGrid" class="keys-grid">
+                        <!-- API key inputs will be rendered here -->
+                    </div>
+                    
+                    <div class="key-actions">
+                        <button id="validateKeys" class="btn btn-primary">Validate</button>
+                        <button id="clearKeys" class="btn btn-secondary">Clear</button>
+                        <span id="keyRotationPill" class="status-pill">NO KEY</span>
+                    </div>
+                </div>
+
+                <!-- Session Configuration -->
+                <div class="config-section">
+                    <div class="section-header">
+                        <h2>SESSION</h2>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modelSelect">Model</label>
+                        <select id="modelSelect" class="select-input">
+                            <option value="">-- select model --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="userQuery">Research Query</label>
+                        <textarea id="userQuery" class="textarea-input" 
+                                  placeholder="Enter your research question or task..."></textarea>
+                    </div>
+                    
+                    <div class="session-actions">
+                        <button id="runQueryBtn" class="btn btn-primary btn-large">Run Analysis</button>
+                        <span id="sessionStatus" class="status-pill">IDLE</span>
+                    </div>
+                </div>
+                
+            </section>
+
+            <!-- Center Panel: Processing -->
+            <section class="center-panel">
+                
+                <!-- Reasoning Log -->
+                <div class="process-section">
+                    <div class="section-header">
+                        <h2>REASONING LOG</h2>
+                        <span class="section-desc">iter <span id="iterationCount">0</span></span>
+                    </div>
+                    <div id="iterationLog" class="log-container">
+                        <div class="log-placeholder">Reasoning iterations will appear here...</div>
+                    </div>
+                </div>
+
+                <!-- Code Execution -->
+                <div class="process-section">
+                    <div class="section-header">
+                        <h2>CODE EXECUTION</h2>
+                        <span id="execStatus" class="status-pill">READY</span>
+                    </div>
+                    
+                    <div class="code-editor">
+                        <textarea id="codeInput" class="code-textarea" 
+                                  placeholder="// Use {{<vaultref id=&quot;vault_id&quot; />}} to inline vault content
+console.log('Hello GDRS');
+return { status: 'ready', timestamp: new Date() };"></textarea>
+                    </div>
+                    
+                    <div class="code-actions">
+                        <button id="execBtn" class="btn btn-primary">Execute</button>
+                        <button id="clearExec" class="btn btn-secondary">Clear</button>
+                    </div>
+                    
+                    <div class="console-section">
+                        <h3>Console</h3>
+                        <pre id="execOutput" class="console-output">Execution output will appear here...</pre>
+                    </div>
+                </div>
+
+                <!-- Final Output -->
+                <div class="process-section">
+                    <div class="section-header">
+                        <h2>FINAL OUTPUT</h2>
+                        <span id="finalStatus" class="status-pill">idle</span>
+                    </div>
+                    <div id="finalOutput" class="output-container">
+                        <div class="output-placeholder">
+                            <p>Research report will render here after goal validation.</p>
+                        </div>
+                    </div>
+                    <div class="output-actions">
+                        <button id="exportTxt" class="btn btn-secondary">Export TXT</button>
+                    </div>
+                </div>
+                
+            </section>
+
+            <!-- Right Panel: Storage Systems -->
+            <section class="right-panel">
+                
+                <!-- Tasks Storage -->
+                <div class="storage-section">
+                    <div class="section-header">
+                        <h2>TASKS</h2>
+                        <span class="section-desc">All tasks</span>
+                    </div>
+                    <div id="tasksList" class="storage-list">
+                        <div class="storage-placeholder">No tasks yet</div>
+                    </div>
+                </div>
+
+                <!-- Memory Storage -->
+                <div class="storage-section">
+                    <div class="section-header">
+                        <h2>MEMORY</h2>
+                        <span class="section-desc">Long-term context</span>
+                    </div>
+                    <div id="memoryList" class="storage-list">
+                        <div class="storage-placeholder">No memories yet</div>
+                    </div>
+                </div>
+
+                <!-- Goals Storage -->
+                <div class="storage-section">
+                    <div class="section-header">
+                        <h2>GOALS</h2>
+                        <span class="section-desc">Verification anchors</span>
+                    </div>
+                    <div id="goalsList" class="storage-list">
+                        <div class="storage-placeholder">No goals yet</div>
+                    </div>
+                </div>
+
+                <!-- Data Vault -->
+                <div class="storage-section">
+                    <div class="section-header">
+                        <h2>DATA VAULT</h2>
+                        <span class="section-desc">Entries</span>
+                    </div>
+                    <div id="vaultList" class="storage-list">
+                        <div class="storage-placeholder">No vault entries yet</div>
+                    </div>
+                    
+                    <!-- Vault Entry Form -->
+                    <div class="vault-form">
+                        <div class="form-group">
+                            <label for="vaultType">Type</label>
+                            <select id="vaultType" class="select-input">
+                                <option value="text">Text</option>
+                                <option value="code">Code</option>
+                                <option value="data">Data</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="vaultDesc">Description</label>
+                            <input id="vaultDesc" type="text" class="text-input" 
+                                   placeholder="Brief description...">
+                        </div>
+                    </div>
+                </div>
+                
+            </section>
+            
+        </main>
+        
     </div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center" class="mono"><span>MODEL</span><span class="pill" id="sessionStatus">IDLE</span></div>
-        <div style="margin-top:6px"><select id="modelSelect"><option value="">-- select model --</option></select></div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center" class="mono"><span>KEY ROTATION</span><span class="pill" id="keyRotationPill">NEXT: #1</span></div>
-        <div class="mono" style="font-size:10px;color:var(--dim);margin-top:6px">auto-failover on rate limit • cooldown tracked live</div>
-      </div>
+
+    <!-- Vault Modal -->
+    <div id="vaultModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Vault Entry</h3>
+                <button id="vaultModalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="vault-meta">
+                    <span><strong>ID:</strong> <span id="vaultModalId"></span></span>
+                    <span><strong>Type:</strong> <span id="vaultModalType"></span></span>
+                </div>
+                <div class="vault-description">
+                    <strong>Description:</strong>
+                    <p id="vaultModalDesc"></p>
+                </div>
+                <div class="vault-content">
+                    <strong>Content:</strong>
+                    <pre id="vaultModalContent"></pre>
+                </div>
+            </div>
+        </div>
     </div>
-  </header>
-  <main>
-    <section class="col left">
-      <section class="panel">
-        <div class="ph"><div><div class="pt">API KEYS</div><div class="pm">5-key pool • Sequential rotation • Local only</div></div><div style="display:flex;gap:8px"><button id="validateKeys">validate</button><button id="clearKeys">clear</button></div></div>
-        <div class="pb">
-          <div class="grid-keys" id="keysGrid"></div>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="ph"><div class="pt">SESSION</div></div>
-        <div class="pb">
-          <textarea id="userQuery" placeholder="Describe your research goal…"></textarea>
-          <div style="display:flex;gap:8px"><button id="runQueryBtn">Run</button><button id="runQueryBtn2">Run (Alt)</button></div>
-        </div>
-      </section>
-    </section>
 
-    <section class="col center">
-      <section class="panel">
-        <div class="ph"><div class="pt">REASONING LOG</div><div class="mono">iter <span id="iterationCount">0</span></div></div>
-        <div class="pb" style="overflow:auto" id="iterationLog"></div>
-      </section>
-      <section class="panel">
-        <div class="ph"><div class="pt">CODE EXECUTION</div><div class="pill mono" id="execStatus">READY</div></div>
-        <div class="pb">
-          <div class="code">
-            <textarea id="codeInput" spellcheck="false">// Use {{<vaultref id="example" />}} to inline vault content
-console.log("Hello GDRS")
-return 42</textarea>
-            <div style="display:flex;gap:8px;padding:8px;border-top:1px solid var(--border)"><button id="execBtn">Execute</button><button id="clearExec">Clear</button></div>
-          </div>
-          <div class="console"><div class="ph" style="border-bottom:1px solid var(--border)"><div class="pt">Console</div></div><div class="consoles" id="execOutput"></div></div>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="ph"><div><div class="pt">FINAL OUTPUT</div><div class="pm mono">status: <span id="finalStatus">idle</span></div></div><div style="display:flex;gap:8px"><button id="exportTxt">Export .txt</button></div></div>
-        <div class="pb"><div id="finalOutput" style="font:12px var(--fs)"></div></div>
-      </section>
-    </section>
-
-    <section class="col right">
-      <section class="panel"><div class="ph"><div class="pt">TASKS</div></div><div class="pb"><div class="list"><div class="head"><div class="mono">All tasks</div></div><div class="body" id="tasksList"></div></div></div></section>
-      <section class="panel"><div class="ph"><div class="pt">MEMORY</div></div><div class="pb"><div class="list"><div class="head"><div class="mono">Long-term context</div></div><div class="body" id="memoryList"></div></div></div></section>
-      <section class="panel"><div class="ph"><div class="pt">GOALS</div></div><div class="pb"><div class="list"><div class="head"><div class="mono">Verification anchors</div></div><div class="body" id="goalsList"></div></div></div></section>
-      <section class="panel"><div class="ph"><div class="pt">DATA VAULT</div></div><div class="pb"><div class="list"><div class="head"><div class="mono">Entries</div></div><div class="body" id="vaultList"></div></div></div></section>
-    </section>
-  </main>
-
-  <!-- Vault modal -->
-  <div id="vaultModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center">
-    <div style="width:min(860px,92vw);max-height:80vh;overflow:auto;background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:16px" class="mono">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div id="vaultModalId"></div><button id="vaultModalClose">×</button></div>
-      <div>Type: <span id="vaultModalType"></span></div>
-      <div>Description: <span id="vaultModalDesc"></span></div>
-      <pre style="white-space:pre-wrap" id="vaultModalContent"></pre>
-    </div>
-  </div>
-
-  <script type="module" src="/js/main.js"></script>
+    <!-- Scripts -->
+    <script src="js/tools.js"></script>
+    <script src="js/gemini.js"></script>
+    <script src="js/main.js"></script>
+    
 </body>
 </html>
