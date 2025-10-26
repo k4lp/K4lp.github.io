@@ -35,15 +35,9 @@ A production-grade, browser-based research assistant with iterative reasoning, u
 
 ## Development
 
-The system is built with vanilla JavaScript and CSS, no build tools required:
-- `index.html` - Main interface
-- `js/gdrs.js` - Runtime core with all functionality
-- Pure browser APIs for all operations
-
-## Live Demo
-
-Visit: [https://k4lp.github.io/](https://k4lp.github.io/)
+- index.html – Main interface
+- js/gdrs.js – Runtime core with all functionality
 
 ---
 
-*Built with minimalist design principles using Geist/Geist Mono typography*
+Built with minimalist design principles using Geist/Geist Mono typography.
