@@ -253,8 +253,11 @@ When goals are achieved, create comprehensive results:
 {{<reasoning_text>}}
 {{<final_output>}}
 <div class="research-report">
-  <h1>Comprehensive Analysis Results</h1>
-  
+
+ for each questions asked by the user, do this loop {
+  <h1>Questions asked by the user</h1>
+  <h1>(answers that you have found after the analysis)</h1>
+ }
   <div class="executive-summary">
     <h2>Executive Summary</h2>
     <p>Key findings and conclusions with high-level insights...</p>
