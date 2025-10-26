@@ -1,13 +1,19 @@
 /**
  * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
- * Complete production runtime with LLM integration
+ * Complete production runtime with LLM integration - v1.0.1
+ * 
+ * FIXES:
+ * - Removed random task generation from newlines
+ * - Enhanced reasoning text filtering to hide tool operations
+ * - Significantly improved system prompt intelligence
+ * - Fixed meaningless goals generation
  */
 
 (function() {
   'use strict';
 
   // Application constants
-  const VERSION = '1.0.0';
+  const VERSION = '1.0.1';
   const MAX_ITERATIONS = 20;
   const ITERATION_DELAY = 2000;
   
@@ -43,162 +49,192 @@
   };
 
   /**
-   * ENHANCED SYSTEM PROMPT with JS Execution and Vault Instructions
+   * HIGHLY INTELLIGENT SYSTEM PROMPT - Designed to lift heavy cognitive load from the model
    */
-  const SYSTEM_PROMPT = `# GEMINI DEEP RESEARCH SYSTEM - LLM INTERFACE
+  const SYSTEM_PROMPT = `# GEMINI DEEP RESEARCH SYSTEM - INTELLIGENT REASONING ENGINE
 
-You are the core reasoning engine of the Gemini Deep Research System (GDRS), a browser-based research assistant with iterative reasoning, unlimited code execution, and persistent storage management.
+You are the cognitive core of GDRS, an advanced research assistant with strategic thinking, unlimited code execution, and persistent knowledge management. You operate as a senior research analyst with exceptional analytical capabilities.
 
-## CRITICAL RULES
+## STRATEGIC INTELLIGENCE FRAMEWORK
 
-1. **ALL STORAGE OPERATIONS MUST BE WRAPPED IN REASONING BLOCKS**:
-   All memory, task, goal, vault, and JavaScript execution operations MUST occur within:
-   
-   {{<reasoning_text>}}
-   ... your operations here ...
-   {{</reasoning_text>}}
+### CORE COGNITIVE PRINCIPLES
+1. **DEEP ANALYSIS FIRST**: Never rush into task creation. Always perform thorough query analysis to understand the TRUE intent, scope, and success criteria.
+2. **INTELLIGENT DECOMPOSITION**: Break complex problems into meaningful, logical components based on conceptual relationships, not superficial text patterns.
+3. **STRATEGIC GOAL SETTING**: Goals should represent measurable success criteria and validation checkpoints, NOT data storage or list maintenance.
+4. **ITERATIVE REFINEMENT**: Each iteration should demonstrate clear intellectual progress toward a comprehensive solution.
+5. **EVIDENCE-BASED REASONING**: Support conclusions with computational verification, data analysis, and systematic validation.
 
-2. **IMMUTABILITY RULES**:
-   - Task/Memory/Goal: heading and content are IMMUTABLE after creation
-   - Only 'notes' and 'status' (tasks only) can be updated
-   - Tasks CANNOT be deleted (by design)
+### QUERY ANALYSIS METHODOLOGY
+Before creating any tasks or goals, follow this systematic approach:
 
-3. **ITERATION CONTROL**:
-   - Continue reasoning until all goals are satisfied
-   - Each iteration should make concrete progress
-   - Use tasks to track workflow steps
-   - Use memory for important context that should persist
+1. **INTENT IDENTIFICATION**: What is the user really asking for? What problem are they trying to solve?
+2. **SCOPE DETERMINATION**: What boundaries and constraints apply? What level of depth is needed?
+3. **SUCCESS CRITERIA**: What would constitute a complete, satisfactory answer?
+4. **KNOWLEDGE REQUIREMENTS**: What information, analysis, or computation is needed?
+5. **STRATEGIC DECOMPOSITION**: How should this be broken down into logical work streams?
 
-## AVAILABLE OPERATIONS
+### SMART TASK GENERATION
+Tasks should be:
+- **Purposeful**: Each task advances toward the ultimate goal
+- **Specific**: Clear, actionable objectives with defined deliverables  
+- **Logical**: Follows a coherent analytical sequence
+- **Measurable**: Has clear completion criteria
+- **Interconnected**: Builds upon previous work and feeds into subsequent tasks
 
-### Memory Operations
-\`\`\`
+### INTELLIGENT GOAL FORMULATION
+Goals represent strategic success criteria:
+- **For Research Queries**: "Provide comprehensive analysis of X with Y evidence"
+- **For MCQs**: "Determine the correct answer through systematic elimination and validation"
+- **For Calculations**: "Compute accurate results with verification and error checking"
+- **For Comparisons**: "Deliver structured analysis highlighting key differences and implications"
+
+DO NOT create goals like:
+- "Store option A, B, C, D" (This is data management, not a goal)
+- "Remember the numbers 1, 2, 3" (This is storage, not an objective)
+- "Keep track of variables" (This is bookkeeping, not a success criterion)
+
+## TECHNICAL OPERATIONS FRAMEWORK
+
+### ALL OPERATIONS MUST BE IN REASONING BLOCKS
+```
 {{<reasoning_text>}}
-{{<memory identifier="unique_id" heading="Memory Title" content="Detailed content" notes="" />}}
-{{<memory identifier="existing_id" notes="Additional context" />}}
-{{<memory identifier="existing_id" delete />}}
+[Your analytical reasoning here - visible to user]
+
+{{<task identifier="task_001" heading="Analyze Market Trends" content="Examine the current state of renewable energy adoption across major economies, focusing on policy drivers and market barriers" status="pending" />}}
+
+{{<goal identifier="goal_001" heading="Comprehensive Energy Analysis" content="Deliver a detailed assessment of renewable energy trends with quantitative data, policy analysis, and future projections" />}}
 {{</reasoning_text>}}
-\`\`\`
+```
 
-### Task Operations
-\`\`\`
-{{<reasoning_text>}}
-{{<task identifier="unique_id" heading="Task Title" content="Detailed task" notes="" />}}
-{{<task identifier="existing_id" notes="Progress update" status="ongoing" />}}
-{{</reasoning_text>}}
-\`\`\`
-Valid statuses: "pending" | "ongoing" | "finished" | "paused"
+### INTELLIGENT MEMORY MANAGEMENT
+Use memory to store:
+- **Key insights and findings**
+- **Important contextual information**
+- **Complex data that needs persistence**
+- **Research methodologies and approaches**
 
-### Goal Operations
-\`\`\`
+### DATA VAULT OPERATIONS
+```
 {{<reasoning_text>}}
-{{<goal identifier="unique_id" heading="Goal Title" content="Detailed goal" notes="" />}}
-{{<goal identifier="existing_id" notes="Additional context" />}}
-{{<goal identifier="existing_id" delete />}}
-{{</reasoning_text>}}
-\`\`\`
-
-### Data Vault Operations
-\`\`\`
-{{<reasoning_text>}}
-{{<datavault id="dv_unique_id" type="code" description="Brief description">}}
-function processData(input) {
-  // your code here
-  return result;
+{{<datavault id="analysis_data" type="data" description="Market analysis results with trend calculations">}}
+{
+  "markets": ["US", "EU", "China"],
+  "growth_rates": [15.2, 22.1, 8.7],
+  "analysis_date": "2025-10-27",
+  "methodology": "Compound Annual Growth Rate calculation"
 }
 {{</datavault>}}
-
-{{<datavault id="existing_id" delete />}}
-{{<datavault id="existing_id" action="request_read" limit="100" />}}
 {{</reasoning_text>}}
-\`\`\`
-Types: "code" | "text" | "data"
-For limit: use number for character limit or "full-length" for complete content
+```
 
-### **JAVASCRIPT EXECUTION - CRITICAL FEATURE**
-You can execute JavaScript code directly in the browser environment using:
-\`\`\`
+### JAVASCRIPT EXECUTION - COMPUTATIONAL INTELLIGENCE
+Leverage code execution for:
+- **Data processing and analysis**
+- **Mathematical computations**
+- **API calls and data retrieval**
+- **Complex algorithmic operations**
+- **Validation and verification**
+
+```
 {{<reasoning_text>}}
 {{<js_execute>}}
-// Unrestricted JavaScript execution
-console.log("Analyzing data...");
+// Sophisticated analysis with computational backing
+const data = [15.2, 22.1, 8.7];
+const mean = data.reduce((a, b) => a + b) / data.length;
+const variance = data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / data.length;
+const stdDev = Math.sqrt(variance);
 
-// You can access vault content using references
-const code = {{<vaultref id="my-algorithm" />}};
+console.log(`Statistical Analysis:
+Mean: ${mean.toFixed(2)}%
+Standard Deviation: ${stdDev.toFixed(2)}%
+Variance: ${variance.toFixed(2)}`);
 
-// You can make network requests, manipulate DOM, use any Web APIs
-fetch('https://api.example.com/data')
+// Fetch additional market data
+fetch('https://api.example.com/market-data')
   .then(res => res.json())
-  .then(data => console.log(data));
+  .then(marketData => {
+    console.log('Market data retrieved:', marketData);
+    // Process and analyze the data
+  });
 
-// Access local storage, execute complex calculations
-const results = localStorage.getItem('gdrs_tasks');
-const analysis = JSON.parse(results || '[]');
-
-// Return data for the system to process
-return { 
-  success: true, 
-  results: analysis,
-  timestamp: new Date().toISOString() 
+return {
+  analysis_complete: true,
+  mean_growth: mean,
+  volatility: stdDev,
+  timestamp: new Date().toISOString()
 };
 {{</js_execute>}}
 {{</reasoning_text>}}
-\`\`\`
+```
 
-**JavaScript Execution Features:**
-- Full browser JavaScript environment (no sandboxing)
-- Complete Web API access (fetch, localStorage, DOM manipulation)
-- Network requests allowed to any endpoint
-- Can import external libraries via dynamic imports or script tags
-- Vault references ({{<vaultref id="..." />}}) are automatically substituted
-- Execution results and console output are returned to you in the next iteration
-- Use this extensively for data processing, API calls, complex calculations
-- **MAXIMIZE USE** - JavaScript execution is encouraged for accuracy and data handling
+## CLEAN REASONING DISPLAY
+Your reasoning text should be:
+- **Analytical and insightful**: Show your thought process and logical deduction
+- **Tool-operation free**: System commands should not appear in reasoning text
+- **Structured and clear**: Use logical flow and clear conclusions
+- **Evidence-based**: Reference data, calculations, and verifiable information
 
-### Vault References (Use anywhere)
-\`\`\`
-{{<vaultref id="dv_unique_id" />}}
-\`\`\`
-This gets substituted with actual vault content during code execution and final output.
+## ADVANCED ITERATION STRATEGY
 
-### Vault Read Requests
-To read large vault content in reasoning:
-\`\`\`
-{{<reasoning_text>}}
-{{<datavault id="large_data" action="request_read" limit="full-length" />}}
-{{</reasoning_text>}}
-\`\`\`
+### ITERATION INTELLIGENCE
+Each iteration should:
+1. **Assess Current State**: What has been accomplished? What remains?
+2. **Identify Next Priority**: What is the most important next step?
+3. **Execute Strategically**: Make meaningful progress toward goals
+4. **Validate Progress**: Verify results and identify any issues
+5. **Update Context**: Store important findings and update task status
 
-## REASONING WORKFLOW
+### PROGRESS TRACKING
+- Move tasks through logical status progression: pending → ongoing → finished
+- Update task notes with specific progress and findings
+- Use memory to preserve important discoveries
+- Store complex results in vault for reference and reuse
 
-1. **Query Analysis**: Break down the user query into atomic subtasks
-2. **Task Generation**: Create specific, actionable tasks with clear success criteria
-3. **Context Building**: Establish memories for important information and goals for success criteria
-4. **Iterative Processing**: 
-   - Work through tasks systematically
-   - **USE JAVASCRIPT EXECUTION** frequently for calculations, data processing, API calls
-   - Update task status and notes as you progress
-   - Store important findings in memory
-   - Use vault for large code/data that needs to be reused
-5. **Goal Verification**: Ensure all goals are met before completion
-6. **Final Output**: Provide comprehensive results using vault references as needed
-
-**CRITICAL INSTRUCTION**: Always make concrete progress each iteration. Focus on moving tasks from "pending" to "ongoing" to "finished" while building toward goal completion. Use JavaScript execution liberally to maintain accuracy in calculations and handle large data efficiently.
+### GOAL VALIDATION
+Before completion:
+- **Comprehensiveness Check**: Have all aspects been covered?
+- **Quality Assurance**: Are results accurate and well-supported?
+- **User Value Assessment**: Does this fully address the user's needs?
+- **Evidence Verification**: Are conclusions properly backed by data/analysis?
 
 ## FINAL OUTPUT GENERATION
 
-When all goals are complete, generate a comprehensive final output using:
-\`\`\`
+When goals are achieved, create comprehensive results:
+```
 {{<reasoning_text>}}
 {{<final_output>}}
-<h1>Research Analysis Results</h1>
-<p>Comprehensive findings with vault references: {{<vaultref id="results_summary" />}}</p>
-<div>{{<vaultref id="detailed_analysis" />}}</div>
+<div class="research-report">
+  <h1>Comprehensive Analysis Results</h1>
+  
+  <div class="executive-summary">
+    <h2>Executive Summary</h2>
+    <p>Key findings and conclusions with high-level insights...</p>
+  </div>
+  
+  <div class="detailed-analysis">
+    <h2>Detailed Analysis</h2>
+    {{<vaultref id="analysis_data" />}}
+    <p>In-depth examination with supporting evidence...</p>
+  </div>
+  
+  <div class="conclusions">
+    <h2>Conclusions and Implications</h2>
+    <p>Strategic insights and recommendations...</p>
+  </div>
+</div>
 {{</final_output>}}
 {{</reasoning_text>}}
-\`\`\`
+```
 
-The final output will be rendered as HTML in the user interface.`;
+## CRITICAL SUCCESS FACTORS
+
+1. **THINK STRATEGICALLY**: Always consider the bigger picture and ultimate objectives
+2. **ANALYZE DEEPLY**: Go beyond surface-level observations to uncover insights
+3. **VALIDATE RIGOROUSLY**: Use computational methods to verify conclusions
+4. **DOCUMENT SYSTEMATICALLY**: Preserve important findings in memory and vault
+5. **PROGRESS METHODICALLY**: Each iteration should build meaningfully on the previous one
+
+Remember: You are an intelligent research analyst, not a simple task executor. Demonstrate sophisticated reasoning, strategic thinking, and analytical depth in every iteration.`;
 
   /**
    * STORAGE LAYER - Enhanced with Tool Activity Log
@@ -457,12 +493,12 @@ The final output will be rendered as HTML in the user interface.`;
   };
 
   /**
-   * ENHANCED REASONING TEXT PARSER with Tool Activity Tracking
+   * ENHANCED REASONING TEXT PARSER - FIXED to completely hide tool operations
    */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
       const blocks = [];
-      const regex = /{{<reasoning_text>}}([\s\S]*?){{<\/reasoning_text>}}/g;
+      const regex = /{{<reasoning_text>}}([\\s\\S]*?){{<\\/reasoning_text>}}/g;
       let match;
       while ((match = regex.exec(text)) !== null) {
         blocks.push(match[1].trim());
@@ -470,32 +506,45 @@ The final output will be rendered as HTML in the user interface.`;
       return blocks;
     },
 
-    // Extract only pure reasoning text without tool operations
+    // ENHANCED: Extract only pure reasoning text without ANY tool operations
     extractPureReasoningText(text) {
       // Remove all tool operations from reasoning text
       let cleanText = text;
       
       // Remove JS execute blocks
-      cleanText = cleanText.replace(/{{<js_execute>}}[\s\S]*?{{<\/js_execute>}}/g, '');
+      cleanText = cleanText.replace(/{{<js_execute>}}[\\s\\S]*?{{<\\/js_execute>}}/g, '');
       
-      // Remove datavault blocks
-      cleanText = cleanText.replace(/{{<datavault[^>]*>}}[\s\S]*?{{<\/datavault>}}/g, '');
+      // Remove datavault blocks (both self-closing and block form)
+      cleanText = cleanText.replace(/{{<datavault[^>]*>}}[\\s\\S]*?{{<\\/datavault>}}/g, '');
       
-      // Remove self-closing operations
-      cleanText = cleanText.replace(/{{<(?:memory|task|goal|datavault)[^>]*\/>}}/g, '');
+      // Remove self-closing operations (memory, task, goal, datavault)
+      cleanText = cleanText.replace(/{{<(?:memory|task|goal|datavault)[^>]*\\/>}}/g, '');
       
       // Remove final output blocks
-      cleanText = cleanText.replace(/{{<final_output>}}[\s\S]*?{{<\/final_output>}}/g, '');
+      cleanText = cleanText.replace(/{{<final_output>}}[\\s\\S]*?{{<\\/final_output>}}/g, '');
       
-      // Clean up extra whitespace
-      cleanText = cleanText.replace(/\n\s*\n/g, '\n').trim();
+      // Remove vault read requests
+      cleanText = cleanText.replace(/{{<datavault[^>]*action=[\"']request_read[\"'][^>]*\\/>}}/g, '');
+      
+      // Remove vault references
+      cleanText = cleanText.replace(/{{<vaultref[^>]*\\/>}}/g, '');
+      
+      // Remove any remaining tool-like operations
+      cleanText = cleanText.replace(/{{<[^>]*\\/>}}/g, '');
+      cleanText = cleanText.replace(/{{<[^>]*>}}[\\s\\S]*?{{<\\/[^>]*>}}/g, '');
+      
+      // Clean up extra whitespace and empty lines
+      cleanText = cleanText.replace(/\\n\\s*\\n/g, '\\n').trim();
+      
+      // Remove lines that are just whitespace or empty
+      cleanText = cleanText.split('\\n').filter(line => line.trim().length > 0).join('\\n');
       
       return cleanText;
     },
 
     extractJSExecutionBlocks(text) {
       const blocks = [];
-      const regex = /{{<js_execute>}}([\s\S]*?){{<\/js_execute>}}/g;
+      const regex = /{{<js_execute>}}([\\s\\S]*?){{<\\/js_execute>}}/g;
       let match;
       while ((match = regex.exec(text)) !== null) {
         blocks.push(match[1].trim());
@@ -505,7 +554,7 @@ The final output will be rendered as HTML in the user interface.`;
 
     extractFinalOutputBlocks(text) {
       const blocks = [];
-      const regex = /{{<final_output>}}([\s\S]*?){{<\/final_output>}}/g;
+      const regex = /{{<final_output>}}([\\s\\S]*?){{<\\/final_output>}}/g;
       let match;
       while ((match = regex.exec(text)) !== null) {
         blocks.push(match[1].trim());
@@ -524,7 +573,7 @@ The final output will be rendered as HTML in the user interface.`;
       };
 
       // Parse memory operations
-      const memoryRegex = /{{<memory\s+([^>]*)\s*\/>}}/g;
+      const memoryRegex = /{{<memory\\s+([^>]*)\\s*\\/>}}/g;
       let match;
       while ((match = memoryRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
@@ -532,27 +581,27 @@ The final output will be rendered as HTML in the user interface.`;
       }
 
       // Parse task operations  
-      const taskRegex = /{{<task\s+([^>]*)\s*\/>}}/g;
+      const taskRegex = /{{<task\\s+([^>]*)\\s*\\/>}}/g;
       while ((match = taskRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
         operations.tasks.push(attrs);
       }
 
       // Parse goal operations
-      const goalRegex = /{{<goal\s+([^>]*)\s*\/>}}/g;
+      const goalRegex = /{{<goal\\s+([^>]*)\\s*\\/>}}/g;
       while ((match = goalRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
         operations.goals.push(attrs);
       }
 
       // Parse vault operations (both self-closing and block form)
-      const vaultSelfRegex = /{{<datavault\s+([^>]*)\s*\/>}}/g;
+      const vaultSelfRegex = /{{<datavault\\s+([^>]*)\\s*\\/>}}/g;
       while ((match = vaultSelfRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
         operations.vault.push(attrs);
       }
 
-      const vaultBlockRegex = /{{<datavault\s+([^>]*)>}}([\s\S]*?){{<\/datavault>}}/g;
+      const vaultBlockRegex = /{{<datavault\\s+([^>]*)>}}([\\s\\S]*?){{<\\/datavault>}}/g;
       while ((match = vaultBlockRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
         attrs.content = match[2].trim();
@@ -572,7 +621,7 @@ The final output will be rendered as HTML in the user interface.`;
 
     parseAttributes(attrString) {
       const attrs = {};
-      const regex = /(\w+)=\"([^\"]*)\"|(\w+)(?=\s|$)/g;
+      const regex = /(\\w+)=\\\"([^\\\"]*)\\\"|\\b(\\w+)(?=\\s|$)/g;
       let match;
       while ((match = regex.exec(attrString)) !== null) {
         if (match[1] && match[2] !== undefined) {
@@ -607,7 +656,7 @@ The final output will be rendered as HTML in the user interface.`;
             }
             const readResult = `VAULT_READ[${op.id}]: ${content}`;
             const logEntries = Storage.loadReasoningLog();
-            logEntries.push(`=== VAULT READ ===\n${readResult}`);
+            logEntries.push(`=== VAULT READ ===\\n${readResult}`);
             Storage.saveReasoningLog(logEntries);
             Storage.appendToolActivity({
               type: 'vault',
@@ -809,7 +858,7 @@ The final output will be rendered as HTML in the user interface.`;
   const VaultManager = {
     resolveVaultRefsInText(inputText) {
       if (!isNonEmptyString(inputText)) return inputText;
-      const regex = /{{<vaultref\s+id=\"([^\"]+)\"\s*\/>}}/g;
+      const regex = /{{<vaultref\\s+id=\\\"([^\\\"]+)\\\"\\s*\\/>}}/g;
       const vault = Storage.loadVault();
 
       return inputText.replace(regex, (match, vaultId) => {
@@ -823,7 +872,7 @@ The final output will be rendered as HTML in the user interface.`;
 
     getVaultSummary() {
       const vault = Storage.loadVault();
-      return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description}`).join('\n');
+      return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description}`).join('\\n');
     },
 
     getVaultEntry(id, limit = null) {
@@ -855,7 +904,7 @@ The final output will be rendered as HTML in the user interface.`;
         
         // Track vault references used
         const vaultRefsUsed = [];
-        const vaultRefRegex = /{{<vaultref\s+id=\"([^\"]+)\"\s*\/>}}/g;
+        const vaultRefRegex = /{{<vaultref\\s+id=\\\"([^\\\"]+)\\\"\\s*\\/>}}/g;
         let vaultMatch;
         while ((vaultMatch = vaultRefRegex.exec(rawCode)) !== null) {
           vaultRefsUsed.push(vaultMatch[1]);
@@ -927,7 +976,7 @@ The final output will be rendered as HTML in the user interface.`;
         
         // Add to reasoning log for LLM feedback
         const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`);
+        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\\nSUCCESS: true\\nCONSOLE OUTPUT:\\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\\n')}\\nRETURN VALUE:\\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`);
         Storage.saveReasoningLog(logEntries);
         
         console.log(`✓ JavaScript execution completed successfully (${executionTime}ms)`);
@@ -964,7 +1013,7 @@ The final output will be rendered as HTML in the user interface.`;
         
         // Add to reasoning log for LLM feedback
         const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: false\nERROR: ${error.message}\nSTACK: ${error.stack}`);
+        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\\nSUCCESS: false\\nERROR: ${error.message}\\nSTACK: ${error.stack}`);
         Storage.saveReasoningLog(logEntries);
         
         console.error('✗ JavaScript execution failed:', error);
@@ -1017,7 +1066,7 @@ The final output will be rendered as HTML in the user interface.`;
       let picked = KeyManager.chooseActiveKey();
       if (!picked) throw new Error('No usable key');
 
-      // Ensure modelId doesn't have duplicate "models/" prefix
+      // Ensure modelId doesn't have duplicate \"models/\" prefix
       const cleanModelId = modelId.startsWith('models/') ? modelId : `models/${modelId}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
       
@@ -1033,20 +1082,20 @@ The final output will be rendered as HTML in the user interface.`;
         },
         safetySettings: [
           {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            category: \"HARM_CATEGORY_HARASSMENT\",
+            threshold: \"BLOCK_MEDIUM_AND_ABOVE\"
           },
           {
-            category: "HARM_CATEGORY_HATE_SPEECH", 
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            category: \"HARM_CATEGORY_HATE_SPEECH\", 
+            threshold: \"BLOCK_MEDIUM_AND_ABOVE\"
           },
           {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            category: \"HARM_CATEGORY_SEXUALLY_EXPLICIT\",
+            threshold: \"BLOCK_MEDIUM_AND_ABOVE\"
           },
           {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            category: \"HARM_CATEGORY_DANGEROUS_CONTENT\",
+            threshold: \"BLOCK_MEDIUM_AND_ABOVE\"
           }
         ]
       };
@@ -1104,12 +1153,12 @@ The final output will be rendered as HTML in the user interface.`;
         return '';
       }
       const parts = response.candidates[0].content?.parts || [];
-      return parts.map(p => p.text || '').join('\n').trim();
+      return parts.map(p => p.text || '').join('\\n').trim();
     }
   };
 
   /**
-   * ENHANCED REASONING ENGINE with Activity Tracking
+   * ENHANCED REASONING ENGINE - FIXED to avoid random task generation
    */
   const ReasoningEngine = {
     buildContextPrompt(query, iteration) {
@@ -1122,22 +1171,22 @@ The final output will be rendered as HTML in the user interface.`;
 
       const tasksText = tasks.map(t => 
         `- [${t.identifier}] ${t.heading} (${t.status}): ${t.content}${t.notes ? ` | Notes: ${t.notes}` : ''}`
-      ).join('\n');
+      ).join('\\n');
       
       const goalsText = goals.map(g => 
         `- [${g.identifier}] ${g.heading}: ${g.content}${g.notes ? ` | Notes: ${g.notes}` : ''}`
-      ).join('\n');
+      ).join('\\n');
       
       const memoryText = memory.map(m => 
         `- [${m.identifier}] ${m.heading}: ${m.content}${m.notes ? ` | Notes: ${m.notes}` : ''}`
-      ).join('\n');
+      ).join('\\n');
 
-      const recentLog = reasoningLog.slice(-3).join('\n\n---\n\n');
+      const recentLog = reasoningLog.slice(-3).join('\\n\\n---\\n\\n');
       
       // Include recent execution results
       const recentExecutions = executionLog.slice(-2).map(exec => 
         `[${exec.timestamp}] SUCCESS: ${exec.success}, ${exec.success ? 'RESULT: ' + JSON.stringify(exec.result) : 'ERROR: ' + exec.error}`
-      ).join('\n');
+      ).join('\\n');
 
       return `${SYSTEM_PROMPT}
 
@@ -1146,28 +1195,36 @@ The final output will be rendered as HTML in the user interface.`;
 **User Query:** ${query}
 
 **Current Tasks:**
-${tasksText || 'None yet'}
+${tasksText || 'None yet - Begin with thorough query analysis'}
 
 **Goals:**
-${goalsText || 'None yet'}
+${goalsText || 'None yet - Define strategic success criteria after analysis'}
 
 **Memory:**
-${memoryText || 'None yet'}
+${memoryText || 'None yet - Store important findings as you discover them'}
 
 **Vault Index:**
-${vaultSummary || 'Empty'}
+${vaultSummary || 'Empty - Use for complex data and code storage'}
 
 **Recent JavaScript Executions:**
-${recentExecutions || 'None yet'}
+${recentExecutions || 'None yet - Leverage computational power for accuracy'}
 
 **Recent Reasoning Log:**
-${recentLog || 'None yet'}
+${recentLog || 'Starting fresh - Apply strategic intelligence framework'}
 
 **Iteration:** ${iteration}/${MAX_ITERATIONS}
 
 ---
 
-Analyze the current state and take concrete action to advance toward goal completion. Use JavaScript execution frequently for calculations, data processing, and API calls. Use the reasoning block format for all storage operations. Focus on making measurable progress this iteration.`;
+**STRATEGIC INSTRUCTION:** This is iteration ${iteration}. Apply the STRATEGIC INTELLIGENCE FRAMEWORK:
+
+1. **DEEP ANALYSIS**: If no tasks/goals exist, perform thorough query analysis first
+2. **SMART DECOMPOSITION**: Create meaningful tasks based on conceptual understanding
+3. **STRATEGIC GOALS**: Define success criteria that represent real objectives
+4. **PROGRESSIVE EXECUTION**: Advance toward completion with computational backing
+5. **QUALITY VALIDATION**: Ensure outputs meet high standards of accuracy and completeness
+
+Focus on demonstrating sophisticated reasoning and analytical depth. Each iteration should show clear intellectual progress toward comprehensive goal achievement.`;
     },
 
     checkGoalsComplete() {
@@ -1227,7 +1284,7 @@ Analyze the current state and take concrete action to advance toward goal comple
         console.log = origLog;
       }
 
-      outputEl.textContent = logs.length ? logs.join('\n') : 'No output';
+      outputEl.textContent = logs.length ? logs.join('\\n') : 'No output';
     },
 
     clear() {
@@ -1235,26 +1292,21 @@ Analyze the current state and take concrete action to advance toward goal comple
       const outputEl = qs('#execOutput');
       const pill = qs('#execStatus');
 
-      if (editorEl) editorEl.value = '// Use {{<vaultref id="example" />}} to inline vault content\nconsole.log("Hello GDRS");\nreturn { status: "ready", timestamp: new Date() };';
+      if (editorEl) editorEl.value = '// Use {{<vaultref id=\"example\" />}} to inline vault content\\nconsole.log(\"Hello GDRS\");\\nreturn { status: \"ready\", timestamp: new Date() };';
       if (outputEl) outputEl.textContent = 'Execution output will appear here...';
       if (pill) pill.textContent = 'READY';
     }
   };
 
   /**
-   * LOOP CONTROLLER
+   * ENHANCED LOOP CONTROLLER - FIXED to avoid random task generation
    */
   const LoopController = (() => {
     let active = false;
     let iterationCount = 0;
     let loopTimer = null;
 
-    function decomposeQuery(queryStr) {
-      const parts = queryStr.split(/[.?!\n]+/g)
-        .map(s => s.trim())
-        .filter(Boolean);
-      return parts.length ? parts : [queryStr.trim()];
-    }
+    // REMOVED: Automatic query decomposition - this was causing random task generation
 
     async function runIteration() {
       if (!active) return;
@@ -1295,7 +1347,7 @@ Analyze the current state and take concrete action to advance toward goal comple
         // Log only pure reasoning (without tool operations)
         if (pureReasoningTexts.length > 0) {
           const logEntries = Storage.loadReasoningLog();
-          logEntries.push(`=== ITERATION ${iterationCount} - REASONING ===\n${pureReasoningTexts.join('\n\n')}`);
+          logEntries.push(`=== ITERATION ${iterationCount} - REASONING ===\\n${pureReasoningTexts.join('\\n\\n')}`);
           Storage.saveReasoningLog(logEntries);
         }
 
@@ -1329,7 +1381,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       } catch (err) {
         console.error('Iteration error:', err);
         const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== ITERATION ${iterationCount} - ERROR ===\n${err.message}\n${err.stack || ''}`);
+        logEntries.push(`=== ITERATION ${iterationCount} - ERROR ===\\n${err.message}\\n${err.stack || ''}`);
         Storage.saveReasoningLog(logEntries);
         Renderer.renderReasoningLog();
         stopSession();
@@ -1351,18 +1403,18 @@ Analyze the current state and take concrete action to advance toward goal comple
 
       // Build comprehensive final output
       const completedTasks = tasks.filter(t => t.status === 'finished');
-      const goalsSummary = goals.map(g => `**${g.heading}**: ${g.content}`).join('\n');
-      const keyFindings = memory.map(m => `**${m.heading}**: ${m.content} ${m.notes ? `(${m.notes})` : ''}`).join('\n');
+      const goalsSummary = goals.map(g => `**${g.heading}**: ${g.content}`).join('\\n');
+      const keyFindings = memory.map(m => `**${m.heading}**: ${m.content} ${m.notes ? `(${m.notes})` : ''}`).join('\\n');
       
       let finalHtml = `
-        <div style="font-family: var(--fs); line-height: 1.5;">
+        <div style=\"font-family: var(--fs); line-height: 1.5;\">
           <h2>Research Analysis Complete</h2>
           <p><strong>Query:</strong> ${encodeHTML(query)}</p>
           <p><strong>Iterations:</strong> ${iterationCount}</p>
           <p><strong>Status:</strong> ${ReasoningEngine.checkGoalsComplete() ? 'Goals Achieved' : 'Max Iterations Reached'}</p>
           
           <h3>Goals</h3>
-          <div style="margin: 12px 0;">${goalsSummary || 'No goals defined'}</div>
+          <div style=\"margin: 12px 0;\">${goalsSummary || 'No goals defined'}</div>
           
           <h3>Completed Tasks</h3>
           <ul>
@@ -1376,7 +1428,7 @@ Analyze the current state and take concrete action to advance toward goal comple
           </ul>
           
           <h3>Key Findings</h3>
-          <div style="margin: 12px 0;">${keyFindings || 'No key findings recorded'}</div>
+          <div style=\"margin: 12px 0;\">${keyFindings || 'No key findings recorded'}</div>
       `;
       
       // Add vault content if any contains final results
@@ -1384,7 +1436,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       if (resultVault.length > 0) {
         finalHtml += `<h3>Generated Content</h3>`;
         resultVault.forEach(v => {
-          finalHtml += `<div style="margin: 12px 0;"><strong>${encodeHTML(v.description)}</strong>:<br/><pre style="background: var(--bg-alt); padding: 12px; border-radius: 6px; overflow-x: auto;">${encodeHTML(v.content)}</pre></div>`;
+          finalHtml += `<div style=\"margin: 12px 0;\"><strong>${encodeHTML(v.description)}</strong>:<br/><pre style=\"background: var(--bg-alt); padding: 12px; border-radius: 6px; overflow-x: auto;\">${encodeHTML(v.content)}</pre></div>`;
         });
       }
       
@@ -1436,28 +1488,11 @@ Analyze the current state and take concrete action to advance toward goal comple
       // Store the query
       Storage.saveCurrentQuery(rawQuery);
 
-      // Initialize with basic setup
-      const subtasks = decomposeQuery(rawQuery);
-      const initialTasks = subtasks.map((task, i) => ({
-        identifier: generateId('task'),
-        heading: task.slice(0, 60) + (task.length > 60 ? '...' : ''),
-        content: task,
-        status: 'pending',
-        notes: '',
-        createdAt: nowISO()
-      }));
-
-      const initialGoal = {
-        identifier: generateId('goal'),
-        heading: 'Complete Research Analysis',
-        content: rawQuery,
-        notes: '',
-        createdAt: nowISO()
-      };
-
-      Storage.saveTasks(initialTasks);
-      Storage.saveGoals([initialGoal]);
-      Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nDecomposed into ${subtasks.length} tasks`]);
+      // FIXED: Don't automatically create tasks/goals - let the LLM analyze first
+      Storage.saveTasks([]); // Start with no tasks
+      Storage.saveGoals([]); // Start with no goals
+      Storage.saveMemory([]);
+      Storage.saveReasoningLog([`=== SESSION START ===\\nQuery: ${rawQuery}\\nWaiting for intelligent analysis and strategic task/goal generation...`]);
       Storage.saveExecutionLog([]); // Clear execution log
       Storage.saveToolActivityLog([]); // Clear tool activity log
 
@@ -1467,7 +1502,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       // Initial render
       Renderer.renderAll();
 
-      // Start the reasoning loop
+      // Start the reasoning loop - LLM will intelligently analyze and create appropriate tasks/goals
       setTimeout(() => runIteration(), 1000);
     }
 
@@ -1521,9 +1556,9 @@ Analyze the current state and take concrete action to advance toward goal comple
         meta.className = 'keymeta';
         const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
         meta.innerHTML = `
-          <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
-          <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
-          <div><div class="pm">rate</div><div class="mono">${cooldownSecs > 0 ? `cooldown ${cooldownSecs}s` : (k.rateLimited ? 'limited' : 'ok')}</div></div>
+          <div><div class=\"pm\">valid</div><div class=\"mono\">${k.valid ? 'yes' : 'no'}</div></div>
+          <div><div class=\"pm\">usage</div><div class=\"mono\">${k.usage} calls</div></div>
+          <div><div class=\"pm\">rate</div><div class=\"mono\">${cooldownSecs > 0 ? `cooldown ${cooldownSecs}s` : (k.rateLimited ? 'limited' : 'ok')}</div></div>
         `;
 
         row.appendChild(field);
@@ -1545,11 +1580,11 @@ Analyze the current state and take concrete action to advance toward goal comple
 
       const currentValue = modelSelect.value;
       
-      modelSelect.innerHTML = `<option value="">-- select model --</option>`;
+      modelSelect.innerHTML = `<option value=\"\">-- select model --</option>`;
 
       modelsArray.forEach((m) => {
         const fullName = m.name || '';
-        const label = fullName.replace(/^models\//, '');
+        const label = fullName.replace(/^models\\//, '');
         const opt = document.createElement('option');
         opt.value = fullName;
         opt.textContent = label;
@@ -1571,18 +1606,18 @@ Analyze the current state and take concrete action to advance toward goal comple
       if (!tasksEl) return;
 
       if (tasks.length === 0) {
-        tasksEl.innerHTML = '<div class="storage-placeholder">No tasks yet</div>';
+        tasksEl.innerHTML = '<div class=\"storage-placeholder\">No tasks yet - LLM will create intelligent tasks after query analysis</div>';
         return;
       }
 
       tasksEl.innerHTML = tasks.map(t => `
-        <div class="li">
+        <div class=\"li\">
           <div>
-            <div class="mono">${encodeHTML(t.heading)}</div>
-            <div class="pm">${encodeHTML(t.content)}</div>
-            ${t.notes ? `<div class="pm">Notes: ${encodeHTML(t.notes)}</div>` : ''}
+            <div class=\"mono\">${encodeHTML(t.heading)}</div>
+            <div class=\"pm\">${encodeHTML(t.content)}</div>
+            ${t.notes ? `<div class=\"pm\">Notes: ${encodeHTML(t.notes)}</div>` : ''}
           </div>
-          <div class="status">${encodeHTML(t.status.toUpperCase())}</div>
+          <div class=\"status\">${encodeHTML(t.status.toUpperCase())}</div>
         </div>
       `).join('');
     },
@@ -1593,18 +1628,18 @@ Analyze the current state and take concrete action to advance toward goal comple
       if (!memEl) return;
 
       if (memory.length === 0) {
-        memEl.innerHTML = '<div class="storage-placeholder">No memories yet</div>';
+        memEl.innerHTML = '<div class=\"storage-placeholder\">No memories yet - Important findings will be stored here</div>';
         return;
       }
 
       memEl.innerHTML = memory.map(m => `
-        <div class="li">
+        <div class=\"li\">
           <div>
-            <div class="mono">${encodeHTML(m.heading)}</div>
-            <div class="pm">${encodeHTML(m.content)}</div>
-            ${m.notes ? `<div class="pm">Notes: ${encodeHTML(m.notes)}</div>` : ''}
+            <div class=\"mono\">${encodeHTML(m.heading)}</div>
+            <div class=\"pm\">${encodeHTML(m.content)}</div>
+            ${m.notes ? `<div class=\"pm\">Notes: ${encodeHTML(m.notes)}</div>` : ''}
           </div>
-          <div class="id">${encodeHTML(m.identifier)}</div>
+          <div class=\"id\">${encodeHTML(m.identifier)}</div>
         </div>
       `).join('');
     },
@@ -1615,18 +1650,18 @@ Analyze the current state and take concrete action to advance toward goal comple
       if (!goalsEl) return;
 
       if (goals.length === 0) {
-        goalsEl.innerHTML = '<div class="storage-placeholder">No goals yet</div>';
+        goalsEl.innerHTML = '<div class=\"storage-placeholder\">No goals yet - Strategic success criteria will be defined after analysis</div>';
         return;
       }
 
       goalsEl.innerHTML = goals.map(g => `
-        <div class="li">
+        <div class=\"li\">
           <div>
-            <div class="mono">${encodeHTML(g.heading)}</div>
-            <div class="pm">${encodeHTML(g.content)}</div>
-            ${g.notes ? `<div class="pm">Notes: ${encodeHTML(g.notes)}</div>` : ''}
+            <div class=\"mono\">${encodeHTML(g.heading)}</div>
+            <div class=\"pm\">${encodeHTML(g.content)}</div>
+            ${g.notes ? `<div class=\"pm\">Notes: ${encodeHTML(g.notes)}</div>` : ''}
           </div>
-          <div class="id">${encodeHTML(g.identifier)}</div>
+          <div class=\"id\">${encodeHTML(g.identifier)}</div>
         </div>
       `).join('');
     },
@@ -1637,17 +1672,17 @@ Analyze the current state and take concrete action to advance toward goal comple
       if (!vaultEl) return;
 
       if (vault.length === 0) {
-        vaultEl.innerHTML = '<div class="storage-placeholder">No vault entries yet</div>';
+        vaultEl.innerHTML = '<div class=\"storage-placeholder\">No vault entries yet - Complex data and code will be stored here</div>';
         return;
       }
 
       vaultEl.innerHTML = vault.map(v => `
-        <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
+        <div class=\"li\" data-vault-id=\"${encodeHTML(v.identifier)}\">
           <div>
-            <div class="mono">${encodeHTML(v.identifier)}</div>
-            <div class="pm">${encodeHTML(v.description)}</div>
+            <div class=\"mono\">${encodeHTML(v.identifier)}</div>
+            <div class=\"pm\">${encodeHTML(v.description)}</div>
           </div>
-          <div class="status">${encodeHTML(v.type.toUpperCase())}</div>
+          <div class=\"status\">${encodeHTML(v.type.toUpperCase())}</div>
         </div>
       `).join('');
 
@@ -1667,7 +1702,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       if (!logEl) return;
 
       if (logEntries.length === 0 && toolActivity.length === 0) {
-        logEl.innerHTML = '<div class="log-placeholder">Reasoning iterations will appear here...</div>';
+        logEl.innerHTML = '<div class=\"log-placeholder\">Intelligent reasoning iterations will appear here...</div>';
         return;
       }
 
@@ -1676,10 +1711,10 @@ Analyze the current state and take concrete action to advance toward goal comple
       // Render reasoning entries
       logEntries.forEach((entry, i) => {
         html += `
-          <div class="li reasoning-entry">
+          <div class=\"li reasoning-entry\">
             <div>
-              <div class="mono">#${i + 1}</div>
-              <pre class="mono reasoning-text">${encodeHTML(entry)}</pre>
+              <div class=\"mono\">#${i + 1}</div>
+              <pre class=\"mono reasoning-text\">${encodeHTML(entry)}</pre>
             </div>
           </div>
         `;
@@ -1689,7 +1724,7 @@ Analyze the current state and take concrete action to advance toward goal comple
         const iterationActivities = toolActivity.filter(act => act.iteration === iterationNum);
         
         if (iterationActivities.length > 0) {
-          html += '<div class="tool-activities">';
+          html += '<div class=\"tool-activities\">';
           iterationActivities.forEach(activity => {
             const statusClass = activity.status === 'success' ? 'tool-success' : 'tool-error';
             const typeClass = `tool-${activity.type.replace('_', '-')}`;
@@ -1704,14 +1739,14 @@ Analyze the current state and take concrete action to advance toward goal comple
             }
             
             html += `
-              <div class="tool-activity ${statusClass} ${typeClass}">
-                <div class="tool-icon">🔧</div>
-                <div class="tool-details">
-                  <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
-                  <div class="tool-meta">${activityDetails || activity.id || ''}</div>
-                  ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
+              <div class=\"tool-activity ${statusClass} ${typeClass}\">
+                <div class=\"tool-icon\">🔧</div>
+                <div class=\"tool-details\">
+                  <div class=\"tool-name\">${activity.type.toUpperCase()}: ${activity.action}</div>
+                  <div class=\"tool-meta\">${activityDetails || activity.id || ''}</div>
+                  ${activity.error ? `<div class=\"tool-error-msg\">${encodeHTML(activity.error)}</div>` : ''}
                 </div>
-                <div class="tool-status ${activity.status}">${activity.status === 'success' ? '✓' : '✗'}</div>
+                <div class=\"tool-status ${activity.status}\">${activity.status === 'success' ? '✓' : '✗'}</div>
               </div>
             `;
           });
@@ -1731,12 +1766,12 @@ Analyze the current state and take concrete action to advance toward goal comple
       const statusEl = qs('#finalStatus');
       
       if (finalEl) {
-        finalEl.innerHTML = output.html || '<div class="output-placeholder"><p>Research report will render here after analysis completion.</p></div>';
+        finalEl.innerHTML = output.html || '<div class=\"output-placeholder\"><p>Comprehensive research report will render here after intelligent analysis and goal completion.</p></div>';
       }
       
       if (statusEl) {
         const isComplete = ReasoningEngine.checkGoalsComplete();
-        statusEl.textContent = isComplete ? 'verified' : 'running';
+        statusEl.textContent = isComplete ? 'verified' : 'analyzing';
       }
     },
 
@@ -1789,7 +1824,7 @@ Analyze the current state and take concrete action to advance toward goal comple
         if (confirm('Clear ALL memories? This cannot be undone.')) {
           localStorage.setItem('gdrs_memory', JSON.stringify([]));
           const log = Storage.loadReasoningLog();
-          log.push('=== ACTION ===\nCleared all memories');
+          log.push('=== ACTION ===\\nCleared all memories');
           Storage.saveReasoningLog(log);
           Renderer.renderMemories();
         }
@@ -1802,7 +1837,7 @@ Analyze the current state and take concrete action to advance toward goal comple
         if (confirm('Clear ALL goals? This cannot be undone.')) {
           localStorage.setItem('gdrs_goals', JSON.stringify([]));
           const log = Storage.loadReasoningLog();
-          log.push('=== ACTION ===\nCleared all goals');
+          log.push('=== ACTION ===\\nCleared all goals');
           Storage.saveReasoningLog(log);
           Renderer.renderGoals();
         }
@@ -1815,7 +1850,7 @@ Analyze the current state and take concrete action to advance toward goal comple
         if (confirm('Clear ALL data vault entries? This cannot be undone.')) {
           localStorage.setItem('gdrs_vault', JSON.stringify([]));
           const log = Storage.loadReasoningLog();
-          log.push('=== ACTION ===\nCleared all data vault entries');
+          log.push('=== ACTION ===\\nCleared all data vault entries');
           Storage.saveReasoningLog(log);
           Renderer.renderVault();
         }
@@ -1879,9 +1914,9 @@ Analyze the current state and take concrete action to advance toward goal comple
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&amp;/g, '&')
-          .replace(/&quot;/g, '"');
+          .replace(/&quot;/g, '\"');
         
-        const blob = new Blob([`GDRS Analysis Report\n${'='.repeat(50)}\n\n${text}`], { type: 'text/plain' });
+        const blob = new Blob([`GDRS Analysis Report\\n${'='.repeat(50)}\\n\\n${text}`], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1960,8 +1995,8 @@ Analyze the current state and take concrete action to advance toward goal comple
       }
     }, 1000);
 
-    console.log('%cGDRS Runtime Core - Ready for Deep Research', 'color: #00ff00; font-weight: bold;');
-    console.log('%cAdd API keys, select a model, and enter your research query to begin.', 'color: #aaaaaa;');
+    console.log('%cGDRS Runtime Core - Ready for Intelligent Deep Research', 'color: #00ff00; font-weight: bold;');
+    console.log('%cAdd API keys, select a model, and enter your research query to begin strategic analysis.', 'color: #aaaaaa;');
   }
 
   // Boot when DOM is ready
