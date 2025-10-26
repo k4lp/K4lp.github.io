@@ -14,8 +14,8 @@
 
   // Application constants
   const VERSION = '1.1.1';
-  const MAX_ITERATIONS = 20;
-  const ITERATION_DELAY = 2000;
+  const MAX_ITERATIONS = 2000;
+  const ITERATION_DELAY = 200;
   
   // Local storage keys
   const LS_KEYS = {
@@ -138,9 +138,9 @@ Goals represent strategic success criteria:
 - **For Comparisons**: "Deliver structured analysis highlighting key differences and implications"
 
 DO NOT create goals like:
-- "Store option A, B, C, D" (This is data management, not a goal)
-- "Remember the numbers 1, 2, 3" (This is storage, not an objective)
-- "Keep track of variables" (This is bookkeeping, not a success criterion)
+- "Store option A, B, C, D" (This is data management, not a goal, use memory for that.)
+- "Remember the numbers 1, 2, 3" (This is storage, not an objective, use memory for that.)
+- "Keep track of variables" (This is bookkeeping, not a success criterion, use memory for that.)
 
 ## TECHNICAL OPERATIONS FRAMEWORK
 
@@ -263,12 +263,12 @@ When goals are achieved, create comprehensive results:
   <div class="detailed-analysis">
     <h2>Detailed Analysis</h2>
     {{<vaultref id="analysis_data" />}}
-    <p>In-depth examination with supporting evidence...</p>
+    <p>In-depth examination with supporting evidence in short with only details necessary...</p>
   </div>
   
   <div class="conclusions">
-    <h2>Conclusions and Implications</h2>
-    <p>Strategic insights and recommendations...</p>
+    <h2>Conclusions and Implications:</h2>
+    <h2>Answers to the questions and solutions:</h2>
   </div>
 </div>
 {{</final_output>}}
