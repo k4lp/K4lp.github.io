@@ -36,7 +36,9 @@ A production-grade, browser-based research assistant with iterative reasoning, u
 ## Development
 
 - index.html – Main interface
-- js/gdrs.js – Runtime core with all functionality
+- js/main.js – Orchestrator / UI runtime
+- js/tools.js – Vault ref and helpers
+- js/gemini.js – Reasoning loop (stub)
 
 ---
 
