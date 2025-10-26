@@ -124,10 +124,10 @@
           parts: [{ text: prompt }]
         }],
         generationConfig: {
-          temperature: options.temperature || 0.7,
-          topP: options.topP || 0.8,
-          topK: options.topK || 40,
-          maxOutputTokens: options.maxOutputTokens || 8192,
+          temperature: options.temperature || 0.8,
+          topP: options.topP || 1,
+          topK: options.topK || 95,
+          maxOutputTokens: options.maxOutputTokens || 65536,
           ...options.generationConfig
         },
         safetySettings: options.safetySettings || [
