@@ -13,6 +13,14 @@
   --warning: #ffc107;
   --error: #dc3545;
   
+  /* Tool Activity Colors */
+  --tool-js: #f7df1e;
+  --tool-vault: #6f42c1;
+  --tool-memory: #28a745;
+  --tool-task: #fd7e14;
+  --tool-goal: #20c997;
+  --tool-final: #e83e8c;
+  
   /* Typography */
   --fs: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --fs-mono: 'Geist Mono', 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', Consolas, 'Courier New', monospace;
@@ -51,6 +59,14 @@
     --success: #3fb950;
     --warning: #d29922;
     --error: #f85149;
+    
+    /* Dark mode tool colors */
+    --tool-js: #f7df1e;
+    --tool-vault: #8b5cf6;
+    --tool-memory: #10b981;
+    --tool-task: #f59e0b;
+    --tool-goal: #06b6d4;
+    --tool-final: #ec4899;
   }
 }
 
@@ -259,9 +275,25 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-secondary);
 }
 
+.btn-danger {
+  background-color: var(--error);
+  border-color: var(--error);
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
 .btn-large {
   padding: var(--gap-sm) var(--gap-lg);
   font-size: 13px;
+}
+
+.btn-small {
+  padding: 2px var(--gap-xs);
+  font-size: 10px;
 }
 
 /* Status Pills */
@@ -377,6 +409,24 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
 }
 
+/* Storage Actions */
+.storage-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--gap-sm);
+  padding-top: var(--gap-sm);
+  border-top: 1px solid var(--border);
+}
+
+.storage-actions .btn {
+  margin-right: var(--gap-xs);
+}
+
+.storage-actions .btn:last-child {
+  margin-right: 0;
+}
+
 /* Log Container */
 .log-container {
   max-height: 400px;
@@ -399,6 +449,149 @@ h1, h2, h3, h4, h5, h6 {
   margin-top: var(--gap-xs);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Reasoning Entry Styling */
+.reasoning-entry {
+  background-color: var(--bg);
+  border-left: 3px solid var(--accent);
+}
+
+.reasoning-text {
+  padding: var(--gap-sm);
+  background-color: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  margin: var(--gap-xs) 0;
+}
+
+/* Tool Activities */
+.tool-activities {
+  margin: var(--gap-sm) 0;
+  padding: var(--gap-sm);
+  background-color: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--text-muted);
+}
+
+.tool-activity {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-xs) var(--gap-sm);
+  margin-bottom: var(--gap-xs);
+  background-color: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.tool-activity:last-child {
+  margin-bottom: 0;
+}
+
+.tool-icon {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+}
+
+.tool-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-name {
+  font-family: var(--fs-mono);
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.tool-meta {
+  color: var(--text-secondary);
+  font-size: 9px;
+  margin-top: 1px;
+}
+
+.tool-error-msg {
+  color: var(--error);
+  font-size: 9px;
+  margin-top: 2px;
+  font-family: var(--fs-mono);
+}
+
+.tool-status {
+  font-size: 12px;
+  font-weight: bold;
+  width: 16px;
+  text-align: center;
+}
+
+/* Tool Activity Types */
+.tool-js-execute {
+  border-left-color: var(--tool-js);
+}
+
+.tool-js-execute .tool-icon {
+  color: var(--tool-js);
+}
+
+.tool-vault {
+  border-left-color: var(--tool-vault);
+}
+
+.tool-vault .tool-icon {
+  color: var(--tool-vault);
+}
+
+.tool-memory {
+  border-left-color: var(--tool-memory);
+}
+
+.tool-memory .tool-icon {
+  color: var(--tool-memory);
+}
+
+.tool-task {
+  border-left-color: var(--tool-task);
+}
+
+.tool-task .tool-icon {
+  color: var(--tool-task);
+}
+
+.tool-goal {
+  border-left-color: var(--tool-goal);
+}
+
+.tool-goal .tool-icon {
+  color: var(--tool-goal);
+}
+
+.tool-final-output {
+  border-left-color: var(--tool-final);
+}
+
+.tool-final-output .tool-icon {
+  color: var(--tool-final);
+}
+
+/* Tool Status Colors */
+.tool-success .tool-status {
+  color: var(--success);
+}
+
+.tool-error .tool-status {
+  color: var(--error);
+}
+
+.tool-success {
+  background-color: rgba(40, 167, 69, 0.05);
+}
+
+.tool-error {
+  background-color: rgba(220, 53, 69, 0.05);
 }
 
 /* Code Editor */
@@ -631,6 +824,21 @@ h1, h2, h3, h4, h5, h6 {
 
 .status-pill.pulse {
   animation: pulse 2s infinite;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tool-activity {
+  animation: slideIn 0.3s ease-out;
 }
 
 /* Utilities */
