@@ -595,11 +595,12 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
       let picked = KeyManager.chooseActiveKey();
       if (!picked) throw new Error('No usable key');
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
+      // Ensure modelId doesn't have duplicate "models/" prefix
+      const cleanModelId = modelId.startsWith('models/') ? modelId : `models/${modelId}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
       
       const payload = {
         contents: [{
-          role: 'user',
           parts: [{ text: prompt }]
         }],
         generationConfig: {
@@ -607,13 +608,35 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
           topP: 0.8,
           topK: 40,
           maxOutputTokens: 8192
-        }
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH", 
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       };
+
+      console.log('Making request to:', url);
 
       try {
         const resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify(payload)
         });
 
@@ -622,14 +645,18 @@ Always make concrete progress each iteration. Focus on moving tasks from "pendin
           picked = KeyManager.chooseActiveKey();
           if (!picked) throw new Error('Rate limited. No backup key.');
           
-          const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
+          const cleanModelId2 = picked.modelId?.startsWith('models/') ? picked.modelId : `models/${picked.modelId || modelId}`;
+          const url2 = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId2}:generateContent?key=${encodeURIComponent(picked.key)}`;
           const resp2 = await fetch(url2, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
           
-          if (!resp2.ok) throw new Error('Gemini request failed: ' + resp2.status);
+          if (!resp2.ok) {
+            const errorText = await resp2.text();
+            throw new Error(`Gemini request failed: ${resp2.status} - ${errorText}`);
+          }
           KeyManager.bumpUsage(picked.slot);
           return resp2.json();
         }
@@ -1005,6 +1032,9 @@ Analyze the current state and take concrete action to advance toward goal comple
       
       const sessionPill = qs('#sessionStatus');
       if (sessionPill) sessionPill.textContent = 'IDLE';
+      
+      const runBtn = qs('#runQueryBtn');
+      if (runBtn) runBtn.textContent = 'Run Analysis';
     }
 
     return {
@@ -1267,10 +1297,8 @@ Analyze the current state and take concrete action to advance toward goal comple
       runBtn.addEventListener('click', () => {
         if (LoopController.isActive()) {
           LoopController.stopSession();
-          runBtn.textContent = 'Run Analysis';
         } else {
           LoopController.startSession();
-          runBtn.textContent = 'Stop Analysis';
         }
       });
     }
