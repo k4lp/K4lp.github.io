@@ -1,111 +1,48 @@
 /**
- * GEMINI DEEP RESEARCH SYSTEM - COMPLETE PRODUCTION RUNTIME
- * Live working system with full LLM integration
+ * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
+ * Complete production runtime with LLM integration
  */
 
-(() => {
-  "use strict";
+(function() {
+  'use strict';
 
-  /********************************************************************
-   * CORE CONSTANTS & UTILITIES
-   ********************************************************************/
-
-  const VERSION = "1.0.0";
+  // Application constants
+  const VERSION = '1.0.0';
   const MAX_ITERATIONS = 20;
   const ITERATION_DELAY = 2000;
   
-  const NOW = () => new Date();
-  const pad2 = (n) => String(n).padStart(2, "0");
-
-  function nowISO() {
-    const d = NOW();
-    const yr = d.getFullYear();
-    const mo = pad2(d.getMonth() + 1);
-    const da = pad2(d.getDate());
-    const hr = pad2(d.getHours());
-    const mi = pad2(d.getMinutes());
-    return `${yr}-${mo}-${da} ${hr}:${mi}`;
-  }
-
-  function encodeHTML(str) {
-    if (str == null) return "";
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
-  function safeJSONParse(raw, fallback) {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return fallback;
-    }
-  }
-
-  function deepClone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-
-  function isNonEmptyString(x) {
-    return typeof x === "string" && x.trim().length > 0;
-  }
-
-  function generateId(prefix = "id") {
-    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /********************************************************************
-   * DOM QUERY & ASSERTION
-   ********************************************************************/
-
-  const qs = (sel, root = document) => root.querySelector(sel);
-  const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-  /********************************************************************
-   * LOCAL STORAGE KEYS
-   ********************************************************************/
-
+  // Local storage keys
   const LS_KEYS = {
-    META: "gdrs_meta",
-    KEYPOOL: "gdrs_keypool",
-    GOALS: "gdrs_goals",
-    MEMORY: "gdrs_memory",
-    TASKS: "gdrs_tasks",
-    VAULT: "gdrs_vault",
-    FINAL_OUTPUT: "gdrs_final_output",
-    REASONING_LOG: "gdrs_reasoning_log",
-    CURRENT_QUERY: "gdrs_current_query"
+    META: 'gdrs_meta',
+    KEYPOOL: 'gdrs_keypool', 
+    GOALS: 'gdrs_goals',
+    MEMORY: 'gdrs_memory',
+    TASKS: 'gdrs_tasks',
+    VAULT: 'gdrs_vault',
+    FINAL_OUTPUT: 'gdrs_final_output',
+    REASONING_LOG: 'gdrs_reasoning_log',
+    CURRENT_QUERY: 'gdrs_current_query'
   };
 
-  /********************************************************************
-   * DATA MODELS
-   ********************************************************************/
-
-  const DEFAULT_FINAL_OUTPUT = () => ({
-    timestamp: "—",
-    html: "<p>Report will render here after goal validation.</p>"
-  });
-
+  // Default data structures
   const DEFAULT_KEYPOOL = () => {
-    const arr = [];
+    const pool = [];
     for (let i = 1; i <= 5; i++) {
-      arr.push({
+      pool.push({
         slot: i,
-        key: "",
+        key: '',
         usage: 0,
         cooldownUntil: 0,
         rateLimited: false,
         valid: false
       });
     }
-    return arr;
+    return pool;
   };
 
-  /********************************************************************
-   * SYSTEM PROMPT FOR LLM
-   ********************************************************************/
-
+  /**
+   * SYSTEM PROMPT - Enhanced for better LLM interaction
+   */
   const SYSTEM_PROMPT = `# GEMINI DEEP RESEARCH SYSTEM - LLM INTERFACE
 
 You are the core reasoning engine of the Gemini Deep Research System (GDRS), a browser-based research assistant with iterative reasoning, unlimited code execution, and persistent storage management.
@@ -133,34 +70,34 @@ You are the core reasoning engine of the Gemini Deep Research System (GDRS), a b
 ## AVAILABLE OPERATIONS
 
 ### Memory Operations
-```
+\`\`\`
 {{<reasoning_text>}}
 {{<memory identifier="unique_id" heading="Memory Title" content="Detailed content" notes="" />}}
 {{<memory identifier="existing_id" notes="Additional context" />}}
 {{<memory identifier="existing_id" delete />}}
 {{</reasoning_text>}}
-```
+\`\`\`
 
 ### Task Operations
-```
+\`\`\`
 {{<reasoning_text>}}
 {{<task identifier="unique_id" heading="Task Title" content="Detailed task" notes="" />}}
 {{<task identifier="existing_id" notes="Progress update" status="ongoing" />}}
 {{</reasoning_text>}}
-```
+\`\`\`
 Valid statuses: "pending" | "ongoing" | "finished" | "paused"
 
 ### Goal Operations
-```
+\`\`\`
 {{<reasoning_text>}}
 {{<goal identifier="unique_id" heading="Goal Title" content="Detailed goal" notes="" />}}
 {{<goal identifier="existing_id" notes="Additional context" />}}
 {{<goal identifier="existing_id" delete />}}
 {{</reasoning_text>}}
-```
+\`\`\`
 
 ### Data Vault Operations
-```
+\`\`\`
 {{<reasoning_text>}}
 {{<datavault id="dv_unique_id" type="code" description="Brief description">}}
 function processData(input) {
@@ -172,14 +109,14 @@ function processData(input) {
 {{<datavault id="existing_id" delete />}}
 {{<datavault id="existing_id" action="request_read" limit="100" />}}
 {{</reasoning_text>}}
-```
+\`\`\`
 Types: "code" | "text" | "data"
 For limit: use number for character limit or "full-length" for complete content
 
 ### Vault References (Use anywhere)
-```
+\`\`\`
 {{<vaultref id="dv_unique_id" />}}
-```
+\`\`\`
 This gets substituted with actual vault content during code execution and final output.
 
 ## REASONING WORKFLOW
@@ -195,61 +132,13 @@ This gets substituted with actual vault content during code execution and final 
 5. **Goal Verification**: Ensure all goals are met before completion
 6. **Final Output**: Provide comprehensive results using vault references as needed
 
-## CODE EXECUTION
+Always make concrete progress each iteration. Focus on moving tasks from "pending" to "ongoing" to "finished" while building toward goal completion.`;
 
-You can reference and execute JavaScript code. The system will:
-- Substitute {{<vaultref id="..." />}} with actual content before execution
-- Provide full DOM and Web API access
-- Capture console output and return values
-- Handle errors gracefully
-
-## EXAMPLE USAGE
-
-```
-{{<reasoning_text>}}
-{{<goal identifier="main_analysis" heading="Complete Data Analysis" content="Analyze the provided dataset and identify key trends" />}}
-{{<task identifier="data_load" heading="Load Dataset" content="Import and validate the data structure" status="pending" notes="" />}}
-{{<memory identifier="dataset_info" heading="Dataset Metadata" content="CSV with 1000 rows, 5 columns: id, name, value, category, timestamp" notes="Validated structure" />}}
-{{<datavault id="dv_analysis_code" type="code" description="Main analysis function">}}
-function analyzeData(data) {
-  // Complex analysis logic here
-  const trends = data.reduce((acc, item) => {
-    // aggregation logic
-    return acc;
-  }, {});
-  return trends;
-}
-{{</datavault>}}
-{{</reasoning_text>}}
-
-I've established the analysis framework. Now I'll load the data:
-
-{{<reasoning_text>}}
-{{<task identifier="data_load" status="ongoing" notes="Starting data import process" />}}
-{{</reasoning_text>}}
-
-[Continue with actual work...]
-```
-
-## CURRENT CONTEXT
-
-You will receive:
-- User Query: The research question or task
-- Current Tasks: All active tasks with status
-- Goals: Success criteria to achieve
-- Memory: Important context from previous iterations
-- Vault Index: Available stored code/data/text
-- Iteration Count: Current iteration number
-
-Always make concrete progress each iteration. Focus on moving tasks from "pending" to "ongoing" to "finished" while building toward goal completion.
-
-Remember: You are not just analyzing - you are actively researching, coding, and building solutions through the iterative process.`;
-
-  /********************************************************************
-   * STORE LAYER
-   ********************************************************************/
-
-  const Store = {
+  /**
+   * STORAGE LAYER
+   */
+  const Storage = {
+    // Keypool management
     loadKeypool() {
       const raw = safeJSONParse(localStorage.getItem(LS_KEYS.KEYPOOL), null);
       if (!Array.isArray(raw)) {
@@ -257,85 +146,21 @@ Remember: You are not just analyzing - you are actively researching, coding, and
         localStorage.setItem(LS_KEYS.KEYPOOL, JSON.stringify(seed));
         return seed;
       }
-      return KeyManager.normalizeKeypool(raw);
+      return this.normalizeKeypool(raw);
     },
+
     saveKeypool(pool) {
       localStorage.setItem(LS_KEYS.KEYPOOL, JSON.stringify(pool));
     },
 
-    loadGoals() {
-      return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []) || [];
-    },
-    saveGoals(goalsArr) {
-      localStorage.setItem(LS_KEYS.GOALS, JSON.stringify(goalsArr));
-    },
-
-    loadMemory() {
-      return safeJSONParse(localStorage.getItem(LS_KEYS.MEMORY), []) || [];
-    },
-    saveMemory(memArr) {
-      localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memArr));
-    },
-
-    loadTasks() {
-      return safeJSONParse(localStorage.getItem(LS_KEYS.TASKS), []) || [];
-    },
-    saveTasks(tasksArr) {
-      localStorage.setItem(LS_KEYS.TASKS, JSON.stringify(tasksArr));
-    },
-
-    loadVault() {
-      return safeJSONParse(localStorage.getItem(LS_KEYS.VAULT), []) || [];
-    },
-    saveVault(vaultArr) {
-      localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(vaultArr));
-    },
-
-    loadFinalOutput() {
-      const fo = safeJSONParse(localStorage.getItem(LS_KEYS.FINAL_OUTPUT), null);
-      if (!fo || typeof fo !== "object") {
-        const fallback = DEFAULT_FINAL_OUTPUT();
-        localStorage.setItem(LS_KEYS.FINAL_OUTPUT, JSON.stringify(fallback));
-        return fallback;
-      }
-      return fo;
-    },
-    saveFinalOutput(htmlString) {
-      const outObj = {
-        timestamp: nowISO(),
-        html: htmlString || ""
-      };
-      localStorage.setItem(LS_KEYS.FINAL_OUTPUT, JSON.stringify(outObj));
-    },
-
-    loadReasoningLog() {
-      return safeJSONParse(localStorage.getItem(LS_KEYS.REASONING_LOG), []) || [];
-    },
-    saveReasoningLog(lines) {
-      localStorage.setItem(LS_KEYS.REASONING_LOG, JSON.stringify(lines));
-    },
-
-    loadCurrentQuery() {
-      return localStorage.getItem(LS_KEYS.CURRENT_QUERY) || "";
-    },
-    saveCurrentQuery(query) {
-      localStorage.setItem(LS_KEYS.CURRENT_QUERY, query || "");
-    }
-  };
-
-  /********************************************************************
-   * KEY MANAGER
-   ********************************************************************/
-
-  const KeyManager = {
     normalizeKeypool(arr) {
       const out = [];
       for (let i = 1; i <= 5; i++) {
-        const found = arr.find((k) => k && k.slot === i);
+        const found = arr.find(k => k && k.slot === i);
         if (found) {
           out.push({
             slot: i,
-            key: isNonEmptyString(found.key) ? found.key.trim() : "",
+            key: isNonEmptyString(found.key) ? found.key.trim() : '',
             usage: Number(found.usage || 0),
             cooldownUntil: Number(found.cooldownUntil || 0),
             rateLimited: !!found.rateLimited,
@@ -344,7 +169,7 @@ Remember: You are not just analyzing - you are actively researching, coding, and
         } else {
           out.push({
             slot: i,
-            key: "",
+            key: '',
             usage: 0,
             cooldownUntil: 0,
             rateLimited: false,
@@ -355,17 +180,80 @@ Remember: You are not just analyzing - you are actively researching, coding, and
       return out;
     },
 
+    // Entity storage
+    loadGoals() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []) || [];
+    },
+    saveGoals(goals) {
+      localStorage.setItem(LS_KEYS.GOALS, JSON.stringify(goals));
+    },
+
+    loadMemory() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.MEMORY), []) || [];
+    },
+    saveMemory(memory) {
+      localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memory));
+    },
+
+    loadTasks() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.TASKS), []) || [];
+    },
+    saveTasks(tasks) {
+      localStorage.setItem(LS_KEYS.TASKS, JSON.stringify(tasks));
+    },
+
+    loadVault() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.VAULT), []) || [];
+    },
+    saveVault(vault) {
+      localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(vault));
+    },
+
+    // Output and logs
+    loadFinalOutput() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.FINAL_OUTPUT), {
+        timestamp: '—',
+        html: '<p>Report will render here after goal validation.</p>'
+      });
+    },
+    saveFinalOutput(htmlString) {
+      const outObj = {
+        timestamp: nowISO(),
+        html: htmlString || ''
+      };
+      localStorage.setItem(LS_KEYS.FINAL_OUTPUT, JSON.stringify(outObj));
+    },
+
+    loadReasoningLog() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.REASONING_LOG), []) || [];
+    },
+    saveReasoningLog(log) {
+      localStorage.setItem(LS_KEYS.REASONING_LOG, JSON.stringify(log));
+    },
+
+    loadCurrentQuery() {
+      return localStorage.getItem(LS_KEYS.CURRENT_QUERY) || '';
+    },
+    saveCurrentQuery(query) {
+      localStorage.setItem(LS_KEYS.CURRENT_QUERY, query || '');
+    }
+  };
+
+  /**
+   * KEY MANAGER
+   */
+  const KeyManager = {
     getCooldownRemainingSeconds(k) {
       const now = Date.now();
       if (!k.cooldownUntil || k.cooldownUntil <= now) return 0;
-      const diffMs = k.cooldownUntil - now;
-      return Math.ceil(diffMs / 1000);
+      return Math.ceil((k.cooldownUntil - now) / 1000);
     },
 
     liftCooldowns() {
-      const pool = Store.loadKeypool();
+      const pool = Storage.loadKeypool();
       let dirty = false;
       const now = Date.now();
+      
       for (const k of pool) {
         if (k.cooldownUntil && k.cooldownUntil <= now) {
           if (k.rateLimited) dirty = true;
@@ -373,72 +261,79 @@ Remember: You are not just analyzing - you are actively researching, coding, and
           k.cooldownUntil = 0;
         }
       }
-      if (dirty) {
-        Store.saveKeypool(pool);
-      }
+      
+      if (dirty) Storage.saveKeypool(pool);
     },
 
     markRateLimit(slot, cooldownSeconds = 30) {
-      const pool = Store.loadKeypool();
-      const rec = pool.find((k) => k.slot === slot);
+      const pool = Storage.loadKeypool();
+      const rec = pool.find(k => k.slot === slot);
       if (!rec) return;
+      
       const now = Date.now();
       rec.rateLimited = true;
       rec.cooldownUntil = now + cooldownSeconds * 1000;
-      Store.saveKeypool(pool);
+      Storage.saveKeypool(pool);
     },
 
     chooseActiveKey() {
-      const pool = Store.loadKeypool();
-      KeyManager.liftCooldowns();
-      const usable = pool.find((k) => {
-        const cd = KeyManager.getCooldownRemainingSeconds(k);
+      const pool = Storage.loadKeypool();
+      this.liftCooldowns();
+      
+      const usable = pool.find(k => {
+        const cd = this.getCooldownRemainingSeconds(k);
         return k.key && k.valid && !k.rateLimited && cd === 0;
       });
+      
       return usable || null;
     },
 
     setKey(slot, newKey) {
-      const pool = Store.loadKeypool();
-      const rec = pool.find((k) => k.slot === slot);
+      const pool = Storage.loadKeypool();
+      const rec = pool.find(k => k.slot === slot);
       if (!rec) return;
+      
       rec.key = newKey.trim();
       rec.valid = false;
-      Store.saveKeypool(pool);
+      Storage.saveKeypool(pool);
     },
 
     markValid(slot, isValid) {
-      const pool = Store.loadKeypool();
-      const rec = pool.find((k) => k.slot === slot);
+      const pool = Storage.loadKeypool();
+      const rec = pool.find(k => k.slot === slot);
       if (!rec) return;
+      
       rec.valid = !!isValid;
-      Store.saveKeypool(pool);
+      Storage.saveKeypool(pool);
     },
 
     bumpUsage(slot) {
-      const pool = Store.loadKeypool();
-      const rec = pool.find((k) => k.slot === slot);
+      const pool = Storage.loadKeypool();
+      const rec = pool.find(k => k.slot === slot);
       if (!rec) return;
+      
       rec.usage = Number(rec.usage || 0) + 1;
-      Store.saveKeypool(pool);
+      Storage.saveKeypool(pool);
     },
 
     clearAll() {
-      Store.saveKeypool(DEFAULT_KEYPOOL());
+      Storage.saveKeypool(DEFAULT_KEYPOOL());
     },
 
     async validateAllKeys() {
-      const pool = Store.loadKeypool();
+      const pool = Storage.loadKeypool();
       for (const k of pool) {
         if (!k.key) {
           k.valid = false;
           continue;
         }
+        
         try {
           const resp = await fetch(
-            "https://generativelanguage.googleapis.com/v1beta/models?key=" +
-              encodeURIComponent(k.key)
+            'https://generativelanguage.googleapis.com/v1beta/models?key=' +
+            encodeURIComponent(k.key)
           );
+          
           if (resp.status === 429) {
             k.valid = true;
             k.rateLimited = true;
@@ -452,17 +347,16 @@ Remember: You are not just analyzing - you are actively researching, coding, and
           }
         } catch (err) {
           k.valid = false;
-          console.error("Key validation error:", err);
+          console.error('Key validation error:', err);
         }
       }
-      Store.saveKeypool(pool);
+      Storage.saveKeypool(pool);
     }
   };
 
-  /********************************************************************
+  /**
    * REASONING TEXT PARSER
-   ********************************************************************/
-
+   */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
       const blocks = [];
@@ -523,7 +417,7 @@ Remember: You are not just analyzing - you are actively researching, coding, and
 
     parseAttributes(attrString) {
       const attrs = {};
-      const regex = /(\w+)=\"([^\"]*)\"|\s+(\w+)(?=\s|$)/g;
+      const regex = /(\w+)=\"([^\"]*)\"|(\w+)(?=\s|$)/g;
       let match;
       while ((match = regex.exec(attrString)) !== null) {
         if (match[1] && match[2] !== undefined) {
@@ -539,10 +433,10 @@ Remember: You are not just analyzing - you are actively researching, coding, and
       // Apply memory operations
       operations.memories.forEach(op => {
         if (op.delete) {
-          const memories = Store.loadMemory().filter(m => m.identifier !== op.identifier);
-          Store.saveMemory(memories);
+          const memories = Storage.loadMemory().filter(m => m.identifier !== op.identifier);
+          Storage.saveMemory(memories);
         } else if (op.identifier) {
-          const memories = Store.loadMemory();
+          const memories = Storage.loadMemory();
           const existing = memories.find(m => m.identifier === op.identifier);
           if (existing) {
             if (op.notes !== undefined) existing.notes = op.notes;
@@ -551,22 +445,22 @@ Remember: You are not just analyzing - you are actively researching, coding, and
               identifier: op.identifier,
               heading: op.heading,
               content: op.content,
-              notes: op.notes || "",
+              notes: op.notes || '',
               createdAt: nowISO()
             });
           }
-          Store.saveMemory(memories);
+          Storage.saveMemory(memories);
         }
       });
 
       // Apply task operations
       operations.tasks.forEach(op => {
         if (op.identifier) {
-          const tasks = Store.loadTasks();
+          const tasks = Storage.loadTasks();
           const existing = tasks.find(t => t.identifier === op.identifier);
           if (existing) {
             if (op.notes !== undefined) existing.notes = op.notes;
-            if (op.status && ["pending", "ongoing", "finished", "paused"].includes(op.status)) {
+            if (op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status)) {
               existing.status = op.status;
             }
           } else if (op.heading && op.content) {
@@ -574,22 +468,22 @@ Remember: You are not just analyzing - you are actively researching, coding, and
               identifier: op.identifier,
               heading: op.heading,
               content: op.content,
-              status: op.status && ["pending", "ongoing", "finished", "paused"].includes(op.status) ? op.status : "pending",
-              notes: op.notes || "",
+              status: op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status) ? op.status : 'pending',
+              notes: op.notes || '',
               createdAt: nowISO()
             });
           }
-          Store.saveTasks(tasks);
+          Storage.saveTasks(tasks);
         }
       });
 
       // Apply goal operations
       operations.goals.forEach(op => {
         if (op.delete) {
-          const goals = Store.loadGoals().filter(g => g.identifier !== op.identifier);
-          Store.saveGoals(goals);
+          const goals = Storage.loadGoals().filter(g => g.identifier !== op.identifier);
+          Storage.saveGoals(goals);
         } else if (op.identifier) {
-          const goals = Store.loadGoals();
+          const goals = Storage.loadGoals();
           const existing = goals.find(g => g.identifier === op.identifier);
           if (existing) {
             if (op.notes !== undefined) existing.notes = op.notes;
@@ -598,21 +492,21 @@ Remember: You are not just analyzing - you are actively researching, coding, and
               identifier: op.identifier,
               heading: op.heading,
               content: op.content,
-              notes: op.notes || "",
+              notes: op.notes || '',
               createdAt: nowISO()
             });
           }
-          Store.saveGoals(goals);
+          Storage.saveGoals(goals);
         }
       });
 
       // Apply vault operations
       operations.vault.forEach(op => {
         if (op.delete) {
-          const vault = Store.loadVault().filter(v => v.identifier !== op.id);
-          Store.saveVault(vault);
+          const vault = Storage.loadVault().filter(v => v.identifier !== op.id);
+          Storage.saveVault(vault);
         } else if (op.id && op.content !== undefined) {
-          const vault = Store.loadVault();
+          const vault = Storage.loadVault();
           const existing = vault.find(v => v.identifier === op.id);
           if (existing) {
             existing.content = op.content;
@@ -621,58 +515,55 @@ Remember: You are not just analyzing - you are actively researching, coding, and
           } else {
             vault.push({
               identifier: op.id,
-              type: op.type || "text",
-              description: op.description || "",
+              type: op.type || 'text',
+              description: op.description || '',
               content: op.content,
               createdAt: nowISO()
             });
           }
-          Store.saveVault(vault);
+          Storage.saveVault(vault);
         }
       });
     }
   };
 
-  /********************************************************************
+  /**
    * VAULT MANAGER
-   ********************************************************************/
-
+   */
   const VaultManager = {
     resolveVaultRefsInText(inputText) {
       if (!isNonEmptyString(inputText)) return inputText;
       const regex = /{{<vaultref\s+id=\"([^\"]+)\"\s*\/>}}/g;
-      const vault = Store.loadVault();
+      const vault = Storage.loadVault();
 
       return inputText.replace(regex, (match, vaultId) => {
-        const entry = vault.find((v) => v.identifier === vaultId);
+        const entry = vault.find(v => v.identifier === vaultId);
         if (!entry) {
           return `/* [MISSING_VAULT:${vaultId}] */`;
         }
-        return entry.content || "";
+        return entry.content || '';
       });
     },
 
     getVaultSummary() {
-      const vault = Store.loadVault();
+      const vault = Storage.loadVault();
       return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description}`).join('\n');
     }
   };
 
-  /********************************************************************
-   * GEMINI CLIENT
-   ********************************************************************/
-
-  const GeminiClient = {
+  /**
+   * GEMINI CLIENT INTEGRATION
+   */
+  const GeminiAPI = {
     async fetchModelList() {
       KeyManager.liftCooldowns();
-      let picked = KeyManager.chooseActiveKey();
+      const picked = KeyManager.chooseActiveKey();
       if (!picked) {
-        console.error("No valid API key for model list");
+        console.error('No valid API key for model list');
         return;
       }
 
-      const url =
-        "https://generativelanguage.googleapis.com/v1beta/models?key=" +
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' +
         encodeURIComponent(picked.key);
 
       try {
@@ -685,7 +576,7 @@ Remember: You are not just analyzing - you are actively researching, coding, and
           if (resp.status === 401 || resp.status === 403) {
             KeyManager.markValid(picked.slot, false);
           }
-          console.error("fetchModelList() non-OK", `status ${resp.status}`);
+          console.error('fetchModelList() non-OK', `status ${resp.status}`);
           return;
         }
 
@@ -695,20 +586,20 @@ Remember: You are not just analyzing - you are actively researching, coding, and
         Renderer.populateModelDropdown(data.models);
         KeyManager.markValid(picked.slot, true);
       } catch (err) {
-        console.error("fetchModelList() exception", err);
+        console.error('fetchModelList() exception', err);
       }
     },
 
     async generateContent(modelId, prompt) {
       KeyManager.liftCooldowns();
       let picked = KeyManager.chooseActiveKey();
-      if (!picked) throw new Error("No usable key");
+      if (!picked) throw new Error('No usable key');
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
       
       const payload = {
         contents: [{
-          role: "user",
+          role: 'user',
           parts: [{ text: prompt }]
         }],
         generationConfig: {
@@ -721,24 +612,24 @@ Remember: You are not just analyzing - you are actively researching, coding, and
 
       try {
         const resp = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
         if (resp.status === 429) {
           KeyManager.markRateLimit(picked.slot, 30);
           picked = KeyManager.chooseActiveKey();
-          if (!picked) throw new Error("Rate limited. No backup key.");
+          if (!picked) throw new Error('Rate limited. No backup key.');
           
           const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
           const resp2 = await fetch(url2, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
           
-          if (!resp2.ok) throw new Error("Gemini request failed: " + resp2.status);
+          if (!resp2.ok) throw new Error('Gemini request failed: ' + resp2.status);
           KeyManager.bumpUsage(picked.slot);
           return resp2.json();
         }
@@ -754,31 +645,30 @@ Remember: You are not just analyzing - you are actively researching, coding, and
         KeyManager.bumpUsage(picked.slot);
         return resp.json();
       } catch (err) {
-        console.error("generateContent error:", err);
+        console.error('generateContent error:', err);
         throw err;
       }
     },
 
     extractResponseText(response) {
       if (!response || !response.candidates || !response.candidates[0]) {
-        return "";
+        return '';
       }
       const parts = response.candidates[0].content?.parts || [];
-      return parts.map(p => p.text || "").join("\n").trim();
+      return parts.map(p => p.text || '').join('\n').trim();
     }
   };
 
-  /********************************************************************
+  /**
    * REASONING ENGINE
-   ********************************************************************/
-
+   */
   const ReasoningEngine = {
     buildContextPrompt(query, iteration) {
-      const tasks = Store.loadTasks();
-      const goals = Store.loadGoals();
-      const memory = Store.loadMemory();
+      const tasks = Storage.loadTasks();
+      const goals = Storage.loadGoals();
+      const memory = Storage.loadMemory();
       const vaultSummary = VaultManager.getVaultSummary();
-      const reasoningLog = Store.loadReasoningLog();
+      const reasoningLog = Storage.loadReasoningLog();
 
       const tasksText = tasks.map(t => 
         `- [${t.identifier}] ${t.heading} (${t.status}): ${t.content}${t.notes ? ` | Notes: ${t.notes}` : ''}`
@@ -823,8 +713,8 @@ Analyze the current state and take concrete action to advance toward goal comple
     },
 
     checkGoalsComplete() {
-      const goals = Store.loadGoals();
-      const tasks = Store.loadTasks();
+      const goals = Storage.loadGoals();
+      const tasks = Storage.loadTasks();
       
       if (goals.length === 0) return false;
       
@@ -834,83 +724,76 @@ Analyze the current state and take concrete action to advance toward goal comple
     }
   };
 
-  /********************************************************************
+  /**
    * CODE EXECUTOR
-   ********************************************************************/
-
+   */
   const CodeExecutor = {
     run() {
-      const editorEl = qs("#codeInput");
-      const outputEl = qs("#execOutput");
-      const pill = qs("#execStatus");
+      const editorEl = qs('#codeInput');
+      const outputEl = qs('#execOutput');
+      const pill = qs('#execStatus');
 
       if (!editorEl || !outputEl || !pill) return;
 
-      const rawCode = editorEl.value || "";
+      const rawCode = editorEl.value || '';
       const expanded = VaultManager.resolveVaultRefsInText(rawCode);
 
       const logs = [];
       const origLog = console.log;
       console.log = (...args) => {
-        const line = args
-          .map((a) => {
-            try {
-              if (typeof a === "string") return a;
-              return JSON.stringify(a, null, 2);
-            } catch {
-              return String(a);
-            }
-          })
-          .join(" ");
+        const line = args.map(a => {
+          try {
+            if (typeof a === 'string') return a;
+            return JSON.stringify(a, null, 2);
+          } catch {
+            return String(a);
+          }
+        }).join(' ');
         logs.push(line);
         origLog.apply(console, args);
       };
 
-      pill.textContent = "RUNNING";
+      pill.textContent = 'RUNNING';
 
-      let errVal = null;
       try {
         const fn = new Function(expanded);
         const ret = fn();
         if (ret !== undefined) {
-          logs.push("[RETURN] " + JSON.stringify(ret, null, 2));
+          logs.push('[RETURN] ' + JSON.stringify(ret, null, 2));
         }
-        pill.textContent = "OK";
+        pill.textContent = 'OK';
       } catch (err) {
-        errVal = err;
-        logs.push("[ERROR] " + (err.stack || err.message || String(err)));
-        pill.textContent = "ERROR";
+        logs.push('[ERROR] ' + (err.stack || err.message || String(err)));
+        pill.textContent = 'ERROR';
       } finally {
         console.log = origLog;
       }
 
-      outputEl.textContent = logs.length ? logs.join("\n") : "No output";
+      outputEl.textContent = logs.length ? logs.join('\n') : 'No output';
     },
 
     clear() {
-      const editorEl = qs("#codeInput");
-      const outputEl = qs("#execOutput");
-      const pill = qs("#execStatus");
+      const editorEl = qs('#codeInput');
+      const outputEl = qs('#execOutput');
+      const pill = qs('#execStatus');
 
-      if (editorEl) editorEl.value = "// Use {{<vaultref id=\"example\" />}} to inline vault content\nconsole.log(\"Hello GDRS\");\nreturn { status: 'ready', timestamp: new Date() };";
-      if (outputEl) outputEl.textContent = "";
-      if (pill) pill.textContent = "READY";
+      if (editorEl) editorEl.value = '// Use {{<vaultref id="example" />}} to inline vault content\nconsole.log("Hello GDRS");\nreturn { status: "ready", timestamp: new Date() };';
+      if (outputEl) outputEl.textContent = 'Execution output will appear here...';
+      if (pill) pill.textContent = 'READY';
     }
   };
 
-  /********************************************************************
+  /**
    * LOOP CONTROLLER
-   ********************************************************************/
-
+   */
   const LoopController = (() => {
     let active = false;
     let iterationCount = 0;
     let loopTimer = null;
 
     function decomposeQuery(queryStr) {
-      const parts = queryStr
-        .split(/[\.\?\!\n]+/g)
-        .map((s) => s.trim())
+      const parts = queryStr.split(/[.?!\n]+/g)
+        .map(s => s.trim())
         .filter(Boolean);
       return parts.length ? parts : [queryStr.trim()];
     }
@@ -918,17 +801,17 @@ Analyze the current state and take concrete action to advance toward goal comple
     async function runIteration() {
       if (!active) return;
 
-      const modelSelect = qs("#modelSelect");
-      const modelId = modelSelect ? modelSelect.value : "";
+      const modelSelect = qs('#modelSelect');
+      const modelId = modelSelect ? modelSelect.value : '';
       
-      if (!modelId || modelId === "") {
-        console.error("No model selected");
+      if (!modelId || modelId === '') {
+        console.error('No model selected');
         return;
       }
 
-      const currentQuery = Store.loadCurrentQuery();
+      const currentQuery = Storage.loadCurrentQuery();
       if (!currentQuery) {
-        console.error("No current query");
+        console.error('No current query');
         return;
       }
 
@@ -937,17 +820,17 @@ Analyze the current state and take concrete action to advance toward goal comple
 
       try {
         const prompt = ReasoningEngine.buildContextPrompt(currentQuery, iterationCount);
-        const response = await GeminiClient.generateContent(modelId, prompt);
-        const responseText = GeminiClient.extractResponseText(response);
+        const response = await GeminiAPI.generateContent(modelId, prompt);
+        const responseText = GeminiAPI.extractResponseText(response);
 
         if (!responseText) {
-          throw new Error("Empty response from model");
+          throw new Error('Empty response from model');
         }
 
         // Log the full response
-        const logEntries = Store.loadReasoningLog();
+        const logEntries = Storage.loadReasoningLog();
         logEntries.push(`=== ITERATION ${iterationCount} ===\n${responseText}`);
-        Store.saveReasoningLog(logEntries);
+        Storage.saveReasoningLog(logEntries);
 
         // Parse and apply reasoning operations
         const reasoningBlocks = ReasoningParser.extractReasoningBlocks(responseText);
@@ -977,23 +860,21 @@ Analyze the current state and take concrete action to advance toward goal comple
         if (active) {
           loopTimer = setTimeout(() => runIteration(), ITERATION_DELAY);
         }
-
       } catch (err) {
-        console.error("Iteration error:", err);
-        const logEntries = Store.loadReasoningLog();
+        console.error('Iteration error:', err);
+        const logEntries = Storage.loadReasoningLog();
         logEntries.push(`=== ITERATION ${iterationCount} - ERROR ===\n${err.message}\n${err.stack || ''}`);
-        Store.saveReasoningLog(logEntries);
+        Storage.saveReasoningLog(logEntries);
         Renderer.renderReasoningLog();
         stopSession();
       }
     }
 
     async function finalizeFinalOutput(query) {
-      const tasks = Store.loadTasks();
-      const goals = Store.loadGoals();
-      const memory = Store.loadMemory();
-      const vault = Store.loadVault();
-      const reasoningLog = Store.loadReasoningLog();
+      const tasks = Storage.loadTasks();
+      const goals = Storage.loadGoals();
+      const memory = Storage.loadMemory();
+      const vault = Storage.loadVault();
 
       // Build comprehensive final output
       const completedTasks = tasks.filter(t => t.status === 'finished');
@@ -1039,48 +920,48 @@ Analyze the current state and take concrete action to advance toward goal comple
       // Apply vault substitutions
       finalHtml = VaultManager.resolveVaultRefsInText(finalHtml);
       
-      Store.saveFinalOutput(finalHtml);
+      Storage.saveFinalOutput(finalHtml);
       Renderer.renderFinalOutput();
     }
 
     function updateIterationDisplay() {
-      const iterCountEl = qs("#iterationCount");
+      const iterCountEl = qs('#iterationCount');
       if (iterCountEl) iterCountEl.textContent = String(iterationCount);
     }
 
     async function startSession() {
-      const queryEl = qs("#userQuery");
-      const sessionPill = qs("#sessionStatus");
+      const queryEl = qs('#userQuery');
+      const sessionPill = qs('#sessionStatus');
 
       if (!queryEl) return;
 
       const rawQuery = queryEl.value.trim();
       if (!rawQuery) {
-        alert("Please enter a research query");
+        alert('Please enter a research query');
         return;
       }
 
       // Check if we have a valid key
       const activeKey = KeyManager.chooseActiveKey();
       if (!activeKey) {
-        alert("Please add and validate at least one API key");
+        alert('Please add and validate at least one API key');
         return;
       }
 
       // Check if model is selected
-      const modelSelect = qs("#modelSelect");
+      const modelSelect = qs('#modelSelect');
       if (!modelSelect || !modelSelect.value) {
-        alert("Please select a model from the dropdown");
+        alert('Please select a model from the dropdown');
         return;
       }
 
       active = true;
       iterationCount = 0;
       
-      if (sessionPill) sessionPill.textContent = "RUNNING";
+      if (sessionPill) sessionPill.textContent = 'RUNNING';
 
       // Store the query
-      Store.saveCurrentQuery(rawQuery);
+      Storage.saveCurrentQuery(rawQuery);
 
       // Initialize with basic setup
       const subtasks = decomposeQuery(rawQuery);
@@ -1088,25 +969,25 @@ Analyze the current state and take concrete action to advance toward goal comple
         identifier: generateId('task'),
         heading: task.slice(0, 60) + (task.length > 60 ? '...' : ''),
         content: task,
-        status: "pending",
-        notes: "",
+        status: 'pending',
+        notes: '',
         createdAt: nowISO()
       }));
 
       const initialGoal = {
         identifier: generateId('goal'),
-        heading: "Complete Research Analysis",
+        heading: 'Complete Research Analysis',
         content: rawQuery,
-        notes: "",
+        notes: '',
         createdAt: nowISO()
       };
 
-      Store.saveTasks(initialTasks);
-      Store.saveGoals([initialGoal]);
-      Store.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nDecomposed into ${subtasks.length} tasks`]);
+      Storage.saveTasks(initialTasks);
+      Storage.saveGoals([initialGoal]);
+      Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nDecomposed into ${subtasks.length} tasks`]);
 
       // Clear final output
-      Store.saveFinalOutput("");
+      Storage.saveFinalOutput('');
 
       // Initial render
       Renderer.renderAll();
@@ -1122,8 +1003,8 @@ Analyze the current state and take concrete action to advance toward goal comple
         loopTimer = null;
       }
       
-      const sessionPill = qs("#sessionStatus");
-      if (sessionPill) sessionPill.textContent = "IDLE";
+      const sessionPill = qs('#sessionStatus');
+      if (sessionPill) sessionPill.textContent = 'IDLE';
     }
 
     return {
@@ -1133,34 +1014,33 @@ Analyze the current state and take concrete action to advance toward goal comple
     };
   })();
 
-  /********************************************************************
+  /**
    * RENDERER
-   ********************************************************************/
-
+   */
   const Renderer = {
     renderKeys() {
-      const pool = Store.loadKeypool();
-      const keysGrid = qs("#keysGrid");
+      const pool = Storage.loadKeypool();
+      const keysGrid = qs('#keysGrid');
       if (!keysGrid) return;
 
-      keysGrid.innerHTML = "";
+      keysGrid.innerHTML = '';
 
       pool.forEach((k) => {
-        const row = document.createElement("div");
-        row.className = "keyrow";
+        const row = document.createElement('div');
+        row.className = 'keyrow';
         
-        const field = document.createElement("input");
-        field.type = "password";
+        const field = document.createElement('input');
+        field.type = 'password';
         field.placeholder = `API Key #${k.slot}`;
         field.value = k.key;
-        field.autocomplete = "off";
+        field.autocomplete = 'off';
         field.spellcheck = false;
-        field.addEventListener("input", (e) => {
+        field.addEventListener('input', (e) => {
           KeyManager.setKey(k.slot, e.target.value);
         });
 
-        const meta = document.createElement("div");
-        meta.className = "keymeta";
+        const meta = document.createElement('div');
+        meta.className = 'keymeta';
         const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
         meta.innerHTML = `
           <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
@@ -1174,15 +1054,15 @@ Analyze the current state and take concrete action to advance toward goal comple
       });
 
       // Update rotation pill
-      const rotPill = qs("#keyRotationPill");
+      const rotPill = qs('#keyRotationPill');
       const nextKey = KeyManager.chooseActiveKey();
       if (rotPill) {
-        rotPill.textContent = nextKey ? `NEXT: #${nextKey.slot}` : "NO KEY";
+        rotPill.textContent = nextKey ? `NEXT: #${nextKey.slot}` : 'NO KEY';
       }
     },
 
     populateModelDropdown(modelsArray) {
-      const modelSelect = qs("#modelSelect");
+      const modelSelect = qs('#modelSelect');
       if (!modelSelect) return;
 
       const currentValue = modelSelect.value;
@@ -1190,9 +1070,9 @@ Analyze the current state and take concrete action to advance toward goal comple
       modelSelect.innerHTML = `<option value="">-- select model --</option>`;
 
       modelsArray.forEach((m) => {
-        const fullName = m.name || "";
-        const label = fullName.replace(/^models\//, "");
-        const opt = document.createElement("option");
+        const fullName = m.name || '';
+        const label = fullName.replace(/^models\//, '');
+        const opt = document.createElement('option');
         opt.value = fullName;
         opt.textContent = label;
         modelSelect.appendChild(opt);
@@ -1208,9 +1088,14 @@ Analyze the current state and take concrete action to advance toward goal comple
     },
 
     renderTasks() {
-      const tasks = Store.loadTasks();
-      const tasksEl = qs("#tasksList");
+      const tasks = Storage.loadTasks();
+      const tasksEl = qs('#tasksList');
       if (!tasksEl) return;
+
+      if (tasks.length === 0) {
+        tasksEl.innerHTML = '<div class="storage-placeholder">No tasks yet</div>';
+        return;
+      }
 
       tasksEl.innerHTML = tasks.map(t => `
         <div class="li">
@@ -1221,13 +1106,18 @@ Analyze the current state and take concrete action to advance toward goal comple
           </div>
           <div class="status">${encodeHTML(t.status.toUpperCase())}</div>
         </div>
-      `).join("");
+      `).join('');
     },
 
     renderMemories() {
-      const memory = Store.loadMemory();
-      const memEl = qs("#memoryList");
+      const memory = Storage.loadMemory();
+      const memEl = qs('#memoryList');
       if (!memEl) return;
+
+      if (memory.length === 0) {
+        memEl.innerHTML = '<div class="storage-placeholder">No memories yet</div>';
+        return;
+      }
 
       memEl.innerHTML = memory.map(m => `
         <div class="li">
@@ -1238,13 +1128,18 @@ Analyze the current state and take concrete action to advance toward goal comple
           </div>
           <div class="id">${encodeHTML(m.identifier)}</div>
         </div>
-      `).join("");
+      `).join('');
     },
 
     renderGoals() {
-      const goals = Store.loadGoals();
-      const goalsEl = qs("#goalsList");
+      const goals = Storage.loadGoals();
+      const goalsEl = qs('#goalsList');
       if (!goalsEl) return;
+
+      if (goals.length === 0) {
+        goalsEl.innerHTML = '<div class="storage-placeholder">No goals yet</div>';
+        return;
+      }
 
       goalsEl.innerHTML = goals.map(g => `
         <div class="li">
@@ -1255,13 +1150,18 @@ Analyze the current state and take concrete action to advance toward goal comple
           </div>
           <div class="id">${encodeHTML(g.identifier)}</div>
         </div>
-      `).join("");
+      `).join('');
     },
 
     renderVault() {
-      const vault = Store.loadVault();
-      const vaultEl = qs("#vaultList");
+      const vault = Storage.loadVault();
+      const vaultEl = qs('#vaultList');
       if (!vaultEl) return;
+
+      if (vault.length === 0) {
+        vaultEl.innerHTML = '<div class="storage-placeholder">No vault entries yet</div>';
+        return;
+      }
 
       vaultEl.innerHTML = vault.map(v => `
         <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
@@ -1271,21 +1171,26 @@ Analyze the current state and take concrete action to advance toward goal comple
           </div>
           <div class="status">${encodeHTML(v.type.toUpperCase())}</div>
         </div>
-      `).join("");
+      `).join('');
 
       // Add click handlers for vault modal
-      qsa("[data-vault-id]", vaultEl).forEach(el => {
-        el.addEventListener("click", () => {
-          const id = el.getAttribute("data-vault-id");
+      qsa('[data-vault-id]', vaultEl).forEach(el => {
+        el.addEventListener('click', () => {
+          const id = el.getAttribute('data-vault-id');
           openVaultModal(id);
         });
       });
     },
 
     renderReasoningLog() {
-      const logEntries = Store.loadReasoningLog();
-      const logEl = qs("#iterationLog");
+      const logEntries = Storage.loadReasoningLog();
+      const logEl = qs('#iterationLog');
       if (!logEl) return;
+
+      if (logEntries.length === 0) {
+        logEl.innerHTML = '<div class="log-placeholder">Reasoning iterations will appear here...</div>';
+        return;
+      }
 
       logEl.innerHTML = logEntries.map((entry, i) => `
         <div class="li">
@@ -1294,25 +1199,24 @@ Analyze the current state and take concrete action to advance toward goal comple
             <pre class="mono" style="white-space:pre-wrap; font-size: 10px; line-height: 1.3;">${encodeHTML(entry)}</pre>
           </div>
         </div>
-      `).join("");
+      `).join('');
 
       // Auto-scroll to bottom
       logEl.scrollTop = logEl.scrollHeight;
     },
 
     renderFinalOutput() {
-      const output = Store.loadFinalOutput();
-      const finalEl = qs("#finalOutput");
-      const statusEl = qs("#finalStatus");
+      const output = Storage.loadFinalOutput();
+      const finalEl = qs('#finalOutput');
+      const statusEl = qs('#finalStatus');
       
       if (finalEl) {
-        finalEl.innerHTML = output.html || "<p>Report will render here after analysis completion.</p>";
+        finalEl.innerHTML = output.html || '<div class="output-placeholder"><p>Research report will render here after analysis completion.</p></div>';
       }
       
       if (statusEl) {
-        const goals = Store.loadGoals();
         const isComplete = ReasoningEngine.checkGoalsComplete();
-        statusEl.textContent = isComplete ? "verified" : "running";
+        statusEl.textContent = isComplete ? 'verified' : 'running';
       }
     },
 
@@ -1327,100 +1231,100 @@ Analyze the current state and take concrete action to advance toward goal comple
     }
   };
 
-  /********************************************************************
+  /**
    * VAULT MODAL
-   ********************************************************************/
-
+   */
   function openVaultModal(vaultId) {
-    const vault = Store.loadVault();
+    const vault = Storage.loadVault();
     const entry = vault.find(v => v.identifier === vaultId);
     if (!entry) return;
 
-    const modal = qs("#vaultModal");
-    const idEl = qs("#vaultModalId");
-    const typeEl = qs("#vaultModalType");
-    const descEl = qs("#vaultModalDesc");
-    const contentEl = qs("#vaultModalContent");
+    const modal = qs('#vaultModal');
+    const idEl = qs('#vaultModalId');
+    const typeEl = qs('#vaultModalType');
+    const descEl = qs('#vaultModalDesc');
+    const contentEl = qs('#vaultModalContent');
 
     if (idEl) idEl.textContent = entry.identifier;
     if (typeEl) typeEl.textContent = entry.type.toUpperCase();
-    if (descEl) descEl.textContent = entry.description || "— no description —";
+    if (descEl) descEl.textContent = entry.description || '— no description —';
     if (contentEl) contentEl.textContent = entry.content;
-    if (modal) modal.style.display = "flex";
+    if (modal) modal.style.display = 'flex';
   }
 
   function closeVaultModal() {
-    const modal = qs("#vaultModal");
-    if (modal) modal.style.display = "none";
+    const modal = qs('#vaultModal');
+    if (modal) modal.style.display = 'none';
   }
 
-  /********************************************************************
+  /**
    * EVENT BINDING
-   ********************************************************************/
-
+   */
   function bindEvents() {
     // Run buttons
-    const runBtn = qs("#runQueryBtn");
-    const runBtn2 = qs("#runQueryBtn2");
-    if (runBtn) runBtn.addEventListener("click", () => {
-      if (LoopController.isActive()) {
-        LoopController.stopSession();
-      } else {
-        LoopController.startSession();
-      }
-    });
-    if (runBtn2) runBtn2.addEventListener("click", () => LoopController.startSession());
+    const runBtn = qs('#runQueryBtn');
+    if (runBtn) {
+      runBtn.addEventListener('click', () => {
+        if (LoopController.isActive()) {
+          LoopController.stopSession();
+          runBtn.textContent = 'Run Analysis';
+        } else {
+          LoopController.startSession();
+          runBtn.textContent = 'Stop Analysis';
+        }
+      });
+    }
 
     // Key management
-    const validateBtn = qs("#validateKeys");
-    const clearBtn = qs("#clearKeys");
+    const validateBtn = qs('#validateKeys');
+    const clearBtn = qs('#clearKeys');
     if (validateBtn) {
-      validateBtn.addEventListener("click", async () => {
-        validateBtn.textContent = "validating...";
+      validateBtn.addEventListener('click', async () => {
+        validateBtn.textContent = 'validating...';
         await KeyManager.validateAllKeys();
-        await GeminiClient.fetchModelList();
+        await GeminiAPI.fetchModelList();
         Renderer.renderKeys();
-        validateBtn.textContent = "validate";
+        validateBtn.textContent = 'Validate';
       });
     }
     if (clearBtn) {
-      clearBtn.addEventListener("click", () => {
+      clearBtn.addEventListener('click', () => {
         KeyManager.clearAll();
         Renderer.renderKeys();
       });
     }
 
     // Model selector
-    const modelSelect = qs("#modelSelect");
+    const modelSelect = qs('#modelSelect');
     if (modelSelect) {
-      modelSelect.addEventListener("focus", () => {
+      modelSelect.addEventListener('focus', () => {
         if (modelSelect.options.length <= 1) {
-          GeminiClient.fetchModelList();
+          GeminiAPI.fetchModelList();
         }
       });
     }
 
     // Code execution
-    const execBtn = qs("#execBtn");
-    const clearExecBtn = qs("#clearExec");
-    if (execBtn) execBtn.addEventListener("click", () => CodeExecutor.run());
-    if (clearExecBtn) clearExecBtn.addEventListener("click", () => CodeExecutor.clear());
+    const execBtn = qs('#execBtn');
+    const clearExecBtn = qs('#clearExec');
+    if (execBtn) execBtn.addEventListener('click', () => CodeExecutor.run());
+    if (clearExecBtn) clearExecBtn.addEventListener('click', () => CodeExecutor.clear());
 
     // Export
-    const exportBtn = qs("#exportTxt");
+    const exportBtn = qs('#exportTxt');
     if (exportBtn) {
-      exportBtn.addEventListener("click", () => {
-        const output = Store.loadFinalOutput();
+      exportBtn.addEventListener('click', () => {
+        const output = Storage.loadFinalOutput();
         const text = output.html
-          .replace(/<[^>]+>/g, "")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&amp;/g, "&")
+          .replace(/<[^>]+>/g, '')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
           .replace(/&quot;/g, '"');
         
-        const blob = new Blob([`GDRS Analysis Report\n${'='.repeat(50)}\n\n${text}`], { type: "text/plain" });
+        const blob = new Blob([`GDRS Analysis Report\n${'='.repeat(50)}\n\n${text}`], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        const a = document.createElement('a');
         a.href = url;
         a.download = `gdrs-analysis-${Date.now()}.txt`;
         a.click();
@@ -1429,19 +1333,19 @@ Analyze the current state and take concrete action to advance toward goal comple
     }
 
     // Vault modal
-    const closeModalBtn = qs("#vaultModalClose");
-    const modal = qs("#vaultModal");
-    if (closeModalBtn) closeModalBtn.addEventListener("click", closeVaultModal);
+    const closeModalBtn = qs('#vaultModalClose');
+    const modal = qs('#vaultModal');
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeVaultModal);
     if (modal) {
-      modal.addEventListener("click", (e) => {
+      modal.addEventListener('click', (e) => {
         if (e.target === modal) closeVaultModal();
       });
     }
 
     // Clear all data (for testing)
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        if (confirm("Clear all GDRS data? This cannot be undone.")) {
+        if (confirm('Clear all GDRS data? This cannot be undone.')) {
           Object.values(LS_KEYS).forEach(key => localStorage.removeItem(key));
           location.reload();
         }
@@ -1449,35 +1353,33 @@ Analyze the current state and take concrete action to advance toward goal comple
     });
   }
 
-  /********************************************************************
+  /**
    * COOLDOWN TICKER
-   ********************************************************************/
-
+   */
   function startCooldownTicker() {
     setInterval(() => {
       Renderer.renderKeys();
     }, 1000);
   }
 
-  /********************************************************************
+  /**
    * BOOT SEQUENCE
-   ********************************************************************/
-
+   */
   function boot() {
-    console.log("%cGDRS Runtime Core v" + VERSION + " - Booting...", "color: #00ff00; font-weight: bold;");
+    console.log('%cGDRS Runtime Core v' + VERSION + ' - Booting...', 'color: #00ff00; font-weight: bold;');
 
     // Initialize storage if needed
     if (!localStorage.getItem(LS_KEYS.META)) {
       localStorage.setItem(LS_KEYS.META, JSON.stringify({ version: VERSION }));
-      Store.saveKeypool(DEFAULT_KEYPOOL());
-      Store.saveGoals([]);
-      Store.saveMemory([]);
-      Store.saveTasks([]);
-      Store.saveVault([]);
-      Store.saveFinalOutput("");
-      Store.saveReasoningLog([]);
-      Store.saveCurrentQuery("");
-      console.log("%cGDRS - Fresh installation initialized", "color: #ffaa00;");
+      Storage.saveKeypool(DEFAULT_KEYPOOL());
+      Storage.saveGoals([]);
+      Storage.saveMemory([]);
+      Storage.saveTasks([]);
+      Storage.saveVault([]);
+      Storage.saveFinalOutput('');
+      Storage.saveReasoningLog([]);
+      Storage.saveCurrentQuery('');
+      console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
     }
 
     // Initial render
@@ -1493,18 +1395,36 @@ Analyze the current state and take concrete action to advance toward goal comple
     setTimeout(() => {
       const activeKey = KeyManager.chooseActiveKey();
       if (activeKey) {
-        GeminiClient.fetchModelList();
+        GeminiAPI.fetchModelList();
       }
     }, 1000);
 
-    console.log("%cGDRS Runtime Core - Ready for Deep Research", "color: #00ff00; font-weight: bold;");
-    console.log("%cAdd API keys, select a model, and enter your research query to begin.", "color: #aaaaaa;");
+    console.log('%cGDRS Runtime Core - Ready for Deep Research', 'color: #00ff00; font-weight: bold;');
+    console.log('%cAdd API keys, select a model, and enter your research query to begin.', 'color: #aaaaaa;');
   }
 
   // Boot when DOM is ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
     boot();
+  }
+
+  // Export to global scope for debugging
+  if (typeof window !== 'undefined') {
+    window.GDRS = window.GDRS || {};
+    Object.assign(window.GDRS, {
+      VERSION,
+      Storage,
+      KeyManager,
+      ReasoningParser,
+      VaultManager,
+      GeminiAPI,
+      ReasoningEngine,
+      CodeExecutor,
+      LoopController,
+      Renderer,
+      boot
+    });
   }
 })();
