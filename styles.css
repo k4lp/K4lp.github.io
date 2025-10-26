@@ -325,25 +325,57 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background-color: var(--color-surface-elevated);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--border-radius);
 }
 
 .keyrow input[type="password"] {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--border-radius);
+    color: var(--color-text-primary);
     font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
+}
+
+.keyrow input[type="password"]:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .keymeta {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-md);
     font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
+    flex-wrap: wrap;
 }
 
-.keymeta span {
+.keymeta > div {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+}
+
+.pm {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    font-weight: var(--font-weight-normal);
+}
+
+.mono {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    background-color: var(--color-surface);
     padding: var(--spacing-xs) var(--spacing-sm);
-    background-color: var(--color-surface-elevated);
     border-radius: var(--border-radius);
-    color: var(--color-text-muted);
+    border: var(--border-width) solid var(--color-border-subtle);
 }
 
 .key-actions {
@@ -501,6 +533,58 @@ body {
     font-size: var(--font-size-xs);
     color: var(--color-text-tertiary);
     font-style: italic;
+}
+
+/* ===== ORIGINAL JS-COMPATIBLE CLASSES ===== */
+
+/* These classes are used by the JavaScript rendering */
+.li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-bottom: var(--border-width) solid var(--color-border-subtle);
+}
+
+.li:last-child {
+    border-bottom: 0;
+}
+
+.li > div:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.li > div:last-child {
+    flex-shrink: 0;
+}
+
+.status {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-surface-elevated);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--border-radius);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-tertiary);
+}
+
+.id {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    background-color: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ===== VAULT FORM ===== */
