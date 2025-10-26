@@ -1,20 +1,19 @@
 /**
  * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
- * Complete production runtime with LLM integration - v1.1.0
+ * Complete production runtime with LLM integration - v1.1.1
  * 
  * CRITICAL FIXES:
- * - FIXED: Variable scope issue in JSExecutor causing "originalLog is not defined" error
- * - COMPLETELY REDESIGNED: DataVault system with proper ordering, validation, and UI updates
- * - ENHANCED: Vault operations with better error handling and sequencing
- * - IMPROVED: UI rendering with immediate feedback and proper state management
- * - OPTIMIZED: Vault parsing with comprehensive attribute validation
+ * - FIXED: API key input focus loss issue - implemented focus preservation in renderKeys
+ * - ENHANCED: Cooldown ticker now updates only metadata without rebuilding input fields
+ * - IMPROVED: Smart rendering that preserves user interaction state
+ * - OPTIMIZED: Reduced DOM manipulation frequency for better UX
  */
 
 (function() {
   'use strict';
 
   // Application constants
-  const VERSION = '1.1.0';
+  const VERSION = '1.1.1';
   const MAX_ITERATIONS = 20;
   const ITERATION_DELAY = 2000;
   
@@ -1753,13 +1752,36 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   })();
 
   /**
-   * ENHANCED RENDERER with improved vault display
+   * ENHANCED RENDERER with FOCUS PRESERVATION for API key inputs
    */
   const Renderer = {
-    renderKeys() {
+    /**
+     * FIXED: Render keys with focus preservation to prevent cursor loss
+     */
+    renderKeys(preserveFocus = true) {
       const pool = Storage.loadKeypool();
       const keysGrid = qs('#keysGrid');
       if (!keysGrid) return;
+
+      // FOCUS PRESERVATION: Capture current focus state
+      let focusInfo = null;
+      if (preserveFocus) {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.matches('#keysGrid input[type="password"]')) {
+          // Find which slot this input belongs to by checking parent structure
+          const keyRow = activeElement.closest('.keyrow');
+          if (keyRow) {
+            const allKeyRows = qsa('.keyrow', keysGrid);
+            const slotIndex = allKeyRows.indexOf(keyRow);
+            focusInfo = {
+              slot: slotIndex + 1,
+              selectionStart: activeElement.selectionStart,
+              selectionEnd: activeElement.selectionEnd,
+              value: activeElement.value
+            };
+          }
+        }
+      }
 
       keysGrid.innerHTML = '';
 
@@ -1789,6 +1811,56 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         row.appendChild(field);
         row.appendChild(meta);
         keysGrid.appendChild(row);
+      });
+
+      // FOCUS RESTORATION: Restore focus and cursor position
+      if (focusInfo && preserveFocus) {
+        const newKeyRows = qsa('.keyrow', keysGrid);
+        if (newKeyRows[focusInfo.slot - 1]) {
+          const newInput = newKeyRows[focusInfo.slot - 1].querySelector('input[type="password"]');
+          if (newInput) {
+            // Use setTimeout to ensure DOM is fully updated
+            setTimeout(() => {
+              newInput.focus();
+              if (focusInfo.selectionStart !== null) {
+                newInput.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd);
+              }
+            }, 0);
+          }
+        }
+      }
+
+      // Update rotation pill
+      const rotPill = qs('#keyRotationPill');
+      const nextKey = KeyManager.chooseActiveKey();
+      if (rotPill) {
+        rotPill.textContent = nextKey ? `NEXT: #${nextKey.slot}` : 'NO KEY';
+      }
+    },
+
+    /**
+     * ENHANCED: Update only key metadata without rebuilding inputs (for cooldown ticker)
+     */
+    updateKeyMetadata() {
+      const pool = Storage.loadKeypool();
+      const keysGrid = qs('#keysGrid');
+      if (!keysGrid) return;
+
+      const keyRows = qsa('.keyrow', keysGrid);
+      
+      pool.forEach((k, index) => {
+        const row = keyRows[index];
+        if (!row) return;
+        
+        const meta = row.querySelector('.keymeta');
+        if (!meta) return;
+        
+        const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
+        meta.innerHTML = `
+          <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
+          <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
+          <div><div class="pm">rate</div><div class="mono">${cooldownSecs > 0 ? `cooldown ${cooldownSecs}s` : (k.rateLimited ? 'limited' : 'ok')}</div></div>
+        `;
       });
 
       // Update rotation pill
@@ -2107,14 +2179,14 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         validateBtn.textContent = 'validating...';
         await KeyManager.validateAllKeys();
         await GeminiAPI.fetchModelList();
-        Renderer.renderKeys();
+        Renderer.renderKeys(); // Full re-render is acceptable during validation
         validateBtn.textContent = 'Validate';
       });
     }
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         KeyManager.clearAll();
-        Renderer.renderKeys();
+        Renderer.renderKeys(); // Full re-render is acceptable during clear
       });
     }
 
@@ -2178,11 +2250,12 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   }
 
   /**
-   * COOLDOWN TICKER
+   * FIXED COOLDOWN TICKER - Now preserves focus by updating only metadata
    */
   function startCooldownTicker() {
     setInterval(() => {
-      Renderer.renderKeys();
+      // FIXED: Use updateKeyMetadata instead of renderKeys to preserve focus
+      Renderer.updateKeyMetadata();
     }, 1000);
   }
 
@@ -2232,7 +2305,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     }, 1000);
 
     console.log('%cGDRS Runtime Core - Ready for Intelligent Deep Research', 'color: #00ff00; font-weight: bold;');
-    console.log('%cEnhanced DataVault System - Ordered operations, validation, and immediate UI updates', 'color: #aaaaaa;');
+    console.log('%cFIXED: API key input focus preservation - no more cursor interruption!', 'color: #00aa00;');
   }
 
   // Boot when DOM is ready
