@@ -1,15 +1,17 @@
 /**
- * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION (FIXED)
- * Fixed: Smart task generation, improved reasoning quality, clean reasoning logs
+ * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
+ * Complete production runtime with LLM integration
  */
 
 (function() {
   'use strict';
 
-  const VERSION = '1.0.1';
+  // Application constants
+  const VERSION = '1.0.0';
   const MAX_ITERATIONS = 20;
   const ITERATION_DELAY = 2000;
   
+  // Local storage keys
   const LS_KEYS = {
     META: 'gdrs_meta',
     KEYPOOL: 'gdrs_keypool', 
@@ -24,6 +26,7 @@
     TOOL_ACTIVITY_LOG: 'gdrs_tool_activity_log'
   };
 
+  // Default data structures
   const DEFAULT_KEYPOOL = () => {
     const pool = [];
     for (let i = 1; i <= 5; i++) {
@@ -40,7 +43,7 @@
   };
 
   /**
-   * ENHANCED SYSTEM PROMPT - More strict about task/goal generation
+   * ENHANCED SYSTEM PROMPT with JS Execution and Vault Instructions
    */
   const SYSTEM_PROMPT = `# GEMINI DEEP RESEARCH SYSTEM - LLM INTERFACE
 
@@ -55,40 +58,22 @@ You are the core reasoning engine of the Gemini Deep Research System (GDRS), a b
    ... your operations here ...
    {{</reasoning_text>}}
 
-2. **INTELLIGENT TASK & GOAL GENERATION**:
-   - **NEVER** mechanically split queries by newlines or periods
-   - **ANALYZE FIRST**: Understand the query's intent, context, and requirements
-   - **TASKS**: Create meaningful, actionable work items that advance toward the goal
-   - **GOALS**: Define clear success criteria that can be verified
-   - For MCQs: Store complete option information with labels (e.g., "Option A: answer text")
-   - For analysis: Create tasks that represent logical workflow steps
-   - Each task should have a clear purpose and success condition
-
-3. **REASONING TEXT PURITY**:
-   - Your reasoning text should contain ONLY your thought process
-   - Tool operations ({{<task>}}, {{<memory>}}, etc.) are separate from reasoning
-   - Structure: First think, then act
-   - Example:
-     {{<reasoning_text>}}
-     I need to analyze this MCQ. The question asks about X, and there are 4 options.
-     I should store the options for verification, then analyze each one systematically.
-     
-     {{<goal identifier="goal_verify" heading="Answer within given options" content="Ensure final answer matches one of: A) text1, B) text2, C) text3, D) text4" />}}
-     {{<task identifier="task_analyze" heading="Analyze each option" content="Evaluate correctness of each option against the question" />}}
-     {{</reasoning_text>}}
-
-4. **IMMUTABILITY RULES**:
+2. **IMMUTABILITY RULES**:
    - Task/Memory/Goal: heading and content are IMMUTABLE after creation
    - Only 'notes' and 'status' (tasks only) can be updated
    - Tasks CANNOT be deleted (by design)
+
+3. **ITERATION CONTROL**:
+   - Continue reasoning until all goals are satisfied
+   - Each iteration should make concrete progress
+   - Use tasks to track workflow steps
+   - Use memory for important context that should persist
 
 ## AVAILABLE OPERATIONS
 
 ### Memory Operations
 \`\`\`
 {{<reasoning_text>}}
-My reasoning about what to remember...
-
 {{<memory identifier="unique_id" heading="Memory Title" content="Detailed content" notes="" />}}
 {{<memory identifier="existing_id" notes="Additional context" />}}
 {{<memory identifier="existing_id" delete />}}
@@ -98,9 +83,7 @@ My reasoning about what to remember...
 ### Task Operations
 \`\`\`
 {{<reasoning_text>}}
-My reasoning about the work to be done...
-
-{{<task identifier="unique_id" heading="Task Title" content="Detailed task description" notes="" />}}
+{{<task identifier="unique_id" heading="Task Title" content="Detailed task" notes="" />}}
 {{<task identifier="existing_id" notes="Progress update" status="ongoing" />}}
 {{</reasoning_text>}}
 \`\`\`
@@ -109,9 +92,7 @@ Valid statuses: "pending" | "ongoing" | "finished" | "paused"
 ### Goal Operations
 \`\`\`
 {{<reasoning_text>}}
-My reasoning about success criteria...
-
-{{<goal identifier="unique_id" heading="Goal Title" content="Detailed goal and verification criteria" notes="" />}}
+{{<goal identifier="unique_id" heading="Goal Title" content="Detailed goal" notes="" />}}
 {{<goal identifier="existing_id" notes="Additional context" />}}
 {{<goal identifier="existing_id" delete />}}
 {{</reasoning_text>}}
@@ -120,85 +101,110 @@ My reasoning about success criteria...
 ### Data Vault Operations
 \`\`\`
 {{<reasoning_text>}}
-My reasoning about what data to store...
-
 {{<datavault id="dv_unique_id" type="code" description="Brief description">}}
 function processData(input) {
+  // your code here
   return result;
 }
 {{</datavault>}}
+
+{{<datavault id="existing_id" delete />}}
+{{<datavault id="existing_id" action="request_read" limit="100" />}}
+{{</reasoning_text>}}
+\`\`\`
+Types: "code" | "text" | "data"
+For limit: use number for character limit or "full-length" for complete content
+
+### **JAVASCRIPT EXECUTION - CRITICAL FEATURE**
+You can execute JavaScript code directly in the browser environment using:
+\`\`\`
+{{<reasoning_text>}}
+{{<js_execute>}}
+// Unrestricted JavaScript execution
+console.log("Analyzing data...");
+
+// You can access vault content using references
+const code = {{<vaultref id="my-algorithm" />}};
+
+// You can make network requests, manipulate DOM, use any Web APIs
+fetch('https://api.example.com/data')
+  .then(res => res.json())
+  .then(data => console.log(data));
+
+// Access local storage, execute complex calculations
+const results = localStorage.getItem('gdrs_tasks');
+const analysis = JSON.parse(results || '[]');
+
+// Return data for the system to process
+return { 
+  success: true, 
+  results: analysis,
+  timestamp: new Date().toISOString() 
+};
+{{</js_execute>}}
 {{</reasoning_text>}}
 \`\`\`
 
-### JavaScript Execution
+**JavaScript Execution Features:**
+- Full browser JavaScript environment (no sandboxing)
+- Complete Web API access (fetch, localStorage, DOM manipulation)
+- Network requests allowed to any endpoint
+- Can import external libraries via dynamic imports or script tags
+- Vault references ({{<vaultref id="..." />}}) are automatically substituted
+- Execution results and console output are returned to you in the next iteration
+- Use this extensively for data processing, API calls, complex calculations
+- **MAXIMIZE USE** - JavaScript execution is encouraged for accuracy and data handling
+
+### Vault References (Use anywhere)
+\`\`\`
+{{<vaultref id="dv_unique_id" />}}
+\`\`\`
+This gets substituted with actual vault content during code execution and final output.
+
+### Vault Read Requests
+To read large vault content in reasoning:
 \`\`\`
 {{<reasoning_text>}}
-My reasoning about what computation to perform...
-
-{{<js_execute>}}
-// Your JavaScript code here
-console.log("Processing...");
-return { success: true };
-{{</js_execute>}}
+{{<datavault id="large_data" action="request_read" limit="full-length" />}}
 {{</reasoning_text>}}
 \`\`\`
 
 ## REASONING WORKFLOW
 
-1. **Query Analysis**: 
-   - DON'T just split by newlines/periods
-   - UNDERSTAND the query type (question, analysis request, MCQ, etc.)
-   - IDENTIFY the actual goal (answer a question, analyze data, etc.)
-
-2. **Smart Task & Goal Generation**:
-   - For MCQs: 
-     * Goal: "Answer must be one of the provided options"
-     * Tasks: "Analyze question requirements", "Evaluate each option", "Select best answer"
-   - For analysis:
-     * Goal: "Provide comprehensive analysis addressing all aspects"
-     * Tasks: Break into logical analysis phases
-   - For calculations:
-     * Goal: "Compute accurate result"
-     * Tasks: "Extract data", "Perform calculation", "Verify result"
-
-3. **Context Building**: 
-   - Store MEANINGFUL information in memory
-   - Store COMPLETE context (e.g., full option text, not just numbers)
-   - Store data that will be USEFUL for verification
-
+1. **Query Analysis**: Break down the user query into atomic subtasks
+2. **Task Generation**: Create specific, actionable tasks with clear success criteria
+3. **Context Building**: Establish memories for important information and goals for success criteria
 4. **Iterative Processing**: 
    - Work through tasks systematically
-   - Use JavaScript execution for accuracy
-   - Update task notes with concrete progress
-   - Store findings in memory
+   - **USE JAVASCRIPT EXECUTION** frequently for calculations, data processing, API calls
+   - Update task status and notes as you progress
+   - Store important findings in memory
+   - Use vault for large code/data that needs to be reused
+5. **Goal Verification**: Ensure all goals are met before completion
+6. **Final Output**: Provide comprehensive results using vault references as needed
 
-5. **Goal Verification**: 
-   - Check that goals are actually met
-   - Don't just mark complete without verification
-
-6. **Final Output**: 
-   - Provide comprehensive, well-structured results
-
-**CRITICAL**: Think intelligently. Don't be mechanical. Understand intent before creating tasks/goals.
+**CRITICAL INSTRUCTION**: Always make concrete progress each iteration. Focus on moving tasks from "pending" to "ongoing" to "finished" while building toward goal completion. Use JavaScript execution liberally to maintain accuracy in calculations and handle large data efficiently.
 
 ## FINAL OUTPUT GENERATION
 
-When all goals are complete:
+When all goals are complete, generate a comprehensive final output using:
 \`\`\`
 {{<reasoning_text>}}
-All goals have been verified and met. Generating final output.
-
 {{<final_output>}}
-<h1>Analysis Results</h1>
-<p>Your comprehensive findings here...</p>
+<h1>Research Analysis Results</h1>
+<p>Comprehensive findings with vault references: {{<vaultref id="results_summary" />}}</p>
+<div>{{<vaultref id="detailed_analysis" />}}</div>
 {{</final_output>}}
 {{</reasoning_text>}}
-\`\`\``;
+\`\`\`
+
+The final output will be rendered as HTML in the user interface.`;
 
   /**
-   * STORAGE LAYER
+   * STORAGE LAYER - Enhanced with Tool Activity Log
    */
   const Storage = {
+    // Keypool management
     loadKeypool() {
       const raw = safeJSONParse(localStorage.getItem(LS_KEYS.KEYPOOL), null);
       if (!Array.isArray(raw)) {
@@ -240,6 +246,7 @@ All goals have been verified and met. Generating final output.
       return out;
     },
 
+    // Entity storage
     loadGoals() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []) || [];
     },
@@ -268,6 +275,7 @@ All goals have been verified and met. Generating final output.
       localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(vault));
     },
 
+    // Output and logs
     loadFinalOutput() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.FINAL_OUTPUT), {
         timestamp: '—',
@@ -296,6 +304,7 @@ All goals have been verified and met. Generating final output.
       localStorage.setItem(LS_KEYS.CURRENT_QUERY, query || '');
     },
 
+    // Execution log storage
     loadExecutionLog() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.EXECUTION_LOG), []) || [];
     },
@@ -312,6 +321,7 @@ All goals have been verified and met. Generating final output.
       this.saveExecutionLog(log);
     },
 
+    // NEW: Tool Activity Log
     loadToolActivityLog() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.TOOL_ACTIVITY_LOG), []) || [];
     },
@@ -325,6 +335,7 @@ All goals have been verified and met. Generating final output.
         iteration: window.GDRS?.currentIteration || 0,
         ...activity
       });
+      // Keep only last 200 activities
       if (log.length > 200) log.splice(0, log.length - 200);
       this.saveToolActivityLog(log);
     }
@@ -446,7 +457,7 @@ All goals have been verified and met. Generating final output.
   };
 
   /**
-   * FIXED REASONING TEXT PARSER - Extracts only pure reasoning
+   * ENHANCED REASONING TEXT PARSER with Tool Activity Tracking
    */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
@@ -459,30 +470,25 @@ All goals have been verified and met. Generating final output.
       return blocks;
     },
 
-    /**
-     * FIXED: Extract ONLY pure reasoning text, completely removing tool operations
-     */
+    // Extract only pure reasoning text without tool operations
     extractPureReasoningText(text) {
+      // Remove all tool operations from reasoning text
       let cleanText = text;
       
-      // Remove JS execute blocks (including content)
+      // Remove JS execute blocks
       cleanText = cleanText.replace(/{{<js_execute>}}[\s\S]*?{{<\/js_execute>}}/g, '');
       
-      // Remove datavault blocks (including content)
+      // Remove datavault blocks
       cleanText = cleanText.replace(/{{<datavault[^>]*>}}[\s\S]*?{{<\/datavault>}}/g, '');
       
-      // Remove final output blocks (including content)
+      // Remove self-closing operations
+      cleanText = cleanText.replace(/{{<(?:memory|task|goal|datavault)[^>]*\/>}}/g, '');
+      
+      // Remove final output blocks
       cleanText = cleanText.replace(/{{<final_output>}}[\s\S]*?{{<\/final_output>}}/g, '');
       
-      // Remove all self-closing tool operations
-      cleanText = cleanText.replace(/{{<(?:memory|task|goal|datavault)[^>]*\/?>}}/g, '');
-      
-      // Remove any remaining {{< >}} syntax
-      cleanText = cleanText.replace(/{{<[^>]*>}}/g, '');
-      cleanText = cleanText.replace(/{{<\/[^>]*>}}/g, '');
-      
-      // Clean up extra whitespace and empty lines
-      cleanText = cleanText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+      // Clean up extra whitespace
+      cleanText = cleanText.replace(/\n\s*\n/g, '\n').trim();
       
       return cleanText;
     },
@@ -539,7 +545,7 @@ All goals have been verified and met. Generating final output.
         operations.goals.push(attrs);
       }
 
-      // Parse vault operations
+      // Parse vault operations (both self-closing and block form)
       const vaultSelfRegex = /{{<datavault\s+([^>]*)\s*\/>}}/g;
       while ((match = vaultSelfRegex.exec(blockText)) !== null) {
         const attrs = this.parseAttributes(match[1]);
@@ -778,7 +784,7 @@ All goals have been verified and met. Generating final output.
         }
       });
 
-      // Execute JavaScript blocks
+      // Execute JavaScript blocks AFTER vault operations are applied
       operations.jsExecute.forEach(code => {
         JSExecutor.executeCode(code);
       });
@@ -798,7 +804,7 @@ All goals have been verified and met. Generating final output.
   };
 
   /**
-   * VAULT MANAGER
+   * ENHANCED VAULT MANAGER with Read Request Support
    */
   const VaultManager = {
     resolveVaultRefsInText(inputText) {
@@ -836,7 +842,7 @@ All goals have been verified and met. Generating final output.
   };
 
   /**
-   * JAVASCRIPT EXECUTOR
+   * ENHANCED JAVASCRIPT EXECUTOR with Activity Logging
    */
   const JSExecutor = {
     executeCode(rawCode) {
@@ -844,8 +850,10 @@ All goals have been verified and met. Generating final output.
       const executionId = generateId('exec');
       
       try {
+        // Resolve vault references in the code
         const expandedCode = VaultManager.resolveVaultRefsInText(rawCode);
         
+        // Track vault references used
         const vaultRefsUsed = [];
         const vaultRefRegex = /{{<vaultref\s+id=\"([^\"]+)\"\s*\/>}}/g;
         let vaultMatch;
@@ -853,6 +861,7 @@ All goals have been verified and met. Generating final output.
           vaultRefsUsed.push(vaultMatch[1]);
         }
         
+        // Capture console output
         const logs = [];
         const originalLog = console.log;
         const originalError = console.error;
@@ -881,14 +890,17 @@ All goals have been verified and met. Generating final output.
           originalWarn.apply(console, args);
         };
 
+        // Execute the code
         const fn = new Function(expandedCode);
         const result = fn();
         const executionTime = Date.now() - startTime;
         
+        // Restore console functions
         console.log = originalLog;
         console.error = originalError;
         console.warn = originalWarn;
         
+        // Store execution result
         const executionResult = {
           id: executionId,
           success: true,
@@ -913,6 +925,7 @@ All goals have been verified and met. Generating final output.
           logsCount: logs.length
         });
         
+        // Add to reasoning log for LLM feedback
         const logEntries = Storage.loadReasoningLog();
         logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`);
         Storage.saveReasoningLog(logEntries);
@@ -923,6 +936,7 @@ All goals have been verified and met. Generating final output.
       } catch (error) {
         const executionTime = Date.now() - startTime;
         
+        // Restore console functions on error
         console.log = console.log;
         console.error = console.error;
         console.warn = console.warn;
@@ -948,6 +962,7 @@ All goals have been verified and met. Generating final output.
           codeSize: rawCode.length
         });
         
+        // Add to reasoning log for LLM feedback
         const logEntries = Storage.loadReasoningLog();
         logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: false\nERROR: ${error.message}\nSTACK: ${error.stack}`);
         Storage.saveReasoningLog(logEntries);
@@ -1002,6 +1017,7 @@ All goals have been verified and met. Generating final output.
       let picked = KeyManager.chooseActiveKey();
       if (!picked) throw new Error('No usable key');
 
+      // Ensure modelId doesn't have duplicate "models/" prefix
       const cleanModelId = modelId.startsWith('models/') ? modelId : `models/${modelId}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
       
@@ -1093,7 +1109,7 @@ All goals have been verified and met. Generating final output.
   };
 
   /**
-   * REASONING ENGINE
+   * ENHANCED REASONING ENGINE with Activity Tracking
    */
   const ReasoningEngine = {
     buildContextPrompt(query, iteration) {
@@ -1118,6 +1134,7 @@ All goals have been verified and met. Generating final output.
 
       const recentLog = reasoningLog.slice(-3).join('\n\n---\n\n');
       
+      // Include recent execution results
       const recentExecutions = executionLog.slice(-2).map(exec => 
         `[${exec.timestamp}] SUCCESS: ${exec.success}, ${exec.success ? 'RESULT: ' + JSON.stringify(exec.result) : 'ERROR: ' + exec.error}`
       ).join('\n');
@@ -1150,7 +1167,7 @@ ${recentLog || 'None yet'}
 
 ---
 
-Analyze the current state intelligently. Think about what needs to be done, then create meaningful tasks/goals that advance toward completion. Use JavaScript execution for accuracy. Make measurable progress this iteration.`;
+Analyze the current state and take concrete action to advance toward goal completion. Use JavaScript execution frequently for calculations, data processing, and API calls. Use the reasoning block format for all storage operations. Focus on making measurable progress this iteration.`;
     },
 
     checkGoalsComplete() {
@@ -1159,13 +1176,14 @@ Analyze the current state intelligently. Think about what needs to be done, then
       
       if (goals.length === 0) return false;
       
+      // Simple heuristic: goals are complete if no tasks are pending/ongoing
       const activeTasks = tasks.filter(t => t.status === 'pending' || t.status === 'ongoing');
       return activeTasks.length === 0;
     }
   };
 
   /**
-   * CODE EXECUTOR (Manual UI)
+   * CODE EXECUTOR (Manual execution UI)
    */
   const CodeExecutor = {
     run() {
@@ -1224,12 +1242,19 @@ Analyze the current state intelligently. Think about what needs to be done, then
   };
 
   /**
-   * FIXED LOOP CONTROLLER - No premature task generation
+   * LOOP CONTROLLER
    */
   const LoopController = (() => {
     let active = false;
     let iterationCount = 0;
     let loopTimer = null;
+
+    function decomposeQuery(queryStr) {
+      const parts = queryStr.split(/[.?!\n]+/g)
+        .map(s => s.trim())
+        .filter(Boolean);
+      return parts.length ? parts : [queryStr.trim()];
+    }
 
     async function runIteration() {
       if (!active) return;
@@ -1249,7 +1274,7 @@ Analyze the current state intelligently. Think about what needs to be done, then
       }
 
       iterationCount++;
-      window.GDRS.currentIteration = iterationCount;
+      window.GDRS.currentIteration = iterationCount; // For tool activity tracking
       updateIterationDisplay();
 
       try {
@@ -1261,36 +1286,43 @@ Analyze the current state intelligently. Think about what needs to be done, then
           throw new Error('Empty response from model');
         }
 
+        // Parse reasoning blocks and extract pure reasoning text
         const reasoningBlocks = ReasoningParser.extractReasoningBlocks(responseText);
         const pureReasoningTexts = reasoningBlocks.map(block => 
           ReasoningParser.extractPureReasoningText(block)
         ).filter(text => text.length > 0);
         
+        // Log only pure reasoning (without tool operations)
         if (pureReasoningTexts.length > 0) {
           const logEntries = Storage.loadReasoningLog();
           logEntries.push(`=== ITERATION ${iterationCount} - REASONING ===\n${pureReasoningTexts.join('\n\n')}`);
           Storage.saveReasoningLog(logEntries);
         }
 
+        // Apply operations from all reasoning blocks
         reasoningBlocks.forEach(block => {
           const operations = ReasoningParser.parseOperations(block);
           ReasoningParser.applyOperations(operations);
         });
 
+        // Re-render everything
         Renderer.renderAll();
 
+        // Check if goals are complete
         if (ReasoningEngine.checkGoalsComplete()) {
           await finalizeFinalOutput(currentQuery);
           stopSession();
           return;
         }
 
+        // Check iteration limit
         if (iterationCount >= MAX_ITERATIONS) {
           await finalizeFinalOutput(currentQuery);
           stopSession();
           return;
         }
 
+        // Schedule next iteration
         if (active) {
           loopTimer = setTimeout(() => runIteration(), ITERATION_DELAY);
         }
@@ -1310,11 +1342,14 @@ Analyze the current state intelligently. Think about what needs to be done, then
       const memory = Storage.loadMemory();
       const vault = Storage.loadVault();
 
+      // Check if there's already a final output from LLM
       const currentOutput = Storage.loadFinalOutput();
       if (currentOutput.html && currentOutput.html !== '<p>Report will render here after goal validation.</p>') {
+        // LLM has already provided final output
         return;
       }
 
+      // Build comprehensive final output
       const completedTasks = tasks.filter(t => t.status === 'finished');
       const goalsSummary = goals.map(g => `**${g.heading}**: ${g.content}`).join('\n');
       const keyFindings = memory.map(m => `**${m.heading}**: ${m.content} ${m.notes ? `(${m.notes})` : ''}`).join('\n');
@@ -1344,6 +1379,7 @@ Analyze the current state intelligently. Think about what needs to be done, then
           <div style="margin: 12px 0;">${keyFindings || 'No key findings recorded'}</div>
       `;
       
+      // Add vault content if any contains final results
       const resultVault = vault.filter(v => v.description.toLowerCase().includes('result') || v.description.toLowerCase().includes('final'));
       if (resultVault.length > 0) {
         finalHtml += `<h3>Generated Content</h3>`;
@@ -1354,6 +1390,7 @@ Analyze the current state intelligently. Think about what needs to be done, then
       
       finalHtml += `</div>`;
       
+      // Apply vault substitutions
       finalHtml = VaultManager.resolveVaultRefsInText(finalHtml);
       
       Storage.saveFinalOutput(finalHtml);
@@ -1377,12 +1414,14 @@ Analyze the current state intelligently. Think about what needs to be done, then
         return;
       }
 
+      // Check if we have a valid key
       const activeKey = KeyManager.chooseActiveKey();
       if (!activeKey) {
         alert('Please add and validate at least one API key');
         return;
       }
 
+      // Check if model is selected
       const modelSelect = qs('#modelSelect');
       if (!modelSelect || !modelSelect.value) {
         alert('Please select a model from the dropdown');
@@ -1394,19 +1433,41 @@ Analyze the current state intelligently. Think about what needs to be done, then
       
       if (sessionPill) sessionPill.textContent = 'RUNNING';
 
+      // Store the query
       Storage.saveCurrentQuery(rawQuery);
 
-      // FIXED: Don't create any tasks/goals upfront - let LLM analyze first
-      Storage.saveTasks([]);
-      Storage.saveGoals([]);
-      Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nWaiting for LLM analysis...`]);
-      Storage.saveExecutionLog([]);
-      Storage.saveToolActivityLog([]);
+      // Initialize with basic setup
+      const subtasks = decomposeQuery(rawQuery);
+      const initialTasks = subtasks.map((task, i) => ({
+        identifier: generateId('task'),
+        heading: task.slice(0, 60) + (task.length > 60 ? '...' : ''),
+        content: task,
+        status: 'pending',
+        notes: '',
+        createdAt: nowISO()
+      }));
 
+      const initialGoal = {
+        identifier: generateId('goal'),
+        heading: 'Complete Research Analysis',
+        content: rawQuery,
+        notes: '',
+        createdAt: nowISO()
+      };
+
+      Storage.saveTasks(initialTasks);
+      Storage.saveGoals([initialGoal]);
+      Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nDecomposed into ${subtasks.length} tasks`]);
+      Storage.saveExecutionLog([]); // Clear execution log
+      Storage.saveToolActivityLog([]); // Clear tool activity log
+
+      // Clear final output
       Storage.saveFinalOutput('');
 
+      // Initial render
       Renderer.renderAll();
 
+      // Start the reasoning loop
       setTimeout(() => runIteration(), 1000);
     }
 
@@ -1430,3 +1491,502 @@ Analyze the current state intelligently. Think about what needs to be done, then
       isActive: () => active
     };
   })();
+
+  /**
+   * ENHANCED RENDERER with Tool Activity Display
+   */
+  const Renderer = {
+    renderKeys() {
+      const pool = Storage.loadKeypool();
+      const keysGrid = qs('#keysGrid');
+      if (!keysGrid) return;
+
+      keysGrid.innerHTML = '';
+
+      pool.forEach((k) => {
+        const row = document.createElement('div');
+        row.className = 'keyrow';
+        
+        const field = document.createElement('input');
+        field.type = 'password';
+        field.placeholder = `API Key #${k.slot}`;
+        field.value = k.key;
+        field.autocomplete = 'off';
+        field.spellcheck = false;
+        field.addEventListener('input', (e) => {
+          KeyManager.setKey(k.slot, e.target.value);
+        });
+
+        const meta = document.createElement('div');
+        meta.className = 'keymeta';
+        const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
+        meta.innerHTML = `
+          <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
+          <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
+          <div><div class="pm">rate</div><div class="mono">${cooldownSecs > 0 ? `cooldown ${cooldownSecs}s` : (k.rateLimited ? 'limited' : 'ok')}</div></div>
+        `;
+
+        row.appendChild(field);
+        row.appendChild(meta);
+        keysGrid.appendChild(row);
+      });
+
+      // Update rotation pill
+      const rotPill = qs('#keyRotationPill');
+      const nextKey = KeyManager.chooseActiveKey();
+      if (rotPill) {
+        rotPill.textContent = nextKey ? `NEXT: #${nextKey.slot}` : 'NO KEY';
+      }
+    },
+
+    populateModelDropdown(modelsArray) {
+      const modelSelect = qs('#modelSelect');
+      if (!modelSelect) return;
+
+      const currentValue = modelSelect.value;
+      
+      modelSelect.innerHTML = `<option value="">-- select model --</option>`;
+
+      modelsArray.forEach((m) => {
+        const fullName = m.name || '';
+        const label = fullName.replace(/^models\//, '');
+        const opt = document.createElement('option');
+        opt.value = fullName;
+        opt.textContent = label;
+        modelSelect.appendChild(opt);
+      });
+
+      if (currentValue && modelsArray.some(m => m.name === currentValue)) {
+        modelSelect.value = currentValue;
+      } else if (modelsArray.length > 0) {
+        // Auto-select a good default model
+        const preferred = modelsArray.find(m => m.name.includes('gemini-1.5-pro')) || modelsArray[0];
+        modelSelect.value = preferred.name;
+      }
+    },
+
+    renderTasks() {
+      const tasks = Storage.loadTasks();
+      const tasksEl = qs('#tasksList');
+      if (!tasksEl) return;
+
+      if (tasks.length === 0) {
+        tasksEl.innerHTML = '<div class="storage-placeholder">No tasks yet</div>';
+        return;
+      }
+
+      tasksEl.innerHTML = tasks.map(t => `
+        <div class="li">
+          <div>
+            <div class="mono">${encodeHTML(t.heading)}</div>
+            <div class="pm">${encodeHTML(t.content)}</div>
+            ${t.notes ? `<div class="pm">Notes: ${encodeHTML(t.notes)}</div>` : ''}
+          </div>
+          <div class="status">${encodeHTML(t.status.toUpperCase())}</div>
+        </div>
+      `).join('');
+    },
+
+    renderMemories() {
+      const memory = Storage.loadMemory();
+      const memEl = qs('#memoryList');
+      if (!memEl) return;
+
+      if (memory.length === 0) {
+        memEl.innerHTML = '<div class="storage-placeholder">No memories yet</div>';
+        return;
+      }
+
+      memEl.innerHTML = memory.map(m => `
+        <div class="li">
+          <div>
+            <div class="mono">${encodeHTML(m.heading)}</div>
+            <div class="pm">${encodeHTML(m.content)}</div>
+            ${m.notes ? `<div class="pm">Notes: ${encodeHTML(m.notes)}</div>` : ''}
+          </div>
+          <div class="id">${encodeHTML(m.identifier)}</div>
+        </div>
+      `).join('');
+    },
+
+    renderGoals() {
+      const goals = Storage.loadGoals();
+      const goalsEl = qs('#goalsList');
+      if (!goalsEl) return;
+
+      if (goals.length === 0) {
+        goalsEl.innerHTML = '<div class="storage-placeholder">No goals yet</div>';
+        return;
+      }
+
+      goalsEl.innerHTML = goals.map(g => `
+        <div class="li">
+          <div>
+            <div class="mono">${encodeHTML(g.heading)}</div>
+            <div class="pm">${encodeHTML(g.content)}</div>
+            ${g.notes ? `<div class="pm">Notes: ${encodeHTML(g.notes)}</div>` : ''}
+          </div>
+          <div class="id">${encodeHTML(g.identifier)}</div>
+        </div>
+      `).join('');
+    },
+
+    renderVault() {
+      const vault = Storage.loadVault();
+      const vaultEl = qs('#vaultList');
+      if (!vaultEl) return;
+
+      if (vault.length === 0) {
+        vaultEl.innerHTML = '<div class="storage-placeholder">No vault entries yet</div>';
+        return;
+      }
+
+      vaultEl.innerHTML = vault.map(v => `
+        <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
+          <div>
+            <div class="mono">${encodeHTML(v.identifier)}</div>
+            <div class="pm">${encodeHTML(v.description)}</div>
+          </div>
+          <div class="status">${encodeHTML(v.type.toUpperCase())}</div>
+        </div>
+      `).join('');
+
+      // Add click handlers for vault modal
+      qsa('[data-vault-id]', vaultEl).forEach(el => {
+        el.addEventListener('click', () => {
+          const id = el.getAttribute('data-vault-id');
+          openVaultModal(id);
+        });
+      });
+    },
+
+    renderReasoningLog() {
+      const logEntries = Storage.loadReasoningLog();
+      const toolActivity = Storage.loadToolActivityLog();
+      const logEl = qs('#iterationLog');
+      if (!logEl) return;
+
+      if (logEntries.length === 0 && toolActivity.length === 0) {
+        logEl.innerHTML = '<div class="log-placeholder">Reasoning iterations will appear here...</div>';
+        return;
+      }
+
+      let html = '';
+
+      // Render reasoning entries
+      logEntries.forEach((entry, i) => {
+        html += `
+          <div class="li reasoning-entry">
+            <div>
+              <div class="mono">#${i + 1}</div>
+              <pre class="mono reasoning-text">${encodeHTML(entry)}</pre>
+            </div>
+          </div>
+        `;
+
+        // Find and render tool activities for this iteration
+        const iterationNum = i + 1;
+        const iterationActivities = toolActivity.filter(act => act.iteration === iterationNum);
+        
+        if (iterationActivities.length > 0) {
+          html += '<div class="tool-activities">';
+          iterationActivities.forEach(activity => {
+            const statusClass = activity.status === 'success' ? 'tool-success' : 'tool-error';
+            const typeClass = `tool-${activity.type.replace('_', '-')}`;
+            
+            let activityDetails = '';
+            if (activity.type === 'js_execute') {
+              activityDetails = `${activity.executionTime}ms • ${activity.codeSize} chars`;
+              if (activity.vaultRefsUsed > 0) activityDetails += ` • ${activity.vaultRefsUsed} vault refs`;
+            } else if (activity.type === 'vault') {
+              if (activity.dataSize) activityDetails += `${activity.dataSize} chars`;
+              if (activity.dataType) activityDetails += ` • ${activity.dataType}`;
+            }
+            
+            html += `
+              <div class="tool-activity ${statusClass} ${typeClass}">
+                <div class="tool-icon">🔧</div>
+                <div class="tool-details">
+                  <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
+                  <div class="tool-meta">${activityDetails || activity.id || ''}</div>
+                  ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
+                </div>
+                <div class="tool-status ${activity.status}">${activity.status === 'success' ? '✓' : '✗'}</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+      });
+
+      logEl.innerHTML = html;
+
+      // Auto-scroll to bottom
+      logEl.scrollTop = logEl.scrollHeight;
+    },
+
+    renderFinalOutput() {
+      const output = Storage.loadFinalOutput();
+      const finalEl = qs('#finalOutput');
+      const statusEl = qs('#finalStatus');
+      
+      if (finalEl) {
+        finalEl.innerHTML = output.html || '<div class="output-placeholder"><p>Research report will render here after analysis completion.</p></div>';
+      }
+      
+      if (statusEl) {
+        const isComplete = ReasoningEngine.checkGoalsComplete();
+        statusEl.textContent = isComplete ? 'verified' : 'running';
+      }
+    },
+
+    renderAll() {
+      this.renderKeys();
+      this.renderTasks();
+      this.renderMemories();
+      this.renderGoals();
+      this.renderVault();
+      this.renderReasoningLog();
+      this.renderFinalOutput();
+    }
+  };
+
+  /**
+   * VAULT MODAL
+   */
+  function openVaultModal(vaultId) {
+    const vault = Storage.loadVault();
+    const entry = vault.find(v => v.identifier === vaultId);
+    if (!entry) return;
+
+    const modal = qs('#vaultModal');
+    const idEl = qs('#vaultModalId');
+    const typeEl = qs('#vaultModalType');
+    const descEl = qs('#vaultModalDesc');
+    const contentEl = qs('#vaultModalContent');
+
+    if (idEl) idEl.textContent = entry.identifier;
+    if (typeEl) typeEl.textContent = entry.type.toUpperCase();
+    if (descEl) descEl.textContent = entry.description || '— no description —';
+    if (contentEl) contentEl.textContent = entry.content;
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeVaultModal() {
+    const modal = qs('#vaultModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  /**
+   * EVENT BINDING
+   */
+  function bindEvents() {
+
+    // Clear buttons for Memory, Goals, Vault
+    const clearMemoryBtn = qs('#clearMemory');
+    if (clearMemoryBtn) {
+      clearMemoryBtn.addEventListener('click', () => {
+        if (confirm('Clear ALL memories? This cannot be undone.')) {
+          localStorage.setItem('gdrs_memory', JSON.stringify([]));
+          const log = Storage.loadReasoningLog();
+          log.push('=== ACTION ===\nCleared all memories');
+          Storage.saveReasoningLog(log);
+          Renderer.renderMemories();
+        }
+      });
+    }
+
+    const clearGoalsBtn = qs('#clearGoals');
+    if (clearGoalsBtn) {
+      clearGoalsBtn.addEventListener('click', () => {
+        if (confirm('Clear ALL goals? This cannot be undone.')) {
+          localStorage.setItem('gdrs_goals', JSON.stringify([]));
+          const log = Storage.loadReasoningLog();
+          log.push('=== ACTION ===\nCleared all goals');
+          Storage.saveReasoningLog(log);
+          Renderer.renderGoals();
+        }
+      });
+    }
+
+    const clearVaultBtn = qs('#clearVault');
+    if (clearVaultBtn) {
+      clearVaultBtn.addEventListener('click', () => {
+        if (confirm('Clear ALL data vault entries? This cannot be undone.')) {
+          localStorage.setItem('gdrs_vault', JSON.stringify([]));
+          const log = Storage.loadReasoningLog();
+          log.push('=== ACTION ===\nCleared all data vault entries');
+          Storage.saveReasoningLog(log);
+          Renderer.renderVault();
+        }
+      });
+    }
+    
+    // Run buttons
+    const runBtn = qs('#runQueryBtn');
+    if (runBtn) {
+      runBtn.addEventListener('click', () => {
+        if (LoopController.isActive()) {
+          LoopController.stopSession();
+        } else {
+          LoopController.startSession();
+        }
+      });
+    }
+
+    // Key management
+    const validateBtn = qs('#validateKeys');
+    const clearBtn = qs('#clearKeys');
+    if (validateBtn) {
+      validateBtn.addEventListener('click', async () => {
+        validateBtn.textContent = 'validating...';
+        await KeyManager.validateAllKeys();
+        await GeminiAPI.fetchModelList();
+        Renderer.renderKeys();
+        validateBtn.textContent = 'Validate';
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        KeyManager.clearAll();
+        Renderer.renderKeys();
+      });
+    }
+
+    // Model selector
+    const modelSelect = qs('#modelSelect');
+    if (modelSelect) {
+      modelSelect.addEventListener('focus', () => {
+        if (modelSelect.options.length <= 1) {
+          GeminiAPI.fetchModelList();
+        }
+      });
+    }
+
+    // Code execution
+    const execBtn = qs('#execBtn');
+    const clearExecBtn = qs('#clearExec');
+    if (execBtn) execBtn.addEventListener('click', () => CodeExecutor.run());
+    if (clearExecBtn) clearExecBtn.addEventListener('click', () => CodeExecutor.clear());
+
+    // Export
+    const exportBtn = qs('#exportTxt');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        const output = Storage.loadFinalOutput();
+        const text = output.html
+          .replace(/<[^>]+>/g, '')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"');
+        
+        const blob = new Blob([`GDRS Analysis Report\n${'='.repeat(50)}\n\n${text}`], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gdrs-analysis-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    // Vault modal
+    const closeModalBtn = qs('#vaultModalClose');
+    const modal = qs('#vaultModal');
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeVaultModal);
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeVaultModal();
+      });
+    }
+
+    // Clear all data (for testing)
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        if (confirm('Clear all GDRS data? This cannot be undone.')) {
+          Object.values(LS_KEYS).forEach(key => localStorage.removeItem(key));
+          location.reload();
+        }
+      }
+    });
+  }
+
+  /**
+   * COOLDOWN TICKER
+   */
+  function startCooldownTicker() {
+    setInterval(() => {
+      Renderer.renderKeys();
+    }, 1000);
+  }
+
+  /**
+   * BOOT SEQUENCE
+   */
+  function boot() {
+    console.log('%cGDRS Runtime Core v' + VERSION + ' - Booting...', 'color: #00ff00; font-weight: bold;');
+
+    // Initialize storage if needed
+    if (!localStorage.getItem(LS_KEYS.META)) {
+      localStorage.setItem(LS_KEYS.META, JSON.stringify({ version: VERSION }));
+      Storage.saveKeypool(DEFAULT_KEYPOOL());
+      Storage.saveGoals([]);
+      Storage.saveMemory([]);
+      Storage.saveTasks([]);
+      Storage.saveVault([]);
+      Storage.saveFinalOutput('');
+      Storage.saveReasoningLog([]);
+      Storage.saveCurrentQuery('');
+      Storage.saveExecutionLog([]);
+      Storage.saveToolActivityLog([]);
+      console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
+    }
+
+    // Initial render
+    Renderer.renderAll();
+
+    // Bind events
+    bindEvents();
+
+    // Start tickers
+    startCooldownTicker();
+
+    // Auto-fetch models if we have keys
+    setTimeout(() => {
+      const activeKey = KeyManager.chooseActiveKey();
+      if (activeKey) {
+        GeminiAPI.fetchModelList();
+      }
+    }, 1000);
+
+    console.log('%cGDRS Runtime Core - Ready for Deep Research', 'color: #00ff00; font-weight: bold;');
+    console.log('%cAdd API keys, select a model, and enter your research query to begin.', 'color: #aaaaaa;');
+  }
+
+  // Boot when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  // Export to global scope for debugging
+  if (typeof window !== 'undefined') {
+    window.GDRS = window.GDRS || {};
+    Object.assign(window.GDRS, {
+      VERSION,
+      Storage,
+      KeyManager,
+      ReasoningParser,
+      VaultManager,
+      GeminiAPI,
+      ReasoningEngine,
+      CodeExecutor,
+      LoopController,
+      Renderer,
+      JSExecutor,
+      boot
+    });
+  }
+})();
