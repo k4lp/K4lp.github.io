@@ -2,7 +2,7 @@
 // This is a thin orchestrator that the runtime calls.
 // It demonstrates structure and returns echoed state updates.
 
-export async function orchestrateResearch(query, snapshot){
+async function orchestrateResearch(query, snapshot){
   // Example: decompose into two tasks and make a trivial log
   const now = Date.now();
   const tasks = [
@@ -28,3 +28,6 @@ export async function orchestrateResearch(query, snapshot){
 
   return { tasks, memories, goals, vault, iterationLog, iterationCount, finalOutput, finalStatus, apiKeys, activeKeyIndex: snapshot.activeKeyIndex, modelId: snapshot.modelId };
 }
+
+// Make function available globally
+window.orchestrateResearch = orchestrateResearch;
