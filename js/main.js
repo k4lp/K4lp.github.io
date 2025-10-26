@@ -22,7 +22,8 @@
     FINAL_OUTPUT: 'gdrs_final_output',
     REASONING_LOG: 'gdrs_reasoning_log',
     CURRENT_QUERY: 'gdrs_current_query',
-    EXECUTION_LOG: 'gdrs_execution_log'
+    EXECUTION_LOG: 'gdrs_execution_log',
+    TOOL_ACTIVITY_LOG: 'gdrs_tool_activity_log'
   };
 
   // Default data structures
@@ -200,7 +201,7 @@ When all goals are complete, generate a comprehensive final output using:
 The final output will be rendered as HTML in the user interface.`;
 
   /**
-   * STORAGE LAYER - Enhanced with Execution Log
+   * STORAGE LAYER - Enhanced with Tool Activity Log
    */
   const Storage = {
     // Keypool management
@@ -303,7 +304,7 @@ The final output will be rendered as HTML in the user interface.`;
       localStorage.setItem(LS_KEYS.CURRENT_QUERY, query || '');
     },
 
-    // NEW: Execution log storage
+    // Execution log storage
     loadExecutionLog() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.EXECUTION_LOG), []) || [];
     },
@@ -318,6 +319,25 @@ The final output will be rendered as HTML in the user interface.`;
         ...result
       });
       this.saveExecutionLog(log);
+    },
+
+    // NEW: Tool Activity Log
+    loadToolActivityLog() {
+      return safeJSONParse(localStorage.getItem(LS_KEYS.TOOL_ACTIVITY_LOG), []) || [];
+    },
+    saveToolActivityLog(log) {
+      localStorage.setItem(LS_KEYS.TOOL_ACTIVITY_LOG, JSON.stringify(log));
+    },
+    appendToolActivity(activity) {
+      const log = this.loadToolActivityLog();
+      log.push({
+        timestamp: nowISO(),
+        iteration: window.GDRS?.currentIteration || 0,
+        ...activity
+      });
+      // Keep only last 200 activities
+      if (log.length > 200) log.splice(0, log.length - 200);
+      this.saveToolActivityLog(log);
     }
   };
 
@@ -437,7 +457,7 @@ The final output will be rendered as HTML in the user interface.`;
   };
 
   /**
-   * ENHANCED REASONING TEXT PARSER with JS Execution Support
+   * ENHANCED REASONING TEXT PARSER with Tool Activity Tracking
    */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
@@ -450,7 +470,29 @@ The final output will be rendered as HTML in the user interface.`;
       return blocks;
     },
 
-    // NEW: Extract JavaScript execution blocks
+    // Extract only pure reasoning text without tool operations
+    extractPureReasoningText(text) {
+      // Remove all tool operations from reasoning text
+      let cleanText = text;
+      
+      // Remove JS execute blocks
+      cleanText = cleanText.replace(/{{<js_execute>}}[\s\S]*?{{<\/js_execute>}}/g, '');
+      
+      // Remove datavault blocks
+      cleanText = cleanText.replace(/{{<datavault[^>]*>}}[\s\S]*?{{<\/datavault>}}/g, '');
+      
+      // Remove self-closing operations
+      cleanText = cleanText.replace(/{{<(?:memory|task|goal|datavault)[^>]*\/>}}/g, '');
+      
+      // Remove final output blocks
+      cleanText = cleanText.replace(/{{<final_output>}}[\s\S]*?{{<\/final_output>}}/g, '');
+      
+      // Clean up extra whitespace
+      cleanText = cleanText.replace(/\n\s*\n/g, '\n').trim();
+      
+      return cleanText;
+    },
+
     extractJSExecutionBlocks(text) {
       const blocks = [];
       const regex = /{{<js_execute>}}([\s\S]*?){{<\/js_execute>}}/g;
@@ -461,7 +503,6 @@ The final output will be rendered as HTML in the user interface.`;
       return blocks;
     },
 
-    // NEW: Extract final output blocks  
     extractFinalOutputBlocks(text) {
       const blocks = [];
       const regex = /{{<final_output>}}([\s\S]*?){{<\/final_output>}}/g;
@@ -518,11 +559,11 @@ The final output will be rendered as HTML in the user interface.`;
         operations.vault.push(attrs);
       }
 
-      // NEW: Parse JavaScript execution blocks
+      // Parse JavaScript execution blocks
       const jsExecuteBlocks = this.extractJSExecutionBlocks(blockText);
       operations.jsExecute = jsExecuteBlocks;
 
-      // NEW: Parse final output blocks
+      // Parse final output blocks
       const finalOutputBlocks = this.extractFinalOutputBlocks(blockText);
       operations.finalOutput = finalOutputBlocks;
 
@@ -544,16 +585,18 @@ The final output will be rendered as HTML in the user interface.`;
     },
 
     applyOperations(operations) {
-      // CRITICAL FIX: Apply vault operations FIRST before JavaScript execution
-      // This ensures vault entries are persisted before vault references are resolved
-      
       // Apply vault operations FIRST
       operations.vault.forEach(op => {
         if (op.delete) {
           const vault = Storage.loadVault().filter(v => v.identifier !== op.id);
           Storage.saveVault(vault);
+          Storage.appendToolActivity({
+            type: 'vault',
+            action: 'delete',
+            id: op.id,
+            status: 'success'
+          });
         } else if (op.action === 'request_read') {
-          // Handle vault read requests
           const vault = Storage.loadVault();
           const entry = vault.find(v => v.identifier === op.id);
           if (entry) {
@@ -562,11 +605,26 @@ The final output will be rendered as HTML in the user interface.`;
               const limit = parseInt(op.limit) || 100;
               content = content.substring(0, limit) + (content.length > limit ? '...' : '');
             }
-            // Store read result for next iteration context
             const readResult = `VAULT_READ[${op.id}]: ${content}`;
             const logEntries = Storage.loadReasoningLog();
             logEntries.push(`=== VAULT READ ===\n${readResult}`);
             Storage.saveReasoningLog(logEntries);
+            Storage.appendToolActivity({
+              type: 'vault',
+              action: 'read',
+              id: op.id,
+              limit: op.limit || 'none',
+              status: 'success',
+              dataSize: entry.content.length
+            });
+          } else {
+            Storage.appendToolActivity({
+              type: 'vault',
+              action: 'read',
+              id: op.id,
+              status: 'error',
+              error: 'Vault entry not found'
+            });
           }
         } else if (op.id && op.content !== undefined) {
           const vault = Storage.loadVault();
@@ -575,6 +633,14 @@ The final output will be rendered as HTML in the user interface.`;
             existing.content = op.content;
             if (op.type) existing.type = op.type;
             if (op.description) existing.description = op.description;
+            Storage.appendToolActivity({
+              type: 'vault',
+              action: 'update',
+              id: op.id,
+              dataType: op.type || existing.type,
+              dataSize: op.content.length,
+              status: 'success'
+            });
           } else {
             vault.push({
               identifier: op.id,
@@ -582,6 +648,14 @@ The final output will be rendered as HTML in the user interface.`;
               description: op.description || '',
               content: op.content,
               createdAt: nowISO()
+            });
+            Storage.appendToolActivity({
+              type: 'vault',
+              action: 'create',
+              id: op.id,
+              dataType: op.type || 'text',
+              dataSize: op.content.length,
+              status: 'success'
             });
           }
           Storage.saveVault(vault);
@@ -593,11 +667,23 @@ The final output will be rendered as HTML in the user interface.`;
         if (op.delete) {
           const memories = Storage.loadMemory().filter(m => m.identifier !== op.identifier);
           Storage.saveMemory(memories);
+          Storage.appendToolActivity({
+            type: 'memory',
+            action: 'delete',
+            id: op.identifier,
+            status: 'success'
+          });
         } else if (op.identifier) {
           const memories = Storage.loadMemory();
           const existing = memories.find(m => m.identifier === op.identifier);
           if (existing) {
             if (op.notes !== undefined) existing.notes = op.notes;
+            Storage.appendToolActivity({
+              type: 'memory',
+              action: 'update',
+              id: op.identifier,
+              status: 'success'
+            });
           } else if (op.heading && op.content) {
             memories.push({
               identifier: op.identifier,
@@ -605,6 +691,13 @@ The final output will be rendered as HTML in the user interface.`;
               content: op.content,
               notes: op.notes || '',
               createdAt: nowISO()
+            });
+            Storage.appendToolActivity({
+              type: 'memory',
+              action: 'create',
+              id: op.identifier,
+              heading: op.heading,
+              status: 'success'
             });
           }
           Storage.saveMemory(memories);
@@ -621,6 +714,13 @@ The final output will be rendered as HTML in the user interface.`;
             if (op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status)) {
               existing.status = op.status;
             }
+            Storage.appendToolActivity({
+              type: 'task',
+              action: 'update',
+              id: op.identifier,
+              status: 'success',
+              newStatus: op.status
+            });
           } else if (op.heading && op.content) {
             tasks.push({
               identifier: op.identifier,
@@ -629,6 +729,13 @@ The final output will be rendered as HTML in the user interface.`;
               status: op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status) ? op.status : 'pending',
               notes: op.notes || '',
               createdAt: nowISO()
+            });
+            Storage.appendToolActivity({
+              type: 'task',
+              action: 'create',
+              id: op.identifier,
+              heading: op.heading,
+              status: 'success'
             });
           }
           Storage.saveTasks(tasks);
@@ -640,11 +747,23 @@ The final output will be rendered as HTML in the user interface.`;
         if (op.delete) {
           const goals = Storage.loadGoals().filter(g => g.identifier !== op.identifier);
           Storage.saveGoals(goals);
+          Storage.appendToolActivity({
+            type: 'goal',
+            action: 'delete',
+            id: op.identifier,
+            status: 'success'
+          });
         } else if (op.identifier) {
           const goals = Storage.loadGoals();
           const existing = goals.find(g => g.identifier === op.identifier);
           if (existing) {
             if (op.notes !== undefined) existing.notes = op.notes;
+            Storage.appendToolActivity({
+              type: 'goal',
+              action: 'update',
+              id: op.identifier,
+              status: 'success'
+            });
           } else if (op.heading && op.content) {
             goals.push({
               identifier: op.identifier,
@@ -652,6 +771,13 @@ The final output will be rendered as HTML in the user interface.`;
               content: op.content,
               notes: op.notes || '',
               createdAt: nowISO()
+            });
+            Storage.appendToolActivity({
+              type: 'goal',
+              action: 'create',
+              id: op.identifier,
+              heading: op.heading,
+              status: 'success'
             });
           }
           Storage.saveGoals(goals);
@@ -667,6 +793,12 @@ The final output will be rendered as HTML in the user interface.`;
       operations.finalOutput.forEach(htmlContent => {
         const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
         Storage.saveFinalOutput(processedHTML);
+        Storage.appendToolActivity({
+          type: 'final_output',
+          action: 'generate',
+          status: 'success',
+          contentSize: processedHTML.length
+        });
       });
     }
   };
@@ -694,7 +826,6 @@ The final output will be rendered as HTML in the user interface.`;
       return vault.map(v => `- [${v.identifier}] ${v.type}: ${v.description}`).join('\n');
     },
 
-    // NEW: Get vault entry for read operations
     getVaultEntry(id, limit = null) {
       const vault = Storage.loadVault();
       const entry = vault.find(v => v.identifier === id);
@@ -711,13 +842,24 @@ The final output will be rendered as HTML in the user interface.`;
   };
 
   /**
-   * NEW: JAVASCRIPT EXECUTOR for LLM-generated code
+   * ENHANCED JAVASCRIPT EXECUTOR with Activity Logging
    */
   const JSExecutor = {
     executeCode(rawCode) {
+      const startTime = Date.now();
+      const executionId = generateId('exec');
+      
       try {
         // Resolve vault references in the code
         const expandedCode = VaultManager.resolveVaultRefsInText(rawCode);
+        
+        // Track vault references used
+        const vaultRefsUsed = [];
+        const vaultRefRegex = /{{<vaultref\s+id=\"([^\"]+)\"\s*\/>}}/g;
+        let vaultMatch;
+        while ((vaultMatch = vaultRefRegex.exec(rawCode)) !== null) {
+          vaultRefsUsed.push(vaultMatch[1]);
+        }
         
         // Capture console output
         const logs = [];
@@ -751,6 +893,7 @@ The final output will be rendered as HTML in the user interface.`;
         // Execute the code
         const fn = new Function(expandedCode);
         const result = fn();
+        const executionTime = Date.now() - startTime;
         
         // Restore console functions
         console.log = originalLog;
@@ -759,38 +902,65 @@ The final output will be rendered as HTML in the user interface.`;
         
         // Store execution result
         const executionResult = {
+          id: executionId,
           success: true,
-          code: expandedCode,
+          code: rawCode,
+          expandedCode: expandedCode,
           result: result,
           logs: logs,
+          executionTime: executionTime,
+          vaultRefsUsed: vaultRefsUsed,
           timestamp: nowISO()
         };
         
         Storage.appendExecutionResult(executionResult);
+        Storage.appendToolActivity({
+          type: 'js_execute',
+          action: 'execute',
+          id: executionId,
+          status: 'success',
+          executionTime: executionTime,
+          codeSize: rawCode.length,
+          vaultRefsUsed: vaultRefsUsed.length,
+          logsCount: logs.length
+        });
         
         // Add to reasoning log for LLM feedback
         const logEntries = Storage.loadReasoningLog();
         logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`);
         Storage.saveReasoningLog(logEntries);
         
-        console.log('✓ JavaScript execution completed successfully');
+        console.log(`✓ JavaScript execution completed successfully (${executionTime}ms)`);
         return executionResult;
         
       } catch (error) {
+        const executionTime = Date.now() - startTime;
+        
         // Restore console functions on error
         console.log = console.log;
         console.error = console.error;
         console.warn = console.warn;
         
         const executionResult = {
+          id: executionId,
           success: false,
           code: rawCode,
           error: error.message,
           stack: error.stack,
+          executionTime: executionTime,
           timestamp: nowISO()
         };
         
         Storage.appendExecutionResult(executionResult);
+        Storage.appendToolActivity({
+          type: 'js_execute',
+          action: 'execute',
+          id: executionId,
+          status: 'error',
+          error: error.message,
+          executionTime: executionTime,
+          codeSize: rawCode.length
+        });
         
         // Add to reasoning log for LLM feedback
         const logEntries = Storage.loadReasoningLog();
@@ -939,7 +1109,7 @@ The final output will be rendered as HTML in the user interface.`;
   };
 
   /**
-   * ENHANCED REASONING ENGINE with Execution Log Integration
+   * ENHANCED REASONING ENGINE with Activity Tracking
    */
   const ReasoningEngine = {
     buildContextPrompt(query, iteration) {
@@ -964,7 +1134,7 @@ The final output will be rendered as HTML in the user interface.`;
 
       const recentLog = reasoningLog.slice(-3).join('\n\n---\n\n');
       
-      // NEW: Include recent execution results
+      // Include recent execution results
       const recentExecutions = executionLog.slice(-2).map(exec => 
         `[${exec.timestamp}] SUCCESS: ${exec.success}, ${exec.success ? 'RESULT: ' + JSON.stringify(exec.result) : 'ERROR: ' + exec.error}`
       ).join('\n');
@@ -1104,6 +1274,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       }
 
       iterationCount++;
+      window.GDRS.currentIteration = iterationCount; // For tool activity tracking
       updateIterationDisplay();
 
       try {
@@ -1115,13 +1286,20 @@ Analyze the current state and take concrete action to advance toward goal comple
           throw new Error('Empty response from model');
         }
 
-        // Log the full response
-        const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== ITERATION ${iterationCount} ===\n${responseText}`);
-        Storage.saveReasoningLog(logEntries);
-
-        // Parse and apply reasoning operations
+        // Parse reasoning blocks and extract pure reasoning text
         const reasoningBlocks = ReasoningParser.extractReasoningBlocks(responseText);
+        const pureReasoningTexts = reasoningBlocks.map(block => 
+          ReasoningParser.extractPureReasoningText(block)
+        ).filter(text => text.length > 0);
+        
+        // Log only pure reasoning (without tool operations)
+        if (pureReasoningTexts.length > 0) {
+          const logEntries = Storage.loadReasoningLog();
+          logEntries.push(`=== ITERATION ${iterationCount} - REASONING ===\n${pureReasoningTexts.join('\n\n')}`);
+          Storage.saveReasoningLog(logEntries);
+        }
+
+        // Apply operations from all reasoning blocks
         reasoningBlocks.forEach(block => {
           const operations = ReasoningParser.parseOperations(block);
           ReasoningParser.applyOperations(operations);
@@ -1281,6 +1459,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       Storage.saveGoals([initialGoal]);
       Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nDecomposed into ${subtasks.length} tasks`]);
       Storage.saveExecutionLog([]); // Clear execution log
+      Storage.saveToolActivityLog([]); // Clear tool activity log
 
       // Clear final output
       Storage.saveFinalOutput('');
@@ -1314,7 +1493,7 @@ Analyze the current state and take concrete action to advance toward goal comple
   })();
 
   /**
-   * RENDERER
+   * ENHANCED RENDERER with Tool Activity Display
    */
   const Renderer = {
     renderKeys() {
@@ -1483,22 +1662,64 @@ Analyze the current state and take concrete action to advance toward goal comple
 
     renderReasoningLog() {
       const logEntries = Storage.loadReasoningLog();
+      const toolActivity = Storage.loadToolActivityLog();
       const logEl = qs('#iterationLog');
       if (!logEl) return;
 
-      if (logEntries.length === 0) {
+      if (logEntries.length === 0 && toolActivity.length === 0) {
         logEl.innerHTML = '<div class="log-placeholder">Reasoning iterations will appear here...</div>';
         return;
       }
 
-      logEl.innerHTML = logEntries.map((entry, i) => `
-        <div class="li">
-          <div>
-            <div class="mono">#${i + 1}</div>
-            <pre class="mono" style="white-space:pre-wrap; font-size: 10px; line-height: 1.3;">${encodeHTML(entry)}</pre>
+      let html = '';
+
+      // Render reasoning entries
+      logEntries.forEach((entry, i) => {
+        html += `
+          <div class="li reasoning-entry">
+            <div>
+              <div class="mono">#${i + 1}</div>
+              <pre class="mono reasoning-text">${encodeHTML(entry)}</pre>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+
+        // Find and render tool activities for this iteration
+        const iterationNum = i + 1;
+        const iterationActivities = toolActivity.filter(act => act.iteration === iterationNum);
+        
+        if (iterationActivities.length > 0) {
+          html += '<div class="tool-activities">';
+          iterationActivities.forEach(activity => {
+            const statusClass = activity.status === 'success' ? 'tool-success' : 'tool-error';
+            const typeClass = `tool-${activity.type.replace('_', '-')}`;
+            
+            let activityDetails = '';
+            if (activity.type === 'js_execute') {
+              activityDetails = `${activity.executionTime}ms • ${activity.codeSize} chars`;
+              if (activity.vaultRefsUsed > 0) activityDetails += ` • ${activity.vaultRefsUsed} vault refs`;
+            } else if (activity.type === 'vault') {
+              if (activity.dataSize) activityDetails += `${activity.dataSize} chars`;
+              if (activity.dataType) activityDetails += ` • ${activity.dataType}`;
+            }
+            
+            html += `
+              <div class="tool-activity ${statusClass} ${typeClass}">
+                <div class="tool-icon">🔧</div>
+                <div class="tool-details">
+                  <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
+                  <div class="tool-meta">${activityDetails || activity.id || ''}</div>
+                  ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
+                </div>
+                <div class="tool-status ${activity.status}">${activity.status === 'success' ? '✓' : '✗'}</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+      });
+
+      logEl.innerHTML = html;
 
       // Auto-scroll to bottom
       logEl.scrollTop = logEl.scrollHeight;
@@ -1677,6 +1898,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       Storage.saveReasoningLog([]);
       Storage.saveCurrentQuery('');
       Storage.saveExecutionLog([]);
+      Storage.saveToolActivityLog([]);
       console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
     }
 
@@ -1722,7 +1944,7 @@ Analyze the current state and take concrete action to advance toward goal comple
       CodeExecutor,
       LoopController,
       Renderer,
-      JSExecutor, // NEW
+      JSExecutor,
       boot
     });
   }
