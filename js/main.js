@@ -1,6 +1,6 @@
 /**
  * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
- * Complete production runtime with LLM integration - v1.1.2
+ * Complete production runtime with LLM integration - v1.1.3
  * 
  * CRITICAL FIXES:
  * - FIXED: API key input focus loss issue - implemented focus preservation in renderKeys
@@ -8,15 +8,18 @@
  * - IMPROVED: Smart rendering that preserves user interaction state
  * - OPTIMIZED: Reduced DOM manipulation frequency for better UX
  * - FIXED: JavaScript code execution visibility - now shows executed code in code execution box
+ * - FIXED: Empty response handling with automatic API key rotation and robust error recovery
  */
 
 (function() {
   'use strict';
 
   // Application constants
-  const VERSION = '1.1.2';
+  const VERSION = '1.1.3';
   const MAX_ITERATIONS = 2000;
   const ITERATION_DELAY = 200;
+  const MAX_RETRY_ATTEMPTS = 3;
+  const EMPTY_RESPONSE_RETRY_DELAY = 1000; // 1 second delay for empty response retries
   
   // Local storage keys
   const LS_KEYS = {
@@ -93,7 +96,9 @@
         usage: 0,
         cooldownUntil: 0,
         rateLimited: false,
-        valid: false
+        valid: false,
+        failureCount: 0, // NEW: Track consecutive failures per key
+        lastFailure: 0   // NEW: Track last failure timestamp
       });
     }
     return pool;
@@ -320,7 +325,9 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
             usage: Number(found.usage || 0),
             cooldownUntil: Number(found.cooldownUntil || 0),
             rateLimited: !!found.rateLimited,
-            valid: !!found.valid
+            valid: !!found.valid,
+            failureCount: Number(found.failureCount || 0), // NEW: Preserve failure tracking
+            lastFailure: Number(found.lastFailure || 0)    // NEW: Preserve last failure timestamp
           });
         } else {
           out.push({
@@ -329,7 +336,9 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
             usage: 0,
             cooldownUntil: 0,
             rateLimited: false,
-            valid: false
+            valid: false,
+            failureCount: 0,
+            lastFailure: 0
           });
         }
       }
@@ -467,7 +476,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * KEY MANAGER
+   * ENHANCED KEY MANAGER with robust failure handling and automatic rotation
    */
   const KeyManager = {
     getCooldownRemainingSeconds(k) {
@@ -487,6 +496,13 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
           k.rateLimited = false;
           k.cooldownUntil = 0;
         }
+        // NEW: Reset failure count after 10 minutes of no failures
+        if (k.lastFailure && (now - k.lastFailure) > 600000) { // 10 minutes
+          if (k.failureCount > 0) {
+            k.failureCount = 0;
+            dirty = true;
+          }
+        }
       }
       
       if (dirty) Storage.saveKeypool(pool);
@@ -500,19 +516,63 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       const now = Date.now();
       rec.rateLimited = true;
       rec.cooldownUntil = now + cooldownSeconds * 1000;
+      rec.failureCount = (rec.failureCount || 0) + 1;
+      rec.lastFailure = now;
+      Storage.saveKeypool(pool);
+      console.warn(`🔑 Key #${slot} rate limited for ${cooldownSeconds}s (failure count: ${rec.failureCount})`);
+    },
+
+    // NEW: Mark a key as having failed (empty response, etc.)
+    markFailure(slot, reason = 'unknown') {
+      const pool = Storage.loadKeypool();
+      const rec = pool.find(k => k.slot === slot);
+      if (!rec) return;
+      
+      const now = Date.now();
+      rec.failureCount = (rec.failureCount || 0) + 1;
+      rec.lastFailure = now;
+      
+      // If too many consecutive failures, temporarily mark as invalid
+      if (rec.failureCount >= 3) {
+        rec.rateLimited = true;
+        rec.cooldownUntil = now + 60000; // 1 minute cooldown for repeated failures
+        console.warn(`🔑 Key #${slot} temporarily disabled due to ${rec.failureCount} consecutive failures (${reason})`);
+      }
+      
       Storage.saveKeypool(pool);
     },
 
+    // ENHANCED: Choose active key with failure awareness
     chooseActiveKey() {
       const pool = Storage.loadKeypool();
       this.liftCooldowns();
       
-      const usable = pool.find(k => {
+      // First, try to find a key with no recent failures
+      let usable = pool.find(k => {
         const cd = this.getCooldownRemainingSeconds(k);
-        return k.key && k.valid && !k.rateLimited && cd === 0;
+        return k.key && k.valid && !k.rateLimited && cd === 0 && k.failureCount === 0;
       });
       
+      // If no perfect key found, try keys with minimal failures
+      if (!usable) {
+        usable = pool.filter(k => {
+          const cd = this.getCooldownRemainingSeconds(k);
+          return k.key && k.valid && !k.rateLimited && cd === 0;
+        }).sort((a, b) => (a.failureCount || 0) - (b.failureCount || 0))[0];
+      }
+      
       return usable || null;
+    },
+
+    // NEW: Get all available keys for rotation
+    getAllAvailableKeys() {
+      const pool = Storage.loadKeypool();
+      this.liftCooldowns();
+      
+      return pool.filter(k => {
+        const cd = this.getCooldownRemainingSeconds(k);
+        return k.key && k.valid && !k.rateLimited && cd === 0;
+      }).sort((a, b) => (a.failureCount || 0) - (b.failureCount || 0));
     },
 
     setKey(slot, newKey) {
@@ -522,6 +582,8 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       
       rec.key = newKey.trim();
       rec.valid = false;
+      rec.failureCount = 0; // Reset failure count when key is updated
+      rec.lastFailure = 0;
       Storage.saveKeypool(pool);
     },
 
@@ -531,6 +593,10 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       if (!rec) return;
       
       rec.valid = !!isValid;
+      if (isValid) {
+        rec.failureCount = 0; // Reset failure count when marked as valid
+        rec.lastFailure = 0;
+      }
       Storage.saveKeypool(pool);
     },
 
@@ -567,6 +633,8 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
             k.cooldownUntil = Date.now() + 30 * 1000;
           } else if (resp.ok) {
             k.valid = true;
+            k.failureCount = 0; // Reset failure count on successful validation
+            k.lastFailure = 0;
           } else if (resp.status === 401 || resp.status === 403) {
             k.valid = false;
           } else {
@@ -1306,7 +1374,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * GEMINI CLIENT INTEGRATION
+   * ENHANCED GEMINI CLIENT INTEGRATION with robust error handling and key rotation
    */
   const GeminiAPI = {
     async fetchModelList() {
@@ -1344,14 +1412,75 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       }
     },
 
+    // NEW: Robust content generation with automatic key rotation and retry logic
     async generateContent(modelId, prompt) {
-      KeyManager.liftCooldowns();
-      let picked = KeyManager.chooseActiveKey();
-      if (!picked) throw new Error('No usable key');
+      return await this.generateContentWithRetry(modelId, prompt, 0);
+    },
 
+    async generateContentWithRetry(modelId, prompt, retryCount = 0) {
+      // Get all available keys for rotation
+      const availableKeys = KeyManager.getAllAvailableKeys();
+      
+      if (availableKeys.length === 0) {
+        throw new Error('No valid API keys available');
+      }
+
+      // Try each available key
+      for (let keyIndex = 0; keyIndex < availableKeys.length; keyIndex++) {
+        const currentKey = availableKeys[keyIndex];
+        
+        try {
+          console.log(`🔑 Attempting with key #${currentKey.slot} (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
+          
+          const result = await this.makeRequest(modelId, prompt, currentKey);
+          
+          // SUCCESS: Mark key as working and return result
+          KeyManager.bumpUsage(currentKey.slot);
+          console.log(`✅ Success with key #${currentKey.slot}`);
+          return result;
+          
+        } catch (error) {
+          console.warn(`❌ Key #${currentKey.slot} failed: ${error.message}`);
+          
+          // Handle different types of errors
+          if (error.message.includes('429') || error.message.includes('Rate limited')) {
+            // Rate limit - mark key as rate limited
+            KeyManager.markRateLimit(currentKey.slot, 60); // 1 minute cooldown
+          } else if (error.message.includes('401') || error.message.includes('403') || error.message.includes('Invalid API key')) {
+            // Invalid key - mark as invalid
+            KeyManager.markValid(currentKey.slot, false);
+          } else if (error.message.includes('Empty response')) {
+            // Empty response - mark as failure but keep key valid
+            KeyManager.markFailure(currentKey.slot, 'empty_response');
+          } else {
+            // Other errors - mark as general failure
+            KeyManager.markFailure(currentKey.slot, error.message.substring(0, 50));
+          }
+          
+          // Continue to next key if available
+          continue;
+        }
+      }
+      
+      // All keys failed - decide whether to retry
+      if (retryCount < MAX_RETRY_ATTEMPTS - 1) {
+        console.warn(`⏳ All keys failed, retrying in ${EMPTY_RESPONSE_RETRY_DELAY}ms (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, EMPTY_RESPONSE_RETRY_DELAY));
+        
+        // Retry with incremented count
+        return await this.generateContentWithRetry(modelId, prompt, retryCount + 1);
+      }
+      
+      // All retries exhausted
+      throw new Error(`All API keys failed after ${MAX_RETRY_ATTEMPTS} attempts. Please check your keys and try again.`);
+    },
+
+    async makeRequest(modelId, prompt, keyInfo) {
       // Ensure modelId doesn't have duplicate "models/" prefix
       const cleanModelId = modelId.startsWith('models/') ? modelId : `models/${modelId}`;
-      const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId}:generateContent?key=${encodeURIComponent(picked.key)}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId}:generateContent?key=${encodeURIComponent(keyInfo.key)}`;
       
       const payload = {
         contents: [{
@@ -1383,52 +1512,51 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         ]
       };
 
-      console.log('Making request to:', url);
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-      try {
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (resp.status === 429) {
-          KeyManager.markRateLimit(picked.slot, 30);
-          picked = KeyManager.chooseActiveKey();
-          if (!picked) throw new Error('Rate limited. No backup key.');
-          
-          const cleanModelId2 = picked.modelId?.startsWith('models/') ? picked.modelId : `models/${picked.modelId || modelId}`;
-          const url2 = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId2}:generateContent?key=${encodeURIComponent(picked.key)}`;
-          const resp2 = await fetch(url2, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          
-          if (!resp2.ok) {
-            const errorText = await resp2.text();
-            throw new Error(`Gemini request failed: ${resp2.status} - ${errorText}`);
-          }
-          KeyManager.bumpUsage(picked.slot);
-          return resp2.json();
-        }
-
-        if (!resp.ok) {
-          if (resp.status === 401 || resp.status === 403) {
-            KeyManager.markValid(picked.slot, false);
-          }
-          const errorText = await resp.text();
-          throw new Error(`Gemini request failed: ${resp.status} - ${errorText}`);
-        }
-
-        KeyManager.bumpUsage(picked.slot);
-        return resp.json();
-      } catch (err) {
-        console.error('generateContent error:', err);
-        throw err;
+      // Handle HTTP errors
+      if (resp.status === 429) {
+        throw new Error('Rate limited (429)');
       }
+      
+      if (resp.status === 401 || resp.status === 403) {
+        throw new Error('Invalid API key (401/403)');
+      }
+      
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${errorText}`);
+      }
+
+      const data = await resp.json();
+      
+      // NEW: Enhanced response validation
+      if (!data) {
+        throw new Error('Empty response from API');
+      }
+      
+      if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+        throw new Error('Empty response: No candidates returned');
+      }
+      
+      const candidate = data.candidates[0];
+      if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+        throw new Error('Empty response: No content in candidate');
+      }
+      
+      // Check if the actual text content is empty
+      const textParts = candidate.content.parts.map(p => p.text || '').join('').trim();
+      if (!textParts) {
+        throw new Error('Empty response: No text content');
+      }
+      
+      return data;
     },
 
     extractResponseText(response) {
@@ -1591,14 +1719,14 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   };
 
   /**
-   * ENHANCED LOOP CONTROLLER - FIXED to avoid random task generation
+   * ENHANCED LOOP CONTROLLER with robust error handling and recovery
    */
   const LoopController = (() => {
     let active = false;
     let iterationCount = 0;
     let loopTimer = null;
-
-    // REMOVED: Automatic query decomposition - this was causing random task generation
+    let consecutiveErrors = 0; // NEW: Track consecutive errors
+    const MAX_CONSECUTIVE_ERRORS = 3;
 
     async function runIteration() {
       if (!active) return;
@@ -1608,12 +1736,14 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       
       if (!modelId || modelId === '') {
         console.error('No model selected');
+        stopSession();
         return;
       }
 
       const currentQuery = Storage.loadCurrentQuery();
       if (!currentQuery) {
         console.error('No current query');
+        stopSession();
         return;
       }
 
@@ -1623,12 +1753,21 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
 
       try {
         const prompt = ReasoningEngine.buildContextPrompt(currentQuery, iterationCount);
+        console.log(`🧠 Starting iteration ${iterationCount} with ${prompt.length} chars prompt`);
+        
+        // NEW: Enhanced API call with robust error handling
         const response = await GeminiAPI.generateContent(modelId, prompt);
         const responseText = GeminiAPI.extractResponseText(response);
 
-        if (!responseText) {
-          throw new Error('Empty response from model');
+        // NEW: Validate response is not empty
+        if (!responseText || responseText.trim().length === 0) {
+          throw new Error('Empty response from model - no content generated');
         }
+
+        console.log(`✅ Received response: ${responseText.length} chars`);
+        
+        // Reset consecutive errors on success
+        consecutiveErrors = 0;
 
         // Parse reasoning blocks and extract pure reasoning text
         const reasoningBlocks = ReasoningParser.extractReasoningBlocks(responseText);
@@ -1654,6 +1793,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
 
         // Check if goals are complete
         if (ReasoningEngine.checkGoalsComplete()) {
+          console.log('🎯 Goals completed, finalizing output');
           await finalizeFinalOutput(currentQuery);
           stopSession();
           return;
@@ -1661,6 +1801,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
 
         // Check iteration limit
         if (iterationCount >= MAX_ITERATIONS) {
+          console.log('🔄 Max iterations reached, finalizing output');
           await finalizeFinalOutput(currentQuery);
           stopSession();
           return;
@@ -1670,13 +1811,44 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         if (active) {
           loopTimer = setTimeout(() => runIteration(), ITERATION_DELAY);
         }
+        
       } catch (err) {
-        console.error('Iteration error:', err);
+        consecutiveErrors++;
+        
+        console.error(`❌ Iteration ${iterationCount} error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`, err);
+        
+        // Log the error
         const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== ITERATION ${iterationCount} - ERROR ===\n${err.message}\n${err.stack || ''}`);
+        const errorMessage = `=== ITERATION ${iterationCount} - ERROR ===\nError: ${err.message}\nConsecutive errors: ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}\nStack: ${err.stack || 'No stack trace'}`;
+        logEntries.push(errorMessage);
         Storage.saveReasoningLog(logEntries);
         Renderer.renderReasoningLog();
-        stopSession();
+        
+        // NEW: Handle consecutive errors gracefully
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          console.error(`🛑 Too many consecutive errors (${consecutiveErrors}), stopping session`);
+          
+          // Add final error message to reasoning log
+          logEntries.push(`=== SESSION TERMINATED ===\nSession stopped due to ${consecutiveErrors} consecutive errors.\nLast error: ${err.message}\n\nSuggestions:\n- Check your API keys\n- Verify network connection\n- Try a different model\n- Review the query complexity`);
+          Storage.saveReasoningLog(logEntries);
+          Renderer.renderReasoningLog();
+          
+          stopSession();
+          return;
+        }
+        
+        // NEW: For recoverable errors, retry with delay
+        if (err.message.includes('Empty response') || err.message.includes('failed after')) {
+          console.warn(`⏳ Recoverable error, retrying iteration ${iterationCount} in ${EMPTY_RESPONSE_RETRY_DELAY * 2}ms`);
+          
+          if (active) {
+            loopTimer = setTimeout(() => runIteration(), EMPTY_RESPONSE_RETRY_DELAY * 2);
+          }
+        } else {
+          // For other errors, stop the session
+          console.error('🛑 Non-recoverable error, stopping session');
+          stopSession();
+        }
       }
     }
 
@@ -1703,7 +1875,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
           <h2>Research Analysis Complete</h2>
           <p><strong>Query:</strong> ${encodeHTML(query)}</p>
           <p><strong>Iterations:</strong> ${iterationCount}</p>
-          <p><strong>Status:</strong> ${ReasoningEngine.checkGoalsComplete() ? 'Goals Achieved' : 'Max Iterations Reached'}</p>
+          <p><strong>Status:</strong> ${ReasoningEngine.checkGoalsComplete() ? 'Goals Achieved' : consecutiveErrors >= MAX_CONSECUTIVE_ERRORS ? 'Stopped due to errors' : 'Max Iterations Reached'}</p>
           
           <h3>Goals</h3>
           <div style="margin: 12px 0;">${goalsSummary || 'No goals defined'}</div>
@@ -1774,6 +1946,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
 
       active = true;
       iterationCount = 0;
+      consecutiveErrors = 0; // Reset error counter
       
       if (sessionPill) sessionPill.textContent = 'RUNNING';
 
@@ -1802,6 +1975,8 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
 
     function stopSession() {
       active = false;
+      consecutiveErrors = 0; // Reset error counter
+      
       if (loopTimer) {
         clearTimeout(loopTimer);
         loopTimer = null;
@@ -1812,6 +1987,8 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       
       const runBtn = qs('#runQueryBtn');
       if (runBtn) runBtn.textContent = 'Run Analysis';
+      
+      console.log('🏁 Session stopped');
     }
 
     return {
@@ -1822,11 +1999,11 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   })();
 
   /**
-   * ENHANCED RENDERER with FOCUS PRESERVATION for API key inputs
+   * ENHANCED RENDERER with FOCUS PRESERVATION for API key inputs + failure count display
    */
   const Renderer = {
     /**
-     * FIXED: Render keys with focus preservation to prevent cursor loss
+     * FIXED: Render keys with focus preservation to prevent cursor loss + enhanced metadata
      */
     renderKeys(preserveFocus = true) {
       const pool = Storage.loadKeypool();
@@ -1872,10 +2049,17 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         const meta = document.createElement('div');
         meta.className = 'keymeta';
         const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
+        
+        // NEW: Enhanced metadata display with failure tracking
+        const failureInfo = k.failureCount > 0 ? ` (${k.failureCount} fails)` : '';
+        const statusText = cooldownSecs > 0 ? 
+          `cooldown ${cooldownSecs}s` : 
+          (k.rateLimited ? 'limited' : k.failureCount > 0 ? `unstable${failureInfo}` : 'ok');
+          
         meta.innerHTML = `
           <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
           <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
-          <div><div class="pm">rate</div><div class="mono">${cooldownSecs > 0 ? `cooldown ${cooldownSecs}s` : (k.rateLimited ? 'limited' : 'ok')}</div></div>
+          <div><div class="pm">status</div><div class="mono">${statusText}</div></div>
         `;
 
         row.appendChild(field);
@@ -1900,16 +2084,21 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         }
       }
 
-      // Update rotation pill
+      // Update rotation pill with enhanced information
       const rotPill = qs('#keyRotationPill');
       const nextKey = KeyManager.chooseActiveKey();
+      const availableKeys = KeyManager.getAllAvailableKeys();
       if (rotPill) {
-        rotPill.textContent = nextKey ? `NEXT: #${nextKey.slot}` : 'NO KEY';
+        if (nextKey) {
+          rotPill.textContent = `NEXT: #${nextKey.slot} (${availableKeys.length} available)`;
+        } else {
+          rotPill.textContent = availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
+        }
       }
     },
 
     /**
-     * ENHANCED: Update only key metadata without rebuilding inputs (for cooldown ticker)
+     * ENHANCED: Update only key metadata without rebuilding inputs (for cooldown ticker) + failure info
      */
     updateKeyMetadata() {
       const pool = Storage.loadKeypool();
@@ -1926,18 +2115,30 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
         if (!meta) return;
         
         const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
+        
+        // NEW: Enhanced status display
+        const failureInfo = k.failureCount > 0 ? ` (${k.failureCount} fails)` : '';
+        const statusText = cooldownSecs > 0 ? 
+          `cooldown ${cooldownSecs}s` : 
+          (k.rateLimited ? 'limited' : k.failureCount > 0 ? `unstable${failureInfo}` : 'ok');
+        
         meta.innerHTML = `
           <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
           <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
-          <div><div class="pm">rate</div><div class="mono">${cooldownSecs > 0 ? `cooldown ${cooldownSecs}s` : (k.rateLimited ? 'limited' : 'ok')}</div></div>
+          <div><div class="pm">status</div><div class="mono">${statusText}</div></div>
         `;
       });
 
-      // Update rotation pill
+      // Update rotation pill with enhanced information
       const rotPill = qs('#keyRotationPill');
       const nextKey = KeyManager.chooseActiveKey();
+      const availableKeys = KeyManager.getAllAvailableKeys();
       if (rotPill) {
-        rotPill.textContent = nextKey ? `NEXT: #${nextKey.slot}` : 'NO KEY';
+        if (nextKey) {
+          rotPill.textContent = `NEXT: #${nextKey.slot} (${availableKeys.length} available)`;
+        } else {
+          rotPill.textContent = availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
+        }
       }
     },
 
@@ -2379,7 +2580,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     }, 1000);
 
     console.log('%cGDRS Runtime Core - Ready for Intelligent Deep Research', 'color: #00ff00; font-weight: bold;');
-    console.log('%cFIXED: JavaScript code execution visibility - code now shows in execution box!', 'color: #00aa00;');
+    console.log('%cFIXED: Empty response handling with automatic API key rotation and robust error recovery!', 'color: #00aa00;');
   }
 
   // Boot when DOM is ready
