@@ -1,19 +1,20 @@
 /**
  * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
- * Complete production runtime with LLM integration - v1.1.1
+ * Complete production runtime with LLM integration - v1.1.2
  * 
  * CRITICAL FIXES:
  * - FIXED: API key input focus loss issue - implemented focus preservation in renderKeys
  * - ENHANCED: Cooldown ticker now updates only metadata without rebuilding input fields
  * - IMPROVED: Smart rendering that preserves user interaction state
  * - OPTIMIZED: Reduced DOM manipulation frequency for better UX
+ * - FIXED: JavaScript code execution visibility - now shows executed code in code execution box
  */
 
 (function() {
   'use strict';
 
   // Application constants
-  const VERSION = '1.1.1';
+  const VERSION = '1.1.2';
   const MAX_ITERATIONS = 2000;
   const ITERATION_DELAY = 200;
   
@@ -29,7 +30,8 @@
     REASONING_LOG: 'gdrs_reasoning_log',
     CURRENT_QUERY: 'gdrs_current_query',
     EXECUTION_LOG: 'gdrs_execution_log',
-    TOOL_ACTIVITY_LOG: 'gdrs_tool_activity_log'
+    TOOL_ACTIVITY_LOG: 'gdrs_tool_activity_log',
+    LAST_EXECUTED_CODE: 'gdrs_last_executed_code'
   };
 
   // Utility functions
@@ -436,6 +438,14 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       this.saveExecutionLog(log);
     },
 
+    // NEW: Store the last executed JavaScript code for visibility
+    loadLastExecutedCode() {
+      return localStorage.getItem(LS_KEYS.LAST_EXECUTED_CODE) || '';
+    },
+    saveLastExecutedCode(code) {
+      localStorage.setItem(LS_KEYS.LAST_EXECUTED_CODE, code || '');
+    },
+
     // Tool Activity Log with enhanced vault tracking
     loadToolActivityLog() {
       return safeJSONParse(localStorage.getItem(LS_KEYS.TOOL_ACTIVITY_LOG), []) || [];
@@ -572,7 +582,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * ENHANCED REASONING TEXT PARSER - Completely hides tool operations
+   * ENHANCED REASONING TEXT PARSER - Completely hides tool operations but shows code in execution box
    */
   const ReasoningParser = {
     extractReasoningBlocks(text) {
@@ -787,6 +797,32 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         });
 
         // STEP 5: Execute JavaScript blocks AFTER vault operations are applied
+        // FIXED: Store the last executed code and display it in the code execution box
+        if (operations.jsExecute.length > 0) {
+          const lastCode = operations.jsExecute[operations.jsExecute.length - 1];
+          Storage.saveLastExecutedCode(lastCode);
+          
+          // Update the code execution box to show the executed code
+          setTimeout(() => {
+            const codeInput = qs('#codeInput');
+            if (codeInput) {
+              codeInput.value = lastCode;
+              // Add a visual indicator that this code was auto-executed
+              const execStatus = qs('#execStatus');
+              if (execStatus) {
+                execStatus.textContent = 'AUTO-EXEC';
+                execStatus.style.background = '#4CAF50';
+                execStatus.style.color = 'white';
+                setTimeout(() => {
+                  execStatus.textContent = 'READY';
+                  execStatus.style.background = '';
+                  execStatus.style.color = '';
+                }, 3000);
+              }
+            }
+          }, 100);
+        }
+        
         operations.jsExecute.forEach((code, index) => {
           try {
             JSExecutor.executeCode(code);
@@ -1120,7 +1156,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * FIXED JAVASCRIPT EXECUTOR - Resolved variable scope issue
+   * FIXED JAVASCRIPT EXECUTOR - Resolved variable scope issue + enhanced visibility
    */
   const JSExecutor = {
     executeCode(rawCode) {
@@ -1200,10 +1236,23 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
           logsCount: logs.length
         });
         
-        // Add to reasoning log for LLM feedback
+        // ENHANCED: Add execution result to reasoning log AND display in console
         const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`);
+        const executionSummary = `=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`;
+        logEntries.push(executionSummary);
         Storage.saveReasoningLog(logEntries);
+        
+        // NEW: Also update the console output in the UI immediately
+        setTimeout(() => {
+          const execOutput = qs('#execOutput');
+          if (execOutput) {
+            const outputText = [
+              ...logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`),
+              result !== undefined ? `[RETURN] ${JSON.stringify(result, null, 2)}` : ''
+            ].filter(Boolean).join('\n');
+            execOutput.textContent = outputText || 'No output';
+          }
+        }, 50);
         
         console.log(`✓ JavaScript execution completed successfully (${executionTime}ms)`);
         return executionResult;
@@ -1236,6 +1285,14 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         const logEntries = Storage.loadReasoningLog();
         logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: false\nERROR: ${error.message}\nSTACK: ${error.stack}`);
         Storage.saveReasoningLog(logEntries);
+        
+        // NEW: Also update the console output in the UI immediately  
+        setTimeout(() => {
+          const execOutput = qs('#execOutput');
+          if (execOutput) {
+            execOutput.textContent = `[ERROR] ${error.message}\n${error.stack || ''}`;
+          }
+        }, 50);
         
         console.error('✗ JavaScript execution failed:', error);
         return executionResult;
@@ -1466,7 +1523,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   };
 
   /**
-   * CODE EXECUTOR (Manual execution UI)
+   * CODE EXECUTOR (Manual execution UI) - ENHANCED with last executed code restoration
    */
   const CodeExecutor = {
     run() {
@@ -1521,6 +1578,15 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       if (editorEl) editorEl.value = '// Use {{<vaultref id="example" />}} to inline vault content\nconsole.log("Hello GDRS");\nreturn { status: "ready", timestamp: new Date() };';
       if (outputEl) outputEl.textContent = 'Execution output will appear here...';
       if (pill) pill.textContent = 'READY';
+    },
+
+    // NEW: Restore the last auto-executed code from LLM
+    restoreLastExecutedCode() {
+      const lastCode = Storage.loadLastExecutedCode();
+      const editorEl = qs('#codeInput');
+      if (lastCode && editorEl) {
+        editorEl.value = lastCode;
+      }
     }
   };
 
@@ -1722,6 +1788,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       Storage.saveReasoningLog([`=== SESSION START ===\nQuery: ${rawQuery}\nWaiting for intelligent analysis and strategic task/goal generation...`]);
       Storage.saveExecutionLog([]); // Clear execution log
       Storage.saveToolActivityLog([]); // Clear tool activity log
+      Storage.saveLastExecutedCode(''); // Clear last executed code
 
       // Clear final output
       Storage.saveFinalOutput('');
@@ -2091,6 +2158,9 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       this.renderVault();
       this.renderReasoningLog();
       this.renderFinalOutput();
+      
+      // NEW: Restore last executed code in the code editor if available
+      CodeExecutor.restoreLastExecutedCode();
     }
   };
 
@@ -2281,6 +2351,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       Storage.saveCurrentQuery('');
       Storage.saveExecutionLog([]);
       Storage.saveToolActivityLog([]);
+      Storage.saveLastExecutedCode('');
       console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
     }
 
@@ -2308,7 +2379,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     }, 1000);
 
     console.log('%cGDRS Runtime Core - Ready for Intelligent Deep Research', 'color: #00ff00; font-weight: bold;');
-    console.log('%cFIXED: API key input focus preservation - no more cursor interruption!', 'color: #00aa00;');
+    console.log('%cFIXED: JavaScript code execution visibility - code now shows in execution box!', 'color: #00aa00;');
   }
 
   // Boot when DOM is ready
