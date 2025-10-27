@@ -1,6 +1,6 @@
 /**
  * GEMINI DEEP RESEARCH SYSTEM - MAIN APPLICATION
- * Complete production runtime with LLM integration - v1.1.3
+ * Complete production runtime with LLM integration - v1.1.4
  * 
  * CRITICAL FIXES:
  * - FIXED: API key input focus loss issue - implemented focus preservation in renderKeys
@@ -9,17 +9,20 @@
  * - OPTIMIZED: Reduced DOM manipulation frequency for better UX
  * - FIXED: JavaScript code execution visibility - now shows executed code in code execution box
  * - FIXED: Empty response handling with automatic API key rotation and robust error recovery
+ * - NEW: Visual API key rotation indicator with animations and notifications
+ * - NEW: User-configurable max output tokens with validation and persistence
  */
 
 (function() {
   'use strict';
 
   // Application constants
-  const VERSION = '1.1.3';
+  const VERSION = '1.1.4';
   const MAX_ITERATIONS = 2000;
   const ITERATION_DELAY = 200;
   const MAX_RETRY_ATTEMPTS = 3;
   const EMPTY_RESPONSE_RETRY_DELAY = 1000; // 1 second delay for empty response retries
+  const KEY_ROTATION_DISPLAY_DURATION = 5000; // 5 seconds to show key rotation indicator
   
   // Local storage keys
   const LS_KEYS = {
@@ -34,7 +37,8 @@
     CURRENT_QUERY: 'gdrs_current_query',
     EXECUTION_LOG: 'gdrs_execution_log',
     TOOL_ACTIVITY_LOG: 'gdrs_tool_activity_log',
-    LAST_EXECUTED_CODE: 'gdrs_last_executed_code'
+    LAST_EXECUTED_CODE: 'gdrs_last_executed_code',
+    MAX_OUTPUT_TOKENS: 'gdrs_max_output_tokens' // NEW: Store max output tokens setting
   };
 
   // Utility functions
@@ -296,7 +300,7 @@ When goals are achieved, create comprehensive results:
 Remember: You are an intelligent research analyst, not a simple task executor. Demonstrate sophisticated reasoning, strategic thinking, and analytical depth in every iteration.`;
 
   /**
-   * ENHANCED STORAGE LAYER with Ordered Operations
+   * ENHANCED STORAGE LAYER with Ordered Operations + Max Output Tokens persistence
    */
   const Storage = {
     // Keypool management
@@ -343,6 +347,29 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         }
       }
       return out;
+    },
+
+    // NEW: Max Output Tokens management
+    loadMaxOutputTokens() {
+      const stored = localStorage.getItem(LS_KEYS.MAX_OUTPUT_TOKENS);
+      if (stored) {
+        const value = parseInt(stored);
+        // Validate range: 512-8192
+        if (value >= 512 && value <= 8192) {
+          return value;
+        }
+      }
+      return 4096; // Default value
+    },
+    
+    saveMaxOutputTokens(tokens) {
+      const value = parseInt(tokens);
+      // Validate range before saving
+      if (value >= 512 && value <= 8192) {
+        localStorage.setItem(LS_KEYS.MAX_OUTPUT_TOKENS, String(value));
+        return true;
+      }
+      return false;
     },
 
     // Entity storage with enhanced vault handling
@@ -476,7 +503,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * ENHANCED KEY MANAGER with robust failure handling and automatic rotation
+   * ENHANCED KEY MANAGER with visual rotation indicator
    */
   const KeyManager = {
     getCooldownRemainingSeconds(k) {
@@ -573,6 +600,24 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         const cd = this.getCooldownRemainingSeconds(k);
         return k.key && k.valid && !k.rateLimited && cd === 0;
       }).sort((a, b) => (a.failureCount || 0) - (b.failureCount || 0));
+    },
+
+    // NEW: Display visual indicator when key rotates
+    showKeyRotationIndicator(fromSlot, toSlot, reason = '') {
+      const indicator = qs('#keyRotationIndicator');
+      const slotSpan = qs('#rotatedKeySlot');
+      
+      if (indicator && slotSpan) {
+        slotSpan.textContent = toSlot;
+        indicator.classList.remove('hidden');
+        
+        console.log(`🔄 Key rotation: #${fromSlot} → #${toSlot} ${reason ? `(${reason})` : ''}`);
+        
+        // Hide indicator after specified duration
+        setTimeout(() => {
+          indicator.classList.add('hidden');
+        }, KEY_ROTATION_DISPLAY_DURATION);
+      }
     },
 
     setKey(slot, newKey) {
@@ -1374,7 +1419,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
   };
 
   /**
-   * ENHANCED GEMINI CLIENT INTEGRATION with robust error handling and key rotation
+   * ENHANCED GEMINI CLIENT INTEGRATION with robust error handling, key rotation, and max tokens support
    */
   const GeminiAPI = {
     async fetchModelList() {
@@ -1412,7 +1457,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       }
     },
 
-    // NEW: Robust content generation with automatic key rotation and retry logic
+    // NEW: Robust content generation with automatic key rotation and retry logic + max tokens support
     async generateContent(modelId, prompt) {
       return await this.generateContentWithRetry(modelId, prompt, 0);
     },
@@ -1425,12 +1470,19 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
         throw new Error('No valid API keys available');
       }
 
+      let lastUsedKeySlot = null; // Track for rotation indicator
+      
       // Try each available key
       for (let keyIndex = 0; keyIndex < availableKeys.length; keyIndex++) {
         const currentKey = availableKeys[keyIndex];
         
         try {
           console.log(`🔑 Attempting with key #${currentKey.slot} (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
+          
+          // NEW: Show visual rotation indicator if switching keys
+          if (lastUsedKeySlot && lastUsedKeySlot !== currentKey.slot) {
+            KeyManager.showKeyRotationIndicator(lastUsedKeySlot, currentKey.slot, 'auto rotation');
+          }
           
           const result = await this.makeRequest(modelId, prompt, currentKey);
           
@@ -1441,6 +1493,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
           
         } catch (error) {
           console.warn(`❌ Key #${currentKey.slot} failed: ${error.message}`);
+          lastUsedKeySlot = currentKey.slot; // Remember for rotation indicator
           
           // Handle different types of errors
           if (error.message.includes('429') || error.message.includes('Rate limited')) {
@@ -1482,6 +1535,9 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       const cleanModelId = modelId.startsWith('models/') ? modelId : `models/${modelId}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelId}:generateContent?key=${encodeURIComponent(keyInfo.key)}`;
       
+      // NEW: Get user-configured max output tokens
+      const maxOutputTokens = Storage.loadMaxOutputTokens();
+      
       const payload = {
         contents: [{
           parts: [{ text: prompt }]
@@ -1490,7 +1546,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
-          maxOutputTokens: 8192
+          maxOutputTokens: maxOutputTokens // NEW: Use user-configured value
         },
         safetySettings: [
           {
@@ -1579,6 +1635,7 @@ Remember: You are an intelligent research analyst, not a simple task executor. D
       const vaultSummary = VaultManager.getVaultSummary();
       const reasoningLog = Storage.loadReasoningLog();
       const executionLog = Storage.loadExecutionLog();
+      const maxOutputTokens = Storage.loadMaxOutputTokens(); // NEW: Include max tokens info
 
       const tasksText = tasks.map(t => 
         `- [${t.identifier}] ${t.heading} (${t.status}): ${t.content}${t.notes ? ` | Notes: ${t.notes}` : ''}`
@@ -1622,6 +1679,9 @@ ${recentExecutions || 'None yet - Leverage computational power for accuracy'}
 
 **Recent Reasoning Log:**
 ${recentLog || 'Starting fresh - Apply strategic intelligence framework'}
+
+**Response Limits:**
+Max Output Tokens: ${maxOutputTokens} (user-configured)
 
 **Iteration:** ${iteration}/${MAX_ITERATIONS}
 
@@ -1999,7 +2059,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   })();
 
   /**
-   * ENHANCED RENDERER with FOCUS PRESERVATION for API key inputs + failure count display
+   * ENHANCED RENDERER with max tokens display and key rotation indicator support
    */
   const Renderer = {
     /**
@@ -2392,9 +2452,38 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
   }
 
   /**
-   * EVENT BINDING
+   * EVENT BINDING with max tokens input handling
    */
   function bindEvents() {
+
+    // NEW: Max Output Tokens input handling
+    const maxTokensInput = qs('#maxOutputTokens');
+    if (maxTokensInput) {
+      // Load saved value on startup
+      maxTokensInput.value = Storage.loadMaxOutputTokens();
+      
+      // Save value on change with validation
+      maxTokensInput.addEventListener('change', () => {
+        const value = parseInt(maxTokensInput.value);
+        if (Storage.saveMaxOutputTokens(value)) {
+          console.log(`⚙️ Max output tokens updated to: ${value}`);
+        } else {
+          // Revert to saved value if invalid
+          maxTokensInput.value = Storage.loadMaxOutputTokens();
+          alert('Invalid token count. Please enter a value between 512 and 8192.');
+        }
+      });
+      
+      // Validate on input for real-time feedback
+      maxTokensInput.addEventListener('input', () => {
+        const value = parseInt(maxTokensInput.value);
+        if (value < 512 || value > 8192 || isNaN(value)) {
+          maxTokensInput.style.borderColor = 'var(--error)';
+        } else {
+          maxTokensInput.style.borderColor = '';
+        }
+      });
+    }
 
     // Clear buttons for Memory, Goals, Vault
     const clearMemoryBtn = qs('#clearMemory');
@@ -2553,6 +2642,10 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
       Storage.saveExecutionLog([]);
       Storage.saveToolActivityLog([]);
       Storage.saveLastExecutedCode('');
+      // NEW: Initialize max output tokens with default value
+      if (!localStorage.getItem(LS_KEYS.MAX_OUTPUT_TOKENS)) {
+        Storage.saveMaxOutputTokens(4096);
+      }
       console.log('%cGDRS - Fresh installation initialized', 'color: #ffaa00;');
     }
 
@@ -2580,7 +2673,7 @@ Focus on demonstrating sophisticated reasoning and analytical depth. Each iterat
     }, 1000);
 
     console.log('%cGDRS Runtime Core - Ready for Intelligent Deep Research', 'color: #00ff00; font-weight: bold;');
-    console.log('%cFIXED: Empty response handling with automatic API key rotation and robust error recovery!', 'color: #00aa00;');
+    console.log('%cNEW FEATURES: Visual API key rotation indicator + User-configurable max output tokens!', 'color: #00aa00;');
   }
 
   // Boot when DOM is ready
