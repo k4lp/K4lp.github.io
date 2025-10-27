@@ -40,6 +40,11 @@
                         <button id="validateKeys" class="btn btn-primary">Validate</button>
                         <button id="clearKeys" class="btn btn-secondary">Clear</button>
                         <span id="keyRotationPill" class="status-pill">NO KEY</span>
+                        <!-- NEW: Key rotation indicator -->
+                        <div id="keyRotationIndicator" class="key-rotation-indicator hidden">
+                            <span class="indicator-icon">🔄</span>
+                            <span class="indicator-text">Key rotated to #<span id="rotatedKeySlot">0</span></span>
+                        </div>
                     </div>
                 </div>
 
@@ -54,6 +59,18 @@
                         <select id="modelSelect" class="select-input">
                             <option value="">-- select model --</option>
                         </select>
+                    </div>
+                    
+                    <!-- NEW: Max Output Tokens Configuration -->
+                    <div class="form-group">
+                        <label for="maxOutputTokens">Max Output Tokens</label>
+                        <div class="token-input-group">
+                            <input id="maxOutputTokens" type="number" class="number-input" 
+                                   value="4096" min="512" max="8192" step="256" 
+                                   title="Maximum number of tokens in the response (512-8192)">
+                            <span class="input-suffix">tokens</span>
+                        </div>
+                        <div class="form-hint">Default: 4096 • Range: 512-8192</div>
                     </div>
                     
                     <div class="form-group">
