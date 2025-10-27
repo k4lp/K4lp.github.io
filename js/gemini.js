@@ -125,9 +125,9 @@
         }],
         generationConfig: {
           temperature: options.temperature || 0.8,
-          topP: options.topP || 1,
-          topK: options.topK || 95,
-          maxOutputTokens: options.maxOutputTokens || 8096,
+          topP: options.topP || 0.9,
+          topK: options.topK || 40,
+          maxOutputTokens: options.maxOutputTokens || 8192,
           ...options.generationConfig
         },
         safetySettings: options.safetySettings || [
