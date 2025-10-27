@@ -127,7 +127,7 @@
           temperature: options.temperature || 0.8,
           topP: options.topP || 0.9,
           topK: options.topK || 40,
-          maxOutputTokens: options.maxOutputTokens || 8192,
+          maxOutputTokens: options.maxOutputTokens || 4096,
           ...options.generationConfig
         },
         safetySettings: options.safetySettings || [
