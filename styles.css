@@ -190,7 +190,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.025em;
 }
 
-.text-input, .select-input, .textarea-input {
+.text-input, .select-input, .textarea-input, .number-input {
   width: 100%;
   padding: var(--gap-sm) var(--gap-sm);
   font-family: var(--fs);
@@ -202,7 +202,7 @@ h1, h2, h3, h4, h5, h6 {
   transition: border-color 0.2s ease;
 }
 
-.text-input:focus, .select-input:focus, .textarea-input:focus {
+.text-input:focus, .select-input:focus, .textarea-input:focus, .number-input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
@@ -213,6 +213,87 @@ h1, h2, h3, h4, h5, h6 {
   resize: vertical;
   font-family: var(--fs-mono);
   font-size: 12px;
+}
+
+/* NEW: Token Input Group Styling */
+.token-input-group {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.token-input-group .number-input {
+  padding-right: 60px; /* Space for the suffix */
+}
+
+.input-suffix {
+  position: absolute;
+  right: var(--gap-sm);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  pointer-events: none;
+  user-select: none;
+}
+
+.form-hint {
+  margin-top: var(--gap-xs);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.number-input {
+  font-family: var(--fs-mono);
+  text-align: right;
+}
+
+/* NEW: Key Rotation Indicator */
+.key-rotation-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  padding: var(--gap-xs) var(--gap-sm);
+  background: linear-gradient(135deg, var(--success), #20c997);
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: var(--shadow-sm);
+  margin-top: var(--gap-xs);
+  animation: slideInRotation 0.4s ease-out;
+}
+
+.key-rotation-indicator.hidden {
+  display: none;
+}
+
+.indicator-icon {
+  font-size: 12px;
+  animation: rotate 1s ease-in-out;
+}
+
+.indicator-text {
+  white-space: nowrap;
+}
+
+/* Animation for key rotation indicator */
+@keyframes slideInRotation {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .code-textarea {
@@ -346,6 +427,16 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: var(--gap-sm);
   flex-wrap: wrap;
+}
+
+.key-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.key-actions > :first-child {
+  display: flex;
+  gap: var(--gap-sm);
 }
 
 /* Storage Lists */
@@ -784,6 +875,11 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--bg);
     border-bottom: none;
   }
+  
+  .key-rotation-indicator {
+    font-size: 9px;
+    padding: 2px var(--gap-xs);
+  }
 }
 
 /* Scrollbar Styling */
@@ -852,4 +948,8 @@ h1, h2, h3, h4, h5, h6 {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.hidden {
+  display: none !important;
 }
