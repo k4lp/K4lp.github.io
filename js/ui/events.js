@@ -1,6 +1,6 @@
 /**
  * GDRS Event Handlers
- * All event binding and user interaction handlers - NOW WITH TEXTAREA KEY SUPPORT!
+ * All event binding and user interaction handlers - NOW WITH 65536 MAX TOKENS!
  */
 
 import { Storage } from '../storage/storage.js';
@@ -14,7 +14,7 @@ import { LS_KEYS } from '../core/constants.js';
 import { qs } from '../core/utils.js';
 
 export function bindEvents() {
-  // Max Output Tokens input handling
+  // NEW: Extended Max Output Tokens input handling (512-65536)
   const maxTokensInput = qs('#maxOutputTokens');
   if (maxTokensInput) {
     maxTokensInput.value = Storage.loadMaxOutputTokens();
@@ -25,13 +25,13 @@ export function bindEvents() {
         console.log(`⚙️ Max output tokens updated to: ${value}`);
       } else {
         maxTokensInput.value = Storage.loadMaxOutputTokens();
-        alert('Invalid token count. Please enter a value between 512 and 8192.');
+        alert('Invalid token count. Please enter a value between 512 and 65536.');
       }
     });
     
     maxTokensInput.addEventListener('input', () => {
       const value = parseInt(maxTokensInput.value);
-      if (value < 512 || value > 8192 || isNaN(value)) {
+      if (value < 512 || value > 65536 || isNaN(value)) {
         maxTokensInput.style.borderColor = 'var(--error)';
       } else {
         maxTokensInput.style.borderColor = '';
@@ -88,7 +88,7 @@ export function bindEvents() {
     });
   }
 
-  // NEW: Key management for unlimited textarea keys
+  // Key management for unlimited textarea keys
   const validateBtn = qs('#validateKeys');
   const clearBtn = qs('#clearKeys');
   
