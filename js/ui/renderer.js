@@ -1,6 +1,6 @@
 /**
  * GDRS UI Renderer
- * All DOM rendering functions and UI updates
+ * All DOM rendering functions and UI updates - NOW WITH TEXTAREA KEY INPUT!
  */
 
 import { Storage } from '../storage/storage.js';
@@ -12,138 +12,197 @@ import { openVaultModal } from './modals.js';
 
 export const Renderer = {
   /**
-   * Render keys with focus preservation
+   * NEW: Render textarea-based key input with consolidated stats
    */
-  renderKeys(preserveFocus = true) {
+  renderKeys() {
+    const keysContainer = qs('#keysContainer');
+    if (!keysContainer) return;
+
     const pool = Storage.loadKeypool();
-    const keysGrid = qs('#keysGrid');
-    if (!keysGrid) return;
+    const stats = KeyManager.getKeyStats();
+    const keysText = Storage.formatKeysToText(pool);
 
-    // Focus preservation
-    let focusInfo = null;
-    if (preserveFocus) {
-      const activeElement = document.activeElement;
-      if (activeElement && activeElement.matches('#keysGrid input[type="password"]')) {
-        const keyRow = activeElement.closest('.keyrow');
-        if (keyRow) {
-          const allKeyRows = qsa('.keyrow', keysGrid);
-          const slotIndex = allKeyRows.indexOf(keyRow);
-          focusInfo = {
-            slot: slotIndex + 1,
-            selectionStart: activeElement.selectionStart,
-            selectionEnd: activeElement.selectionEnd,
-            value: activeElement.value
-          };
-        }
-      }
-    }
-
-    keysGrid.innerHTML = '';
-
-    pool.forEach((k) => {
-      const row = document.createElement('div');
-      row.className = 'keyrow';
+    keysContainer.innerHTML = `
+      <!-- API Keys Textarea -->
+      <div class="keys-input-section">
+        <label for="apiKeysTextarea" class="keys-label">
+          API Keys (one per line)
+        </label>
+        <textarea 
+          id="apiKeysTextarea" 
+          class="keys-textarea" 
+          placeholder="Paste your API keys here, one per line:\nAIzaSy...\nAIzaSy...\nAIzaSy..."
+          rows="6"
+        >${encodeHTML(keysText)}</textarea>
+        <div class="keys-hint">
+          💡 Paste as many keys as you want, separated by newlines. Stats are preserved when you modify the list.
+        </div>
+      </div>
       
-      const field = document.createElement('input');
-      field.type = 'password';
-      field.placeholder = `API Key #${k.slot}`;
-      field.value = k.key;
-      field.autocomplete = 'off';
-      field.spellcheck = false;
-      field.addEventListener('input', (e) => {
-        KeyManager.setKey(k.slot, e.target.value);
+      <!-- Consolidated Stats -->
+      <div class="keys-stats-section">
+        <div class="stats-header">
+          <h3>Key Pool Statistics</h3>
+          <div class="stats-summary">
+            <span class="stat-badge stat-total">${stats.total} total</span>
+            <span class="stat-badge stat-ready">${stats.ready} ready</span>
+            <span class="stat-badge stat-cooling">${stats.cooling} cooling</span>
+            <span class="stat-badge stat-invalid">${stats.invalid} invalid</span>
+          </div>
+        </div>
+        
+        <div class="stats-details">
+          <div class="stat-row">
+            <span class="stat-label">Valid Keys:</span>
+            <span class="stat-value">${stats.valid}/${stats.total}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Usage:</span>
+            <span class="stat-value">${stats.totalUsage} calls</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Avg Failures:</span>
+            <span class="stat-value">${stats.avgFailures.toFixed(1)}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Rate Limited:</span>
+            <span class="stat-value">${stats.rateLimited} keys</span>
+          </div>
+        </div>
+        
+        ${stats.total > 0 ? `
+          <div class="keys-list">
+            <div class="keys-list-header">Individual Key Status:</div>
+            ${pool.map(k => {
+              const cooldown = KeyManager.getCooldownRemainingSeconds(k);
+              const status = cooldown > 0 ? 
+                `cooldown ${cooldown}s` : 
+                (k.rateLimited ? 'limited' : 
+                  (k.failureCount > 0 ? `${k.failureCount} fails` : 
+                    (k.valid ? 'ready' : 'invalid')));
+              const statusClass = k.valid && !k.rateLimited && cooldown === 0 ? 'ready' : 
+                                 cooldown > 0 || k.rateLimited ? 'cooling' : 'invalid';
+              
+              return `
+                <div class="key-status-item">
+                  <div class="key-number">#${k.slot}</div>
+                  <div class="key-preview">${k.key.substring(0, 12)}...${k.key.substring(k.key.length - 4)}</div>
+                  <div class="key-usage">${k.usage} uses</div>
+                  <div class="key-status ${statusClass}">${status}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : '<div class="no-keys-message">No API keys added yet</div>'}
+      </div>
+    `;
+
+    // Bind textarea events
+    const textarea = qs('#apiKeysTextarea');
+    if (textarea) {
+      textarea.addEventListener('input', () => {
+        KeyManager.updateKeysFromTextarea();
+        // Re-render stats after a short delay
+        setTimeout(() => this.renderKeyStats(), 500);
       });
-
-      const meta = document.createElement('div');
-      meta.className = 'keymeta';
-      const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
-      
-      const failureInfo = k.failureCount > 0 ? ` (${k.failureCount} fails)` : '';
-      const statusText = cooldownSecs > 0 ? 
-        `cooldown ${cooldownSecs}s` : 
-        (k.rateLimited ? 'limited' : k.failureCount > 0 ? `unstable${failureInfo}` : 'ok');
-          
-      meta.innerHTML = `
-        <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
-        <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
-        <div><div class="pm">status</div><div class="mono">${statusText}</div></div>
-      `;
-
-      row.appendChild(field);
-      row.appendChild(meta);
-      keysGrid.appendChild(row);
-    });
-
-    // Focus restoration
-    if (focusInfo && preserveFocus) {
-      const newKeyRows = qsa('.keyrow', keysGrid);
-      if (newKeyRows[focusInfo.slot - 1]) {
-        const newInput = newKeyRows[focusInfo.slot - 1].querySelector('input[type="password"]');
-        if (newInput) {
-          setTimeout(() => {
-            newInput.focus();
-            if (focusInfo.selectionStart !== null) {
-              newInput.setSelectionRange(focusInfo.selectionStart, focusInfo.selectionEnd);
-            }
-          }, 0);
-        }
-      }
     }
 
     // Update rotation pill
-    const rotPill = qs('#keyRotationPill');
-    const nextKey = KeyManager.chooseActiveKey();
-    const availableKeys = KeyManager.getAllAvailableKeys();
-    if (rotPill) {
-      if (nextKey) {
-        rotPill.textContent = `NEXT: #${nextKey.slot} (${availableKeys.length} available)`;
-      } else {
-        rotPill.textContent = availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
-      }
-    }
+    this.updateRotationPill();
   },
 
   /**
-   * Update only key metadata without rebuilding inputs
+   * NEW: Update only the stats section without rebuilding textarea
+   */
+  renderKeyStats() {
+    const statsSection = qs('.keys-stats-section');
+    if (!statsSection) return;
+
+    const pool = Storage.loadKeypool();
+    const stats = KeyManager.getKeyStats();
+
+    const statsHTML = `
+      <div class="stats-header">
+        <h3>Key Pool Statistics</h3>
+        <div class="stats-summary">
+          <span class="stat-badge stat-total">${stats.total} total</span>
+          <span class="stat-badge stat-ready">${stats.ready} ready</span>
+          <span class="stat-badge stat-cooling">${stats.cooling} cooling</span>
+          <span class="stat-badge stat-invalid">${stats.invalid} invalid</span>
+        </div>
+      </div>
+      
+      <div class="stats-details">
+        <div class="stat-row">
+          <span class="stat-label">Valid Keys:</span>
+          <span class="stat-value">${stats.valid}/${stats.total}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total Usage:</span>
+          <span class="stat-value">${stats.totalUsage} calls</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Avg Failures:</span>
+          <span class="stat-value">${stats.avgFailures.toFixed(1)}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Rate Limited:</span>
+          <span class="stat-value">${stats.rateLimited} keys</span>
+        </div>
+      </div>
+      
+      ${stats.total > 0 ? `
+        <div class="keys-list">
+          <div class="keys-list-header">Individual Key Status:</div>
+          ${pool.map(k => {
+            const cooldown = KeyManager.getCooldownRemainingSeconds(k);
+            const status = cooldown > 0 ? 
+              `cooldown ${cooldown}s` : 
+              (k.rateLimited ? 'limited' : 
+                (k.failureCount > 0 ? `${k.failureCount} fails` : 
+                  (k.valid ? 'ready' : 'invalid')));
+            const statusClass = k.valid && !k.rateLimited && cooldown === 0 ? 'ready' : 
+                               cooldown > 0 || k.rateLimited ? 'cooling' : 'invalid';
+            
+            return `
+              <div class="key-status-item">
+                <div class="key-number">#${k.slot}</div>
+                <div class="key-preview">${k.key.substring(0, 12)}...${k.key.substring(k.key.length - 4)}</div>
+                <div class="key-usage">${k.usage} uses</div>
+                <div class="key-status ${statusClass}">${status}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : '<div class="no-keys-message">No API keys added yet</div>'}
+    `;
+
+    statsSection.innerHTML = statsHTML;
+    this.updateRotationPill();
+  },
+
+  /**
+   * Update key metadata (for ticker)
    */
   updateKeyMetadata() {
-    const pool = Storage.loadKeypool();
-    const keysGrid = qs('#keysGrid');
-    if (!keysGrid) return;
+    // For textarea version, just update stats
+    this.renderKeyStats();
+  },
 
-    const keyRows = qsa('.keyrow', keysGrid);
-    
-    pool.forEach((k, index) => {
-      const row = keyRows[index];
-      if (!row) return;
-      
-      const meta = row.querySelector('.keymeta');
-      if (!meta) return;
-      
-      const cooldownSecs = KeyManager.getCooldownRemainingSeconds(k);
-      
-      const failureInfo = k.failureCount > 0 ? ` (${k.failureCount} fails)` : '';
-      const statusText = cooldownSecs > 0 ? 
-        `cooldown ${cooldownSecs}s` : 
-        (k.rateLimited ? 'limited' : k.failureCount > 0 ? `unstable${failureInfo}` : 'ok');
-      
-      meta.innerHTML = `
-        <div><div class="pm">valid</div><div class="mono">${k.valid ? 'yes' : 'no'}</div></div>
-        <div><div class="pm">usage</div><div class="mono">${k.usage} calls</div></div>
-        <div><div class="pm">status</div><div class="mono">${statusText}</div></div>
-      `;
-    });
-
-    // Update rotation pill
+  /**
+   * Update rotation pill
+   */
+  updateRotationPill() {
     const rotPill = qs('#keyRotationPill');
+    if (!rotPill) return;
+    
     const nextKey = KeyManager.chooseActiveKey();
     const availableKeys = KeyManager.getAllAvailableKeys();
-    if (rotPill) {
-      if (nextKey) {
-        rotPill.textContent = `NEXT: #${nextKey.slot} (${availableKeys.length} available)`;
-      } else {
-        rotPill.textContent = availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
-      }
+    
+    if (nextKey) {
+      rotPill.textContent = `NEXT: #${nextKey.slot} (${availableKeys.length} available)`;
+    } else {
+      rotPill.textContent = availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
     }
   },
 

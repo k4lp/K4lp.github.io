@@ -3,12 +3,12 @@
  * All CRUD operations for local storage management
  */
 
-import { LS_KEYS, DEFAULT_KEYPOOL } from '../core/constants.js';
+import { LS_KEYS, DEFAULT_KEYPOOL, createKeyFromText } from '../core/constants.js';
 import { safeJSONParse, isNonEmptyString, nowISO } from '../core/utils.js';
 import { Renderer } from '../ui/renderer.js';
 
 export const Storage = {
-  // Keypool management
+  // NEW: Keypool management for unlimited keys
   loadKeypool() {
     const raw = safeJSONParse(localStorage.getItem(LS_KEYS.KEYPOOL), null);
     if (!Array.isArray(raw)) {
@@ -23,35 +23,60 @@ export const Storage = {
     localStorage.setItem(LS_KEYS.KEYPOOL, JSON.stringify(pool));
   },
 
-  normalizeKeypool(arr) {
-    const out = [];
-    for (let i = 1; i <= 5; i++) {
-      const found = arr.find(k => k && k.slot === i);
-      if (found) {
-        out.push({
-          slot: i,
-          key: isNonEmptyString(found.key) ? found.key.trim() : '',
-          usage: Number(found.usage || 0),
-          cooldownUntil: Number(found.cooldownUntil || 0),
-          rateLimited: !!found.rateLimited,
-          valid: !!found.valid,
-          failureCount: Number(found.failureCount || 0),
-          lastFailure: Number(found.lastFailure || 0)
-        });
+  // NEW: Parse keys from textarea and create keypool
+  parseKeysFromText(keysText) {
+    if (!keysText || typeof keysText !== 'string') return [];
+    
+    const lines = keysText.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    return lines.map((keyText, index) => createKeyFromText(keyText, index));
+  },
+
+  // NEW: Convert keypool back to textarea format
+  formatKeysToText(pool) {
+    if (!Array.isArray(pool)) return '';
+    return pool.map(k => k.key).join('\n');
+  },
+
+  // NEW: Update keypool from textarea input
+  updateKeysFromText(keysText) {
+    const oldPool = this.loadKeypool();
+    const newKeys = this.parseKeysFromText(keysText);
+    
+    // Preserve stats for existing keys
+    const updatedPool = newKeys.map(newKey => {
+      const existing = oldPool.find(oldKey => oldKey.key === newKey.key);
+      if (existing) {
+        // Keep existing stats but update slot number
+        return {
+          ...existing,
+          slot: newKey.slot
+        };
       } else {
-        out.push({
-          slot: i,
-          key: '',
-          usage: 0,
-          cooldownUntil: 0,
-          rateLimited: false,
-          valid: false,
-          failureCount: 0,
-          lastFailure: 0
-        });
+        // New key with default stats
+        return newKey;
       }
-    }
-    return out;
+    });
+    
+    this.saveKeypool(updatedPool);
+    return updatedPool;
+  },
+
+  normalizeKeypool(arr) {
+    // Ensure all key objects have required properties
+    return arr.map((k, index) => ({
+      slot: index + 1,
+      key: isNonEmptyString(k.key) ? k.key.trim() : '',
+      usage: Number(k.usage || 0),
+      cooldownUntil: Number(k.cooldownUntil || 0),
+      rateLimited: !!k.rateLimited,
+      valid: !!k.valid,
+      failureCount: Number(k.failureCount || 0),
+      lastFailure: Number(k.lastFailure || 0),
+      addedAt: Number(k.addedAt || Date.now())
+    }));
   },
 
   // Max Output Tokens management
@@ -128,7 +153,7 @@ export const Storage = {
   // Output and logs
   loadFinalOutput() {
     return safeJSONParse(localStorage.getItem(LS_KEYS.FINAL_OUTPUT), {
-      timestamp: '—',
+      timestamp: '\u2014',
       html: '<p>Report will render here after goal validation.</p>'
     });
   },

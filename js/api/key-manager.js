@@ -1,6 +1,6 @@
 /**
  * GDRS Key Manager
- * API key management, rotation, validation, failure tracking
+ * API key management, rotation, validation, failure tracking - NOW SUPPORTS UNLIMITED KEYS!
  */
 
 import { Storage } from '../storage/storage.js';
@@ -117,16 +117,13 @@ export const KeyManager = {
     }
   },
 
-  setKey(slot, newKey) {
-    const pool = Storage.loadKeypool();
-    const rec = pool.find(k => k.slot === slot);
-    if (!rec) return;
+  // NEW: Update keys from textarea
+  updateKeysFromTextarea() {
+    const textarea = qs('#apiKeysTextarea');
+    if (!textarea) return;
     
-    rec.key = newKey.trim();
-    rec.valid = false;
-    rec.failureCount = 0;
-    rec.lastFailure = 0;
-    Storage.saveKeypool(pool);
+    const keysText = textarea.value;
+    Storage.updateKeysFromText(keysText);
   },
 
   markValid(slot, isValid) {
@@ -152,11 +149,16 @@ export const KeyManager = {
   },
 
   clearAll() {
-    Storage.saveKeypool(DEFAULT_KEYPOOL());
+    Storage.saveKeypool([]);
+    const textarea = qs('#apiKeysTextarea');
+    if (textarea) textarea.value = '';
   },
 
   async validateAllKeys() {
     const pool = Storage.loadKeypool();
+    
+    console.log(`🔑 Validating ${pool.length} API keys...`);
+    
     for (const k of pool) {
       if (!k.key) {
         k.valid = false;
@@ -184,9 +186,65 @@ export const KeyManager = {
         }
       } catch (err) {
         k.valid = false;
-        console.error('Key validation error:', err);
+        console.error(`Key #${k.slot} validation error:`, err);
       }
     }
+    
     Storage.saveKeypool(pool);
+    console.log(`✅ Key validation complete`);
+  },
+
+  // NEW: Get comprehensive key statistics
+  getKeyStats() {
+    const pool = Storage.loadKeypool();
+    const now = Date.now();
+    
+    const stats = {
+      total: pool.length,
+      valid: 0,
+      invalid: 0,
+      rateLimited: 0,
+      cooling: 0,
+      ready: 0,
+      totalUsage: 0,
+      avgFailures: 0,
+      oldestKey: null,
+      newestKey: null
+    };
+    
+    if (pool.length === 0) return stats;
+    
+    let totalFailures = 0;
+    let oldestTime = Infinity;
+    let newestTime = 0;
+    
+    pool.forEach(k => {
+      if (k.valid) stats.valid++; else stats.invalid++;
+      if (k.rateLimited) stats.rateLimited++;
+      
+      const cooldown = this.getCooldownRemainingSeconds(k);
+      if (cooldown > 0) stats.cooling++;
+      
+      if (k.key && k.valid && !k.rateLimited && cooldown === 0) {
+        stats.ready++;
+      }
+      
+      stats.totalUsage += k.usage || 0;
+      totalFailures += k.failureCount || 0;
+      
+      const keyTime = k.addedAt || now;
+      if (keyTime < oldestTime) {
+        oldestTime = keyTime;
+        stats.oldestKey = k;
+      }
+      if (keyTime > newestTime) {
+        newestTime = keyTime;
+        stats.newestKey = k;
+      }
+    });
+    
+    stats.avgFailures = totalFailures / pool.length;
+    
+    return stats;
   }
 };
