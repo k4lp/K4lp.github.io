@@ -17,7 +17,7 @@
         <!-- Header -->
         <header class="app-header">
             <h1 class="app-title">Gemini Deep Computation & Research System by Kalp Pariya</h1>
-            <div class="version-info">v1.1.4 - Modular Architecture</div>
+            <div class="version-info">v1.1.4 - Modular Architecture + Unlimited Keys</div>
         </header>
 
         <!-- Main Content Grid -->
@@ -26,22 +26,23 @@
             <!-- Left Panel: Configuration -->
             <section class="left-panel">
                 
-                <!-- API Keys Section -->
+                <!-- API Keys Section - NOW WITH TEXTAREA! -->
                 <div class="config-section">
                     <div class="section-header">
                         <h2>API KEYS</h2>
-                        <span class="section-desc">5-key pool • Sequential rotation • Local only</span>
+                        <span class="section-desc">Unlimited keys • Auto rotation • Local only</span>
                     </div>
                     
-                    <div id="keysGrid" class="keys-grid">
-                        <!-- API key inputs will be rendered here -->
+                    <!-- NEW: Container for textarea + stats -->
+                    <div id="keysContainer" class="keys-container">
+                        <!-- Will be populated by renderer -->
                     </div>
                     
                     <div class="key-actions">
-                        <button id="validateKeys" class="btn btn-primary">Validate</button>
-                        <button id="clearKeys" class="btn btn-secondary">Clear</button>
+                        <button id="validateKeys" class="btn btn-primary">Validate All</button>
+                        <button id="clearKeys" class="btn btn-secondary">Clear All</button>
                         <span id="keyRotationPill" class="status-pill">NO KEY</span>
-                        <!-- NEW: Key rotation indicator -->
+                        <!-- Key rotation indicator -->
                         <div id="keyRotationIndicator" class="key-rotation-indicator hidden">
                             <span class="indicator-icon">🔄</span>
                             <span class="indicator-text">Key rotated to #<span id="rotatedKeySlot">0</span></span>
@@ -62,7 +63,7 @@
                         </select>
                     </div>
                     
-                    <!-- NEW: Max Output Tokens Configuration -->
+                    <!-- Max Output Tokens Configuration -->
                     <div class="form-group">
                         <label for="maxOutputTokens">Max Output Tokens</label>
                         <div class="token-input-group">
@@ -253,7 +254,7 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
     <script src="js/tools.js"></script>
     <script src="js/execution.js"></script>
     <script src="js/gemini.js"></script>
-    <!-- NEW: Modular main.js with ES6 modules -->
+    <!-- Modular main.js with ES6 modules -->
     <script src="js/main.js" type="module"></script>
     
 </body>
