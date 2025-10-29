@@ -325,9 +325,14 @@ export const Renderer = {
           if (activity.type === 'js_execute') {
             activityDetails = `${activity.executionTime}ms \u2022 ${activity.codeSize} chars`;
             if (activity.vaultRefsUsed > 0) activityDetails += ` \u2022 ${activity.vaultRefsUsed} vault refs`;
+            if (activity.wasAsync) activityDetails += ' \u2022 async';
           } else if (activity.type === 'vault') {
             if (activity.dataSize) activityDetails += `${activity.dataSize} chars`;
             if (activity.dataType) activityDetails += ` \u2022 ${activity.dataType}`;
+          } else if (activity.type === 'final_output') {
+            activityDetails = `${activity.contentSize} chars`;
+            if (activity.verified) activityDetails += ' \u2022 \u2705 verified';
+            if (activity.source) activityDetails += ` \u2022 ${activity.source}`;
           }
           
           html += `
@@ -350,18 +355,34 @@ export const Renderer = {
     logEl.scrollTop = logEl.scrollHeight;
   },
 
+  // ISSUE 1 FIX: Enhanced final output rendering with verification status
   renderFinalOutput() {
     const output = Storage.loadFinalOutput();
     const finalEl = qs('#finalOutput');
     const statusEl = qs('#finalStatus');
     
     if (finalEl) {
-      finalEl.innerHTML = output.html || '<div class="output-placeholder"><p>Comprehensive research report will render here after intelligent analysis and goal completion.</p></div>';
+      if (!output.html || output.html === '<p>Report will render here after goal validation.</p>') {
+        finalEl.innerHTML = '<div class="output-placeholder"><p>Comprehensive research report will render here after intelligent analysis and goal completion.</p></div>';
+      } else {
+        finalEl.innerHTML = output.html;
+      }
     }
     
     if (statusEl) {
-      const isComplete = ReasoningEngine.checkGoalsComplete();
-      statusEl.textContent = isComplete ? 'verified' : 'analyzing';
+      if (output.verified && output.source === 'llm') {
+        statusEl.textContent = '✅ verified';
+        statusEl.style.background = 'var(--success)';
+        statusEl.style.color = 'white';
+      } else if (output.source === 'auto') {
+        statusEl.textContent = '⚠️ unverified';
+        statusEl.style.background = 'var(--warning)';
+        statusEl.style.color = 'white';
+      } else {
+        statusEl.textContent = 'analyzing';
+        statusEl.style.background = '';
+        statusEl.style.color = '';
+      }
     }
   },
 
