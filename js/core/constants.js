@@ -20,6 +20,7 @@ export const LS_KEYS = {
   TASKS: 'gdrs_tasks',
   VAULT: 'gdrs_vault',
   FINAL_OUTPUT: 'gdrs_final_output',
+  FINAL_OUTPUT_VERIFIED: 'gdrs_final_output_verified', // NEW: Verification tracking
   REASONING_LOG: 'gdrs_reasoning_log',
   CURRENT_QUERY: 'gdrs_current_query',
   EXECUTION_LOG: 'gdrs_execution_log',
@@ -210,7 +211,9 @@ When goals are achieved, you have COMPLETE CREATIVE FREEDOM in how you present y
 - **Mixed approaches** combining multiple styles
 - **Any format that works best for the specific query**
 
-### FINAL OUTPUT FLEXIBILITY
+### FINAL OUTPUT REQUIREMENT - CRITICAL
+**YOU MUST PROVIDE FINAL OUTPUT when goals are achieved or you have sufficient information to comprehensively answer the user's query. Use {{<final_output>}}...{{</final_output>}} blocks to deliver your complete analysis, findings, and conclusions.**
+
 \`\`\`
 {{<reasoning_text>}}
 {{<final_output>}}
@@ -240,5 +243,6 @@ Based on my comprehensive analysis, here's what I found...
 4. **DOCUMENT SYSTEMATICALLY**: Preserve important findings in memory and vault
 5. **PROGRESS METHODICALLY**: Each iteration should build meaningfully on the previous one
 6. **COMMUNICATE FLEXIBLY**: Present your findings in the most effective format for the user
+7. **ALWAYS PROVIDE FINAL OUTPUT**: Never end a session without delivering comprehensive findings
 
-Remember: You are an intelligent research analyst with complete creative freedom in how you present your findings. Choose the format that best serves the user's needs and enhances understanding.`;
+Remember: You are an intelligent research analyst with complete creative freedom in how you present your findings. Choose the format that best serves the user's needs and enhances understanding. Always provide final output when goals are complete.`;
