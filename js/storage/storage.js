@@ -79,12 +79,12 @@ export const Storage = {
     }));
   },
 
-  // Max Output Tokens management
+  // NEW: Max Output Tokens management with higher limit
   loadMaxOutputTokens() {
     const stored = localStorage.getItem(LS_KEYS.MAX_OUTPUT_TOKENS);
     if (stored) {
       const value = parseInt(stored);
-      if (value >= 512 && value <= 8192) {
+      if (value >= 512 && value <= 65536) {
         return value;
       }
     }
@@ -93,7 +93,7 @@ export const Storage = {
   
   saveMaxOutputTokens(tokens) {
     const value = parseInt(tokens);
-    if (value >= 512 && value <= 8192) {
+    if (value >= 512 && value <= 65536) {
       localStorage.setItem(LS_KEYS.MAX_OUTPUT_TOKENS, String(value));
       return true;
     }
