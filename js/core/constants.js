@@ -28,23 +28,23 @@ export const LS_KEYS = {
   MAX_OUTPUT_TOKENS: 'gdrs_max_output_tokens'
 };
 
-// Default data structures
-export const DEFAULT_KEYPOOL = () => {
-  const pool = [];
-  for (let i = 1; i <= 5; i++) {
-    pool.push({
-      slot: i,
-      key: '',
-      usage: 0,
-      cooldownUntil: 0,
-      rateLimited: false,
-      valid: false,
-      failureCount: 0,
-      lastFailure: 0
-    });
-  }
-  return pool;
+// NEW: Unlimited keys structure - no more fixed slots!
+export const createKeyFromText = (keyText, index) => {
+  return {
+    slot: index + 1,  // 1-based indexing for display
+    key: keyText.trim(),
+    usage: 0,
+    cooldownUntil: 0,
+    rateLimited: false,
+    valid: false,
+    failureCount: 0,
+    lastFailure: 0,
+    addedAt: Date.now()
+  };
 };
+
+// Default empty keypool
+export const DEFAULT_KEYPOOL = () => [];
 
 /**
  * HIGHLY INTELLIGENT SYSTEM PROMPT
