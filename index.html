@@ -17,7 +17,7 @@
         <!-- Header -->
         <header class="app-header">
             <h1 class="app-title">Gemini Deep Computation & Research System by Kalp Pariya</h1>
-            <div class="version-info">v1.1.4 - Modular Architecture + Unlimited Keys</div>
+            <div class="version-info">v1.1.4 - Modular Architecture + Unlimited Keys + Flexible Output</div>
         </header>
 
         <!-- Main Content Grid -->
@@ -33,7 +33,7 @@
                         <span class="section-desc">Unlimited keys • Auto rotation • Local only</span>
                     </div>
                     
-                    <!-- NEW: Container for textarea + stats -->
+                    <!-- Container for textarea + stats -->
                     <div id="keysContainer" class="keys-container">
                         <!-- Will be populated by renderer -->
                     </div>
@@ -63,16 +63,16 @@
                         </select>
                     </div>
                     
-                    <!-- Max Output Tokens Configuration -->
+                    <!-- NEW: Extended Max Output Tokens Configuration -->
                     <div class="form-group">
                         <label for="maxOutputTokens">Max Output Tokens</label>
                         <div class="token-input-group">
                             <input id="maxOutputTokens" type="number" class="number-input" 
-                                   value="4096" min="512" max="8192" step="256" 
-                                   title="Maximum number of tokens in the response (512-8192)">
+                                   value="4096" min="512" max="65536" step="256" 
+                                   title="Maximum number of tokens in the response (512-65536)">
                             <span class="input-suffix">tokens</span>
                         </div>
-                        <div class="form-hint">Default: 4096 • Range: 512-8192</div>
+                        <div class="form-hint">Default: 4096 • Range: 512-65536 • Flexible output format</div>
                     </div>
                     
                     <div class="form-group">
@@ -136,7 +136,7 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                     </div>
                     <div id="finalOutput" class="output-container">
                         <div class="output-placeholder">
-                            <p>Research report will render here after goal validation.</p>
+                            <p>Research report will render here - now with flexible creative output format!</p>
                         </div>
                     </div>
                     <div class="output-actions">
