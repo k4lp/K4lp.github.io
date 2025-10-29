@@ -1,6 +1,6 @@
 /**
  * GDRS JavaScript Executor
- * Auto JavaScript execution from LLM responses
+ * Auto JavaScript execution from LLM responses with FULL ASYNC SUPPORT
  */
 
 import { VaultManager } from '../storage/vault-manager.js';
@@ -8,7 +8,8 @@ import { Storage } from '../storage/storage.js';
 import { generateId, nowISO } from '../core/utils.js';
 
 export const JSExecutor = {
-  executeCode(rawCode) {
+  // ISSUE 3 FIX: Complete async execution support
+  async executeCode(rawCode) {
     const startTime = Date.now();
     const executionId = generateId('exec');
     
@@ -54,9 +55,31 @@ export const JSExecutor = {
         originalWarn.apply(console, args);
       };
 
-      // Execute the code
-      const fn = new Function(expandedCode);
-      const result = fn();
+      // CRITICAL FIX: Detect if code contains async/await or returns a Promise
+      const hasAsync = /\basync\b|\bawait\b|\.then\(|Promise\b/.test(expandedCode);
+      
+      let result;
+      
+      if (hasAsync) {
+        // Wrap in async IIFE and properly await
+        const asyncWrapper = `
+          (async () => {
+            ${expandedCode}
+          })()
+        `;
+        
+        console.log('🔄 Detected async code, executing with await support...');
+        
+        const asyncFn = new Function(`return ${asyncWrapper}`);
+        result = await asyncFn(); // CRITICAL: await the promise
+        
+        console.log('✅ Async execution completed');
+      } else {
+        // Synchronous execution
+        const fn = new Function(expandedCode);
+        result = fn();
+      }
+      
       const executionTime = Date.now() - startTime;
       
       // Store execution result
@@ -69,6 +92,7 @@ export const JSExecutor = {
         logs: logs,
         executionTime: executionTime,
         vaultRefsUsed: vaultRefsUsed,
+        wasAsync: hasAsync,
         timestamp: nowISO()
       };
       
@@ -81,12 +105,21 @@ export const JSExecutor = {
         executionTime: executionTime,
         codeSize: rawCode.length,
         vaultRefsUsed: vaultRefsUsed.length,
-        logsCount: logs.length
+        logsCount: logs.length,
+        wasAsync: hasAsync
       });
       
       // Add execution result to reasoning log
       const logEntries = Storage.loadReasoningLog();
-      const executionSummary = `=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: true\nCONSOLE OUTPUT:\n${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRETURN VALUE:\n${result ? JSON.stringify(result, null, 2) : 'undefined'}`;
+      const executionSummary = `=== JAVASCRIPT EXECUTION RESULT ===
+SUCCESS: true
+EXECUTION TYPE: ${hasAsync ? 'Async (awaited)' : 'Sync'}
+EXECUTION TIME: ${executionTime}ms
+CONSOLE OUTPUT:
+${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}
+RETURN VALUE:
+${result !== undefined ? JSON.stringify(result, null, 2) : 'undefined'}`;
+      
       logEntries.push(executionSummary);
       Storage.saveReasoningLog(logEntries);
       
@@ -102,7 +135,7 @@ export const JSExecutor = {
         }
       }, 50);
       
-      console.log(`✓ JavaScript execution completed successfully (${executionTime}ms)`);
+      console.log(`✓ JavaScript execution completed successfully (${executionTime}ms, ${hasAsync ? 'async' : 'sync'})`);
       return executionResult;
       
     } catch (error) {
