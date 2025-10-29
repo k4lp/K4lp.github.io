@@ -1,6 +1,6 @@
 /**
  * GDRS Event Handlers
- * All event binding and user interaction handlers
+ * All event binding and user interaction handlers - NOW WITH TEXTAREA KEY SUPPORT!
  */
 
 import { Storage } from '../storage/storage.js';
@@ -88,22 +88,52 @@ export function bindEvents() {
     });
   }
 
-  // Key management
+  // NEW: Key management for unlimited textarea keys
   const validateBtn = qs('#validateKeys');
   const clearBtn = qs('#clearKeys');
+  
   if (validateBtn) {
     validateBtn.addEventListener('click', async () => {
-      validateBtn.textContent = 'validating...';
-      await KeyManager.validateAllKeys();
-      await GeminiAPI.fetchModelList();
-      Renderer.renderKeys();
-      validateBtn.textContent = 'Validate';
+      // Update keypool from textarea first
+      KeyManager.updateKeysFromTextarea();
+      
+      const pool = Storage.loadKeypool();
+      if (pool.length === 0) {
+        alert('Please add some API keys first');
+        return;
+      }
+      
+      validateBtn.textContent = `Validating ${pool.length} keys...`;
+      validateBtn.disabled = true;
+      
+      try {
+        await KeyManager.validateAllKeys();
+        await GeminiAPI.fetchModelList();
+        Renderer.renderKeyStats();
+        
+        const stats = KeyManager.getKeyStats();
+        if (stats.valid > 0) {
+          console.log(`✅ Validation complete: ${stats.valid}/${stats.total} keys valid`);
+        } else {
+          console.warn('⚠️ No valid keys found');
+        }
+      } catch (error) {
+        console.error('Validation error:', error);
+        alert('Error during key validation. Check console for details.');
+      } finally {
+        validateBtn.textContent = 'Validate All';
+        validateBtn.disabled = false;
+      }
     });
   }
+  
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      KeyManager.clearAll();
-      Renderer.renderKeys();
+      if (confirm('Clear ALL API keys? This cannot be undone.')) {
+        KeyManager.clearAll();
+        Renderer.renderKeys();
+        console.log('🗑️ All API keys cleared');
+      }
     });
   }
 
