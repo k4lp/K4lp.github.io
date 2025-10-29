@@ -126,6 +126,15 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+.version-info {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: var(--gap-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .main-grid {
   flex: 1;
   display: grid;
@@ -217,7 +226,263 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 12px;
 }
 
-/* NEW: Token Input Group Styling */
+/* NEW: Textarea-based Key Management Styles */
+.keys-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+  margin-bottom: var(--gap-md);
+}
+
+.keys-input-section {
+  margin-bottom: var(--gap-md);
+}
+
+.keys-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--gap-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.keys-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: var(--gap-md);
+  font-family: var(--fs-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  background-color: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.keys-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+  background-color: var(--bg-alt);
+}
+
+.keys-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.keys-hint {
+  margin-top: var(--gap-xs);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-xs);
+}
+
+/* NEW: Consolidated Key Statistics */
+.keys-stats-section {
+  background-color: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap-md);
+}
+
+.stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gap-md);
+  padding-bottom: var(--gap-sm);
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-header h3 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.stats-summary {
+  display: flex;
+  gap: var(--gap-xs);
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  display: inline-block;
+  padding: 2px var(--gap-xs);
+  font-family: var(--fs-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.05em;
+}
+
+.stat-total {
+  background-color: var(--accent);
+  color: white;
+}
+
+.stat-ready {
+  background-color: var(--success);
+  color: white;
+}
+
+.stat-cooling {
+  background-color: var(--warning);
+  color: white;
+}
+
+.stat-invalid {
+  background-color: var(--error);
+  color: white;
+}
+
+.stats-details {
+  margin-bottom: var(--gap-md);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--gap-xs) 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .stat-row {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.stat-value {
+  font-family: var(--fs-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* NEW: Individual Key Status List */
+.keys-list {
+  margin-top: var(--gap-md);
+  border-top: 1px solid var(--border);
+  padding-top: var(--gap-md);
+}
+
+.keys-list-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: var(--gap-sm);
+}
+
+.key-status-item {
+  display: grid;
+  grid-template-columns: 24px 1fr 50px 70px;
+  gap: var(--gap-sm);
+  align-items: center;
+  padding: var(--gap-xs) var(--gap-sm);
+  margin-bottom: var(--gap-xs);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  transition: background-color 0.15s ease;
+}
+
+.key-status-item:last-child {
+  margin-bottom: 0;
+}
+
+.key-status-item:hover {
+  background-color: var(--bg-alt);
+}
+
+.key-number {
+  font-family: var(--fs-mono);
+  font-weight: 700;
+  font-size: 9px;
+  color: var(--text-secondary);
+  text-align: center;
+  background-color: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.key-preview {
+  font-family: var(--fs-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.key-usage {
+  font-family: var(--fs-mono);
+  font-size: 9px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.key-status {
+  font-family: var(--fs-mono);
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.05em;
+}
+
+.key-status.ready {
+  background-color: var(--success);
+  color: white;
+}
+
+.key-status.cooling {
+  background-color: var(--warning);
+  color: white;
+}
+
+.key-status.invalid {
+  background-color: var(--error);
+  color: white;
+}
+
+.no-keys-message {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 11px;
+  padding: var(--gap-lg);
+}
+
+/* Token Input Group Styling */
 .token-input-group {
   display: flex;
   align-items: center;
@@ -250,7 +515,7 @@ h1, h2, h3, h4, h5, h6 {
   text-align: right;
 }
 
-/* NEW: Key Rotation Indicator */
+/* Key Rotation Indicator */
 .key-rotation-indicator {
   display: flex;
   align-items: center;
@@ -393,7 +658,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-muted);
 }
 
-/* Key Management */
+/* Key Management - Legacy support (will be removed) */
 .keys-grid {
   margin-bottom: var(--gap-md);
 }
@@ -1015,6 +1280,11 @@ h1, h2, h3, h4, h5, h6 {
   .key-rotation-indicator {
     font-size: 9px;
     padding: 2px var(--gap-xs);
+  }
+  
+  .key-status-item {
+    grid-template-columns: 20px 1fr 40px 60px;
+    font-size: 9px;
   }
 }
 
