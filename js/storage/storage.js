@@ -100,13 +100,16 @@ export const Storage = {
     return false;
   },
 
-  // Entity storage
+  // ISSUE 2 FIX: Entity storage with immediate rendering (no setTimeout)
   loadGoals() {
     return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []) || [];
   },
   saveGoals(goals) {
     localStorage.setItem(LS_KEYS.GOALS, JSON.stringify(goals));
-    setTimeout(() => Renderer.renderGoals(), 0);
+    // FIXED: Immediate render - no setTimeout race conditions
+    if (typeof window !== 'undefined' && Renderer && Renderer.renderGoals) {
+      Renderer.renderGoals();
+    }
   },
 
   loadMemory() {
@@ -114,7 +117,10 @@ export const Storage = {
   },
   saveMemory(memory) {
     localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memory));
-    setTimeout(() => Renderer.renderMemories(), 0);
+    // FIXED: Immediate render - no setTimeout race conditions
+    if (typeof window !== 'undefined' && Renderer && Renderer.renderMemories) {
+      Renderer.renderMemories();
+    }
   },
 
   loadTasks() {
@@ -122,7 +128,10 @@ export const Storage = {
   },
   saveTasks(tasks) {
     localStorage.setItem(LS_KEYS.TASKS, JSON.stringify(tasks));
-    setTimeout(() => Renderer.renderTasks(), 0);
+    // FIXED: Immediate render - no setTimeout race conditions
+    if (typeof window !== 'undefined' && Renderer && Renderer.renderTasks) {
+      Renderer.renderTasks();
+    }
   },
 
   loadVault() {
@@ -147,22 +156,45 @@ export const Storage = {
     }));
     
     localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(validatedVault));
-    setTimeout(() => Renderer.renderVault(), 0);
+    // FIXED: Immediate render - no setTimeout race conditions
+    if (typeof window !== 'undefined' && Renderer && Renderer.renderVault) {
+      Renderer.renderVault();
+    }
   },
 
-  // Output and logs
+  // ISSUE 1 FIX: Enhanced final output with verification tracking
   loadFinalOutput() {
     return safeJSONParse(localStorage.getItem(LS_KEYS.FINAL_OUTPUT), {
       timestamp: '\u2014',
-      html: '<p>Report will render here after goal validation.</p>'
+      html: '<p>Report will render here after goal validation.</p>',
+      verified: false,
+      source: 'none' // 'llm' or 'auto' or 'none'
     });
   },
-  saveFinalOutput(htmlString) {
+  
+  saveFinalOutput(htmlString, verified = false, source = 'auto') {
     const outObj = {
       timestamp: nowISO(),
-      html: htmlString || ''
+      html: htmlString || '',
+      verified: verified,
+      source: source // Track if LLM-generated or auto-generated
     };
     localStorage.setItem(LS_KEYS.FINAL_OUTPUT, JSON.stringify(outObj));
+    
+    // Also save verified status separately for quick checks
+    if (verified) {
+      localStorage.setItem(LS_KEYS.FINAL_OUTPUT_VERIFIED, 'true');
+    }
+    
+    console.log(`📄 Final output saved - Source: ${source}, Verified: ${verified}`);
+  },
+
+  isFinalOutputVerified() {
+    return localStorage.getItem(LS_KEYS.FINAL_OUTPUT_VERIFIED) === 'true';
+  },
+
+  clearFinalOutputVerification() {
+    localStorage.removeItem(LS_KEYS.FINAL_OUTPUT_VERIFIED);
   },
 
   loadReasoningLog() {
