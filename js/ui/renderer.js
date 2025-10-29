@@ -1,6 +1,6 @@
 /**
  * GDRS UI Renderer
- * All DOM rendering functions and UI updates - NOW WITH TEXTAREA KEY INPUT!
+ * All DOM rendering functions and UI updates - CLEAN MINIMALIST DESIGN!
  */
 
 import { Storage } from '../storage/storage.js';
@@ -12,7 +12,7 @@ import { openVaultModal } from './modals.js';
 
 export const Renderer = {
   /**
-   * NEW: Render textarea-based key input with consolidated stats
+   * NEW: Clean minimalist textarea-based key input with essential stats only
    */
   renderKeys() {
     const keysContainer = qs('#keysContainer');
@@ -35,11 +35,11 @@ export const Renderer = {
           rows="6"
         >${encodeHTML(keysText)}</textarea>
         <div class="keys-hint">
-          💡 Paste as many keys as you want, separated by newlines. Stats are preserved when you modify the list.
+          💡 Paste as many keys as you want, separated by newlines. Stats are preserved.
         </div>
       </div>
       
-      <!-- Consolidated Stats -->
+      <!-- Clean Consolidated Stats -->
       <div class="keys-stats-section">
         <div class="stats-header">
           <h3>Key Pool Statistics</h3>
@@ -70,30 +70,7 @@ export const Renderer = {
           </div>
         </div>
         
-        ${stats.total > 0 ? `
-          <div class="keys-list">
-            <div class="keys-list-header">Individual Key Status:</div>
-            ${pool.map(k => {
-              const cooldown = KeyManager.getCooldownRemainingSeconds(k);
-              const status = cooldown > 0 ? 
-                `cooldown ${cooldown}s` : 
-                (k.rateLimited ? 'limited' : 
-                  (k.failureCount > 0 ? `${k.failureCount} fails` : 
-                    (k.valid ? 'ready' : 'invalid')));
-              const statusClass = k.valid && !k.rateLimited && cooldown === 0 ? 'ready' : 
-                                 cooldown > 0 || k.rateLimited ? 'cooling' : 'invalid';
-              
-              return `
-                <div class="key-status-item">
-                  <div class="key-number">#${k.slot}</div>
-                  <div class="key-preview">${k.key.substring(0, 12)}...${k.key.substring(k.key.length - 4)}</div>
-                  <div class="key-usage">${k.usage} uses</div>
-                  <div class="key-status ${statusClass}">${status}</div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        ` : '<div class="no-keys-message">No API keys added yet</div>'}
+        ${stats.total === 0 ? '<div class="no-keys-message">No API keys added yet</div>' : ''}
       </div>
     `;
 
@@ -112,7 +89,7 @@ export const Renderer = {
   },
 
   /**
-   * NEW: Update only the stats section without rebuilding textarea
+   * NEW: Update only the clean stats section without rebuilding textarea
    */
   renderKeyStats() {
     const statsSection = qs('.keys-stats-section');
@@ -151,30 +128,7 @@ export const Renderer = {
         </div>
       </div>
       
-      ${stats.total > 0 ? `
-        <div class="keys-list">
-          <div class="keys-list-header">Individual Key Status:</div>
-          ${pool.map(k => {
-            const cooldown = KeyManager.getCooldownRemainingSeconds(k);
-            const status = cooldown > 0 ? 
-              `cooldown ${cooldown}s` : 
-              (k.rateLimited ? 'limited' : 
-                (k.failureCount > 0 ? `${k.failureCount} fails` : 
-                  (k.valid ? 'ready' : 'invalid')));
-            const statusClass = k.valid && !k.rateLimited && cooldown === 0 ? 'ready' : 
-                               cooldown > 0 || k.rateLimited ? 'cooling' : 'invalid';
-            
-            return `
-              <div class="key-status-item">
-                <div class="key-number">#${k.slot}</div>
-                <div class="key-preview">${k.key.substring(0, 12)}...${k.key.substring(k.key.length - 4)}</div>
-                <div class="key-usage">${k.usage} uses</div>
-                <div class="key-status ${statusClass}">${status}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      ` : '<div class="no-keys-message">No API keys added yet</div>'}
+      ${stats.total === 0 ? '<div class="no-keys-message">No API keys added yet</div>' : ''}
     `;
 
     statsSection.innerHTML = statsHTML;
@@ -308,14 +262,14 @@ export const Renderer = {
     }
 
     vaultEl.innerHTML = vault.map((v, index) => {
-      const timestamp = v.createdAt ? new Date(v.createdAt).toLocaleTimeString() : '—';
+      const timestamp = v.createdAt ? new Date(v.createdAt).toLocaleTimeString() : '\u2014';
       const dataSize = v.content ? String(v.content).length : 0;
       return `
         <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
           <div>
             <div class="mono">${encodeHTML(v.identifier)}</div>
             <div class="pm">${encodeHTML(v.description || 'No description')}</div>
-            <div class="pm" style="font-size: 0.8em; color: #666;">Created: ${timestamp} • Size: ${dataSize} chars</div>
+            <div class="pm" style="font-size: 0.8em; color: #666;">Created: ${timestamp} \u2022 Size: ${dataSize} chars</div>
           </div>
           <div class="status" style="background: ${v.type === 'data' ? '#e3f2fd' : v.type === 'code' ? '#f3e5f5' : '#e8f5e8'}">
             ${encodeHTML(v.type.toUpperCase())}
@@ -369,22 +323,22 @@ export const Renderer = {
           
           let activityDetails = '';
           if (activity.type === 'js_execute') {
-            activityDetails = `${activity.executionTime}ms • ${activity.codeSize} chars`;
-            if (activity.vaultRefsUsed > 0) activityDetails += ` • ${activity.vaultRefsUsed} vault refs`;
+            activityDetails = `${activity.executionTime}ms \u2022 ${activity.codeSize} chars`;
+            if (activity.vaultRefsUsed > 0) activityDetails += ` \u2022 ${activity.vaultRefsUsed} vault refs`;
           } else if (activity.type === 'vault') {
             if (activity.dataSize) activityDetails += `${activity.dataSize} chars`;
-            if (activity.dataType) activityDetails += ` • ${activity.dataType}`;
+            if (activity.dataType) activityDetails += ` \u2022 ${activity.dataType}`;
           }
           
           html += `
             <div class="tool-activity ${statusClass} ${typeClass}">
-              <div class="tool-icon">🔧</div>
+              <div class="tool-icon">\ud83d\udd27</div>
               <div class="tool-details">
                 <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
                 <div class="tool-meta">${activityDetails || activity.id || ''}</div>
                 ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
               </div>
-              <div class="tool-status ${activity.status}">${activity.status === 'success' ? '✓' : '✗'}</div>
+              <div class="tool-status ${activity.status}">${activity.status === 'success' ? '\u2713' : '\u2717'}</div>
             </div>
           `;
         });
