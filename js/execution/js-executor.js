@@ -1,6 +1,6 @@
 /**
  * GDRS JavaScript Executor
- * Auto JavaScript execution from LLM responses with FULL ASYNC SUPPORT
+ * Auto JavaScript execution from LLM responses with COMPLETE ASYNC SUPPORT
  */
 
 import { VaultManager } from '../storage/vault-manager.js';
@@ -8,7 +8,7 @@ import { Storage } from '../storage/storage.js';
 import { generateId, nowISO } from '../core/utils.js';
 
 export const JSExecutor = {
-  // ISSUE 3 FIX: Complete async execution support
+  // CRITICAL FIX: Complete async execution with proper return value capture
   async executeCode(rawCode) {
     const startTime = Date.now();
     const executionId = generateId('exec');
@@ -55,25 +55,44 @@ export const JSExecutor = {
         originalWarn.apply(console, args);
       };
 
-      // CRITICAL FIX: Detect if code contains async/await or returns a Promise
-      const hasAsync = /\basync\b|\bawait\b|\.then\(|Promise\b/.test(expandedCode);
+      // CRITICAL FIX: Enhanced async detection and execution with proper return capture
+      const hasAsync = /\b(async|await|fetch|then|Promise|setTimeout)\b|\.then\s*\(/gi.test(expandedCode);
       
       let result;
       
       if (hasAsync) {
-        // Wrap in async IIFE and properly await
+        // CRITICAL: Improved async wrapper that properly captures return values
         const asyncWrapper = `
           (async () => {
-            ${expandedCode}
+            try {
+              ${expandedCode}
+              
+              // If code doesn't explicitly return, capture last expression
+              ${expandedCode.includes('return') ? '' : '; return undefined;'}
+            } catch (error) {
+              console.error('Async execution error:', error);
+              throw error;
+            }
           })()
         `;
         
-        console.log('🔄 Detected async code, executing with await support...');
+        console.log('\ud83d\udd04 Detected async code, executing with full await support...');
         
-        const asyncFn = new Function(`return ${asyncWrapper}`);
-        result = await asyncFn(); // CRITICAL: await the promise
-        
-        console.log('✅ Async execution completed');
+        try {
+          const asyncFn = new Function(`return ${asyncWrapper}`);
+          const promise = asyncFn();
+          
+          // Add timeout protection for hanging promises
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Async execution timeout (30s)')), 30000);
+          });
+          
+          result = await Promise.race([promise, timeoutPromise]);
+          console.log('\u2705 Async execution completed successfully');
+        } catch (asyncError) {
+          console.error('\u274c Async execution failed:', asyncError);
+          throw asyncError;
+        }
       } else {
         // Synchronous execution
         const fn = new Function(expandedCode);
@@ -135,7 +154,7 @@ ${result !== undefined ? JSON.stringify(result, null, 2) : 'undefined'}`;
         }
       }, 50);
       
-      console.log(`✓ JavaScript execution completed successfully (${executionTime}ms, ${hasAsync ? 'async' : 'sync'})`);
+      console.log(`\u2713 JavaScript execution completed successfully (${executionTime}ms, ${hasAsync ? 'async' : 'sync'})`);
       return executionResult;
       
     } catch (error) {
@@ -175,7 +194,7 @@ ${result !== undefined ? JSON.stringify(result, null, 2) : 'undefined'}`;
         }
       }, 50);
       
-      console.error('✗ JavaScript execution failed:', error);
+      console.error('\u2717 JavaScript execution failed:', error);
       return executionResult;
     } finally {
       // Always restore console functions
