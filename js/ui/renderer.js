@@ -1,18 +1,39 @@
 /**
- * GDRS UI Renderer
- * All DOM rendering functions and UI updates - CLEAN MINIMALIST DESIGN!
+ * GDRS UI Renderer - Event-Driven and Modular
+ * Clean rendering system with event bus integration
  */
 
 import { Storage } from '../storage/storage.js';
 import { KeyManager } from '../api/key-manager.js';
 import { ReasoningEngine } from '../reasoning/reasoning-engine.js';
 import { CodeExecutor } from '../execution/code-executor.js';
+import { eventBus, Events } from '../core/event-bus.js';
 import { qs, qsa, encodeHTML } from '../core/utils.js';
 import { openVaultModal } from './modals.js';
 
 export const Renderer = {
   /**
-   * NEW: Clean minimalist textarea-based key input with essential stats only
+   * Initialize event-driven rendering
+   */
+  init() {
+    this.bindEventListeners();
+    console.log('\ud83c\udfa8 Renderer initialized with event bus');
+  },
+  
+  /**
+   * Bind event listeners for automatic UI updates
+   */
+  bindEventListeners() {
+    eventBus.on(Events.MEMORY_UPDATED, () => this.renderMemories());
+    eventBus.on(Events.TASKS_UPDATED, () => this.renderTasks());
+    eventBus.on(Events.GOALS_UPDATED, () => this.renderGoals());
+    eventBus.on(Events.VAULT_UPDATED, () => this.renderVault());
+    eventBus.on(Events.FINAL_OUTPUT_UPDATED, () => this.renderFinalOutput());
+    eventBus.on(Events.UI_REFRESH_REQUEST, () => this.renderAll());
+  },
+
+  /**
+   * API Keys rendering with clean textarea interface
    */
   renderKeys() {
     const keysContainer = qs('#keysContainer');
@@ -23,23 +44,17 @@ export const Renderer = {
     const keysText = Storage.formatKeysToText(pool);
 
     keysContainer.innerHTML = `
-      <!-- API Keys Textarea -->
       <div class="keys-input-section">
-        <label for="apiKeysTextarea" class="keys-label">
-          API Keys (one per line)
-        </label>
+        <label for="apiKeysTextarea" class="keys-label">API Keys (one per line)</label>
         <textarea 
           id="apiKeysTextarea" 
           class="keys-textarea" 
-          placeholder="Paste your API keys here, one per line:\nAIzaSy...\nAIzaSy...\nAIzaSy..."
+          placeholder="Paste your API keys here, one per line:\nAIzaSy...\nAIzaSy..."
           rows="6"
         >${encodeHTML(keysText)}</textarea>
-        <div class="keys-hint">
-          💡 Paste as many keys as you want, separated by newlines. Stats are preserved.
-        </div>
+        <div class="keys-hint">\ud83d\udca1 Paste keys separated by newlines. Stats preserved automatically.</div>
       </div>
       
-      <!-- Clean Consolidated Stats -->
       <div class="keys-stats-section">
         <div class="stats-header">
           <h3>Key Pool Statistics</h3>
@@ -64,10 +79,6 @@ export const Renderer = {
             <span class="stat-label">Avg Failures:</span>
             <span class="stat-value">${stats.avgFailures.toFixed(1)}</span>
           </div>
-          <div class="stat-row">
-            <span class="stat-label">Rate Limited:</span>
-            <span class="stat-value">${stats.rateLimited} keys</span>
-          </div>
         </div>
         
         ${stats.total === 0 ? '<div class="no-keys-message">No API keys added yet</div>' : ''}
@@ -79,25 +90,21 @@ export const Renderer = {
     if (textarea) {
       textarea.addEventListener('input', () => {
         KeyManager.updateKeysFromTextarea();
-        // Re-render stats after a short delay
         setTimeout(() => this.renderKeyStats(), 500);
       });
     }
 
-    // Update rotation pill
     this.updateRotationPill();
   },
 
   /**
-   * NEW: Update only the clean stats section without rebuilding textarea
+   * Update key stats only (for performance)
    */
   renderKeyStats() {
     const statsSection = qs('.keys-stats-section');
     if (!statsSection) return;
 
-    const pool = Storage.loadKeypool();
     const stats = KeyManager.getKeyStats();
-
     const statsHTML = `
       <div class="stats-header">
         <h3>Key Pool Statistics</h3>
@@ -122,10 +129,6 @@ export const Renderer = {
           <span class="stat-label">Avg Failures:</span>
           <span class="stat-value">${stats.avgFailures.toFixed(1)}</span>
         </div>
-        <div class="stat-row">
-          <span class="stat-label">Rate Limited:</span>
-          <span class="stat-value">${stats.rateLimited} keys</span>
-        </div>
       </div>
       
       ${stats.total === 0 ? '<div class="no-keys-message">No API keys added yet</div>' : ''}
@@ -135,17 +138,10 @@ export const Renderer = {
     this.updateRotationPill();
   },
 
-  /**
-   * Update key metadata (for ticker)
-   */
   updateKeyMetadata() {
-    // For textarea version, just update stats
     this.renderKeyStats();
   },
 
-  /**
-   * Update rotation pill
-   */
   updateRotationPill() {
     const rotPill = qs('#keyRotationPill');
     if (!rotPill) return;
@@ -153,11 +149,9 @@ export const Renderer = {
     const nextKey = KeyManager.chooseActiveKey();
     const availableKeys = KeyManager.getAllAvailableKeys();
     
-    if (nextKey) {
-      rotPill.textContent = `NEXT: #${nextKey.slot} (${availableKeys.length} available)`;
-    } else {
-      rotPill.textContent = availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
-    }
+    rotPill.textContent = nextKey ? 
+      `NEXT: #${nextKey.slot} (${availableKeys.length} available)` :
+      availableKeys.length > 0 ? `${availableKeys.length} keys cooling down` : 'NO KEY';
   },
 
   populateModelDropdown(modelsArray) {
@@ -165,14 +159,12 @@ export const Renderer = {
     if (!modelSelect) return;
 
     const currentValue = modelSelect.value;
-    
     modelSelect.innerHTML = `<option value="">-- select model --</option>`;
 
-    modelsArray.forEach((m) => {
-      const fullName = m.name || '';
-      const label = fullName.replace(/^models\//, '');
+    modelsArray.forEach(m => {
+      const label = (m.name || '').replace(/^models\//, '');
       const opt = document.createElement('option');
-      opt.value = fullName;
+      opt.value = m.name;
       opt.textContent = label;
       modelSelect.appendChild(opt);
     });
@@ -185,70 +177,55 @@ export const Renderer = {
     }
   },
 
+  /**
+   * Entity rendering methods
+   */
   renderTasks() {
-    const tasks = Storage.loadTasks();
-    const tasksEl = qs('#tasksList');
-    if (!tasksEl) return;
-
-    if (tasks.length === 0) {
-      tasksEl.innerHTML = '<div class="storage-placeholder">No tasks yet - LLM will create intelligent tasks after query analysis</div>';
-      return;
-    }
-
-    tasksEl.innerHTML = tasks.map(t => `
-      <div class="li">
-        <div>
-          <div class="mono">${encodeHTML(t.heading)}</div>
-          <div class="pm">${encodeHTML(t.content)}</div>
-          ${t.notes ? `<div class="pm">Notes: ${encodeHTML(t.notes)}</div>` : ''}
+    this._renderEntityList('#tasksList', Storage.loadTasks(), {
+      placeholder: 'No tasks yet - LLM will create intelligent tasks after query analysis',
+      renderItem: t => `
+        <div class="li">
+          <div>
+            <div class="mono">${encodeHTML(t.heading)}</div>
+            <div class="pm">${encodeHTML(t.content)}</div>
+            ${t.notes ? `<div class="pm">Notes: ${encodeHTML(t.notes)}</div>` : ''}
+          </div>
+          <div class="status">${encodeHTML(t.status.toUpperCase())}</div>
         </div>
-        <div class="status">${encodeHTML(t.status.toUpperCase())}</div>
-      </div>
-    `).join('');
+      `
+    });
   },
 
   renderMemories() {
-    const memory = Storage.loadMemory();
-    const memEl = qs('#memoryList');
-    if (!memEl) return;
-
-    if (memory.length === 0) {
-      memEl.innerHTML = '<div class="storage-placeholder">No memories yet - Important findings will be stored here</div>';
-      return;
-    }
-
-    memEl.innerHTML = memory.map(m => `
-      <div class="li">
-        <div>
-          <div class="mono">${encodeHTML(m.heading)}</div>
-          <div class="pm">${encodeHTML(m.content)}</div>
-          ${m.notes ? `<div class="pm">Notes: ${encodeHTML(m.notes)}</div>` : ''}
+    this._renderEntityList('#memoryList', Storage.loadMemory(), {
+      placeholder: 'No memories yet - Important findings will be stored here',
+      renderItem: m => `
+        <div class="li">
+          <div>
+            <div class="mono">${encodeHTML(m.heading)}</div>
+            <div class="pm">${encodeHTML(m.content)}</div>
+            ${m.notes ? `<div class="pm">Notes: ${encodeHTML(m.notes)}</div>` : ''}
+          </div>
+          <div class="id">${encodeHTML(m.identifier)}</div>
         </div>
-        <div class="id">${encodeHTML(m.identifier)}</div>
-      </div>
-    `).join('');
+      `
+    });
   },
 
   renderGoals() {
-    const goals = Storage.loadGoals();
-    const goalsEl = qs('#goalsList');
-    if (!goalsEl) return;
-
-    if (goals.length === 0) {
-      goalsEl.innerHTML = '<div class="storage-placeholder">No goals yet - Strategic success criteria will be defined after analysis</div>';
-      return;
-    }
-
-    goalsEl.innerHTML = goals.map(g => `
-      <div class="li">
-        <div>
-          <div class="mono">${encodeHTML(g.heading)}</div>
-          <div class="pm">${encodeHTML(g.content)}</div>
-          ${g.notes ? `<div class="pm">Notes: ${encodeHTML(g.notes)}</div>` : ''}
+    this._renderEntityList('#goalsList', Storage.loadGoals(), {
+      placeholder: 'No goals yet - Strategic success criteria will be defined after analysis',
+      renderItem: g => `
+        <div class="li">
+          <div>
+            <div class="mono">${encodeHTML(g.heading)}</div>
+            <div class="pm">${encodeHTML(g.content)}</div>
+            ${g.notes ? `<div class="pm">Notes: ${encodeHTML(g.notes)}</div>` : ''}
+          </div>
+          <div class="id">${encodeHTML(g.identifier)}</div>
         </div>
-        <div class="id">${encodeHTML(g.identifier)}</div>
-      </div>
-    `).join('');
+      `
+    });
   },
 
   renderVault() {
@@ -261,9 +238,9 @@ export const Renderer = {
       return;
     }
 
-    vaultEl.innerHTML = vault.map((v, index) => {
+    vaultEl.innerHTML = vault.map(v => {
       const timestamp = v.createdAt ? new Date(v.createdAt).toLocaleTimeString() : '\u2014';
-      const dataSize = v.content ? String(v.content).length : 0;
+      const dataSize = String(v.content || '').length;
       return `
         <div class="li" data-vault-id="${encodeHTML(v.identifier)}">
           <div>
@@ -271,14 +248,14 @@ export const Renderer = {
             <div class="pm">${encodeHTML(v.description || 'No description')}</div>
             <div class="pm" style="font-size: 0.8em; color: #666;">Created: ${timestamp} \u2022 Size: ${dataSize} chars</div>
           </div>
-          <div class="status" style="background: ${v.type === 'data' ? '#e3f2fd' : v.type === 'code' ? '#f3e5f5' : '#e8f5e8'}">
+          <div class="status" style="background: ${this._getTypeColor(v.type)}">
             ${encodeHTML(v.type.toUpperCase())}
           </div>
         </div>
       `;
     }).join('');
 
-    // Add click handlers for vault modal
+    // Bind vault modal handlers
     qsa('[data-vault-id]', vaultEl).forEach(el => {
       el.addEventListener('click', () => {
         const id = el.getAttribute('data-vault-id');
@@ -293,14 +270,12 @@ export const Renderer = {
     const logEl = qs('#iterationLog');
     if (!logEl) return;
 
-    if (logEntries.length === 0 && toolActivity.length === 0) {
+    if (logEntries.length === 0) {
       logEl.innerHTML = '<div class="log-placeholder">Intelligent reasoning iterations will appear here...</div>';
       return;
     }
 
     let html = '';
-
-    // Render reasoning entries
     logEntries.forEach((entry, i) => {
       html += `
         <div class="li reasoning-entry">
@@ -311,43 +286,10 @@ export const Renderer = {
         </div>
       `;
 
-      // Find and render tool activities for this iteration
-      const iterationNum = i + 1;
-      const iterationActivities = toolActivity.filter(act => act.iteration === iterationNum);
-      
+      // Render associated tool activities
+      const iterationActivities = toolActivity.filter(act => act.iteration === i + 1);
       if (iterationActivities.length > 0) {
-        html += '<div class="tool-activities">';
-        iterationActivities.forEach(activity => {
-          const statusClass = activity.status === 'success' ? 'tool-success' : 'tool-error';
-          const typeClass = `tool-${activity.type.replace('_', '-')}`;
-          
-          let activityDetails = '';
-          if (activity.type === 'js_execute') {
-            activityDetails = `${activity.executionTime}ms \u2022 ${activity.codeSize} chars`;
-            if (activity.vaultRefsUsed > 0) activityDetails += ` \u2022 ${activity.vaultRefsUsed} vault refs`;
-            if (activity.wasAsync) activityDetails += ' \u2022 async';
-          } else if (activity.type === 'vault') {
-            if (activity.dataSize) activityDetails += `${activity.dataSize} chars`;
-            if (activity.dataType) activityDetails += ` \u2022 ${activity.dataType}`;
-          } else if (activity.type === 'final_output') {
-            activityDetails = `${activity.contentSize} chars`;
-            if (activity.verified) activityDetails += ' \u2022 \u2705 verified';
-            if (activity.source) activityDetails += ` \u2022 ${activity.source}`;
-          }
-          
-          html += `
-            <div class="tool-activity ${statusClass} ${typeClass}">
-              <div class="tool-icon">\ud83d\udd27</div>
-              <div class="tool-details">
-                <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
-                <div class="tool-meta">${activityDetails || activity.id || ''}</div>
-                ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
-              </div>
-              <div class="tool-status ${activity.status}">${activity.status === 'success' ? '\u2713' : '\u2717'}</div>
-            </div>
-          `;
-        });
-        html += '</div>';
+        html += this._renderToolActivities(iterationActivities);
       }
     });
 
@@ -355,27 +297,24 @@ export const Renderer = {
     logEl.scrollTop = logEl.scrollHeight;
   },
 
-  // ISSUE 1 FIX: Enhanced final output rendering with verification status
   renderFinalOutput() {
     const output = Storage.loadFinalOutput();
     const finalEl = qs('#finalOutput');
     const statusEl = qs('#finalStatus');
     
     if (finalEl) {
-      if (!output.html || output.html === '<p>Report will render here after goal validation.</p>') {
-        finalEl.innerHTML = '<div class="output-placeholder"><p>Comprehensive research report will render here after intelligent analysis and goal completion.</p></div>';
-      } else {
-        finalEl.innerHTML = output.html;
-      }
+      finalEl.innerHTML = (!output.html || output.html.includes('goal validation')) ?
+        '<div class="output-placeholder"><p>Comprehensive research report will render here after intelligent analysis and goal completion.</p></div>' :
+        output.html;
     }
     
     if (statusEl) {
       if (output.verified && output.source === 'llm') {
-        statusEl.textContent = '✅ verified';
+        statusEl.textContent = '\u2705 verified';
         statusEl.style.background = 'var(--success)';
         statusEl.style.color = 'white';
       } else if (output.source === 'auto') {
-        statusEl.textContent = '⚠️ unverified';
+        statusEl.textContent = '\u26a0\ufe0f unverified';
         statusEl.style.background = 'var(--warning)';
         statusEl.style.color = 'white';
       } else {
@@ -394,8 +333,94 @@ export const Renderer = {
     this.renderVault();
     this.renderReasoningLog();
     this.renderFinalOutput();
-    
-    // Restore last executed code in the code editor if available
     CodeExecutor.restoreLastExecutedCode();
+    
+    eventBus.emit(Events.UI_REFRESH_COMPLETE);
+  },
+  
+  /**
+   * Generic entity list renderer (DRY principle)
+   */
+  _renderEntityList(selector, entities, options) {
+    const element = qs(selector);
+    if (!element) return;
+    
+    if (entities.length === 0) {
+      element.innerHTML = `<div class="storage-placeholder">${options.placeholder}</div>`;
+      return;
+    }
+    
+    element.innerHTML = entities.map(options.renderItem).join('');
+  },
+  
+  /**
+   * Render tool activities for reasoning log
+   */
+  _renderToolActivities(activities) {
+    let html = '<div class="tool-activities">';
+    
+    activities.forEach(activity => {
+      const statusClass = activity.status === 'success' ? 'tool-success' : 'tool-error';
+      const typeClass = `tool-${activity.type.replace('_', '-')}`;
+      
+      let details = this._formatActivityDetails(activity);
+      
+      html += `
+        <div class="tool-activity ${statusClass} ${typeClass}">
+          <div class="tool-icon">\ud83d\udd27</div>
+          <div class="tool-details">
+            <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
+            <div class="tool-meta">${details}</div>
+            ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
+          </div>
+          <div class="tool-status ${activity.status}">${activity.status === 'success' ? '\u2713' : '\u2717'}</div>
+        </div>
+      `;
+    });
+    
+    return html + '</div>';
+  },
+  
+  /**
+   * Format activity details based on type
+   */
+  _formatActivityDetails(activity) {
+    switch (activity.type) {
+      case 'js_execute':
+        let details = `${activity.executionTime}ms \u2022 ${activity.codeSize} chars`;
+        if (activity.vaultRefsUsed > 0) details += ` \u2022 ${activity.vaultRefsUsed} vault refs`;
+        if (activity.wasAsync) details += ' \u2022 async';
+        if (activity.complexity) details += ` \u2022 ${activity.complexity}`;
+        return details;
+        
+      case 'vault':
+        let vaultDetails = '';
+        if (activity.dataSize) vaultDetails += `${activity.dataSize} chars`;
+        if (activity.dataType) vaultDetails += ` \u2022 ${activity.dataType}`;
+        return vaultDetails;
+        
+      case 'final_output':
+        let outputDetails = `${activity.contentSize} chars`;
+        if (activity.verified) outputDetails += ' \u2022 \u2705 verified';
+        if (activity.source) outputDetails += ` \u2022 ${activity.source}`;
+        return outputDetails;
+        
+      default:
+        return activity.id || '';
+    }
+  },
+  
+  /**
+   * Get color for vault entry type
+   */
+  _getTypeColor(type) {
+    const colors = {
+      data: '#e3f2fd',
+      code: '#f3e5f5', 
+      text: '#e8f5e8',
+      json: '#fff3e0',
+      result: '#e0f2f1'
+    };
+    return colors[type] || '#f5f5f5';
   }
 };
