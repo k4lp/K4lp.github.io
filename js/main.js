@@ -8,6 +8,8 @@ import { boot } from './core/boot.js';
 import { VERSION } from './core/constants.js';
 import { AsyncDetector } from './core/async-detector.js';
 import { eventBus, Events } from './core/event-bus.js';
+import { ExtensionPoints, Registry } from './core/extension-points.js';
+import { Interfaces } from './core/interfaces.js';
 
 // Storage layer
 import { Storage } from './storage/storage.js';
@@ -55,11 +57,14 @@ import { bindEvents } from './ui/events.js';
     window.GDRS = {
       // Version info
       VERSION,
-      
+
       // Core modules
       AsyncDetector,
       eventBus,
       Events,
+      ExtensionPoints,
+      Registry,
+      Interfaces,
       
       // Storage layer (2 modules)
       Storage,
@@ -97,9 +102,10 @@ import { bindEvents } from './ui/events.js';
     // Run boot sequence
     boot();
     
-    console.log('%c\u2705 GDRS Initialized - 12 Core Modules Loaded', 'color: #00aa00; font-weight: bold;');
-    console.log('%c\ud83d\udce6 Architecture: core(4) + storage(2) + api(2) + reasoning(2) + execution(2) + control(1) + ui(3)', 'color: #0066ff;');
-    console.log('%c\ud83d\udce1 Event-driven updates enabled for maximum modularity', 'color: #ff6600;');
+    console.log('%c\u2705 GDRS Initialized - Modular Architecture Ready', 'color: #00aa00; font-weight: bold;');
+    console.log('%c\ud83d\udce6 Core Modules: 14 loaded | Parser: 4 sub-modules', 'color: #0066ff;');
+    console.log('%c\ud83d\udd0c Extension Points: Ready for custom implementations', 'color: #ff6600;');
+    console.log('%c\ud83d\udce1 Event-driven updates enabled for maximum modularity', 'color: #9966ff;');
   }
   
   /**
