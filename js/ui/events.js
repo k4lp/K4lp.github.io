@@ -14,6 +14,9 @@ import { LS_KEYS } from '../core/constants.js';
 import { qs } from '../core/utils.js';
 
 export function bindEvents() {
+  // CRITICAL FIX: Add event-driven UI update system for memory and other components
+  bindStorageEventListeners();
+  
   // NEW: Extended Max Output Tokens input handling (512-65536)
   const maxTokensInput = qs('#maxOutputTokens');
   if (maxTokensInput) {
@@ -113,9 +116,9 @@ export function bindEvents() {
         
         const stats = KeyManager.getKeyStats();
         if (stats.valid > 0) {
-          console.log(`✅ Validation complete: ${stats.valid}/${stats.total} keys valid`);
+          console.log(`\u2705 Validation complete: ${stats.valid}/${stats.total} keys valid`);
         } else {
-          console.warn('⚠️ No valid keys found');
+          console.warn('\u26a0\ufe0f No valid keys found');
         }
       } catch (error) {
         console.error('Validation error:', error);
@@ -132,7 +135,7 @@ export function bindEvents() {
       if (confirm('Clear ALL API keys? This cannot be undone.')) {
         KeyManager.clearAll();
         Renderer.renderKeys();
-        console.log('🗑️ All API keys cleared');
+        console.log('\ud83d\uddd1\ufe0f All API keys cleared');
       }
     });
   }
@@ -194,4 +197,74 @@ export function bindEvents() {
       }
     }
   });
+}
+
+// CRITICAL FIX: Event-driven UI update system to fix memory rendering issues
+function bindStorageEventListeners() {
+  // Listen for custom storage events to trigger UI updates
+  document.addEventListener('gdrs-memories-updated', () => {
+    if (Renderer && Renderer.renderMemories) {
+      Renderer.renderMemories();
+      console.log('\ud83d\udd04 Memory UI updated via event');
+    }
+  });
+  
+  document.addEventListener('gdrs-tasks-updated', () => {
+    if (Renderer && Renderer.renderTasks) {
+      Renderer.renderTasks();
+      console.log('\ud83d\udd04 Tasks UI updated via event');
+    }
+  });
+  
+  document.addEventListener('gdrs-goals-updated', () => {
+    if (Renderer && Renderer.renderGoals) {
+      Renderer.renderGoals();
+      console.log('\ud83d\udd04 Goals UI updated via event');
+    }
+  });
+  
+  document.addEventListener('gdrs-vault-updated', () => {
+    if (Renderer && Renderer.renderVault) {
+      Renderer.renderVault();
+      console.log('\ud83d\udd04 Vault UI updated via event');
+    }
+  });
+  
+  // Fallback: Listen for direct DOM element events
+  const memoryList = qs('#memoryList');
+  const tasksList = qs('#tasksList');
+  const goalsList = qs('#goalsList');
+  const vaultList = qs('#vaultList');
+  
+  if (memoryList) {
+    memoryList.addEventListener('force-update', () => {
+      if (Renderer && Renderer.renderMemories) {
+        Renderer.renderMemories();
+      }
+    });
+  }
+  
+  if (tasksList) {
+    tasksList.addEventListener('force-update', () => {
+      if (Renderer && Renderer.renderTasks) {
+        Renderer.renderTasks();
+      }
+    });
+  }
+  
+  if (goalsList) {
+    goalsList.addEventListener('force-update', () => {
+      if (Renderer && Renderer.renderGoals) {
+        Renderer.renderGoals();
+      }
+    });
+  }
+  
+  if (vaultList) {
+    vaultList.addEventListener('force-update', () => {
+      if (Renderer && Renderer.renderVault) {
+        Renderer.renderVault();
+      }
+    });
+  }
 }
