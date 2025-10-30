@@ -37,8 +37,7 @@ Comprehensive roadmap for maximum modularity including:
 #### 🏗️ **8 Implementation Phases:**
 
 **Phase 1: Foundation** (Week 1-2)
-- Plugin manager and lifecycle hooks
-- Dependency injection container
+- Extension points and registry system
 - Interface contracts
 - Break down large modules
 - Configuration management
@@ -57,7 +56,7 @@ Comprehensive roadmap for maximum modularity including:
 - API middleware chain
 - Storage middleware
 - Rendering middleware
-- Plugin hook integration
+- Extension points integration
 
 **Phase 5: Advanced Patterns** (Week 9-10)
 - Factory pattern for module creation
@@ -109,25 +108,26 @@ Comprehensive roadmap for maximum modularity including:
 4. **Better Documentation** - Interface contracts
 
 ### Long-term Extensibility
-1. **Plugin Architecture** - Add features without touching core
+1. **Modular Architecture** - Add features by writing new code modules
 2. **Provider System** - Swap implementations (API, storage, execution)
-3. **Middleware Hooks** - Intercept/transform at any stage
+3. **Middleware Chains** - Intercept/transform at any stage
 4. **Component System** - Reusable UI components
 
-### Future Plugin Examples
+### Adding New Features Is Easy
 ```javascript
-// Custom LLM provider
-app.registerAPIProvider('ollama', OllamaProvider);
+// 1. Write a class that implements an interface
+class OllamaProvider {
+  async generateContent(prompt, options) { /* ... */ }
+  async validateKey(key) { /* ... */ }
+  async listModels() { /* ... */ }
+}
 
-// Cloud storage sync
-app.registerStorageProvider('cloud', CloudProvider);
+// 2. Register it
+Registry.register(ExtensionPoints.API_PROVIDERS, 'ollama', OllamaProvider);
 
-// Custom UI components
-app.registerComponent('chart', ChartComponent);
-
-// Middleware interceptors
-app.use(loggingMiddleware);
-app.use(cacheMiddleware);
+// 3. Use it
+const provider = Registry.get(ExtensionPoints.API_PROVIDERS, 'ollama');
+const api = new provider({ /* config */ });
 ```
 
 ---
@@ -163,10 +163,9 @@ js/
 ## 📋 IMPLEMENTATION CHECKLIST
 
 ### Priority 1: Foundation (Week 1-2)
-- [ ] Create `plugin-manager.js` - Plugin registration & lifecycle
-- [ ] Create `hooks.js` - Extensibility hook system
+- [ ] Create `extension-points.js` - Define extension points
+- [ ] Create `registry.js` - Register implementations
 - [ ] Create `interfaces.js` - Contract definitions
-- [ ] Create `dependency-container.js` - Dependency injection
 - [ ] Split `reasoning-parser.js` (530 lines → 4 modules)
 - [ ] Extract configuration to `config/` directory
 
@@ -245,7 +244,7 @@ js/
 - ✅ **Zero Performance Regression**
 
 ### Extensibility
-- ✅ **Plugin System:** Functional with example plugins
+- ✅ **Extension Points:** Clear extension points for all major features
 - ✅ **Provider Interfaces:** 3+ providers per type
 - ✅ **Middleware:** 5+ middleware types implemented
 - ✅ **100% Backward Compatibility**
@@ -254,38 +253,38 @@ js/
 
 ## 🎓 KEY DESIGN PATTERNS
 
-1. **Plugin Pattern** - Add features without modifying core
+1. **Registry Pattern** - Register and retrieve implementations
 2. **Adapter Pattern** - Swap implementations (storage, API, execution)
 3. **Strategy Pattern** - Choose algorithms at runtime
 4. **Factory Pattern** - Centralized object creation
 5. **Observer Pattern** - Event-driven communication
 6. **Middleware Pattern** - Interceptor chains
-7. **Dependency Injection** - Loose coupling
-8. **Interface Segregation** - Contract-based design
+7. **Interface Segregation** - Contract-based design
+8. **Extension Points** - Well-defined places to add features
 
 ---
 
 ## 🔮 FUTURE POSSIBILITIES
 
-With this architecture, you can easily plug in:
+With this architecture, you can easily add new code modules for:
 
 ### API Providers
-- OpenAI GPT-4, Claude, Ollama (local), Mistral, Cohere, etc.
+- Write classes implementing IAPIProvider: OpenAI, Claude, Ollama, Mistral, Cohere
 
 ### Storage Providers
-- IndexedDB (large data), Cloud sync, Memory cache, File system
+- Write classes implementing IStorageProvider: IndexedDB, Cloud sync, Memory cache
 
 ### Execution Engines
-- Web Workers (isolation), WASM (performance), Sandbox (security)
+- Write classes implementing IExecutionEngine: Web Workers, WASM, Sandbox
 
 ### UI Components
-- Charts/graphs, Markdown editor, Syntax highlighter, Export tools
+- Write new renderer modules: Charts/graphs, Markdown editor, Syntax highlighter
 
 ### Middleware
-- Request logging, Response caching, Data encryption, Analytics
+- Write middleware functions: Request logging, Response caching, Data encryption
 
 ### Integrations
-- GitHub, Notion, Confluence, Slack, Discord, etc.
+- Write integration modules: GitHub, Notion, Confluence, Slack, Discord
 
 ---
 
@@ -296,11 +295,11 @@ With this architecture, you can easily plug in:
 2. **Approve architecture** (Provide feedback if needed)
 3. **Begin Phase 1 implementation**
 4. **Set up testing framework**
-5. **Create first example plugin**
+5. **Create example implementations** (e.g., add a new API provider)
 
 ### Questions to Consider:
 - Which phase should we prioritize?
-- Are there specific plugins you want to build?
+- Are there specific features you want to add first?
 - Do you need TypeScript support?
 - What testing framework would you prefer?
 - Any custom providers you need immediately?
