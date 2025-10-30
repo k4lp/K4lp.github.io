@@ -315,256 +315,134 @@ el.innerHTML = templates.key.render({ key });
 
 ---
 
-## PHASE 4: MIDDLEWARE & INTERCEPTORS
+## PHASE 4 (REVISED): EVENT HANDLER DECOMPOSITION
 
-### 4.1 API Middleware Chain
-**Goal:** Allow easy addition of request/response interceptors
+**NOTE:** Phase 4-8 from original plan focused on adding NEW features (middleware, advanced patterns, etc.).
+**User requested HYBRID approach:** Only modularize existing code, don't add new features.
 
-#### Create Middleware System
-```
-js/api/
-├── middleware/
-│   ├── middleware-chain.js       (Middleware executor)
-│   ├── retry-middleware.js       (Retry logic)
-│   ├── rate-limit-middleware.js  (Rate limiting)
-│   ├── cache-middleware.js       (Response caching)
-│   ├── logging-middleware.js     (Request logging)
-│   └── transform-middleware.js   (Request/response transforms)
-```
+### 4.1 Break Down ui/events.js (270 lines)
+**Goal:** Separate event handlers by responsibility for better maintainability
 
-**How to Add New Middleware:**
-```javascript
-// 1. Write middleware function
-const customMiddleware = async (context, next) => {
-  // Before API call
-  console.log('Request:', context.request);
-
-  // Call next middleware
-  await next();
-
-  // After API call
-  console.log('Response:', context.response);
-};
-
-// 2. Add to chain
-APIClient.use(customMiddleware);
-
-// Execution flow:
-// Request → Middleware 1 → Middleware 2 → API → Middleware 2 → Middleware 1 → Response
-```
-
----
-
-### 4.2 Storage Middleware
-**Goal:** Transform data before save/load
-
-```
-js/storage/
-├── middleware/
-│   ├── encryption-middleware.js  (Encrypt sensitive data)
-│   ├── compression-middleware.js (Compress large data)
-│   ├── validation-middleware.js  (Validate before save)
-│   └── sync-middleware.js        (Cloud sync)
-```
-
----
-
-### 4.3 Rendering Middleware
-**Goal:** Transform data before rendering
-
+#### New Structure
 ```
 js/ui/
-├── middleware/
-│   ├── sanitize-middleware.js    (XSS prevention)
-│   ├── markdown-middleware.js    (Markdown rendering)
-│   ├── syntax-middleware.js      (Code syntax highlighting)
-│   └── filter-middleware.js      (Filter/search)
+├── events.js                    (Main coordinator, ~40 lines)
+└── handlers/
+    ├── handler-config.js        (~50 lines - Max tokens input)
+    ├── handler-clear.js         (~45 lines - Clear buttons)
+    ├── handler-keys.js          (~70 lines - Key management)
+    ├── handler-session.js       (~30 lines - Run/Model selector)
+    ├── handler-code.js          (~15 lines - Code execution)
+    ├── handler-export.js        (~30 lines - Export button)
+    ├── handler-modal.js         (~20 lines - Vault modal)
+    └── handler-storage.js       (~80 lines - Storage events)
 ```
+
+**Responsibilities:**
+- **handler-config.js**: Max output tokens input handling and validation
+- **handler-clear.js**: Clear memory, goals, vault buttons
+- **handler-keys.js**: API key validation and management
+- **handler-session.js**: Run button and model selector
+- **handler-code.js**: Code execution buttons
+- **handler-export.js**: Export to text file
+- **handler-modal.js**: Vault modal open/close
+- **handler-storage.js**: Storage event listeners for reactive UI updates
 
 ---
 
-## PHASE 5: ADVANCED PATTERNS
+## PHASE 5 (REVISED): OPTIONAL DECOMPOSITION
 
-### 5.1 Factory Pattern for Module Creation
-**Goal:** Centralized module instantiation
+### 5.1 Review control/loop-controller.js (250 lines)
+**Goal:** Assess if breakdown is beneficial
 
-```
-js/core/
-├── factories/
-│   ├── storage-factory.js    (Create storage instances)
-│   ├── api-factory.js        (Create API instances)
-│   ├── executor-factory.js   (Create executors)
-│   └── renderer-factory.js   (Create renderers)
-```
+**Current Status:** Well-organized with clear function separation
+- startSession / stopSession
+- runIteration (main logic)
+- handleIterationError
+- finishSession
+- updateIterationDisplay
 
-**Benefits:**
-- Dependency injection at creation
-- Easy to swap implementations
-- Centralized configuration
+**Decision:** Keep as single file unless specific issues arise. File is cohesive and not overly complex.
 
 ---
 
-### 5.2 Strategy Pattern for Algorithms
-**Goal:** Swappable algorithm implementations
+## PHASE 6 (REVISED): CLEANUP & DOCUMENTATION
 
-#### Examples:
-```
-js/reasoning/
-├── strategies/
-│   ├── parsing-strategy.js         (Interface)
-│   ├── xml-parsing-strategy.js     (Current implementation)
-│   ├── json-parsing-strategy.js    (Future: JSON format)
-│   └── markdown-parsing-strategy.js (Future: Markdown format)
-```
+### 6.1 Cleanup Redundant Files
+**Goal:** Remove truly unnecessary files while maintaining backward compatibility
 
-```
-js/execution/
-├── strategies/
-│   ├── execution-strategy.js       (Interface)
-│   ├── sync-execution-strategy.js  (Synchronous code)
-│   ├── async-execution-strategy.js (Async/await code)
-│   └── stream-execution-strategy.js (Streaming output)
-```
+**Keep These Re-export Files (Required for Backward Compatibility):**
+- `js/reasoning/reasoning-parser.js` (re-exports parser/*)
+- `js/ui/renderer.js` (re-exports renderer/*)
+- `js/core/constants.js` (re-exports config/*)
+
+**Review and Remove:**
+- Any old backup files
+- Unused temporary files
+- Duplicate implementations
 
 ---
 
-### 5.3 Observer Pattern Enhancement
-**Goal:** Rich event system with payload transformation
+### 6.2 Documentation Enhancement
+**Goal:** Document the modular architecture
 
-#### Enhanced Event System
-```
-js/core/
-├── events/
-│   ├── event-bus.js         (Current, enhanced)
-│   ├── event-emitter.js     (Base class for event sources)
-│   ├── event-aggregator.js  (Combine multiple events)
-│   ├── event-logger.js      (Debug/audit trail)
-│   └── event-replay.js      (Event sourcing for undo/redo)
-```
-
-**New Capabilities:**
-- Event priorities
-- Event cancellation
-- Event batching
-- Event persistence
-- Time-travel debugging
+**Tasks:**
+- Update js/README.md with current structure
+- Add JSDoc to new modules
+- Document extension points with examples
+- Create architecture diagram
 
 ---
 
-## PHASE 6: UTILITY DECOMPOSITION
+## ORIGINAL PHASE 4-8: FUTURE ENHANCEMENTS (DEFERRED)
 
-### 6.1 Break Down Utils
-**Goal:** Specialized utility modules
+**These phases are for ADDING NEW FEATURES, not modularizing existing code.**
+**Deferred until user requests these specific enhancements:**
 
-```
-js/utils/
-├── dom-utils.js          (DOM operations)
-├── string-utils.js       (String manipulation)
-├── validation-utils.js   (Input validation)
-├── format-utils.js       (Date, number formatting)
-├── async-utils.js        (Promise helpers, debounce, throttle)
-├── array-utils.js        (Array operations)
-└── object-utils.js       (Deep clone, merge, etc.)
-```
+- ~~Phase 4: Middleware & Interceptors~~ (New feature - Deferred)
+- ~~Phase 5: Advanced Patterns~~ (New feature - Deferred)
+- ~~Phase 6: Utility Decomposition~~ (Utils already well-organized)
+- ~~Phase 7: Testing Infrastructure~~ (New feature - Deferred)
+- ~~Phase 8: TypeScript Definitions~~ (New feature - Deferred)
 
 ---
 
-### 6.2 Create Helper Libraries
-**Goal:** Reusable helper functions
+## IMPLEMENTATION ROADMAP (REVISED - HYBRID APPROACH)
 
-```
-js/helpers/
-├── api-helpers.js        (API-specific helpers)
-├── storage-helpers.js    (Storage operations)
-├── ui-helpers.js         (UI manipulation)
-└── parse-helpers.js      (Parsing utilities)
-```
+### Priority 1: Foundation ✅ COMPLETE
+- [x] Create extension-points.js
+- [x] Create registry.js
+- [x] Create interfaces.js
+- [x] Break down reasoning-parser.js (530 → 4 modules)
+- [x] Extract configuration management (4 config files)
 
----
+### Priority 2: Abstraction ✅ COMPLETE
+- [x] Storage provider interface (LocalStorageProvider)
+- [x] API provider interface (GeminiProvider)
+- [x] Execution engine interface (BrowserExecutionEngine)
+- [x] Register default providers
 
-## PHASE 7: TESTING INFRASTRUCTURE
+### Priority 3: Decomposition ✅ COMPLETE
+- [x] Break down renderer.js (426 → 7 modules)
+- [x] All renderer modules under 165 lines
+- [x] Backward compatibility maintained
 
-### 7.1 Test Utilities
-**Goal:** Make modules easily testable
+### Priority 4: Event Handler Decomposition (IN PROGRESS)
+- [ ] Break down events.js (270 → 8 handler modules)
+- [ ] Create handlers/ directory structure
+- [ ] Maintain backward compatibility
 
-```
-js/test/
-├── mocks/
-│   ├── mock-storage.js       (Mock storage provider)
-│   ├── mock-api.js           (Mock API provider)
-│   ├── mock-executor.js      (Mock code executor)
-│   └── mock-renderer.js      (Mock renderer)
-├── fixtures/
-│   ├── sample-responses.js   (Sample API responses)
-│   ├── sample-data.js        (Sample storage data)
-│   └── sample-code.js        (Sample code snippets)
-└── test-utils.js             (Testing helpers)
-```
+### Priority 5: Final Cleanup (PENDING)
+- [ ] Review all re-export files
+- [ ] Clean up any redundant code
+- [ ] Update documentation
+- [ ] Test all functionality
 
----
-
-## PHASE 8: DOCUMENTATION & TYPES
-
-### 8.1 JSDoc Enhancement
-**Goal:** Complete type documentation
-
-- Add JSDoc to every function
-- Define complex types
-- Document interfaces
-- Parameter validation
-
-### 8.2 TypeScript Definitions (Optional)
-**Goal:** Type safety without TypeScript
-
-```
-js/types/
-├── index.d.ts            (Main type definitions)
-├── storage.d.ts          (Storage types)
-├── api.d.ts              (API types)
-├── events.d.ts           (Event types)
-└── ui.d.ts               (UI types)
-```
-
----
-
-## IMPLEMENTATION ROADMAP
-
-### Priority 1: Foundation (Week 1-2)
-- [ ] Create extension-points.js
-- [ ] Create registry.js
-- [ ] Create interfaces.js
-- [ ] Break down reasoning-parser.js
-- [ ] Extract configuration management
-
-### Priority 2: Abstraction (Week 3-4)
-- [ ] Storage provider interface
-- [ ] API provider interface
-- [ ] Execution engine interface
-- [ ] Refactor existing code to use interfaces
-
-### Priority 3: Decomposition (Week 5-6)
-- [ ] Break down renderer.js
-- [ ] Create component-based rendering
-- [ ] Add templating system
-- [ ] Break down utils.js
-
-### Priority 4: Middleware (Week 7-8)
-- [ ] API middleware chain
-- [ ] Storage middleware
-- [ ] Rendering middleware
-- [ ] Extension points integration
-
-### Priority 5: Advanced (Week 9-10)
-- [ ] Factory pattern implementation
-- [ ] Strategy pattern implementation
-- [ ] Enhanced event system
-- [ ] Observer pattern enhancements
-
-### Priority 6: Polish (Week 11-12)
-- [ ] Testing infrastructure
-- [ ] Documentation
-- [ ] Type definitions
-- [ ] Performance optimization
+### DEFERRED: Future Feature Additions
+- ~~Middleware system~~ (New feature, not modularization)
+- ~~Advanced patterns~~ (New feature, not modularization)
+- ~~Testing infrastructure~~ (New feature, not modularization)
+- ~~TypeScript definitions~~ (New feature, not modularization)
 
 ---
 
