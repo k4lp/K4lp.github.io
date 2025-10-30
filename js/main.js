@@ -1,58 +1,122 @@
 /**
- * GDRS Main Bootstrap
- * Modular main entry point - coordinates all modules
- * Version 1.1.4 - Now fully modular and maintainable!
+ * GDRS Main Bootstrap - Streamlined Modular Architecture
+ * Clean entry point with event-driven initialization
  */
 
-// Import core modules
+// Core modules
 import { boot } from './core/boot.js';
 import { VERSION } from './core/constants.js';
+import { AsyncDetector } from './core/async-detector.js';
+import { eventBus, Events } from './core/event-bus.js';
 
-// Import all modules for global access
+// Storage layer
 import { Storage } from './storage/storage.js';
 import { VaultManager } from './storage/vault-manager.js';
+
+// API layer  
 import { KeyManager } from './api/key-manager.js';
 import { GeminiAPI } from './api/gemini-client.js';
+
+// Reasoning layer
 import { ReasoningParser } from './reasoning/reasoning-parser.js';
 import { ReasoningEngine } from './reasoning/reasoning-engine.js';
+
+// Execution layer
 import { JSExecutor } from './execution/js-executor.js';
 import { CodeExecutor } from './execution/code-executor.js';
+
+// Control layer
 import { LoopController } from './control/loop-controller.js';
+
+// UI layer
 import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
 
-// Self-executing anonymous function to avoid global pollution
+/**
+ * Self-executing bootstrap with clean module organization
+ */
 (function() {
   'use strict';
 
-  // Boot when DOM is ready
+  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('DOMContentLoaded', initializeGDRS);
   } else {
-    boot();
+    initializeGDRS();
   }
 
-  // Export to global scope for debugging (maintains backward compatibility)
-  if (typeof window !== 'undefined') {
-    window.GDRS = window.GDRS || {};
-    Object.assign(window.GDRS, {
+  /**
+   * Main initialization function
+   */
+  function initializeGDRS() {
+    console.log('%cGDRS v' + VERSION + ' - Streamlined Modular Architecture', 'color: #00ff00; font-weight: bold;');
+    
+    // Create global GDRS namespace
+    window.GDRS = {
+      // Version info
       VERSION,
+      
+      // Core modules
+      AsyncDetector,
+      eventBus,
+      Events,
+      
+      // Storage layer (2 modules)
       Storage,
       VaultManager,
+      
+      // API layer (2 modules)
       KeyManager,
       GeminiAPI,
+      
+      // Reasoning layer (2 modules)
       ReasoningParser,
       ReasoningEngine,
+      
+      // Execution layer (2 modules)
       JSExecutor,
       CodeExecutor,
+      
+      // Control layer (1 module)
       LoopController,
+      
+      // UI layer (2 modules + events)
       Renderer,
       bindEvents,
-      boot
-    });
+      
+      // Initialization
+      boot,
+      
+      // Runtime state
+      currentIteration: 0
+    };
+    
+    // Initialize renderer with event bus
+    Renderer.init();
+    
+    // Run boot sequence
+    boot();
+    
+    console.log('%c\u2705 GDRS Initialized - 12 Core Modules Loaded', 'color: #00aa00; font-weight: bold;');
+    console.log('%c\ud83d\udce6 Architecture: core(4) + storage(2) + api(2) + reasoning(2) + execution(2) + control(1) + ui(3)', 'color: #0066ff;');
+    console.log('%c\ud83d\udce1 Event-driven updates enabled for maximum modularity', 'color: #ff6600;');
   }
-
-  console.log('%cGDRS v' + VERSION + ' - Modular Architecture Loaded', 'color: #00ff00; font-weight: bold;');
-  console.log('%c✅ All 14 modules loaded successfully!', 'color: #00aa00;');
-  console.log('%c📁 Module structure: core(3) + storage(2) + api(2) + reasoning(2) + execution(2) + ui(3) + control(1)', 'color: #0066ff;');
+  
+  /**
+   * Development helpers
+   */
+  if (typeof window !== 'undefined') {
+    window.GDRS_DEBUG = {
+      enableEventDebug: () => eventBus.setDebugMode(true),
+      disableEventDebug: () => eventBus.setDebugMode(false),
+      listEvents: () => eventBus.getRegisteredEvents(),
+      clearAllData: () => {
+        if (confirm('Clear all GDRS data? This cannot be undone.')) {
+          Object.values(LS_KEYS).forEach(key => localStorage.removeItem(key));
+          location.reload();
+        }
+      }
+    };
+  }
+  
 })();
