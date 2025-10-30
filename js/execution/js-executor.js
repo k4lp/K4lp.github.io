@@ -1,206 +1,249 @@
 /**
  * GDRS JavaScript Executor
- * Auto JavaScript execution from LLM responses with COMPLETE ASYNC SUPPORT
+ * Clean, modular async execution with intelligent detection
  */
 
 import { VaultManager } from '../storage/vault-manager.js';
 import { Storage } from '../storage/storage.js';
+import { AsyncDetector } from '../core/async-detector.js';
 import { generateId, nowISO } from '../core/utils.js';
 
 export const JSExecutor = {
-  // CRITICAL FIX: Complete async execution with proper return value capture
+  /**
+   * Execute JavaScript code with intelligent async detection
+   */
   async executeCode(rawCode) {
     const startTime = Date.now();
     const executionId = generateId('exec');
     
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
+    const originalConsole = this._captureConsole();
+    const logs = [];
     
     try {
-      // Resolve vault references in the code
+      // Resolve vault references
       const expandedCode = VaultManager.resolveVaultRefsInText(rawCode);
+      const vaultRefsUsed = this._extractVaultRefs(rawCode);
       
-      // Track vault references used
-      const vaultRefsUsed = [];
-      const vaultRefRegex = /{{<vaultref\s+id=["']([^"']+)["']\s*\/>}}/g;
-      let vaultMatch;
-      while ((vaultMatch = vaultRefRegex.exec(rawCode)) !== null) {
-        vaultRefsUsed.push(vaultMatch[1]);
-      }
+      // Intelligent async detection (excluding comments/strings)
+      const isAsync = AsyncDetector.isAsyncCode(expandedCode);
+      const complexity = AsyncDetector.getAsyncComplexity(expandedCode);
       
-      // Capture console output
-      const logs = [];
+      console.log(`\ud83d\udd04 Executing ${isAsync ? 'async' : 'sync'} code (complexity: ${complexity.level})`);
       
-      console.log = (...args) => {
-        const message = args.map(arg => {
-          if (typeof arg === 'object') {
-            try { return JSON.stringify(arg, null, 2); } catch { return String(arg); }
-          }
-          return String(arg);
-        }).join(' ');
-        logs.push({ type: 'log', message });
-        originalLog.apply(console, args);
-      };
-      
-      console.error = (...args) => {
-        const message = args.map(arg => String(arg)).join(' ');
-        logs.push({ type: 'error', message });
-        originalError.apply(console, args);
-      };
-      
-      console.warn = (...args) => {
-        const message = args.map(arg => String(arg)).join(' ');
-        logs.push({ type: 'warn', message });
-        originalWarn.apply(console, args);
-      };
-
-      // CRITICAL FIX: Enhanced async detection and execution with proper return capture
-      const hasAsync = /\b(async|await|fetch|then|Promise|setTimeout)\b|\.then\s*\(/gi.test(expandedCode);
-      
-      let result;
-      
-      if (hasAsync) {
-        // CRITICAL: Improved async wrapper that properly captures return values
-        const asyncWrapper = `
-          (async () => {
-            try {
-              ${expandedCode}
-              
-              // If code doesn't explicitly return, capture last expression
-              ${expandedCode.includes('return') ? '' : '; return undefined;'}
-            } catch (error) {
-              console.error('Async execution error:', error);
-              throw error;
-            }
-          })()
-        `;
-        
-        console.log('\ud83d\udd04 Detected async code, executing with full await support...');
-        
-        try {
-          const asyncFn = new Function(`return ${asyncWrapper}`);
-          const promise = asyncFn();
-          
-          // Add timeout protection for hanging promises
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Async execution timeout (30s)')), 30000);
-          });
-          
-          result = await Promise.race([promise, timeoutPromise]);
-          console.log('\u2705 Async execution completed successfully');
-        } catch (asyncError) {
-          console.error('\u274c Async execution failed:', asyncError);
-          throw asyncError;
-        }
-      } else {
-        // Synchronous execution
-        const fn = new Function(expandedCode);
-        result = fn();
-      }
+      // Execute with proper async handling
+      const result = isAsync ? 
+        await this._executeAsync(expandedCode) : 
+        this._executeSync(expandedCode);
       
       const executionTime = Date.now() - startTime;
       
-      // Store execution result
+      // Build execution result
       const executionResult = {
         id: executionId,
         success: true,
         code: rawCode,
-        expandedCode: expandedCode,
-        result: result,
-        logs: logs,
-        executionTime: executionTime,
-        vaultRefsUsed: vaultRefsUsed,
-        wasAsync: hasAsync,
+        expandedCode,
+        result,
+        logs: this._getCaptureLogs(),
+        executionTime,
+        vaultRefsUsed,
+        wasAsync: isAsync,
+        complexity: complexity.level,
         timestamp: nowISO()
       };
       
-      Storage.appendExecutionResult(executionResult);
-      Storage.appendToolActivity({
-        type: 'js_execute',
-        action: 'execute',
-        id: executionId,
-        status: 'success',
-        executionTime: executionTime,
-        codeSize: rawCode.length,
-        vaultRefsUsed: vaultRefsUsed.length,
-        logsCount: logs.length,
-        wasAsync: hasAsync
-      });
+      this._persistExecution(executionResult);
+      this._updateUI(executionResult);
       
-      // Add execution result to reasoning log
-      const logEntries = Storage.loadReasoningLog();
-      const executionSummary = `=== JAVASCRIPT EXECUTION RESULT ===
-SUCCESS: true
-EXECUTION TYPE: ${hasAsync ? 'Async (awaited)' : 'Sync'}
-EXECUTION TIME: ${executionTime}ms
-CONSOLE OUTPUT:
-${logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}
-RETURN VALUE:
-${result !== undefined ? JSON.stringify(result, null, 2) : 'undefined'}`;
-      
-      logEntries.push(executionSummary);
-      Storage.saveReasoningLog(logEntries);
-      
-      // Update the console output in the UI
-      setTimeout(() => {
-        const execOutput = document.querySelector('#execOutput');
-        if (execOutput) {
-          const outputText = [
-            ...logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`),
-            result !== undefined ? `[RETURN] ${JSON.stringify(result, null, 2)}` : ''
-          ].filter(Boolean).join('\n');
-          execOutput.textContent = outputText || 'No output';
-        }
-      }, 50);
-      
-      console.log(`\u2713 JavaScript execution completed successfully (${executionTime}ms, ${hasAsync ? 'async' : 'sync'})`);
+      console.log(`\u2713 Execution completed (${executionTime}ms, ${isAsync ? 'async' : 'sync'})`);
       return executionResult;
       
     } catch (error) {
-      const executionTime = Date.now() - startTime;
-      
-      const executionResult = {
-        id: executionId,
-        success: false,
-        code: rawCode,
-        error: error.message,
-        stack: error.stack,
-        executionTime: executionTime,
-        timestamp: nowISO()
-      };
-      
-      Storage.appendExecutionResult(executionResult);
-      Storage.appendToolActivity({
-        type: 'js_execute',
-        action: 'execute',
-        id: executionId,
-        status: 'error',
-        error: error.message,
-        executionTime: executionTime,
-        codeSize: rawCode.length
-      });
-      
-      // Add to reasoning log for LLM feedback
-      const logEntries = Storage.loadReasoningLog();
-      logEntries.push(`=== JAVASCRIPT EXECUTION RESULT ===\nSUCCESS: false\nERROR: ${error.message}\nSTACK: ${error.stack}`);
-      Storage.saveReasoningLog(logEntries);
-      
-      // Update the console output in the UI
-      setTimeout(() => {
-        const execOutput = document.querySelector('#execOutput');
-        if (execOutput) {
-          execOutput.textContent = `[ERROR] ${error.message}\n${error.stack || ''}`;
-        }
-      }, 50);
-      
-      console.error('\u2717 JavaScript execution failed:', error);
-      return executionResult;
+      return this._handleExecutionError(error, rawCode, executionId, startTime);
     } finally {
-      // Always restore console functions
-      console.log = originalLog;
-      console.error = originalError;
-      console.warn = originalWarn;
+      this._restoreConsole(originalConsole);
     }
+  },
+  
+  /**
+   * Execute synchronous code
+   */
+  _executeSync(code) {
+    const fn = new Function(code);
+    return fn();
+  },
+  
+  /**
+   * Execute asynchronous code with proper wrapping
+   */
+  async _executeAsync(code) {
+    // Smart async wrapper that preserves returns
+    const hasExplicitReturn = /\breturn\b/.test(code);
+    
+    const wrapper = `
+      (async () => {
+        ${code}
+        ${hasExplicitReturn ? '' : '\n        return undefined;'}
+      })()
+    `;
+    
+    const fn = new Function(`return ${wrapper}`);
+    const promise = fn();
+    
+    // Timeout protection
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Async execution timeout (30s)')), 30000);
+    });
+    
+    return await Promise.race([promise, timeoutPromise]);
+  },
+  
+  /**
+   * Capture console output
+   */
+  _captureConsole() {
+    const original = {
+      log: console.log,
+      error: console.error,
+      warn: console.warn
+    };
+    
+    this._captureLogs = [];
+    
+    console.log = (...args) => {
+      const message = args.map(this._formatArg).join(' ');
+      this._captureLogs.push({ type: 'log', message });
+      original.log.apply(console, args);
+    };
+    
+    console.error = (...args) => {
+      const message = args.map(this._formatArg).join(' ');
+      this._captureLogs.push({ type: 'error', message });
+      original.error.apply(console, args);
+    };
+    
+    console.warn = (...args) => {
+      const message = args.map(this._formatArg).join(' ');
+      this._captureLogs.push({ type: 'warn', message });
+      original.warn.apply(console, args);
+    };
+    
+    return original;
+  },
+  
+  /**
+   * Restore original console
+   */
+  _restoreConsole(original) {
+    Object.assign(console, original);
+  },
+  
+  /**
+   * Get captured logs
+   */
+  _getCaptureLogs() {
+    return [...(this._captureLogs || [])];
+  },
+  
+  /**
+   * Format console arguments
+   */
+  _formatArg(arg) {
+    if (typeof arg === 'object') {
+      try { return JSON.stringify(arg, null, 2); } catch { return String(arg); }
+    }
+    return String(arg);
+  },
+  
+  /**
+   * Extract vault references from code
+   */
+  _extractVaultRefs(code) {
+    const refs = [];
+    const regex = /{{<vaultref\s+id=["']([^"']+)["']\s*\/>}}/g;
+    let match;
+    while ((match = regex.exec(code)) !== null) {
+      refs.push(match[1]);
+    }
+    return refs;
+  },
+  
+  /**
+   * Persist execution result
+   */
+  _persistExecution(result) {
+    Storage.appendExecutionResult(result);
+    Storage.appendToolActivity({
+      type: 'js_execute',
+      action: 'execute',
+      id: result.id,
+      status: 'success',
+      executionTime: result.executionTime,
+      codeSize: result.code.length,
+      vaultRefsUsed: result.vaultRefsUsed.length,
+      wasAsync: result.wasAsync,
+      complexity: result.complexity
+    });
+    
+    // Add to reasoning log
+    const logEntries = Storage.loadReasoningLog();
+    logEntries.push(`=== JAVASCRIPT EXECUTION ===\nID: ${result.id}\nTYPE: ${result.wasAsync ? 'Async' : 'Sync'} (${result.complexity})\nTIME: ${result.executionTime}ms\nOUTPUT: ${result.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRESULT: ${result.result !== undefined ? JSON.stringify(result.result, null, 2) : 'undefined'}`);
+    Storage.saveReasoningLog(logEntries);
+  },
+  
+  /**
+   * Handle execution errors
+   */
+  _handleExecutionError(error, rawCode, executionId, startTime) {
+    const executionTime = Date.now() - startTime;
+    
+    const executionResult = {
+      id: executionId,
+      success: false,
+      code: rawCode,
+      error: error.message,
+      stack: error.stack,
+      executionTime,
+      timestamp: nowISO()
+    };
+    
+    Storage.appendExecutionResult(executionResult);
+    Storage.appendToolActivity({
+      type: 'js_execute',
+      action: 'execute',
+      id: executionId,
+      status: 'error',
+      error: error.message,
+      executionTime,
+      codeSize: rawCode.length
+    });
+    
+    const logEntries = Storage.loadReasoningLog();
+    logEntries.push(`=== JAVASCRIPT EXECUTION ERROR ===\nID: ${executionId}\nERROR: ${error.message}\nSTACK: ${error.stack || 'No stack trace'}`);
+    Storage.saveReasoningLog(logEntries);
+    
+    this._updateUI({ error: error.message, stack: error.stack });
+    console.error('\u2717 JavaScript execution failed:', error);
+    return executionResult;
+  },
+  
+  /**
+   * Update UI with execution results
+   */
+  _updateUI(result) {
+    setTimeout(() => {
+      const execOutput = document.querySelector('#execOutput');
+      if (execOutput) {
+        if (result.error) {
+          execOutput.textContent = `[ERROR] ${result.error}\n${result.stack || ''}`;
+        } else if (result.logs) {
+          const outputText = [
+            ...result.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`),
+            result.result !== undefined ? `[RETURN] ${JSON.stringify(result.result, null, 2)}` : ''
+          ].filter(Boolean).join('\n');
+          execOutput.textContent = outputText || 'No output';
+        }
+      }
+    }, 50);
   }
 };
