@@ -6,8 +6,9 @@
 import { Storage } from '../storage/storage.js';
 import { VaultManager } from '../storage/vault-manager.js';
 import { JSExecutor } from '../execution/js-executor.js';
-import { Renderer } from '../ui/renderer.js';
 import { nowISO } from '../core/utils.js';
+// CRITICAL FIX: Remove Renderer import to avoid circular dependency
+// import { Renderer } from '../ui/renderer.js';
 
 export const ReasoningParser = {
   extractReasoningBlocks(text) {
@@ -149,7 +150,7 @@ export const ReasoningParser = {
     return attrs;
   },
 
-  // ISSUE 3 FIX: Made async to properly handle JS execution awaiting
+  // ASYNC: Properly handle async operations
   async applyOperations(operations) {
     const startTime = Date.now();
     let operationsApplied = 0;
@@ -203,7 +204,7 @@ export const ReasoningParser = {
         }
       });
 
-      // ISSUE 3 FIX: Execute JavaScript blocks with proper async support
+      // Execute JavaScript blocks with proper async support
       if (operations.jsExecute.length > 0) {
         const lastCode = operations.jsExecute[operations.jsExecute.length - 1];
         Storage.saveLastExecutedCode(lastCode);
@@ -247,7 +248,7 @@ export const ReasoningParser = {
         }
       }
 
-      // ISSUE 1 FIX: Handle final output - LLM-generated (VERIFIED)
+      // Handle final output - LLM-generated (VERIFIED)
       operations.finalOutput.forEach((htmlContent, index) => {
         try {
           const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
@@ -288,13 +289,15 @@ export const ReasoningParser = {
       const totalTime = Date.now() - startTime;
       console.log(`\u2713 Applied ${operationsApplied} operations in ${totalTime}ms`);
       
-      // ISSUE 2 FIX: Force UI update after all operations
+      // CRITICAL FIX: Force complete UI refresh after all operations - no circular dependency
       setTimeout(() => {
+        // Dynamically access Renderer to avoid circular dependency
+        const Renderer = window.GDRS?.Renderer;
         if (Renderer && Renderer.renderAll) {
           Renderer.renderAll();
           console.log('\ud83d\udd04 UI refreshed after operations');
         }
-      }, 100); // Small delay to ensure storage writes complete
+      }, 100);
       
     } catch (error) {
       console.error('Critical error in applyOperations:', error);
