@@ -1,7 +1,6 @@
 /**
  * Browser Execution Engine
- *
- * Implementation of IExecutionEngine for browser-based code execution
+ * Professional implementation of IExecutionEngine for browser-based code execution
  */
 
 import { AsyncDetector } from '../../core/async-detector.js';
@@ -9,6 +8,7 @@ import { AsyncDetector } from '../../core/async-detector.js';
 /**
  * BrowserExecutionEngine
  * Implements IExecutionEngine interface for executing code in the browser
+ * with intelligent async detection and REPL-style implicit returns
  */
 export class BrowserExecutionEngine {
   constructor(options = {}) {
@@ -19,6 +19,7 @@ export class BrowserExecutionEngine {
 
   /**
    * Execute code in the browser environment
+   *
    * @param {string} code - JavaScript code to execute
    * @param {Object} context - Execution context (variables, vault access, etc.)
    * @returns {Promise<Object>} Execution result with output, logs, errors
@@ -31,14 +32,19 @@ export class BrowserExecutionEngine {
     this._startConsoleCapture();
 
     try {
-      // Detect if code is async
-      const isAsync = AsyncDetector.isAsyncCode(code);
+      // Detect if code requires async wrapping (only top-level await does)
+      const requiresAsync = AsyncDetector.isAsyncCode(code);
       const complexity = AsyncDetector.getAsyncComplexity(code);
 
-      // Execute with appropriate handler
-      const result = isAsync ?
-        await this._executeAsync(code, context) :
-        this._executeSync(code, context);
+      // Execute with appropriate strategy
+      let result;
+      if (requiresAsync) {
+        // Code has top-level await - must wrap in async function
+        result = await this._executeAsync(code, context);
+      } else {
+        // Code may return a promise, but doesn't need async wrapping
+        result = await this._executeSyncOrPromise(code, context);
+      }
 
       const executionTime = Date.now() - startTime;
 
@@ -49,8 +55,9 @@ export class BrowserExecutionEngine {
         logs: this.capturedLogs,
         error: null,
         executionTime,
-        wasAsync: isAsync,
+        requiresAsync,
         complexity: complexity.level,
+        features: complexity.features,
         timestamp: new Date().toISOString()
       };
 
@@ -68,7 +75,7 @@ export class BrowserExecutionEngine {
           name: error.name
         },
         executionTime,
-        wasAsync: AsyncDetector.isAsyncCode(code),
+        requiresAsync: AsyncDetector.isAsyncCode(code),
         timestamp: new Date().toISOString()
       };
 
@@ -78,7 +85,97 @@ export class BrowserExecutionEngine {
   }
 
   /**
+   * Execute code that doesn't require async wrapper, but may return a promise
+   * Implements REPL-style implicit return with context injection
+   *
+   * @private
+   * @param {string} code - JavaScript code
+   * @param {Object} context - Execution context variables
+   * @returns {Promise<any>} Execution result
+   */
+  async _executeSyncOrPromise(code, context) {
+    const contextKeys = Object.keys(context);
+    const contextValues = Object.values(context);
+    let result;
+
+    // Strategy 1: Try to execute as an expression (implicit return)
+    try {
+      const fn = new Function(...contextKeys, `return (${code.trim()})`);
+      result = fn(...contextValues);
+    } catch (expressionError) {
+      // Strategy 2: If expression syntax fails, execute as statement block
+      try {
+        const fn = new Function(...contextKeys, code);
+        result = fn(...contextValues);
+      } catch (statementError) {
+        // If both fail, throw the more relevant error
+        throw statementError;
+      }
+    }
+
+    // If result is a promise, await it with timeout protection
+    if (result && typeof result.then === 'function') {
+      return await this._withTimeout(result);
+    }
+
+    return result;
+  }
+
+  /**
+   * Execute code that requires async context (has top-level await)
+   * Implements REPL-style implicit return in async context with context injection
+   *
+   * @private
+   * @param {string} code - JavaScript code with await
+   * @param {Object} context - Execution context variables
+   * @returns {Promise<any>} Execution result
+   */
+  async _executeAsync(code, context) {
+    const contextKeys = Object.keys(context);
+    const contextValues = Object.values(context);
+    const trimmedCode = code.trim();
+
+    // Strategy 1: Try to execute as expression with implicit return
+    try {
+      const wrapper = `(async () => { return (${trimmedCode}) })()`;
+      const fn = new Function(...contextKeys, `return ${wrapper}`);
+      const promise = fn(...contextValues);
+      return await this._withTimeout(promise);
+    } catch (expressionError) {
+      // Strategy 2: Execute as statement block
+      try {
+        const wrapper = `(async () => { ${code} })()`;
+        const fn = new Function(...contextKeys, `return ${wrapper}`);
+        const promise = fn(...contextValues);
+        return await this._withTimeout(promise);
+      } catch (statementError) {
+        // If both fail, throw the more relevant error
+        throw statementError;
+      }
+    }
+  }
+
+  /**
+   * Wrap promise with timeout protection
+   *
+   * @private
+   * @param {Promise} promise - Promise to protect
+   * @returns {Promise<any>} Protected promise
+   */
+  async _withTimeout(promise) {
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(
+        () => reject(new Error(`Execution timeout (${this.timeout}ms)`)),
+        this.timeout
+      );
+    });
+
+    return await Promise.race([promise, timeoutPromise]);
+  }
+
+  /**
    * Cleanup resources
+   *
    * @returns {Promise<void>}
    */
   async cleanup() {
@@ -88,12 +185,16 @@ export class BrowserExecutionEngine {
 
   /**
    * Check if this engine supports a feature
+   *
    * @param {string} feature - Feature name
    * @returns {boolean}
    */
   supports(feature) {
     const supportedFeatures = {
       'async': true,
+      'implicit-return': true,
+      'context-injection': true,
+      'promise-auto-await': true,
       'modules': false, // Browser engine doesn't support ES modules in eval
       'wasm': false,
       'workers': false,
@@ -107,55 +208,8 @@ export class BrowserExecutionEngine {
   }
 
   /**
-   * Execute synchronous code
-   * @private
-   */
-  _executeSync(code, context) {
-    // Inject context variables
-    const contextKeys = Object.keys(context);
-    const contextValues = Object.values(context);
-
-    // Create function with context
-    const fn = new Function(...contextKeys, code);
-    return fn(...contextValues);
-  }
-
-  /**
-   * Execute asynchronous code
-   * @private
-   */
-  async _executeAsync(code, context) {
-    // Inject context variables
-    const contextKeys = Object.keys(context);
-    const contextValues = Object.values(context);
-
-    // Smart async wrapper that preserves returns
-    const hasExplicitReturn = /\breturn\b/.test(code);
-
-    const wrapper = `
-      (async () => {
-        ${code}
-        ${hasExplicitReturn ? '' : '\n        return undefined;'}
-      })()
-    `;
-
-    // Create function with context
-    const fn = new Function(...contextKeys, `return ${wrapper}`);
-    const promise = fn(...contextValues);
-
-    // Timeout protection
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(
-        () => reject(new Error(`Async execution timeout (${this.timeout}ms)`)),
-        this.timeout
-      );
-    });
-
-    return await Promise.race([promise, timeoutPromise]);
-  }
-
-  /**
    * Start capturing console output
+   *
    * @private
    */
   _startConsoleCapture() {
@@ -190,6 +244,7 @@ export class BrowserExecutionEngine {
 
   /**
    * Stop capturing console output
+   *
    * @private
    */
   _stopConsoleCapture() {
@@ -205,7 +260,10 @@ export class BrowserExecutionEngine {
 
   /**
    * Format log argument for capture
+   *
    * @private
+   * @param {any} arg - Argument to format
+   * @returns {string} Formatted argument
    */
   _formatLogArg(arg) {
     if (arg === null) return 'null';
@@ -224,6 +282,7 @@ export class BrowserExecutionEngine {
 
   /**
    * Get engine information
+   *
    * @returns {Object}
    */
   getInfo() {
@@ -233,6 +292,9 @@ export class BrowserExecutionEngine {
       timeout: this.timeout,
       features: {
         async: this.supports('async'),
+        'implicit-return': this.supports('implicit-return'),
+        'context-injection': this.supports('context-injection'),
+        'promise-auto-await': this.supports('promise-auto-await'),
         console: this.supports('console'),
         fetch: this.supports('fetch'),
         dom: this.supports('dom')

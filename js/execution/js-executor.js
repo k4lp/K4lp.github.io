@@ -1,6 +1,6 @@
 /**
  * GDRS JavaScript Executor
- * Clean, modular async execution with intelligent detection
+ * Professional async execution with intelligent implicit return support
  */
 
 import { VaultManager } from '../storage/vault-manager.js';
@@ -10,33 +10,40 @@ import { generateId, nowISO } from '../core/utils.js';
 
 export const JSExecutor = {
   /**
-   * Execute JavaScript code with intelligent async detection
+   * Execute JavaScript code with intelligent async/sync detection and implicit returns
+   *
+   * @param {string} rawCode - Raw JavaScript code to execute
+   * @returns {Promise<Object>} Execution result
    */
   async executeCode(rawCode) {
     const startTime = Date.now();
     const executionId = generateId('exec');
-    
+
     const originalConsole = this._captureConsole();
-    const logs = [];
-    
+
     try {
       // Resolve vault references
       const expandedCode = VaultManager.resolveVaultRefsInText(rawCode);
       const vaultRefsUsed = this._extractVaultRefs(rawCode);
-      
-      // Intelligent async detection (excluding comments/strings)
-      const isAsync = AsyncDetector.isAsyncCode(expandedCode);
+
+      // Detect if code requires async wrapping (only top-level await does)
+      const requiresAsync = AsyncDetector.isAsyncCode(expandedCode);
       const complexity = AsyncDetector.getAsyncComplexity(expandedCode);
-      
-      console.log(`\ud83d\udd04 Executing ${isAsync ? 'async' : 'sync'} code (complexity: ${complexity.level})`);
-      
-      // Execute with proper async handling
-      const result = isAsync ? 
-        await this._executeAsync(expandedCode) : 
-        this._executeSync(expandedCode);
-      
+
+      console.log(`🔄 Executing ${requiresAsync ? 'async' : 'sync/promise'} code (${complexity.level})`);
+
+      // Execute with appropriate strategy
+      let result;
+      if (requiresAsync) {
+        // Code has top-level await - must wrap in async function
+        result = await this._executeAsync(expandedCode);
+      } else {
+        // Code may return a promise, but doesn't need async wrapping
+        result = await this._executeSyncOrPromise(expandedCode);
+      }
+
       const executionTime = Date.now() - startTime;
-      
+
       // Build execution result
       const executionResult = {
         id: executionId,
@@ -47,116 +54,189 @@ export const JSExecutor = {
         logs: this._getCaptureLogs(),
         executionTime,
         vaultRefsUsed,
-        wasAsync: isAsync,
+        requiresAsync,
         complexity: complexity.level,
+        features: complexity.features,
         timestamp: nowISO()
       };
-      
+
       this._persistExecution(executionResult);
       this._updateUI(executionResult);
-      
-      console.log(`\u2713 Execution completed (${executionTime}ms, ${isAsync ? 'async' : 'sync'})`);
+
+      console.log(`✓ Execution completed in ${executionTime}ms`);
       return executionResult;
-      
+
     } catch (error) {
       return this._handleExecutionError(error, rawCode, executionId, startTime);
     } finally {
       this._restoreConsole(originalConsole);
     }
   },
-  
+
   /**
-   * Execute synchronous code
+   * Execute code that doesn't require async wrapper, but may return a promise
+   * Implements REPL-style implicit return
+   *
+   * @private
+   * @param {string} code - JavaScript code
+   * @returns {Promise<any>} Execution result
    */
-  _executeSync(code) {
-    const fn = new Function(code);
-    return fn();
+  async _executeSyncOrPromise(code) {
+    let result;
+
+    // Strategy 1: Try to execute as an expression (implicit return)
+    try {
+      const fn = new Function(`return (${code.trim()})`);
+      result = fn();
+    } catch (expressionError) {
+      // Strategy 2: If expression syntax fails, execute as statement block
+      try {
+        const fn = new Function(code);
+        result = fn();
+      } catch (statementError) {
+        // If both fail, throw the more relevant error
+        throw statementError;
+      }
+    }
+
+    // If result is a promise, await it with timeout protection
+    if (result && typeof result.then === 'function') {
+      return await this._withTimeout(result);
+    }
+
+    return result;
   },
-  
+
   /**
-   * Execute asynchronous code with proper wrapping
+   * Execute code that requires async context (has top-level await)
+   * Implements REPL-style implicit return in async context
+   *
+   * @private
+   * @param {string} code - JavaScript code with await
+   * @returns {Promise<any>} Execution result
    */
   async _executeAsync(code) {
-    // Smart async wrapper that preserves returns
-    const hasExplicitReturn = /\breturn\b/.test(code);
-    
-    const wrapper = `
-      (async () => {
-        ${code}
-        ${hasExplicitReturn ? '' : '\n        return undefined;'}
-      })()
-    `;
-    
-    const fn = new Function(`return ${wrapper}`);
-    const promise = fn();
-    
-    // Timeout protection
+    const trimmedCode = code.trim();
+
+    // Strategy 1: Try to execute as expression with implicit return
+    try {
+      const wrapper = `(async () => { return (${trimmedCode}) })()`;
+      const fn = new Function(`return ${wrapper}`);
+      const promise = fn();
+      return await this._withTimeout(promise);
+    } catch (expressionError) {
+      // Strategy 2: Execute as statement block
+      try {
+        const wrapper = `(async () => { ${code} })()`;
+        const fn = new Function(`return ${wrapper}`);
+        const promise = fn();
+        return await this._withTimeout(promise);
+      } catch (statementError) {
+        // If both fail, throw the more relevant error
+        throw statementError;
+      }
+    }
+  },
+
+  /**
+   * Wrap promise with timeout protection
+   *
+   * @private
+   * @param {Promise} promise - Promise to protect
+   * @param {number} timeout - Timeout in milliseconds
+   * @returns {Promise<any>} Protected promise
+   */
+  async _withTimeout(promise, timeout = 30000) {
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Async execution timeout (30s)')), 30000);
+      setTimeout(
+        () => reject(new Error(`Execution timeout (${timeout}ms)`)),
+        timeout
+      );
     });
-    
+
     return await Promise.race([promise, timeoutPromise]);
   },
-  
+
   /**
    * Capture console output
+   *
+   * @private
+   * @returns {Object} Original console methods
    */
   _captureConsole() {
     const original = {
       log: console.log,
       error: console.error,
-      warn: console.warn
+      warn: console.warn,
+      info: console.info,
+      debug: console.debug
     };
-    
+
     this._captureLogs = [];
-    
-    console.log = (...args) => {
+
+    const createCaptureFunction = (type) => (...args) => {
       const message = args.map(this._formatArg).join(' ');
-      this._captureLogs.push({ type: 'log', message });
-      original.log.apply(console, args);
+      this._captureLogs.push({ type, message, timestamp: Date.now() });
+      original[type].apply(console, args);
     };
-    
-    console.error = (...args) => {
-      const message = args.map(this._formatArg).join(' ');
-      this._captureLogs.push({ type: 'error', message });
-      original.error.apply(console, args);
-    };
-    
-    console.warn = (...args) => {
-      const message = args.map(this._formatArg).join(' ');
-      this._captureLogs.push({ type: 'warn', message });
-      original.warn.apply(console, args);
-    };
-    
+
+    console.log = createCaptureFunction('log');
+    console.error = createCaptureFunction('error');
+    console.warn = createCaptureFunction('warn');
+    console.info = createCaptureFunction('info');
+    console.debug = createCaptureFunction('debug');
+
     return original;
   },
-  
+
   /**
    * Restore original console
+   *
+   * @private
+   * @param {Object} original - Original console methods
    */
   _restoreConsole(original) {
     Object.assign(console, original);
   },
-  
+
   /**
    * Get captured logs
+   *
+   * @private
+   * @returns {Array} Captured log entries
    */
   _getCaptureLogs() {
     return [...(this._captureLogs || [])];
   },
-  
+
   /**
    * Format console arguments
+   *
+   * @private
+   * @param {any} arg - Argument to format
+   * @returns {string} Formatted argument
    */
   _formatArg(arg) {
+    if (arg === null) return 'null';
+    if (arg === undefined) return 'undefined';
+
     if (typeof arg === 'object') {
-      try { return JSON.stringify(arg, null, 2); } catch { return String(arg); }
+      try {
+        return JSON.stringify(arg, null, 2);
+      } catch {
+        return String(arg);
+      }
     }
+
     return String(arg);
   },
-  
+
   /**
    * Extract vault references from code
+   *
+   * @private
+   * @param {string} code - JavaScript code
+   * @returns {Array<string>} Vault reference IDs
    */
   _extractVaultRefs(code) {
     const refs = [];
@@ -167,9 +247,12 @@ export const JSExecutor = {
     }
     return refs;
   },
-  
+
   /**
    * Persist execution result
+   *
+   * @private
+   * @param {Object} result - Execution result
    */
   _persistExecution(result) {
     Storage.appendExecutionResult(result);
@@ -181,32 +264,53 @@ export const JSExecutor = {
       executionTime: result.executionTime,
       codeSize: result.code.length,
       vaultRefsUsed: result.vaultRefsUsed.length,
-      wasAsync: result.wasAsync,
-      complexity: result.complexity
+      requiresAsync: result.requiresAsync,
+      complexity: result.complexity,
+      features: result.features
     });
-    
+
     // Add to reasoning log
     const logEntries = Storage.loadReasoningLog();
-    logEntries.push(`=== JAVASCRIPT EXECUTION ===\nID: ${result.id}\nTYPE: ${result.wasAsync ? 'Async' : 'Sync'} (${result.complexity})\nTIME: ${result.executionTime}ms\nOUTPUT: ${result.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n')}\nRESULT: ${result.result !== undefined ? JSON.stringify(result.result, null, 2) : 'undefined'}`);
+    const resultStr = result.result !== undefined ?
+      JSON.stringify(result.result, null, 2) : 'undefined';
+    const logsStr = result.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n');
+
+    logEntries.push(
+      `=== JAVASCRIPT EXECUTION ===\n` +
+      `ID: ${result.id}\n` +
+      `TYPE: ${result.requiresAsync ? 'Async' : 'Sync/Promise'} (${result.complexity})\n` +
+      `FEATURES: ${result.features.join(', ') || 'none'}\n` +
+      `TIME: ${result.executionTime}ms\n` +
+      `LOGS:\n${logsStr || '(no logs)'}\n` +
+      `RESULT: ${resultStr}`
+    );
     Storage.saveReasoningLog(logEntries);
   },
-  
+
   /**
    * Handle execution errors
+   *
+   * @private
+   * @param {Error} error - Error object
+   * @param {string} rawCode - Original code
+   * @param {string} executionId - Execution ID
+   * @param {number} startTime - Execution start time
+   * @returns {Object} Error result
    */
   _handleExecutionError(error, rawCode, executionId, startTime) {
     const executionTime = Date.now() - startTime;
-    
+
     const executionResult = {
       id: executionId,
       success: false,
       code: rawCode,
       error: error.message,
       stack: error.stack,
+      logs: this._getCaptureLogs(),
       executionTime,
       timestamp: nowISO()
     };
-    
+
     Storage.appendExecutionResult(executionResult);
     Storage.appendToolActivity({
       type: 'js_execute',
@@ -217,18 +321,26 @@ export const JSExecutor = {
       executionTime,
       codeSize: rawCode.length
     });
-    
+
     const logEntries = Storage.loadReasoningLog();
-    logEntries.push(`=== JAVASCRIPT EXECUTION ERROR ===\nID: ${executionId}\nERROR: ${error.message}\nSTACK: ${error.stack || 'No stack trace'}`);
+    logEntries.push(
+      `=== JAVASCRIPT EXECUTION ERROR ===\n` +
+      `ID: ${executionId}\n` +
+      `ERROR: ${error.message}\n` +
+      `STACK: ${error.stack || 'No stack trace'}`
+    );
     Storage.saveReasoningLog(logEntries);
-    
+
     this._updateUI({ error: error.message, stack: error.stack });
-    console.error('\u2717 JavaScript execution failed:', error);
+    console.error('✗ JavaScript execution failed:', error);
     return executionResult;
   },
-  
+
   /**
    * Update UI with execution results
+   *
+   * @private
+   * @param {Object} result - Execution result
    */
   _updateUI(result) {
     setTimeout(() => {
@@ -236,12 +348,14 @@ export const JSExecutor = {
       if (execOutput) {
         if (result.error) {
           execOutput.textContent = `[ERROR] ${result.error}\n${result.stack || ''}`;
-        } else if (result.logs) {
-          const outputText = [
-            ...result.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`),
-            result.result !== undefined ? `[RETURN] ${JSON.stringify(result.result, null, 2)}` : ''
-          ].filter(Boolean).join('\n');
-          execOutput.textContent = outputText || 'No output';
+        } else if (result.logs || result.result !== undefined) {
+          const logLines = (result.logs || []).map(l => `[${l.type.toUpperCase()}] ${l.message}`);
+
+          if (result.result !== undefined) {
+            logLines.push(`[RETURN] ${JSON.stringify(result.result, null, 2)}`);
+          }
+
+          execOutput.textContent = logLines.join('\n') || 'No output';
         }
       }
     }, 50);

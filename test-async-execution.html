@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Async JS Execution Test</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #252526;
+      border-left: 3px solid #007acc;
+    }
+    .test-title {
+      color: #4ec9b0;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .test-code {
+      background: #1e1e1e;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+      color: #ce9178;
+    }
+    .test-result {
+      background: #1e1e1e;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+      white-space: pre-wrap;
+    }
+    .success {
+      border-left: 3px solid #4ec9b0;
+    }
+    .error {
+      border-left: 3px solid #f48771;
+      color: #f48771;
+    }
+    button {
+      background: #007acc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 3px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+    #allResults {
+      margin-top: 30px;
+      padding: 20px;
+      background: #252526;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔬 Async JavaScript Execution Test Suite</h1>
+  <p>Testing the professional async execution implementation</p>
+
+  <button onclick="runAllTests()">Run All Tests</button>
+  <button onclick="clearResults()">Clear Results</button>
+
+  <div id="allResults"></div>
+
+  <script type="module">
+    import { JSExecutor } from './js/execution/js-executor.js';
+    import { AsyncDetector } from './js/core/async-detector.js';
+
+    window.JSExecutor = JSExecutor;
+    window.AsyncDetector = AsyncDetector;
+
+    const testCases = [
+      {
+        name: "Simple sync expression",
+        code: "2 + 2",
+        expected: 4
+      },
+      {
+        name: "Sync Promise (no await)",
+        code: "Promise.resolve(42)",
+        shouldBePromise: true,
+        expected: 42
+      },
+      {
+        name: "Async expression with await",
+        code: "await Promise.resolve(99)",
+        expected: 99
+      },
+      {
+        name: "Fetch API with await (expression)",
+        code: "await fetch('https://jsonplaceholder.typicode.com/users/1').then(r => r.json())",
+        shouldHaveData: true
+      },
+      {
+        name: "Multiple awaits in block",
+        code: `
+const r1 = await fetch('https://jsonplaceholder.typicode.com/users/1');
+const data = await r1.json();
+data.name
+        `,
+        shouldHaveData: true
+      },
+      {
+        name: "Promise.all expression",
+        code: "await Promise.all([Promise.resolve(1), Promise.resolve(2), Promise.resolve(3)])",
+        expected: [1, 2, 3]
+      },
+      {
+        name: "Sync code with console.log",
+        code: "console.log('Hello World'); 'test'",
+        expected: 'test'
+      },
+      {
+        name: "Async code with console.log",
+        code: "console.log('Starting...'); await Promise.resolve('Done')",
+        expected: 'Done'
+      },
+      {
+        name: "Expression returning object",
+        code: "({a: 1, b: 2})",
+        expected: {a: 1, b: 2}
+      },
+      {
+        name: "Array expression",
+        code: "[1, 2, 3].map(x => x * 2)",
+        expected: [2, 4, 6]
+      }
+    ];
+
+    async function runTest(testCase) {
+      const startTime = Date.now();
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'test-section';
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'test-title';
+      titleDiv.textContent = `Test: ${testCase.name}`;
+      resultDiv.appendChild(titleDiv);
+
+      const codeDiv = document.createElement('div');
+      codeDiv.className = 'test-code';
+      codeDiv.textContent = testCase.code;
+      resultDiv.appendChild(codeDiv);
+
+      try {
+        // Check async detection
+        const isAsync = AsyncDetector.isAsyncCode(testCase.code);
+        const complexity = AsyncDetector.getAsyncComplexity(testCase.code);
+
+        const detectionDiv = document.createElement('div');
+        detectionDiv.textContent = `Detection: ${isAsync ? 'ASYNC' : 'SYNC/PROMISE'} | Complexity: ${complexity.level} | Features: ${complexity.features.join(', ') || 'none'}`;
+        detectionDiv.style.color = '#858585';
+        detectionDiv.style.fontSize = '12px';
+        resultDiv.appendChild(detectionDiv);
+
+        // Execute
+        const result = await JSExecutor.executeCode(testCase.code);
+        const executionTime = Date.now() - startTime;
+
+        const resultDataDiv = document.createElement('div');
+        resultDataDiv.className = 'test-result success';
+
+        let resultText = `✓ SUCCESS (${executionTime}ms)\n`;
+        resultText += `Result: ${JSON.stringify(result.result, null, 2)}\n`;
+
+        if (result.logs && result.logs.length > 0) {
+          resultText += `\nLogs:\n`;
+          result.logs.forEach(log => {
+            resultText += `  [${log.type}] ${log.message}\n`;
+          });
+        }
+
+        // Validate expected result
+        if (testCase.expected !== undefined) {
+          const matches = JSON.stringify(result.result) === JSON.stringify(testCase.expected);
+          resultText += `\nValidation: ${matches ? '✓ PASS' : '✗ FAIL'}`;
+          if (!matches) {
+            resultText += `\nExpected: ${JSON.stringify(testCase.expected)}`;
+            resultText += `\nGot: ${JSON.stringify(result.result)}`;
+          }
+        }
+
+        if (testCase.shouldHaveData) {
+          resultText += `\nData check: ${result.result && Object.keys(result.result).length > 0 ? '✓ PASS' : '✗ FAIL'}`;
+        }
+
+        resultDataDiv.textContent = resultText;
+        resultDiv.appendChild(resultDataDiv);
+
+      } catch (error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'test-result error';
+        errorDiv.textContent = `✗ ERROR\n${error.message}\n${error.stack}`;
+        resultDiv.appendChild(errorDiv);
+      }
+
+      return resultDiv;
+    }
+
+    window.runAllTests = async function() {
+      const resultsContainer = document.getElementById('allResults');
+      resultsContainer.innerHTML = '<h2>Test Results</h2>';
+
+      for (const testCase of testCases) {
+        const resultDiv = await runTest(testCase);
+        resultsContainer.appendChild(resultDiv);
+        // Small delay to see tests running
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'test-section';
+      summaryDiv.style.borderLeft = '3px solid #4ec9b0';
+      summaryDiv.innerHTML = `<h3>✓ All tests completed!</h3>`;
+      resultsContainer.appendChild(summaryDiv);
+    };
+
+    window.clearResults = function() {
+      document.getElementById('allResults').innerHTML = '';
+    };
+
+    // Auto-run on load
+    console.log('Test page loaded. Click "Run All Tests" to start.');
+  </script>
+</body>
+</html>
