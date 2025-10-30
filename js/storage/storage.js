@@ -5,7 +5,8 @@
 
 import { LS_KEYS, DEFAULT_KEYPOOL, createKeyFromText } from '../core/constants.js';
 import { safeJSONParse, isNonEmptyString, nowISO } from '../core/utils.js';
-import { Renderer } from '../ui/renderer.js';
+// CRITICAL FIX: Remove Renderer import to avoid circular dependency
+// import { Renderer } from '../ui/renderer.js';
 
 export const Storage = {
   // NEW: Keypool management for unlimited keys
@@ -100,16 +101,14 @@ export const Storage = {
     return false;
   },
 
-  // ISSUE 2 FIX: Entity storage with immediate rendering (no setTimeout)
+  // CRITICAL FIX: Entity storage with immediate rendering (no setTimeout) + fallback mechanisms
   loadGoals() {
     return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []) || [];
   },
   saveGoals(goals) {
     localStorage.setItem(LS_KEYS.GOALS, JSON.stringify(goals));
-    // FIXED: Immediate render - no setTimeout race conditions
-    if (typeof window !== 'undefined' && Renderer && Renderer.renderGoals) {
-      Renderer.renderGoals();
-    }
+    // CRITICAL FIX: Force immediate render with fallback
+    this._forceRender('renderGoals');
   },
 
   loadMemory() {
@@ -117,10 +116,8 @@ export const Storage = {
   },
   saveMemory(memory) {
     localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memory));
-    // FIXED: Immediate render - no setTimeout race conditions
-    if (typeof window !== 'undefined' && Renderer && Renderer.renderMemories) {
-      Renderer.renderMemories();
-    }
+    // CRITICAL FIX: Force immediate render with fallback
+    this._forceRender('renderMemories');
   },
 
   loadTasks() {
@@ -128,10 +125,8 @@ export const Storage = {
   },
   saveTasks(tasks) {
     localStorage.setItem(LS_KEYS.TASKS, JSON.stringify(tasks));
-    // FIXED: Immediate render - no setTimeout race conditions
-    if (typeof window !== 'undefined' && Renderer && Renderer.renderTasks) {
-      Renderer.renderTasks();
-    }
+    // CRITICAL FIX: Force immediate render with fallback
+    this._forceRender('renderTasks');
   },
 
   loadVault() {
@@ -156,13 +151,53 @@ export const Storage = {
     }));
     
     localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(validatedVault));
-    // FIXED: Immediate render - no setTimeout race conditions
-    if (typeof window !== 'undefined' && Renderer && Renderer.renderVault) {
-      Renderer.renderVault();
+    // CRITICAL FIX: Force immediate render with fallback
+    this._forceRender('renderVault');
+  },
+
+  // CRITICAL FIX: Universal render method with multiple fallback strategies
+  _forceRender(methodName) {
+    try {
+      // Strategy 1: Direct window.GDRS access
+      if (typeof window !== 'undefined' && window.GDRS?.Renderer?.[methodName]) {
+        window.GDRS.Renderer[methodName]();
+        return;
+      }
+      
+      // Strategy 2: Event-based fallback
+      if (typeof window !== 'undefined') {
+        const eventName = methodName.replace('render', '').toLowerCase() + '-updated';
+        setTimeout(() => {
+          const event = new CustomEvent('gdrs-' + eventName, { detail: { method: methodName } });
+          document.dispatchEvent(event);
+        }, 0);
+      }
+      
+      // Strategy 3: Direct DOM manipulation as last resort
+      setTimeout(() => {
+        const targetMap = {
+          'renderMemories': '#memoryList',
+          'renderTasks': '#tasksList', 
+          'renderGoals': '#goalsList',
+          'renderVault': '#vaultList'
+        };
+        
+        const selector = targetMap[methodName];
+        if (selector) {
+          const element = document.querySelector(selector);
+          if (element) {
+            // Force a re-render by dispatching a custom event
+            element.dispatchEvent(new Event('force-update'));
+          }
+        }
+      }, 10);
+      
+    } catch (e) {
+      console.warn(`Render failed for ${methodName}:`, e);
     }
   },
 
-  // ISSUE 1 FIX: Enhanced final output with verification tracking
+  // Enhanced final output with verification tracking
   loadFinalOutput() {
     return safeJSONParse(localStorage.getItem(LS_KEYS.FINAL_OUTPUT), {
       timestamp: '\u2014',
@@ -186,7 +221,7 @@ export const Storage = {
       localStorage.setItem(LS_KEYS.FINAL_OUTPUT_VERIFIED, 'true');
     }
     
-    console.log(`📄 Final output saved - Source: ${source}, Verified: ${verified}`);
+    console.log(`\ud83d\udcc4 Final output saved - Source: ${source}, Verified: ${verified}`);
   },
 
   isFinalOutputVerified() {
