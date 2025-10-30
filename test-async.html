@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JS Execution Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    .test {
+      margin: 15px 0;
+      padding: 15px;
+      background: #252526;
+      border-left: 3px solid #007acc;
+    }
+    .code {
+      background: #1e1e1e;
+      padding: 10px;
+      margin: 10px 0;
+      color: #ce9178;
+    }
+    .result {
+      background: #1e1e1e;
+      padding: 10px;
+      margin: 10px 0;
+      white-space: pre-wrap;
+    }
+    .success { border-left: 3px solid #4ec9b0; }
+    .error { border-left: 3px solid #f48771; color: #f48771; }
+    button {
+      background: #007acc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>JS Execution Test</h1>
+  <button onclick="runTests()">Run Tests</button>
+  <button onclick="results.innerHTML=''">Clear</button>
+  <div id="results"></div>
+
+  <script type="module">
+    import { JSExecutor } from './js/execution/js-executor.js';
+
+    const tests = [
+      { name: "Simple", code: "2 + 2", expect: 4 },
+      { name: "Promise", code: "Promise.resolve(42)", expect: 42 },
+      { name: "Await", code: "await Promise.resolve(99)", expect: 99 },
+      { name: "Fetch", code: "await fetch('https://jsonplaceholder.typicode.com/users/1').then(r => r.json())", expectObject: true },
+      { name: "Multi-await", code: "const r = await fetch('https://jsonplaceholder.typicode.com/users/1'); const d = await r.json(); d.name", expectString: true },
+      { name: "Promise.all", code: "await Promise.all([Promise.resolve(1), Promise.resolve(2)])", expect: [1, 2] },
+      { name: "Console+return", code: "console.log('test'); 'value'", expect: "value" },
+      { name: "Object", code: "({a: 1})", expect: {a: 1} },
+      { name: "Array", code: "[1,2,3].map(x => x*2)", expect: [2,4,6] }
+    ];
+
+    window.runTests = async function() {
+      const container = document.getElementById('results');
+      container.innerHTML = '<h2>Running...</h2>';
+
+      for (const test of tests) {
+        const div = document.createElement('div');
+        div.className = 'test';
+        div.innerHTML = `<strong>${test.name}</strong>`;
+
+        const codeDiv = document.createElement('div');
+        codeDiv.className = 'code';
+        codeDiv.textContent = test.code;
+        div.appendChild(codeDiv);
+
+        try {
+          const result = await JSExecutor.executeCode(test.code);
+
+          const resultDiv = document.createElement('div');
+          resultDiv.className = 'result success';
+
+          let text = `✓ Result: ${JSON.stringify(result.result, null, 2)}\n`;
+
+          if (result.logs?.length > 0) {
+            text += `\nLogs:\n${result.logs.map(l => `  [${l.type}] ${l.message}`).join('\n')}`;
+          }
+
+          if (test.expect !== undefined) {
+            const match = JSON.stringify(result.result) === JSON.stringify(test.expect);
+            text += `\n\nExpected: ${JSON.stringify(test.expect)}`;
+            text += `\n${match ? '✓ PASS' : '✗ FAIL'}`;
+          } else if (test.expectObject) {
+            text += `\n${result.result && typeof result.result === 'object' ? '✓ PASS' : '✗ FAIL'}`;
+          } else if (test.expectString) {
+            text += `\n${typeof result.result === 'string' && result.result.length > 0 ? '✓ PASS' : '✗ FAIL'}`;
+          }
+
+          resultDiv.textContent = text;
+          div.appendChild(resultDiv);
+
+        } catch (error) {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'result error';
+          errorDiv.textContent = `✗ ${error.message}`;
+          div.appendChild(errorDiv);
+        }
+
+        container.appendChild(div);
+        await new Promise(r => setTimeout(r, 50));
+      }
+
+      const summary = document.createElement('div');
+      summary.className = 'test success';
+      summary.innerHTML = '<h3>✓ Complete</h3>';
+      container.appendChild(summary);
+    };
+  </script>
+</body>
+</html>

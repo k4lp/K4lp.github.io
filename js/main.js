@@ -6,7 +6,6 @@
 // Core modules
 import { boot } from './core/boot.js';
 import { VERSION } from './core/constants.js';
-import { AsyncDetector } from './core/async-detector.js';
 import { eventBus, Events } from './core/event-bus.js';
 import { ExtensionPoints, Registry } from './core/extension-points.js';
 import { Interfaces } from './core/interfaces.js';
@@ -63,7 +62,6 @@ import { bindEvents } from './ui/events.js';
       VERSION,
 
       // Core modules
-      AsyncDetector,
       eventBus,
       Events,
       ExtensionPoints,
