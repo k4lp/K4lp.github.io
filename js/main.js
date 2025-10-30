@@ -14,10 +14,13 @@ import { Interfaces } from './core/interfaces.js';
 // Storage layer
 import { Storage } from './storage/storage.js';
 import { VaultManager } from './storage/vault-manager.js';
+import { LocalStorageProvider } from './storage/providers/localstorage-provider.js';
+import { storageProviderManager } from './storage/providers/storage-provider-manager.js';
 
-// API layer  
+// API layer
 import { KeyManager } from './api/key-manager.js';
 import { GeminiAPI } from './api/gemini-client.js';
+import { GeminiProvider } from './api/providers/gemini-provider.js';
 
 // Reasoning layer
 import { ReasoningParser } from './reasoning/reasoning-parser.js';
@@ -26,6 +29,7 @@ import { ReasoningEngine } from './reasoning/reasoning-engine.js';
 // Execution layer
 import { JSExecutor } from './execution/js-executor.js';
 import { CodeExecutor } from './execution/code-executor.js';
+import { BrowserExecutionEngine } from './execution/engines/browser-engine.js';
 
 // Control layer
 import { LoopController } from './control/loop-controller.js';
@@ -65,46 +69,56 @@ import { bindEvents } from './ui/events.js';
       ExtensionPoints,
       Registry,
       Interfaces,
-      
-      // Storage layer (2 modules)
+
+      // Storage layer (2 modules + providers)
       Storage,
       VaultManager,
-      
-      // API layer (2 modules)
+      LocalStorageProvider,
+      storageProviderManager,
+
+      // API layer (2 modules + providers)
       KeyManager,
       GeminiAPI,
-      
+      GeminiProvider,
+
       // Reasoning layer (2 modules)
       ReasoningParser,
       ReasoningEngine,
-      
-      // Execution layer (2 modules)
+
+      // Execution layer (2 modules + engines)
       JSExecutor,
       CodeExecutor,
-      
+      BrowserExecutionEngine,
+
       // Control layer (1 module)
       LoopController,
-      
+
       // UI layer (2 modules + events)
       Renderer,
       bindEvents,
-      
+
       // Initialization
       boot,
-      
+
       // Runtime state
       currentIteration: 0
     };
     
+    // Register default providers
+    Registry.register(ExtensionPoints.STORAGE_PROVIDERS, 'localStorage', LocalStorageProvider);
+    Registry.register(ExtensionPoints.API_PROVIDERS, 'gemini', GeminiProvider);
+    Registry.register(ExtensionPoints.EXECUTION_ENGINES, 'browser', BrowserExecutionEngine);
+    console.log('%c\ud83d\udd0c Default providers registered', 'color: #00aaff;');
+
     // Initialize renderer with event bus
     Renderer.init();
-    
+
     // Run boot sequence
     boot();
-    
+
     console.log('%c\u2705 GDRS Initialized - Modular Architecture Ready', 'color: #00aa00; font-weight: bold;');
-    console.log('%c\ud83d\udce6 Core Modules: 14 loaded | Parser: 4 sub-modules', 'color: #0066ff;');
-    console.log('%c\ud83d\udd0c Extension Points: Ready for custom implementations', 'color: #ff6600;');
+    console.log('%c\ud83d\udce6 Core Modules: 14 loaded | Parser: 4 sub-modules | Providers: 3 registered', 'color: #0066ff;');
+    console.log('%c\ud83d\udd0c Extension Points: 8 defined, ready for custom implementations', 'color: #ff6600;');
     console.log('%c\ud83d\udce1 Event-driven updates enabled for maximum modularity', 'color: #9966ff;');
   }
   
