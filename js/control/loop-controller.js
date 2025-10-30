@@ -72,7 +72,7 @@ export const LoopController = {
     Storage.saveToolActivityLog([]);
     Storage.saveLastExecutedCode('');
     Storage.saveFinalOutput(''); // Clear any previous final output
-    Storage.clearFinalOutputVerification(); // ISSUE 1 FIX: Clear verified flag on new session
+    Storage.clearFinalOutputVerification(); // Clear verified flag on new session
 
     // Initial render
     Renderer.renderAll();
@@ -126,7 +126,7 @@ async function runIteration() {
   updateIterationDisplay();
 
   try {
-    // ISSUE 1 FIX: Check if LLM has already provided verified final output
+    // Check if LLM has already provided verified final output
     if (Storage.isFinalOutputVerified()) {
       console.log('\u2705 LLM has provided verified final output, stopping session');
       const logEntries = Storage.loadReasoningLog();
@@ -165,7 +165,7 @@ async function runIteration() {
       Storage.saveReasoningLog(logEntries);
     }
 
-    // ISSUE 3 FIX: Apply operations from all reasoning blocks - WITH ASYNC SUPPORT
+    // CRITICAL: Apply operations from all reasoning blocks - WITH ASYNC SUPPORT
     for (const block of reasoningBlocks) {
       const operations = ReasoningParser.parseOperations(block);
       await ReasoningParser.applyOperations(operations); // CRITICAL: await async operations
@@ -191,6 +191,35 @@ async function runIteration() {
       await ensureFinalOutputExists(currentQuery);
       LoopController.stopSession();
       return;
+    }
+
+    // CRITICAL FIX: Extra check for final output if no final output after all iterations
+    if (iterationCount >= MAX_ITERATIONS - 5) { // Last 5 iterations
+      if (!Storage.isFinalOutputVerified()) {
+        console.warn('\u26a0\ufe0f No final output from LLM approaching max iterations, requesting explicit final output...');
+        
+        const promptForFinal = `${ReasoningEngine.buildContextPrompt(currentQuery, iterationCount)}
+
+CRITICAL: You have completed ${iterationCount} iterations but have not provided a final output yet.
+Please immediately generate a {{<final_output>}}...{{</final_output>}} block with your comprehensive findings.
+This is MANDATORY. Include all discoveries, analysis, and conclusions NOW.`;
+        
+        try {
+          const finalResponse = await GeminiAPI.generateContent(modelId, promptForFinal);
+          const finalText = GeminiAPI.extractResponseText(finalResponse);
+          
+          const finalBlocks = ReasoningParser.extractFinalOutputBlocks(finalText);
+          if (finalBlocks.length > 0) {
+            const processedHTML = VaultManager.resolveVaultRefsInText(finalBlocks[0]);
+            Storage.saveFinalOutput(processedHTML, true, 'llm');
+            console.log('\u2705 Successfully obtained final output from LLM');
+            LoopController.stopSession();
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to get final output from LLM:', e);
+        }
+      }
     }
 
     // Check iteration limit
@@ -244,7 +273,7 @@ async function runIteration() {
   }
 }
 
-// ISSUE 1 FIX: Simplified final output handling - LLM-first approach
+// LLM-first final output handling
 async function ensureFinalOutputExists(query) {
   const currentOutput = Storage.loadFinalOutput();
   
