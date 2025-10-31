@@ -53,13 +53,15 @@ export const JSExecutor = {
       console.error = originalError;
       console.warn = originalWarn;
 
+      const executionTime = Date.now() - startTime;
+
       const executionResult = {
         id: executionId,
         success: true,
         code: rawCode,
         result,
         logs,
-        executionTime: Date.now() - startTime,
+        executionTime,
         timestamp: nowISO()
       };
 
@@ -69,10 +71,25 @@ export const JSExecutor = {
       // Save as last executed
       Storage.saveLastExecutedCode(rawCode);
 
+      // Add to reasoning log for LLM visibility
+      const reasoningLog = Storage.loadReasoningLog();
+      const resultStr = result !== undefined ? JSON.stringify(result, null, 2) : 'undefined';
+      const logsStr = logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n');
+
+      reasoningLog.push(
+        `=== JAVASCRIPT EXECUTION ===\n` +
+        `ID: ${executionId}\n` +
+        `TIME: ${executionTime}ms\n` +
+        `CODE:\n${rawCode}\n` +
+        `CONSOLE OUTPUT:\n${logsStr || '(no output)'}\n` +
+        `RETURN VALUE: ${resultStr}`
+      );
+      Storage.saveReasoningLog(reasoningLog);
+
       // Update UI immediately
       this._updateUI(executionResult);
 
-      console.log(`✓ Execution completed in ${executionResult.executionTime}ms`);
+      console.log(`✓ Execution completed in ${executionTime}ms`);
       return executionResult;
 
     } catch (error) {
@@ -81,6 +98,8 @@ export const JSExecutor = {
       console.error = originalError;
       console.warn = originalWarn;
 
+      const executionTime = Date.now() - startTime;
+
       const executionResult = {
         id: executionId,
         success: false,
@@ -88,11 +107,23 @@ export const JSExecutor = {
         error: error.message,
         stack: error.stack,
         logs,
-        executionTime: Date.now() - startTime,
+        executionTime,
         timestamp: nowISO()
       };
 
       Storage.appendExecutionResult(executionResult);
+
+      // Add error to reasoning log for LLM visibility
+      const reasoningLog = Storage.loadReasoningLog();
+      reasoningLog.push(
+        `=== JAVASCRIPT EXECUTION ERROR ===\n` +
+        `ID: ${executionId}\n` +
+        `CODE:\n${rawCode}\n` +
+        `ERROR: ${error.message}\n` +
+        `STACK: ${error.stack || 'No stack trace'}`
+      );
+      Storage.saveReasoningLog(reasoningLog);
+
       this._updateUI(executionResult);
 
       console.error('✗ Execution failed:', error);
