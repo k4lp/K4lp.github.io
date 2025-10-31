@@ -67,32 +67,8 @@ export async function applyOperations(operations) {
       }
     });
 
-    // Execute JavaScript blocks with proper async support
-    if (operations.jsExecute.length > 0) {
-      const lastCode = operations.jsExecute[operations.jsExecute.length - 1];
-      Storage.saveLastExecutedCode(lastCode);
-
-      // Update code execution box
-      setTimeout(() => {
-        const codeInput = document.querySelector('#codeInput');
-        if (codeInput) {
-          codeInput.value = lastCode;
-          const execStatus = document.querySelector('#execStatus');
-          if (execStatus) {
-            execStatus.textContent = 'AUTO-EXEC';
-            execStatus.style.background = '#4CAF50';
-            execStatus.style.color = 'white';
-            setTimeout(() => {
-              execStatus.textContent = 'READY';
-              execStatus.style.background = '';
-              execStatus.style.color = '';
-            }, 3000);
-          }
-        }
-      }, 100);
-    }
-
-    // Execute all JS blocks sequentially with async support
+    // Execute all JS blocks sequentially
+    // (JSExecutor handles all UI updates)
     for (let index = 0; index < operations.jsExecute.length; index++) {
       const code = operations.jsExecute[index];
       try {
