@@ -28,7 +28,6 @@ import { ReasoningEngine } from './reasoning/reasoning-engine.js';
 // Execution layer
 import { JSExecutor } from './execution/js-executor.js';
 import { CodeExecutor } from './execution/code-executor.js';
-import { BrowserExecutionEngine } from './execution/engines/browser-engine.js';
 
 // Control layer
 import { LoopController } from './control/loop-controller.js';
@@ -83,10 +82,9 @@ import { bindEvents } from './ui/events.js';
       ReasoningParser,
       ReasoningEngine,
 
-      // Execution layer (2 modules + engines)
+      // Execution layer (2 modules)
       JSExecutor,
       CodeExecutor,
-      BrowserExecutionEngine,
 
       // Control layer (1 module)
       LoopController,
@@ -105,7 +103,6 @@ import { bindEvents } from './ui/events.js';
     // Register default providers
     Registry.register(ExtensionPoints.STORAGE_PROVIDERS, 'localStorage', LocalStorageProvider);
     Registry.register(ExtensionPoints.API_PROVIDERS, 'gemini', GeminiProvider);
-    Registry.register(ExtensionPoints.EXECUTION_ENGINES, 'browser', BrowserExecutionEngine);
     console.log('%c\ud83d\udd0c Default providers registered', 'color: #00aaff;');
 
     // Initialize renderer with event bus
