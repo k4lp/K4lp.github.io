@@ -1,284 +1,151 @@
 /**
- * JS Executor - Production-grade execution engine
- * Stateless, isolated, robust execution with proper async handling
+ * JSExecutor
+ *
+ * Unified facade over the execution manager that keeps the reasoning log and
+ * manual execution UI in sync. Both manual and automatic code paths flow
+ * through this API which guarantees serial execution and consistent results.
  */
 
-import { VaultManager } from '../storage/vault-manager.js';
+import { executionManager } from './execution-manager.js';
 import { Storage } from '../storage/storage.js';
-import { generateId, nowISO } from '../core/utils.js';
+import { eventBus, Events } from '../core/event-bus.js';
 
-/**
- * Console capture manager - ensures proper cleanup
- */
-class ConsoleCapture {
-  constructor() {
-    this.logs = [];
-    this.originalConsole = null;
-  }
-
-  start() {
-    this.logs = [];
-    this.originalConsole = {
-      log: console.log,
-      error: console.error,
-      warn: console.warn
-    };
-
-    const capture = (type) => (...args) => {
-      const msg = args.map(a => {
-        if (typeof a === 'object' && a !== null) {
-          try { return JSON.stringify(a, null, 2); }
-          catch { return String(a); }
-        }
-        return String(a);
-      }).join(' ');
-
-      this.logs.push({ type, message: msg });
-      this.originalConsole[type].apply(console, args);
-    };
-
-    console.log = capture('log');
-    console.error = capture('error');
-    console.warn = capture('warn');
-  }
-
-  stop() {
-    if (this.originalConsole) {
-      console.log = this.originalConsole.log;
-      console.error = this.originalConsole.error;
-      console.warn = this.originalConsole.warn;
-      this.originalConsole = null;
-    }
-  }
-
-  getLogs() {
-    return [...this.logs];
-  }
-}
-
-/**
- * Code executor - handles sync and async code properly
- */
-class CodeRunner {
-  async execute(code) {
-    // Detect if code contains await (requires async wrapper)
-    const needsAsync = /\bawait\s/.test(code);
-
-    if (needsAsync) {
-      return await this.executeAsync(code);
-    } else {
-      return await this.executeSync(code);
-    }
-  }
-
-  async executeSync(code) {
-    // Execute in async context to handle promises
-    const fn = new Function(`
-      return (async () => {
-        ${code}
-      })();
-    `);
-    return await fn();
-  }
-
-  async executeAsync(code) {
-    // Code has await - wrap in async function
-    const fn = new Function(`
-      return (async () => {
-        ${code}
-      })();
-    `);
-    return await fn();
-  }
-}
-
-/**
- * Main executor
- */
 export const JSExecutor = {
   /**
-   * Execute JavaScript code with full isolation and error handling
+   * Queue the supplied code for execution.
+   * @param {string} rawCode - Code emitted by the LLM or manual editor.
+   * @param {Object} options - Execution options
+   * @param {string} [options.source='auto'] - Source label (auto|manual|other)
+   * @param {Object} [options.context] - Arbitrary context metadata
+  * @param {Object} [options.metadata] - Optional metadata for activity logs
+   * @param {boolean} [options.updateUI=true] - Skip UI updates when false
+   * @param {number} [options.timeoutMs] - Override execution timeout
+   * @returns {Promise<Object>} Normalised execution result
    */
-  async executeCode(rawCode) {
-    const startTime = Date.now();
-    const executionId = generateId('exec');
+  async executeCode(rawCode, options = {}) {
+    const request = {
+      code: typeof rawCode === 'string' ? rawCode : '',
+      source: options.source || 'auto',
+      context: options.context || {},
+      metadata: options.metadata || {},
+      timeoutMs: options.timeoutMs
+    };
 
-    // Create isolated instances
-    const consoleCapture = new ConsoleCapture();
-    const codeRunner = new CodeRunner();
+    const result = await executionManager.enqueue(request);
+    this._recordReasoningLog(result);
 
-    try {
-      // Start console capture
-      consoleCapture.start();
-
-      // Resolve vault references
-      const code = VaultManager.resolveVaultRefsInText(rawCode);
-
-      // Execute code
-      let result;
-      try {
-        result = await codeRunner.execute(code);
-      } catch (execError) {
-        // Stop console capture before throwing
-        consoleCapture.stop();
-        throw execError;
-      }
-
-      // Stop console capture
-      consoleCapture.stop();
-
-      const executionTime = Date.now() - startTime;
-      const logs = consoleCapture.getLogs();
-
-      // Build success result
-      const executionResult = {
-        id: executionId,
-        success: true,
-        code: rawCode,
-        result,
-        logs,
-        executionTime,
-        timestamp: nowISO()
-      };
-
-      // Persist
-      this._persist(executionResult);
-
-      // Update UI
-      this._updateUI(executionResult);
-
-      console.log(`✓ Execution ${executionId} completed in ${executionTime}ms`);
-      return executionResult;
-
-    } catch (error) {
-      // Ensure console is restored
-      consoleCapture.stop();
-
-      const executionTime = Date.now() - startTime;
-      const logs = consoleCapture.getLogs();
-
-      // Build error result
-      const executionResult = {
-        id: executionId,
-        success: false,
-        code: rawCode,
-        error: error.message,
-        stack: error.stack,
-        logs,
-        executionTime,
-        timestamp: nowISO()
-      };
-
-      // Persist error
-      this._persist(executionResult);
-
-      // Update UI with error
-      this._updateUI(executionResult);
-
-      console.error(`✗ Execution ${executionId} failed:`, error.message);
-      return executionResult;
+    if (options.updateUI !== false) {
+      this._updateUI(result);
     }
+
+    eventBus.emit(Events.JS_EXECUTION_COMPLETE, result);
+    return result;
   },
 
   /**
-   * Persist execution result
+   * Persist execution narrative for the reasoning log pane.
+   * @private
    */
-  _persist(result) {
-    // Store execution result
-    Storage.appendExecutionResult(result);
-
-    // Save as last executed code
-    if (result.success) {
-      Storage.saveLastExecutedCode(result.code);
-    }
-
-    // Add to reasoning log for LLM
-    const reasoningLog = Storage.loadReasoningLog();
+  _recordReasoningLog(result) {
+    const entries = Storage.loadReasoningLog();
 
     if (result.success) {
-      const resultStr = result.result !== undefined
-        ? JSON.stringify(result.result, null, 2)
-        : 'undefined';
-      const logsStr = result.logs.map(l => `[${l.type.toUpperCase()}] ${l.message}`).join('\n');
-
-      reasoningLog.push(
-        `=== JAVASCRIPT EXECUTION ===\n` +
-        `ID: ${result.id}\n` +
-        `TIME: ${result.executionTime}ms\n` +
-        `CODE:\n${result.code}\n` +
-        `CONSOLE OUTPUT:\n${logsStr || '(no output)'}\n` +
-        `RETURN VALUE: ${resultStr}`
-      );
+      entries.push([
+        '=== JAVASCRIPT EXECUTION ===',
+        `ID: ${result.id}`,
+        `SOURCE: ${result.source}`,
+        `TIME: ${result.executionTime}ms`,
+        `CODE:\n${result.code}`,
+        `CONSOLE OUTPUT:\n${formatLogs(result.logs) || '(no output)'}`,
+        `RETURN VALUE:\n${stringifyReturn(result.result)}`
+      ].join('\n'));
     } else {
-      reasoningLog.push(
-        `=== JAVASCRIPT EXECUTION ERROR ===\n` +
-        `ID: ${result.id}\n` +
-        `CODE:\n${result.code}\n` +
-        `ERROR: ${result.error}\n` +
-        `STACK: ${result.stack || 'No stack trace'}`
-      );
+      entries.push([
+        '=== JAVASCRIPT EXECUTION ERROR ===',
+        `ID: ${result.id}`,
+        `SOURCE: ${result.source}`,
+        `CODE:\n${result.code}`,
+        `ERROR: ${result.error?.message || 'Unknown error'}`,
+        `STACK: ${result.error?.stack || 'No stack trace'}`
+      ].join('\n'));
     }
 
-    Storage.saveReasoningLog(reasoningLog);
+    Storage.saveReasoningLog(entries);
   },
 
   /**
-   * Update UI elements
+   * Update manual execution widgets to reflect the latest run.
+   * @private
    */
   _updateUI(result) {
-    // Update code input
     const codeInput = document.querySelector('#codeInput');
     if (codeInput) {
-      codeInput.value = result.code;
+      codeInput.value = result.code || '';
     }
 
-    // Update execution output
     const execOutput = document.querySelector('#execOutput');
     if (execOutput) {
-      if (result.error) {
-        execOutput.textContent = `[ERROR] ${result.error}\n${result.stack || ''}`;
-      } else {
-        const output = [];
-
-        // Add console logs
-        if (result.logs && result.logs.length > 0) {
-          result.logs.forEach(l => {
-            output.push(`[${l.type.toUpperCase()}] ${l.message}`);
-          });
-        }
-
-        // Add return value
-        if (result.result !== undefined) {
-          try {
-            output.push(`[RETURN] ${JSON.stringify(result.result, null, 2)}`);
-          } catch {
-            output.push(`[RETURN] ${String(result.result)}`);
-          }
-        }
-
-        execOutput.textContent = output.join('\n') || 'No output';
-      }
+      execOutput.textContent = buildOutputSummary(result);
     }
 
-    // Update status pill
     const execStatus = document.querySelector('#execStatus');
-    if (execStatus) {
-      if (result.error) {
-        execStatus.textContent = 'ERROR';
-        execStatus.style.background = '#f48771';
-        execStatus.style.color = 'white';
-      } else {
-        execStatus.textContent = 'AUTO-EXEC';
-        execStatus.style.background = '#4CAF50';
-        execStatus.style.color = 'white';
+    if (!execStatus) return;
 
-        // Reset after 3 seconds
-        setTimeout(() => {
-          execStatus.textContent = 'READY';
-          execStatus.style.background = '';
-          execStatus.style.color = '';
-        }, 3000);
-      }
+    if (result.success) {
+      execStatus.textContent = result.source === 'manual' ? 'MANUAL' : 'AUTO';
+      execStatus.style.background = '#4CAF50';
+      execStatus.style.color = 'white';
+      resetStatusLater(execStatus);
+    } else {
+      execStatus.textContent = 'ERROR';
+      execStatus.style.background = '#f48771';
+      execStatus.style.color = 'white';
     }
   }
 };
+
+function buildOutputSummary(result) {
+  if (!result.success) {
+    const message = result.error?.message || 'Unknown error';
+    const stack = result.error?.stack ? `\n${result.error.stack}` : '';
+    return `[ERROR] ${message}${stack}`;
+  }
+
+  const lines = [];
+
+  if (result.logs?.length) {
+    result.logs.forEach((entry) => {
+      lines.push(`[${entry.type.toUpperCase()}] ${entry.message}`);
+    });
+  }
+
+  if (result.result !== undefined) {
+    lines.push(`[RETURN] ${stringifyReturn(result.result)}`);
+  }
+
+  return lines.join('\n') || 'No output';
+}
+
+function formatLogs(logs) {
+  return (logs || [])
+    .map((entry) => `[${entry.type.toUpperCase()}] ${entry.message}`)
+    .join('\n');
+}
+
+function stringifyReturn(value) {
+  if (value === undefined) return 'undefined';
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function resetStatusLater(element) {
+  setTimeout(() => {
+    element.textContent = 'READY';
+    element.style.background = '';
+    element.style.color = '';
+  }, 2500);
+}
+

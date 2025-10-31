@@ -150,6 +150,7 @@ export const Events = {
   JS_EXECUTION_START: 'execution:start',
   JS_EXECUTION_COMPLETE: 'execution:complete',
   JS_EXECUTION_ERROR: 'execution:error',
+  JS_EXECUTION_QUEUE_CHANGED: 'execution:queue-changed',
   
   // Session events
   SESSION_START: 'session:start',

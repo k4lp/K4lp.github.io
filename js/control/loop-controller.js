@@ -156,7 +156,8 @@ async function runIteration() {
     // Apply operations with proper async support
     for (const block of reasoningBlocks) {
       const operations = ReasoningParser.parseOperations(block);
-      await ReasoningParser.applyOperations(operations);
+      const operationSummary = await ReasoningParser.applyOperations(operations);
+      recordOperationSummary(operationSummary, iterationCount);
     }
 
     // Emit iteration complete event
@@ -165,9 +166,6 @@ async function runIteration() {
       operations: reasoningBlocks.length 
     });
     
-    // Re-render after operations
-    setTimeout(() => Renderer.renderAll(), 50);
-
     // Check completion conditions
     if (Storage.isFinalOutputVerified()) {
       console.log('\u2705 Final output generated during iteration');
@@ -246,4 +244,29 @@ function finishSession(reason) {
 function updateIterationDisplay() {
   const iterCountEl = qs('#iterationCount');
   if (iterCountEl) iterCountEl.textContent = String(iterationCount);
+}
+
+/**
+ * Persist operation summary metadata for diagnostics.
+ */
+function recordOperationSummary(summary, iteration) {
+  if (!summary || !Array.isArray(summary.errors) || summary.errors.length === 0) {
+    return;
+  }
+
+  const logEntries = Storage.loadReasoningLog();
+  const errorSnippets = summary.errors
+    .map((err) => `- [${err.type}] ${err.id}: ${err.message}`)
+    .join('\n');
+
+  logEntries.push(
+    [
+      `=== ITERATION ${iteration} OPERATION WARNINGS ===`,
+      errorSnippets,
+      `Operation bundle duration: ${summary.duration}ms`
+    ].join('\n')
+  );
+
+  Storage.saveReasoningLog(logEntries);
+  Renderer.renderReasoningLog();
 }

@@ -14,7 +14,9 @@ export function bindCodeHandlers() {
   const clearExecBtn = qs('#clearExec');
 
   if (execBtn) {
-    execBtn.addEventListener('click', () => CodeExecutor.run());
+    execBtn.addEventListener('click', () => {
+      CodeExecutor.run().catch((error) => console.error('[CodeExecutor] Manual run failed', error));
+    });
   }
 
   if (clearExecBtn) {

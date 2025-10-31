@@ -1,386 +1,534 @@
 /**
- * Parser Appliers
+ * Parser Appliers (Re-architected)
  *
- * Apply parsed operations to storage and execute actions
+ * Applies parsed operations in a deterministic order with clear state reporting.
+ * All operations execute sequentially and emit structured summaries so callers
+ * can reason about what happened without relying on side effects.
  */
 
 import { Storage } from '../../storage/storage.js';
 import { VaultManager } from '../../storage/vault-manager.js';
 import { JSExecutor } from '../../execution/js-executor.js';
+import { eventBus, Events } from '../../core/event-bus.js';
 import { nowISO } from '../../core/utils.js';
 
+const TASK_STATUSES = ['pending', 'ongoing', 'finished', 'paused'];
+
 /**
- * Apply all operations (main orchestrator)
- * @param {Object} operations - Parsed operations object
- * @returns {Promise<void>}
+ * Apply the full operation bundle.
+ * @param {Object} operations Parsed operations
+ * @param {Object} [options]
+ * @param {boolean} [options.render=true] Whether to request a UI refresh when finished
+ * @returns {Promise<Object>} Summary of everything that happened
  */
-export async function applyOperations(operations) {
-  const startTime = Date.now();
-  let operationsApplied = 0;
+export async function applyOperations(operations, options = {}) {
+  const summary = createEmptySummary();
+  const startedAt = Date.now();
 
-  try {
-    // Apply vault operations FIRST (so they're available for subsequent operations)
-    operations.vault.forEach((op, index) => {
-      try {
-        applyVaultOperation(op, index);
-        operationsApplied++;
-      } catch (error) {
-        console.error(`Vault operation ${index} failed:`, error);
-        Storage.appendToolActivity({
-          type: 'vault',
-          action: op.action || 'unknown',
-          id: op.id || 'unknown',
-          status: 'error',
-          error: error.message,
-          operationIndex: index
-        });
-      }
-    });
+  await processVaultOperations(operations.vault, summary);
+  await processMemoryOperations(operations.memories, summary);
+  await processTaskOperations(operations.tasks, summary);
+  await processGoalOperations(operations.goals, summary);
 
-    // Apply memory operations
-    operations.memories.forEach((op, index) => {
-      try {
-        applyMemoryOperation(op);
-        operationsApplied++;
-      } catch (error) {
-        console.error(`Memory operation ${index} failed:`, error);
-      }
-    });
+  // Persist entity changes before executing code so scripts observe the latest state.
+  commitEntityChanges(summary);
 
-    // Apply task operations
-    operations.tasks.forEach((op, index) => {
-      try {
-        applyTaskOperation(op);
-        operationsApplied++;
-      } catch (error) {
-        console.error(`Task operation ${index} failed:`, error);
-      }
-    });
+  await processExecutionBlocks(operations.jsExecute, summary);
+  processFinalOutputs(operations.finalOutput, summary);
 
-    // Apply goal operations
-    operations.goals.forEach((op, index) => {
-      try {
-        applyGoalOperation(op);
-        operationsApplied++;
-      } catch (error) {
-        console.error(`Goal operation ${index} failed:`, error);
-      }
-    });
+  summary.duration = Date.now() - startedAt;
 
-    // Execute all JS blocks sequentially
-    // (JSExecutor handles all UI updates)
-    for (let index = 0; index < operations.jsExecute.length; index++) {
-      const code = operations.jsExecute[index];
-      try {
-        // CRITICAL: await the execution to handle async code properly
-        await JSExecutor.executeCode(code);
-        operationsApplied++;
-      } catch (error) {
-        console.error(`JS execution ${index} failed:`, error);
-        Storage.appendToolActivity({
-          type: 'js_execute',
-          action: 'execute',
-          status: 'error',
-          error: error.message,
-          operationIndex: index
-        });
-      }
-    }
-
-    // Handle final output - LLM-generated (VERIFIED)
-    operations.finalOutput.forEach((htmlContent, index) => {
-      try {
-        const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
-
-        // LLM-generated final output is ALWAYS verified
-        Storage.saveFinalOutput(processedHTML, true, 'llm');
-
-        Storage.appendToolActivity({
-          type: 'final_output',
-          action: 'generate',
-          status: 'success',
-          source: 'llm',
-          verified: true,
-          contentSize: processedHTML.length,
-          operationIndex: index
-        });
-
-        // Add to reasoning log for visibility
-        const logEntries = Storage.loadReasoningLog();
-        logEntries.push(`=== LLM-GENERATED FINAL OUTPUT (VERIFIED) ===\nGenerated at: ${new Date().toISOString()}\nContent size: ${processedHTML.length} characters\nVerification: PASSED`);
-        Storage.saveReasoningLog(logEntries);
-
-        console.log(`✅ LLM-generated final output received and verified (${processedHTML.length} chars)`);
-
-        operationsApplied++;
-      } catch (error) {
-        console.error(`Final output ${index} failed:`, error);
-        Storage.appendToolActivity({
-          type: 'final_output',
-          action: 'generate',
-          status: 'error',
-          error: error.message,
-          operationIndex: index
-        });
-      }
-    });
-
-    const totalTime = Date.now() - startTime;
-    console.log(`✓ Applied ${operationsApplied} operations in ${totalTime}ms`);
-
-    // CRITICAL FIX: Force complete UI refresh after all operations - no circular dependency
-    setTimeout(() => {
-      // Dynamically access Renderer to avoid circular dependency
-      const Renderer = window.GDRS?.Renderer;
-      if (Renderer && Renderer.renderAll) {
-        Renderer.renderAll();
-        console.log('🔄 UI refreshed after operations');
-      }
-    }, 100);
-
-  } catch (error) {
-    console.error('Critical error in applyOperations:', error);
+  if (options.render !== false) {
+    eventBus.emit(Events.UI_REFRESH_REQUEST);
   }
+
+  return summary;
 }
 
 /**
- * Apply vault operation
- * @param {Object} op - Vault operation
- * @param {number} [index] - Operation index for logging
+ * Backward-compatible single-operation helpers.
  */
-export function applyVaultOperation(op, index) {
-  const vault = Storage.loadVault();
-
-  if (op.delete) {
-    const originalLength = vault.length;
-    const filteredVault = vault.filter(v => v.identifier !== op.id);
-
-    if (filteredVault.length < originalLength) {
-      Storage.saveVault(filteredVault);
-      Storage.appendToolActivity({
-        type: 'vault',
-        action: 'delete',
-        id: op.id,
-        status: 'success',
-        entriesRemoved: originalLength - filteredVault.length
-      });
-      console.log(`🗑️ Deleted vault entry: ${op.id}`);
-    } else {
-      Storage.appendToolActivity({
-        type: 'vault',
-        action: 'delete',
-        id: op.id,
-        status: 'error',
-        error: 'Entry not found'
-      });
-    }
-  }
-  else if (op.action === 'request_read') {
-    const entry = vault.find(v => v.identifier === op.id);
-    if (entry) {
-      let content = entry.content;
-      if (op.limit && op.limit !== 'full-length') {
-        const limit = parseInt(op.limit) || 100;
-        content = content.substring(0, limit) + (content.length > limit ? '...' : '');
-      }
-      const readResult = `VAULT_READ[${op.id}]: ${content}`;
-      const logEntries = Storage.loadReasoningLog();
-      logEntries.push(`=== VAULT READ ===\n${readResult}`);
-      Storage.saveReasoningLog(logEntries);
-      Storage.appendToolActivity({
-        type: 'vault',
-        action: 'read',
-        id: op.id,
-        limit: op.limit || 'none',
-        status: 'success',
-        dataSize: entry.content.length
-      });
-      console.log(`📚 Read vault entry: ${op.id} (${content.length} chars)`);
-    } else {
-      Storage.appendToolActivity({
-        type: 'vault',
-        action: 'read',
-        id: op.id,
-        status: 'error',
-        error: 'Vault entry not found'
-      });
-      console.warn(`⚠️ Vault entry not found: ${op.id}`);
-    }
-  }
-  else if (op.id && op.content !== undefined) {
-    const existing = vault.find(v => v.identifier === op.id);
-
-    if (existing) {
-      existing.content = op.content;
-      existing.updatedAt = nowISO();
-      if (op.type) existing.type = op.type.toLowerCase();
-      if (op.description) existing.description = op.description;
-
-      Storage.saveVault(vault);
-      Storage.appendToolActivity({
-        type: 'vault',
-        action: 'update',
-        id: op.id,
-        dataType: existing.type,
-        dataSize: String(op.content).length,
-        status: 'success'
-      });
-      console.log(`📝 Updated vault entry: ${op.id} (${existing.type})`);
-    } else {
-      const newEntry = {
-        identifier: op.id,
-        type: (op.type || 'text').toLowerCase(),
-        description: op.description || '',
-        content: op.content,
-        createdAt: nowISO(),
-        updatedAt: nowISO()
-      };
-
-      vault.push(newEntry);
-      Storage.saveVault(vault);
-      Storage.appendToolActivity({
-        type: 'vault',
-        action: 'create',
-        id: op.id,
-        dataType: newEntry.type,
-        dataSize: String(op.content).length,
-        status: 'success'
-      });
-      console.log(`➕ Created vault entry: ${op.id} (${newEntry.type})`);
-    }
-  }
+export function applyVaultOperation(op) {
+  const summary = createEmptySummary();
+  return processVaultOperations([op], summary).then(() => {
+    commitEntityChanges(summary);
+    return summary;
+  });
 }
 
-/**
- * Apply memory operation
- * @param {Object} op - Memory operation
- */
 export function applyMemoryOperation(op) {
-  if (op.delete) {
-    const memories = Storage.loadMemory().filter(m => m.identifier !== op.identifier);
-    Storage.saveMemory(memories);
-    Storage.appendToolActivity({
-      type: 'memory',
-      action: 'delete',
-      id: op.identifier,
-      status: 'success'
-    });
-  } else if (op.identifier) {
-    const memories = Storage.loadMemory();
-    const existing = memories.find(m => m.identifier === op.identifier);
-    if (existing) {
-      if (op.notes !== undefined) existing.notes = op.notes;
-      Storage.saveMemory(memories);
-      Storage.appendToolActivity({
-        type: 'memory',
-        action: 'update',
-        id: op.identifier,
-        status: 'success'
-      });
-    } else if (op.heading && op.content) {
-      memories.push({
-        identifier: op.identifier,
-        heading: op.heading,
-        content: op.content,
-        notes: op.notes || '',
-        createdAt: nowISO()
-      });
-      Storage.saveMemory(memories);
-      Storage.appendToolActivity({
-        type: 'memory',
-        action: 'create',
-        id: op.identifier,
-        heading: op.heading,
-        status: 'success'
+  const summary = createEmptySummary();
+  return processMemoryOperations([op], summary).then(() => {
+    commitEntityChanges(summary);
+    return summary;
+  });
+}
+
+export function applyTaskOperation(op) {
+  const summary = createEmptySummary();
+  return processTaskOperations([op], summary).then(() => {
+    commitEntityChanges(summary);
+    return summary;
+  });
+}
+
+export function applyGoalOperation(op) {
+  const summary = createEmptySummary();
+  return processGoalOperations([op], summary).then(() => {
+    commitEntityChanges(summary);
+    return summary;
+  });
+}
+
+/* ------------------------------------------------------------------------- */
+/* Internal helpers                                                          */
+/* ------------------------------------------------------------------------- */
+
+function createEmptySummary() {
+  return {
+    vault: [],
+    memory: [],
+    tasks: [],
+    goals: [],
+    executions: [],
+    finalOutput: [],
+    errors: [],
+    duration: 0,
+    _dirty: {
+      vault: false,
+      memory: false,
+      tasks: false,
+      goals: false
+    },
+    _snapshots: {
+      vault: Storage.loadVault(),
+      memory: Storage.loadMemory(),
+      tasks: Storage.loadTasks(),
+      goals: Storage.loadGoals()
+    }
+  };
+}
+
+async function processVaultOperations(vaultOps, summary) {
+  const vault = summary._snapshots.vault;
+
+  for (const op of vaultOps) {
+    const result = { id: op.id, action: op.action || detectVaultAction(op), status: 'success' };
+
+    try {
+      if (op.delete) {
+        deleteVaultEntry(vault, op);
+        summary._dirty.vault = true;
+        appendActivity({
+          type: 'vault',
+          action: 'delete',
+          id: op.id,
+          status: 'success'
+        });
+      } else if (op.action === 'request_read') {
+        handleVaultRead(op, vault, summary);
+      } else if (op.id && op.content !== undefined) {
+        upsertVaultEntry(vault, op);
+        summary._dirty.vault = true;
+      } else {
+        throw new Error('Unsupported vault operation');
+      }
+    } catch (error) {
+      result.status = 'error';
+      result.error = error.message;
+      summary.errors.push({
+        type: 'vault',
+        id: op.id || 'unknown',
+        message: error.message
       });
     }
+
+    summary.vault.push(result);
   }
 }
 
-/**
- * Apply task operation
- * @param {Object} op - Task operation
- */
-export function applyTaskOperation(op) {
-  if (op.identifier) {
-    const tasks = Storage.loadTasks();
-    const existing = tasks.find(t => t.identifier === op.identifier);
-    if (existing) {
-      if (op.notes !== undefined) existing.notes = op.notes;
-      if (op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status)) {
-        existing.status = op.status;
+async function processMemoryOperations(memoryOps, summary) {
+  let memories = summary._snapshots.memory;
+
+  for (const op of memoryOps) {
+    const result = { id: op.identifier, action: op.delete ? 'delete' : 'upsert', status: 'success' };
+
+    try {
+      if (op.delete) {
+        const updated = memories.filter((item) => item.identifier !== op.identifier);
+        if (updated.length !== memories.length) {
+          summary._snapshots.memory = updated;
+          memories = summary._snapshots.memory;
+          summary._dirty.memory = true;
+          appendActivity({
+            type: 'memory',
+            action: 'delete',
+            id: op.identifier,
+            status: 'success'
+          });
+        }
+      } else if (op.identifier && op.heading && op.content) {
+        const existing = memories.find((item) => item.identifier === op.identifier);
+        if (existing) {
+          existing.heading = op.heading;
+          existing.content = op.content;
+          if (op.notes !== undefined) existing.notes = op.notes;
+        } else {
+          memories.push({
+            identifier: op.identifier,
+            heading: op.heading,
+            content: op.content,
+            notes: op.notes || '',
+            createdAt: nowISO()
+          });
+        }
+        summary._dirty.memory = true;
+        appendActivity({
+          type: 'memory',
+          action: existing ? 'update' : 'create',
+          id: op.identifier,
+          status: 'success'
+        });
+      } else if (op.identifier) {
+        const existing = memories.find((item) => item.identifier === op.identifier);
+        if (existing && op.notes !== undefined) {
+          existing.notes = op.notes;
+          summary._dirty.memory = true;
+          appendActivity({
+            type: 'memory',
+            action: 'update',
+            id: op.identifier,
+            status: 'success'
+          });
+        }
       }
-      Storage.saveTasks(tasks);
-      Storage.appendToolActivity({
+    } catch (error) {
+      result.status = 'error';
+      result.error = error.message;
+      summary.errors.push({
+        type: 'memory',
+        id: op.identifier || 'unknown',
+        message: error.message
+      });
+    }
+
+    summary.memory.push(result);
+  }
+}
+
+async function processTaskOperations(taskOps, summary) {
+  const tasks = summary._snapshots.tasks;
+
+  for (const op of taskOps) {
+    const result = { id: op.identifier, action: 'upsert', status: 'success' };
+
+    try {
+      if (!op.identifier) {
+        throw new Error('Task operation missing identifier');
+      }
+
+      const existing = tasks.find((item) => item.identifier === op.identifier);
+      if (existing) {
+        if (op.heading) existing.heading = op.heading;
+        if (op.content) existing.content = op.content;
+        if (op.notes !== undefined) existing.notes = op.notes;
+        if (op.status && TASK_STATUSES.includes(op.status)) existing.status = op.status;
+      } else {
+        if (!op.heading || !op.content) {
+          throw new Error('New tasks require heading and content');
+        }
+        tasks.push({
+          identifier: op.identifier,
+          heading: op.heading,
+          content: op.content,
+          status: TASK_STATUSES.includes(op.status) ? op.status : 'pending',
+          notes: op.notes || '',
+          createdAt: nowISO()
+        });
+      }
+
+      summary._dirty.tasks = true;
+      appendActivity({
         type: 'task',
-        action: 'update',
+        action: existing ? 'update' : 'create',
         id: op.identifier,
         status: 'success',
-        newStatus: op.status
+        newStatus: existing ? existing.status : TASK_STATUSES.includes(op.status) ? op.status : 'pending'
       });
-    } else if (op.heading && op.content) {
-      tasks.push({
-        identifier: op.identifier,
-        heading: op.heading,
-        content: op.content,
-        status: op.status && ['pending', 'ongoing', 'finished', 'paused'].includes(op.status) ? op.status : 'pending',
-        notes: op.notes || '',
-        createdAt: nowISO()
-      });
-      Storage.saveTasks(tasks);
-      Storage.appendToolActivity({
+    } catch (error) {
+      result.status = 'error';
+      result.error = error.message;
+      summary.errors.push({
         type: 'task',
-        action: 'create',
-        id: op.identifier,
-        heading: op.heading,
-        status: 'success'
+        id: op.identifier || 'unknown',
+        message: error.message
+      });
+    }
+
+    summary.tasks.push(result);
+  }
+}
+
+async function processGoalOperations(goalOps, summary) {
+  let goals = summary._snapshots.goals;
+
+  for (const op of goalOps) {
+    const result = { id: op.identifier, action: op.delete ? 'delete' : 'upsert', status: 'success' };
+
+    try {
+      if (op.delete) {
+        const updated = goals.filter((item) => item.identifier !== op.identifier);
+        if (updated.length !== goals.length) {
+          summary._snapshots.goals = updated;
+          goals = summary._snapshots.goals;
+          summary._dirty.goals = true;
+          appendActivity({
+            type: 'goal',
+            action: 'delete',
+            id: op.identifier,
+            status: 'success'
+          });
+        }
+      } else if (op.identifier && op.heading && op.content) {
+        const existing = goals.find((item) => item.identifier === op.identifier);
+        if (existing) {
+          existing.heading = op.heading;
+          existing.content = op.content;
+          if (op.notes !== undefined) existing.notes = op.notes;
+        } else {
+          goals.push({
+            identifier: op.identifier,
+            heading: op.heading,
+            content: op.content,
+            notes: op.notes || '',
+            createdAt: nowISO()
+          });
+        }
+        summary._dirty.goals = true;
+        appendActivity({
+          type: 'goal',
+          action: existing ? 'update' : 'create',
+          id: op.identifier,
+          status: 'success'
+        });
+      } else if (op.identifier) {
+        const existing = goals.find((item) => item.identifier === op.identifier);
+        if (existing && op.notes !== undefined) {
+          existing.notes = op.notes;
+          summary._dirty.goals = true;
+          appendActivity({
+            type: 'goal',
+            action: 'update',
+            id: op.identifier,
+            status: 'success'
+          });
+        }
+      }
+    } catch (error) {
+      result.status = 'error';
+      result.error = error.message;
+      summary.errors.push({
+        type: 'goal',
+        id: op.identifier || 'unknown',
+        message: error.message
+      });
+    }
+
+    summary.goals.push(result);
+  }
+}
+
+async function processExecutionBlocks(codeBlocks, summary) {
+  for (let index = 0; index < codeBlocks.length; index += 1) {
+    const code = codeBlocks[index];
+    const execResult = await JSExecutor.executeCode(code, {
+      source: 'auto',
+      updateUI: false,
+      context: {
+        blockIndex: index
+      },
+      metadata: {
+        operationsBefore: {
+          vault: summary.vault.length,
+          memory: summary.memory.length,
+          tasks: summary.tasks.length,
+          goals: summary.goals.length
+        }
+      }
+    });
+
+    summary.executions.push(execResult);
+
+    if (!execResult.success) {
+      summary.errors.push({
+        type: 'execution',
+        id: execResult.id,
+        message: execResult.error?.message || 'Execution failed'
       });
     }
   }
 }
 
-/**
- * Apply goal operation
- * @param {Object} op - Goal operation
- */
-export function applyGoalOperation(op) {
-  if (op.delete) {
-    const goals = Storage.loadGoals().filter(g => g.identifier !== op.identifier);
-    Storage.saveGoals(goals);
-    Storage.appendToolActivity({
-      type: 'goal',
-      action: 'delete',
-      id: op.identifier,
-      status: 'success'
-    });
-  } else if (op.identifier) {
-    const goals = Storage.loadGoals();
-    const existing = goals.find(g => g.identifier === op.identifier);
-    if (existing) {
-      if (op.notes !== undefined) existing.notes = op.notes;
-      Storage.saveGoals(goals);
+function processFinalOutputs(finalOutputBlocks, summary) {
+  finalOutputBlocks.forEach((htmlContent, index) => {
+    const result = { index, status: 'success' };
+
+    try {
+      const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
+
+      Storage.saveFinalOutput(processedHTML, true, 'llm');
+
       Storage.appendToolActivity({
-        type: 'goal',
-        action: 'update',
-        id: op.identifier,
-        status: 'success'
+        type: 'final_output',
+        action: 'generate',
+        status: 'success',
+        source: 'llm',
+        verified: true,
+        contentSize: processedHTML.length,
+        operationIndex: index
       });
-    } else if (op.heading && op.content) {
-      goals.push({
-        identifier: op.identifier,
-        heading: op.heading,
-        content: op.content,
-        notes: op.notes || '',
-        createdAt: nowISO()
-      });
-      Storage.saveGoals(goals);
+
+      const logEntries = Storage.loadReasoningLog();
+      logEntries.push(
+        `=== LLM-GENERATED FINAL OUTPUT (VERIFIED) ===\nGenerated at: ${nowISO()}\nContent size: ${processedHTML.length} characters\nVerification: PASSED`
+      );
+      Storage.saveReasoningLog(logEntries);
+    } catch (error) {
+      result.status = 'error';
+      result.error = error.message;
+
       Storage.appendToolActivity({
-        type: 'goal',
-        action: 'create',
-        id: op.identifier,
-        heading: op.heading,
-        status: 'success'
+        type: 'final_output',
+        action: 'generate',
+        status: 'error',
+        error: error.message,
+        operationIndex: index
+      });
+
+      summary.errors.push({
+        type: 'final_output',
+        id: `block_${index}`,
+        message: error.message
       });
     }
+
+    summary.finalOutput.push(result);
+  });
+}
+
+function commitEntityChanges(summary) {
+  if (summary._dirty.vault) {
+    Storage.saveVault(summary._snapshots.vault);
   }
+  if (summary._dirty.memory) {
+    Storage.saveMemory(summary._snapshots.memory);
+  }
+  if (summary._dirty.tasks) {
+    Storage.saveTasks(summary._snapshots.tasks);
+  }
+  if (summary._dirty.goals) {
+    Storage.saveGoals(summary._snapshots.goals);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Vault helpers                                                             */
+/* ------------------------------------------------------------------------- */
+
+function detectVaultAction(op) {
+  if (op.delete) return 'delete';
+  if (op.action === 'request_read') return 'read';
+  if (op.id && op.content !== undefined) return 'upsert';
+  return 'unknown';
+}
+
+function deleteVaultEntry(vault, op) {
+  const index = vault.findIndex((entry) => entry.identifier === op.id);
+  if (index === -1) {
+    throw new Error(`Vault entry not found: ${op.id}`);
+  }
+  vault.splice(index, 1);
+}
+
+function upsertVaultEntry(vault, op) {
+  const existing = vault.find((entry) => entry.identifier === op.id);
+  const payload = {
+    identifier: op.id,
+    type: (op.type || (existing ? existing.type : 'text')).toLowerCase(),
+    description: op.description || (existing ? existing.description : ''),
+    content: op.content,
+    createdAt: existing?.createdAt || nowISO(),
+    updatedAt: nowISO()
+  };
+
+  if (existing) {
+    Object.assign(existing, payload);
+    appendActivity({
+      type: 'vault',
+      action: 'update',
+      id: op.id,
+      status: 'success',
+      dataType: payload.type,
+      dataSize: String(op.content).length
+    });
+  } else {
+    vault.push(payload);
+    appendActivity({
+      type: 'vault',
+      action: 'create',
+      id: op.id,
+      status: 'success',
+      dataType: payload.type,
+      dataSize: String(op.content).length
+    });
+  }
+}
+
+function handleVaultRead(op, vaultSnapshot, summary) {
+  const entry = vaultSnapshot.find((item) => item.identifier === op.id);
+  if (!entry) {
+    appendActivity({
+      type: 'vault',
+      action: 'read',
+      id: op.id,
+      status: 'error',
+      error: 'Vault entry not found'
+    });
+    summary.errors.push({
+      type: 'vault',
+      id: op.id || 'unknown',
+      message: `Vault entry not found: ${op.id}`
+    });
+    return;
+  }
+
+  const limit = op.limit === 'full-length' ? entry.content.length : parseInt(op.limit || '0', 10);
+  const content = Number.isFinite(limit) && limit > 0
+    ? entry.content.slice(0, limit)
+    : entry.content;
+
+  const reasoningLog = Storage.loadReasoningLog();
+  reasoningLog.push([
+    '=== VAULT READ ===',
+    `Entry: ${op.id}`,
+    `Limit: ${op.limit || 'none'}`,
+    `Content:\n${content}`
+  ].join('\n'));
+  Storage.saveReasoningLog(reasoningLog);
+
+  appendActivity({
+    type: 'vault',
+    action: 'read',
+    id: op.id,
+    status: 'success',
+    dataSize: content.length,
+    limit: op.limit || 'none'
+  });
+}
+
+/**
+ * Proxy to Storage.appendToolActivity so tests/mocks can override it if needed.
+ */
+function appendActivity(activity) {
+  Storage.appendToolActivity(activity);
 }
