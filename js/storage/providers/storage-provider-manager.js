@@ -3,36 +3,36 @@
  *
  * Manages storage providers and provides a unified interface
  * Allows switching between different storage backends
+ *
+ * NOTE: Does NOT register providers - registration is handled by
+ * the centralized ProviderRegistry system in core/provider-registry.js
  */
 
 import { Registry, ExtensionPoints } from '../../core/extension-points.js';
-import { LocalStorageProvider } from './localstorage-provider.js';
 
 /**
  * StorageProviderManager
  * Manages and coordinates storage providers
  */
 export class StorageProviderManager {
-  constructor() {
-    this.currentProviderName = 'localStorage';
+  constructor(options = {}) {
+    this.currentProviderName = null;
     this.currentProvider = null;
-    this._initializeDefaultProvider();
+    this.autoInitialize = options.autoInitialize !== false;
   }
 
   /**
-   * Initialize the default localStorage provider
-   * @private
+   * Initialize with a specific provider
+   * @param {string} providerName - Name of the provider to use (default: 'localStorage')
+   * @returns {boolean} True if initialized successfully
    */
-  _initializeDefaultProvider() {
-    // Register default provider
-    Registry.register(
-      ExtensionPoints.STORAGE_PROVIDERS,
-      'localStorage',
-      LocalStorageProvider
-    );
+  initialize(providerName = 'localStorage') {
+    if (!this.autoInitialize && this.currentProvider) {
+      console.log('[StorageProviderManager] Already initialized');
+      return true;
+    }
 
-    // Instantiate and set as current
-    this.setProvider('localStorage');
+    return this.setProvider(providerName);
   }
 
   /**
@@ -222,5 +222,12 @@ export class StorageProviderManager {
   }
 }
 
-// Create singleton instance
-export const storageProviderManager = new StorageProviderManager();
+/**
+ * Create singleton instance
+ *
+ * NOTE: Provider registration happens in main.js via ProviderLoader.
+ * This manager only handles switching between registered providers.
+ */
+export const storageProviderManager = new StorageProviderManager({
+  autoInitialize: false  // Don't auto-initialize, let main.js coordinate
+});
