@@ -1,38 +1,55 @@
 /**
  * GDRS Main Bootstrap - Streamlined Modular Architecture
- * Clean entry point with event-driven initialization
+ * Clean entry point with event-driven initialization and centralized provider loading
  */
 
-// Core modules
+// ==========================================
+// CORE MODULES
+// ==========================================
 import { boot } from './core/boot.js';
 import { VERSION } from './core/constants.js';
 import { eventBus, Events } from './core/event-bus.js';
 import { ExtensionPoints, Registry } from './core/extension-points.js';
 import { Interfaces } from './core/interfaces.js';
 
-// Storage layer
+// Provider system
+import { ProviderRegistry } from './core/provider-registry.js';
+import { ProviderLoader } from './core/provider-loader.js';
+import { PROVIDER_MANIFEST } from './core/provider-manifest.js';
+
+// ==========================================
+// STORAGE LAYER
+// ==========================================
 import { Storage } from './storage/storage.js';
 import { VaultManager } from './storage/vault-manager.js';
-import { LocalStorageProvider } from './storage/providers/localstorage-provider.js';
 import { storageProviderManager } from './storage/providers/storage-provider-manager.js';
 
-// API layer
+// ==========================================
+// API LAYER
+// ==========================================
 import { KeyManager } from './api/key-manager.js';
 import { GeminiAPI } from './api/gemini-client.js';
-import { GeminiProvider } from './api/providers/gemini-provider.js';
 
-// Reasoning layer
+// ==========================================
+// REASONING LAYER
+// ==========================================
 import { ReasoningParser } from './reasoning/reasoning-parser.js';
 import { ReasoningEngine } from './reasoning/reasoning-engine.js';
 
-// Execution layer
+// ==========================================
+// EXECUTION LAYER
+// ==========================================
 import { JSExecutor } from './execution/js-executor.js';
 import { CodeExecutor } from './execution/code-executor.js';
 
-// Control layer
+// ==========================================
+// CONTROL LAYER
+// ==========================================
 import { LoopController } from './control/loop-controller.js';
 
-// UI layer
+// ==========================================
+// UI LAYER
+// ==========================================
 import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
 
@@ -52,10 +69,35 @@ import { bindEvents } from './ui/events.js';
   /**
    * Main initialization function
    */
-  function initializeGDRS() {
+  async function initializeGDRS() {
     console.log('%cGDRS v' + VERSION + ' - Streamlined Modular Architecture', 'color: #00ff00; font-weight: bold;');
-    
-    // Create global GDRS namespace
+
+    // ==========================================
+    // PHASE 1: Load Providers from Manifest
+    // ==========================================
+    console.log('%cLoading providers from manifest...', 'color: #00aaff;');
+
+    const loadResults = await ProviderLoader.loadFromManifest(PROVIDER_MANIFEST);
+
+    console.log(
+      `%cProviders loaded: ${loadResults.loaded.length} successful, ` +
+      `${loadResults.skipped.length} skipped, ${loadResults.failed.length} failed`,
+      'color: #00aa00;'
+    );
+
+    if (loadResults.failed.length > 0) {
+      console.warn('Failed to load providers:', loadResults.failed);
+    }
+
+    // ==========================================
+    // PHASE 2: Initialize Storage Manager
+    // ==========================================
+    const defaultStorageProvider = PROVIDER_MANIFEST.defaults[ExtensionPoints.STORAGE_PROVIDERS];
+    storageProviderManager.initialize(defaultStorageProvider);
+
+    // ==========================================
+    // PHASE 3: Create Global GDRS Namespace
+    // ==========================================
     window.GDRS = {
       // Version info
       VERSION,
@@ -67,29 +109,32 @@ import { bindEvents } from './ui/events.js';
       Registry,
       Interfaces,
 
-      // Storage layer (2 modules + providers)
+      // Provider system (new!)
+      ProviderRegistry,
+      ProviderLoader,
+      PROVIDER_MANIFEST,
+
+      // Storage layer
       Storage,
       VaultManager,
-      LocalStorageProvider,
       storageProviderManager,
 
-      // API layer (2 modules + providers)
+      // API layer
       KeyManager,
       GeminiAPI,
-      GeminiProvider,
 
-      // Reasoning layer (2 modules)
+      // Reasoning layer
       ReasoningParser,
       ReasoningEngine,
 
-      // Execution layer (2 modules)
+      // Execution layer
       JSExecutor,
       CodeExecutor,
 
-      // Control layer (1 module)
+      // Control layer
       LoopController,
 
-      // UI layer (2 modules + events)
+      // UI layer
       Renderer,
       bindEvents,
 
@@ -99,24 +144,29 @@ import { bindEvents } from './ui/events.js';
       // Runtime state
       currentIteration: 0
     };
-    
-    // Register default providers
-    Registry.register(ExtensionPoints.STORAGE_PROVIDERS, 'localStorage', LocalStorageProvider);
-    Registry.register(ExtensionPoints.API_PROVIDERS, 'gemini', GeminiProvider);
-    console.log('%c\ud83d\udd0c Default providers registered', 'color: #00aaff;');
 
+    // ==========================================
+    // PHASE 4: Initialize UI and Boot
+    // ==========================================
     // Initialize renderer with event bus
     Renderer.init();
 
     // Run boot sequence
     boot();
 
-    console.log('%c\u2705 GDRS Initialized - Modular Architecture Ready', 'color: #00aa00; font-weight: bold;');
-    console.log('%c\ud83d\udce6 Core Modules: 14 loaded | Parser: 4 sub-modules | Providers: 3 registered', 'color: #0066ff;');
-    console.log('%c\ud83d\udd0c Extension Points: 8 defined, ready for custom implementations', 'color: #ff6600;');
-    console.log('%c\ud83d\udce1 Event-driven updates enabled for maximum modularity', 'color: #9966ff;');
+    // ==========================================
+    // PHASE 5: Report Success
+    // ==========================================
+    const stats = ProviderRegistry.getStats();
+    const totalProviders = stats.totals.registered;
+
+    console.log('%cGDRS Initialized - Modular Architecture Ready', 'color: #00aa00; font-weight: bold;');
+    console.log(`%cCore Modules: 15 loaded | Providers: ${totalProviders} registered`, 'color: #0066ff;');
+    console.log('%cExtension Points: 8 defined, ready for custom implementations', 'color: #ff6600;');
+    console.log('%cEvent-driven updates enabled for maximum modularity', 'color: #9966ff;');
+    console.log('%cProvider system: Centralized, declarative, extensible', 'color: #ff9900;');
   }
-  
+
   /**
    * Development helpers
    */
@@ -127,11 +177,23 @@ import { bindEvents } from './ui/events.js';
       listEvents: () => eventBus.getRegisteredEvents(),
       clearAllData: () => {
         if (confirm('Clear all GDRS data? This cannot be undone.')) {
-          Object.values(LS_KEYS).forEach(key => localStorage.removeItem(key));
+          Storage.clearAll();
           location.reload();
         }
+      },
+      // New provider debugging tools
+      providerStats: () => ProviderRegistry.getStats(),
+      loadingStats: () => ProviderLoader.getStats(),
+      listProviders: (extensionPoint) => ProviderRegistry.listProviders(extensionPoint),
+      enableProviderDebug: () => {
+        ProviderRegistry.enableDebug();
+        ProviderLoader.enableDebug();
+      },
+      disableProviderDebug: () => {
+        ProviderRegistry.disableDebug();
+        ProviderLoader.disableDebug();
       }
     };
   }
-  
+
 })();
