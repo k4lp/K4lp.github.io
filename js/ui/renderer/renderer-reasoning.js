@@ -23,22 +23,44 @@ export function renderReasoningLog() {
 
   let html = '';
   logEntries.forEach((entry, i) => {
-    // Render reasoning as markdown, just like final output
+    const iterationNumber = i + 1;
+    const timestamp = new Date().toLocaleTimeString();
+
+    // Render reasoning as markdown
     const reasoningHtml = window.marked ? marked.parse(entry) : encodeHTML(entry);
+
+    // Get associated tool activities
+    const iterationActivities = toolActivity.filter(act => act.iteration === iterationNumber);
+    const hasActivities = iterationActivities.length > 0;
+
     html += `
-      <div class="li reasoning-entry">
-        <div>
-          <div class="mono">#${i + 1}</div>
-          <div class="markdown-body reasoning-text">${reasoningHtml}</div>
+      <div class="reasoning-iteration">
+        <div class="iteration-header">
+          <div class="iteration-badge">
+            <span class="iteration-number">${iterationNumber}</span>
+            <span class="iteration-label">ITERATION</span>
+          </div>
+          <div class="iteration-meta">
+            <span class="iteration-time">${timestamp}</span>
+            ${hasActivities ? `<span class="iteration-activities-count">${iterationActivities.length} ${iterationActivities.length === 1 ? 'activity' : 'activities'}</span>` : ''}
+          </div>
         </div>
+
+        <div class="iteration-content">
+          <div class="reasoning-block">
+            <div class="reasoning-header">
+              <span class="reasoning-icon">💭</span>
+              <span class="reasoning-title">Reasoning</span>
+            </div>
+            <div class="markdown-body reasoning-text">${reasoningHtml}</div>
+          </div>
+
+          ${hasActivities ? renderToolActivities(iterationActivities) : ''}
+        </div>
+
+        ${i < logEntries.length - 1 ? '<div class="iteration-connector"></div>' : ''}
       </div>
     `;
-
-    // Render associated tool activities
-    const iterationActivities = toolActivity.filter(act => act.iteration === i + 1);
-    if (iterationActivities.length > 0) {
-      html += renderToolActivities(iterationActivities);
-    }
   });
 
   logEl.innerHTML = html;

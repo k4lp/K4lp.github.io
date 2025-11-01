@@ -73,31 +73,76 @@ export function getTypeColor(type) {
 }
 
 /**
+ * Get icon for tool activity type
+ */
+function getActivityIcon(type) {
+  const icons = {
+    'js_execute': '⚡',
+    'js-execute': '⚡',
+    'vault': '🔒',
+    'memory': '🧠',
+    'task': '✓',
+    'goal': '🎯',
+    'final_output': '📊',
+    'final-output': '📊'
+  };
+  return icons[type] || '🔧';
+}
+
+/**
+ * Get readable name for tool activity type
+ */
+function getActivityName(type) {
+  const names = {
+    'js_execute': 'Code Execution',
+    'js-execute': 'Code Execution',
+    'vault': 'Data Vault',
+    'memory': 'Memory Storage',
+    'task': 'Task Management',
+    'goal': 'Goal Tracking',
+    'final_output': 'Final Output',
+    'final-output': 'Final Output'
+  };
+  return names[type] || type.toUpperCase();
+}
+
+/**
  * Render tool activities for reasoning log
  * @param {Array} activities - Array of tool activity objects
  * @returns {string} HTML string for activities
  */
 export function renderToolActivities(activities) {
-  let html = '<div class="tool-activities">';
+  let html = '<div class="tool-activities-section">';
+  html += '<div class="activities-header"><span class="activities-icon">⚙️</span><span class="activities-title">Tool Activities</span></div>';
+  html += '<div class="tool-activities">';
 
   activities.forEach(activity => {
     const statusClass = activity.status === 'success' ? 'tool-success' : 'tool-error';
     const typeClass = `tool-${activity.type.replace('_', '-')}`;
+    const icon = getActivityIcon(activity.type);
+    const name = getActivityName(activity.type);
 
     let details = formatActivityDetails(activity);
 
     html += `
       <div class="tool-activity ${statusClass} ${typeClass}">
-        <div class="tool-icon">🔧</div>
-        <div class="tool-details">
-          <div class="tool-name">${activity.type.toUpperCase()}: ${activity.action}</div>
-          <div class="tool-meta">${details}</div>
-          ${activity.error ? `<div class="tool-error-msg">${encodeHTML(activity.error)}</div>` : ''}
+        <div class="activity-indicator ${activity.status}"></div>
+        <div class="activity-content">
+          <div class="activity-header">
+            <span class="activity-icon">${icon}</span>
+            <span class="activity-name">${name}</span>
+            <span class="activity-action">${encodeHTML(activity.action)}</span>
+          </div>
+          ${details ? `<div class="activity-meta">${details}</div>` : ''}
+          ${activity.error ? `<div class="activity-error"><span class="error-icon">⚠️</span> ${encodeHTML(activity.error)}</div>` : ''}
         </div>
-        <div class="tool-status ${activity.status}">${activity.status === 'success' ? '✓' : '✗'}</div>
+        <div class="activity-status">
+          <span class="status-icon">${activity.status === 'success' ? '✓' : '✗'}</span>
+        </div>
       </div>
     `;
   });
 
-  return html + '</div>';
+  html += '</div></div>';
+  return html;
 }
