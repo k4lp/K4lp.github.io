@@ -1,91 +1,27 @@
 /**
- * Storage Event Handlers
- * Event-driven UI update system for reactive rendering
+ * Storage Event Handlers - FIXED VERSION
+ * REMOVES incorrect browser event listeners that were causing the issue
+ * The eventBus in renderer-core.js handles all UI updates properly
  */
 
 import { Renderer } from '../renderer.js';
-import { qs } from '../../core/utils.js';
 
 /**
- * Bind storage event listeners for reactive UI updates
- * CRITICAL FIX: Event-driven UI update system to fix memory rendering issues
+ * Bind storage event handlers for reactive UI updates
+ * FIXED: Removed incorrect browser event listeners that were never fired
  */
 export function bindStorageHandlers() {
-  bindCustomStorageEvents();
-  bindFallbackDOMEvents();
-}
-
-/**
- * Listen for custom storage events to trigger UI updates
- */
-function bindCustomStorageEvents() {
-  document.addEventListener('gdrs-memories-updated', () => {
-    if (Renderer && Renderer.renderMemories) {
-      Renderer.renderMemories();
-      console.log('🔄 Memory UI updated via event');
-    }
-  });
-
-  document.addEventListener('gdrs-tasks-updated', () => {
-    if (Renderer && Renderer.renderTasks) {
-      Renderer.renderTasks();
-      console.log('🔄 Tasks UI updated via event');
-    }
-  });
-
-  document.addEventListener('gdrs-goals-updated', () => {
-    if (Renderer && Renderer.renderGoals) {
-      Renderer.renderGoals();
-      console.log('🔄 Goals UI updated via event');
-    }
-  });
-
-  document.addEventListener('gdrs-vault-updated', () => {
-    if (Renderer && Renderer.renderVault) {
-      Renderer.renderVault();
-      console.log('🔄 Vault UI updated via event');
-    }
-  });
-}
-
-/**
- * Fallback: Listen for direct DOM element events
- */
-function bindFallbackDOMEvents() {
-  const memoryList = qs('#memoryList');
-  const tasksList = qs('#tasksList');
-  const goalsList = qs('#goalsList');
-  const vaultList = qs('#vaultList');
-
-  if (memoryList) {
-    memoryList.addEventListener('force-update', () => {
-      if (Renderer && Renderer.renderMemories) {
-        Renderer.renderMemories();
-      }
-    });
-  }
-
-  if (tasksList) {
-    tasksList.addEventListener('force-update', () => {
-      if (Renderer && Renderer.renderTasks) {
-        Renderer.renderTasks();
-      }
-    });
-  }
-
-  if (goalsList) {
-    goalsList.addEventListener('force-update', () => {
-      if (Renderer && Renderer.renderGoals) {
-        Renderer.renderGoals();
-      }
-    });
-  }
-
-  if (vaultList) {
-    vaultList.addEventListener('force-update', () => {
-      if (Renderer && Renderer.renderVault) {
-        Renderer.renderVault();
-      }
-    });
+  // DO NOT use document.addEventListener for custom events!
+  // The eventBus in renderer-core.js handles everything correctly
+  
+  console.log('✅ Storage handlers initialized (UI updates handled by eventBus in renderer-core)');
+  
+  // Optional: Add a fallback manual refresh for debugging
+  if (window.GDRS_DEBUG_EVENTS) {
+    window.GDRS_FORCE_REFRESH = () => {
+      console.log('🔨 Forcing manual UI refresh...');
+      Renderer.renderAll();
+    };
+    console.log('Debug: Call GDRS_FORCE_REFRESH() to manually refresh UI');
   }
 }
