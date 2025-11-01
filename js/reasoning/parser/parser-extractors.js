@@ -1,8 +1,11 @@
 /**
  * Parser Extractors
  *
- * Extracts various blocks from LLM response text
+ * Extracts various blocks from LLM response text.
+ * All patterns are now centralized in tool-registry-config.js.
  */
+
+import { TOOL_DEFINITIONS } from '../../config/tool-registry-config.js';
 
 /**
  * Extract reasoning text blocks
@@ -11,7 +14,8 @@
  */
 export function extractReasoningBlocks(text) {
   const blocks = [];
-  const regex = /{{<reasoning_text>}}([\s\S]*?){{<\/reasoning_text>}}/g;
+  const pattern = TOOL_DEFINITIONS.REASONING_TEXT.patterns.block;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     blocks.push(match[1].trim());
@@ -57,7 +61,8 @@ export function extractPureReasoningText(text) {
  */
 export function extractJSExecutionBlocks(text) {
   const blocks = [];
-  const regex = /{{<js_execute>}}([\s\S]*?){{<\/js_execute>}}/g;
+  const pattern = TOOL_DEFINITIONS.JS_EXECUTE.patterns.block;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     blocks.push(match[1].trim());
@@ -72,7 +77,8 @@ export function extractJSExecutionBlocks(text) {
  */
 export function extractFinalOutputBlocks(text) {
   const blocks = [];
-  const regex = /{{<final_output>}}([\s\S]*?){{<\/final_output>}}/g;
+  const pattern = TOOL_DEFINITIONS.FINAL_OUTPUT.patterns.block;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     blocks.push(match[1].trim());
@@ -87,7 +93,8 @@ export function extractFinalOutputBlocks(text) {
  */
 export function extractMemoryOperations(text) {
   const operations = [];
-  const regex = /{{<memory\s+([^>]*)\s*\/>}}/g;
+  const pattern = TOOL_DEFINITIONS.MEMORY.patterns.selfClosing;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     operations.push({
@@ -105,7 +112,8 @@ export function extractMemoryOperations(text) {
  */
 export function extractTaskOperations(text) {
   const operations = [];
-  const regex = /{{<task\s+([^>]*)\s*\/>}}/g;
+  const pattern = TOOL_DEFINITIONS.TASK.patterns.selfClosing;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     operations.push({
@@ -123,7 +131,8 @@ export function extractTaskOperations(text) {
  */
 export function extractGoalOperations(text) {
   const operations = [];
-  const regex = /{{<goal\s+([^>]*)\s*\/>}}/g;
+  const pattern = TOOL_DEFINITIONS.GOAL.patterns.selfClosing;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     operations.push({
@@ -141,7 +150,8 @@ export function extractGoalOperations(text) {
  */
 export function extractVaultSelfClosingOperations(text) {
   const operations = [];
-  const regex = /{{<datavault\s+([^>]*)\s*\/>}}/g;
+  const pattern = TOOL_DEFINITIONS.DATAVAULT.patterns.selfClosing;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     operations.push({
@@ -160,7 +170,8 @@ export function extractVaultSelfClosingOperations(text) {
  */
 export function extractVaultBlockOperations(text) {
   const operations = [];
-  const regex = /{{<datavault\s+([^>]*)>}}([\s\S]*?){{<\/datavault>}}/g;
+  const pattern = TOOL_DEFINITIONS.DATAVAULT.patterns.block;
+  const regex = new RegExp(pattern);
   let match;
   while ((match = regex.exec(text)) !== null) {
     operations.push({
