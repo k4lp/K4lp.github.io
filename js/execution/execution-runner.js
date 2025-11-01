@@ -4,12 +4,15 @@
  * Responsible for preparing code (vault resolution, metrics), capturing console
  * output, running the code in an async wrapper with timeout protection, and
  * returning a structured execution outcome.
+ *
+ * Injects runtime APIs (vault, memory, tasks, goals, utils) into the execution context.
  */
 
 import { ConsoleCapture } from './console-capture.js';
 import { nowISO } from '../core/utils.js';
 import { EXECUTION_DEFAULT_TIMEOUT_MS } from '../config/execution-config.js';
 import { expandVaultReferences } from '../utils/vault-reference-resolver.js';
+import { buildExecutionContext } from './execution-context-api.js';
 
 export class ExecutionRunner {
   constructor(options = {}) {
@@ -68,13 +71,20 @@ export class ExecutionRunner {
 
   /**
    * Execute code inside an async IIFE with timeout protection.
+   * Injects vault, memory, tasks, goals, and utils APIs into the execution context.
    * @private
    */
   async _executeWithTimeout(resolvedCode) {
     let runner;
 
+    // Build the execution context with all APIs
+    const context = buildExecutionContext();
+
     try {
+      // Create function with injected context parameters
+      // The executed code can access: vault, memory, tasks, goals, utils
       runner = new Function(
+        'vault', 'memory', 'tasks', 'goals', 'utils',
         '"use strict";\n' +
         'return (async () => {\n' +
         '  return await (async () => {\n' +
@@ -87,7 +97,15 @@ export class ExecutionRunner {
       throw error;
     }
 
-    const promise = runner();
+    // Execute with context APIs injected
+    const promise = runner(
+      context.vault,
+      context.memory,
+      context.tasks,
+      context.goals,
+      context.utils
+    );
+
     return this.timeoutMs
       ? await runWithTimeout(promise, this.timeoutMs)
       : promise;
