@@ -48,18 +48,8 @@ try {
   process.exit(1);
 }
 
-// Test 5: Import updated parser-validators
-console.log('\nTest 5: Importing parser-validators.js...');
-try {
-  const validators = await import('./js/reasoning/parser/parser-validators.js');
-  console.log('✅ Parser validators imported successfully');
-} catch (error) {
-  console.error('❌ Failed to import validators:', error.message);
-  process.exit(1);
-}
-
-// Test 6: Test basic functionality
-console.log('\nTest 6: Testing basic functionality...');
+// Test 5: Test basic functionality (validation now in tool-registry-config.js)
+console.log('\nTest 5: Testing basic functionality...');
 try {
   const { parseAttributes, isValidIdentifier } = await import('./js/config/tool-registry-config.js');
 
@@ -83,8 +73,8 @@ try {
   process.exit(1);
 }
 
-// Test 7: Test tool extraction
-console.log('\nTest 7: Testing tool extraction...');
+// Test 6: Test tool extraction
+console.log('\nTest 6: Testing tool extraction...');
 try {
   const { extractToolOperations } = await import('./js/reasoning/parser/unified-tool-parser.js');
 
@@ -109,8 +99,8 @@ try {
   process.exit(1);
 }
 
-// Test 8: Test vault reference utilities
-console.log('\nTest 8: Testing vault reference utilities...');
+// Test 7: Test vault reference utilities
+console.log('\nTest 7: Testing vault reference utilities...');
 try {
   const { extractVaultReferenceIds, countVaultReferences } = await import('./js/config/tool-registry-config.js');
 
