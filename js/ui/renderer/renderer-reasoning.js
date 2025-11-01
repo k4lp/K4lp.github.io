@@ -36,17 +36,11 @@ export function renderReasoningLog() {
     const hasActivities = iterationActivities.length > 0;
 
     html += `
-      <div class="reasoning-block ${isEven ? 'even' : 'odd'}">
+      <div class="reasoning-block reasoning-type ${isEven ? 'even' : 'odd'}">
         <div class="block-header reasoning">
           <div class="header-left">
             <span class="iteration-badge">#${iterationNumber}</span>
-            <span class="block-icon">💭</span>
-            <span class="block-title">Reasoning Process</span>
-          </div>
-          <div class="header-right">
-            <span class="meta-item"><span class="meta-label">Words:</span> ${wordCount}</span>
-            <span class="meta-item"><span class="meta-label">Chars:</span> ${charCount}</span>
-            ${hasActivities ? `<span class="meta-badge">${iterationActivities.length} activities</span>` : ''}
+            <span class="block-meta-compact">${wordCount} words · ${charCount} chars${hasActivities ? ` · ${iterationActivities.length} actions` : ''}</span>
           </div>
         </div>
         <div class="markdown-body reasoning-content">${reasoningHtml}</div>
@@ -55,7 +49,7 @@ export function renderReasoningLog() {
 
     // Render tool activities
     iterationActivities.forEach(activity => {
-      html += renderToolActivities(activity, i);
+      html += renderToolActivities(activity, iterationNumber);
     });
   });
 
