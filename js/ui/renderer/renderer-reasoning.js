@@ -25,17 +25,29 @@ export function renderReasoningLog() {
   logEntries.forEach((entry, i) => {
     const iterationNumber = i + 1;
     const isEven = iterationNumber % 2 === 0;
+    const wordCount = entry.split(/\s+/).length;
+    const charCount = entry.length;
 
     // Render reasoning as markdown
     const reasoningHtml = window.marked ? marked.parse(entry) : encodeHTML(entry);
 
     // Get associated tool activities
     const iterationActivities = toolActivity.filter(act => act.iteration === iterationNumber);
+    const hasActivities = iterationActivities.length > 0;
 
     html += `
       <div class="reasoning-block ${isEven ? 'even' : 'odd'}">
-        <div class="block-header">
-          <span class="block-type">Iteration ${iterationNumber}</span>
+        <div class="block-header reasoning">
+          <div class="header-left">
+            <span class="iteration-badge">#${iterationNumber}</span>
+            <span class="block-icon">💭</span>
+            <span class="block-title">Reasoning Process</span>
+          </div>
+          <div class="header-right">
+            <span class="meta-item"><span class="meta-label">Words:</span> ${wordCount}</span>
+            <span class="meta-item"><span class="meta-label">Chars:</span> ${charCount}</span>
+            ${hasActivities ? `<span class="meta-badge">${iterationActivities.length} activities</span>` : ''}
+          </div>
         </div>
         <div class="markdown-body reasoning-content">${reasoningHtml}</div>
       </div>

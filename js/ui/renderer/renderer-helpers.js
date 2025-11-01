@@ -73,20 +73,20 @@ export function getTypeColor(type) {
 }
 
 /**
- * Get readable name for tool activity type
+ * Get icon and name for tool activity type
  */
-function getActivityName(type) {
-  const names = {
-    'js_execute': 'Code Execution',
-    'js-execute': 'Code Execution',
-    'vault': 'Data Vault',
-    'memory': 'Memory',
-    'task': 'Task',
-    'goal': 'Goal',
-    'final_output': 'Output',
-    'final-output': 'Output'
+function getActivityInfo(type) {
+  const info = {
+    'js_execute': { icon: '⚡', name: 'Code Execution' },
+    'js-execute': { icon: '⚡', name: 'Code Execution' },
+    'vault': { icon: '🔒', name: 'Data Vault' },
+    'memory': { icon: '🧠', name: 'Memory Storage' },
+    'task': { icon: '✓', name: 'Task Created' },
+    'goal': { icon: '🎯', name: 'Goal Set' },
+    'final_output': { icon: '📊', name: 'Final Output' },
+    'final-output': { icon: '📊', name: 'Final Output' }
   };
-  return names[type] || type;
+  return info[type] || { icon: '🔧', name: type };
 }
 
 /**
@@ -97,27 +97,40 @@ function getActivityName(type) {
  */
 export function renderToolActivities(activity, iteration) {
   const isEven = iteration % 2 === 0;
-  const name = getActivityName(activity.type);
+  const info = getActivityInfo(activity.type);
   const details = formatActivityDetails(activity);
+  const hasError = activity.status === 'error';
+
+  // Parse metadata from details
+  const metaItems = details ? details.split(' • ') : [];
 
   let html = `
-    <div class="reasoning-block ${isEven ? 'even' : 'odd'}">
-      <div class="block-header">
-        <span class="block-type">${name}</span>
-        ${activity.status === 'error' ? '<span class="block-status error">Error</span>' : ''}
+    <div class="reasoning-block ${isEven ? 'even' : 'odd'} ${hasError ? 'error' : 'success'}">
+      <div class="block-header activity">
+        <div class="header-left">
+          <span class="activity-icon">${info.icon}</span>
+          <span class="block-title">${info.name}</span>
+          ${activity.action ? `<span class="activity-action">${encodeHTML(activity.action)}</span>` : ''}
+        </div>
+        <div class="header-right">
+          ${metaItems.map(item => `<span class="meta-item">${item}</span>`).join('')}
+          <span class="status-badge ${hasError ? 'error' : 'success'}">${hasError ? '✗ Failed' : '✓ Success'}</span>
+        </div>
       </div>
-      <div class="activity-body">
   `;
 
-  if (details) {
-    html += `<div class="activity-details">${details}</div>`;
-  }
-
   if (activity.error) {
-    html += `<div class="activity-error">${encodeHTML(activity.error)}</div>`;
+    html += `
+      <div class="activity-body">
+        <div class="activity-error">
+          <span class="error-icon">⚠️</span>
+          <span class="error-message">${encodeHTML(activity.error)}</span>
+        </div>
+      </div>
+    `;
   }
 
-  html += `</div></div>`;
+  html += `</div>`;
 
   return html;
 }
