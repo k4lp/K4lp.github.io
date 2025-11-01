@@ -140,13 +140,14 @@ async function runIteration() {
     console.log(`\u2705 Response received: ${responseText.length} chars`);
     consecutiveErrors = 0; // Reset on success
 
-    // Process reasoning blocks
+    // --- MODULAR FIX: Parse entire response, not just reasoning blocks ---
+
+    // Step 1: Extract reasoning text (from reasoning blocks) for logging only
     const reasoningBlocks = ReasoningParser.extractReasoningBlocks(responseText);
     const pureReasoningTexts = reasoningBlocks
       .map(block => ReasoningParser.extractPureReasoningText(block))
       .filter(text => text.length > 0);
-    
-    // Log reasoning
+
     if (pureReasoningTexts.length > 0) {
       const logEntries = Storage.loadReasoningLog();
       logEntries.push(`=== ITERATION ${iterationCount} ===\n${pureReasoningTexts.join('\n\n')}`);
@@ -154,17 +155,26 @@ async function runIteration() {
       Renderer.renderReasoningLog(); // Re-render UI to show new reasoning blocks
     }
 
-    // Apply operations with proper async support
-    for (const block of reasoningBlocks) {
-      const operations = ReasoningParser.parseOperations(block);
-      const operationSummary = await ReasoningParser.applyOperations(operations);
-      recordOperationSummary(operationSummary, iterationCount);
-    }
+    // Step 2: Parse ALL operations from the ENTIRE response text.
+    // This uses the fixed, modular parser that finds ALL tools including
+    // <final_output> even if it's placed outside <reasoning_text> blocks.
+    const allOperations = ReasoningParser.parseOperations(responseText);
+
+    // Step 3: Apply all found operations
+    const operationSummary = await ReasoningParser.applyOperations(allOperations);
+    recordOperationSummary(operationSummary, iterationCount);
 
     // Emit iteration complete event
-    eventBus.emit(Events.ITERATION_COMPLETE, { 
-      iteration: iterationCount, 
-      operations: reasoningBlocks.length 
+    const totalOps = (allOperations.jsExecute?.length || 0) +
+                     (allOperations.finalOutput?.length || 0) +
+                     (allOperations.memories?.length || 0) +
+                     (allOperations.tasks?.length || 0) +
+                     (allOperations.goals?.length || 0) +
+                     (allOperations.vault?.length || 0);
+
+    eventBus.emit(Events.ITERATION_COMPLETE, {
+      iteration: iterationCount,
+      operations: totalOps
     });
     
     // Check completion conditions

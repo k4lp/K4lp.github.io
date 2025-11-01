@@ -21,8 +21,6 @@ export { ReasoningParser } from './parser/parser-core.js';
 export {
   extractReasoningBlocks,
   extractPureReasoningText,
-  extractJSExecutionBlocks,
-  extractFinalOutputBlocks,
   parseAttributes,
   applyOperations,
   applyVaultOperation,
