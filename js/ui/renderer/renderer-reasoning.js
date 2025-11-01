@@ -25,11 +25,24 @@ export function renderReasoningLog() {
   logEntries.forEach((entry, i) => {
     const iterationNumber = i + 1;
     const isEven = iterationNumber % 2 === 0;
-    const wordCount = entry.split(/\s+/).length;
-    const charCount = entry.length;
+
+    // Clean up the entry text - remove iteration headers and session markers
+    let cleanedEntry = entry
+      .replace(/^=== ITERATION \d+ ===\n?/gm, '')
+      .replace(/^=== SESSION START ===\n?/gm, '')
+      .replace(/^=== SESSION COMPLETE ===\n?/gm, '')
+      .replace(/^=== ITERATION \d+ ERROR ===\n?/gm, '')
+      .replace(/^=== ITERATION \d+ OPERATION WARNINGS ===\n?/gm, '')
+      .replace(/^=== SESSION TERMINATED ===\n?/gm, '')
+      .trim();
+
+    if (!cleanedEntry) return; // Skip empty entries
+
+    const wordCount = cleanedEntry.split(/\s+/).length;
+    const charCount = cleanedEntry.length;
 
     // Render reasoning as markdown
-    const reasoningHtml = window.marked ? marked.parse(entry) : encodeHTML(entry);
+    const reasoningHtml = window.marked ? marked.parse(cleanedEntry) : encodeHTML(cleanedEntry);
 
     // Get associated tool activities
     const iterationActivities = toolActivity.filter(act => act.iteration === iterationNumber);
