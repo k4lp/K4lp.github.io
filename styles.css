@@ -1122,9 +1122,18 @@ h1, h2, h3, h4, h5, h6 {
   text-align: right;
   user-select: none;
   min-width: 54px;
-  overflow-y: hidden;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: scroll;
   overflow-x: hidden;
   white-space: pre-line;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.line-numbers::-webkit-scrollbar {
+  display: none;
 }
 
 .line-numbers::after {
@@ -1181,6 +1190,10 @@ h1, h2, h3, h4, h5, h6 {
     background-color: #f5f5f5;
     border-right-color: #d0d7de;
     color: #6e7781;
+  }
+
+  .line-numbers::-webkit-scrollbar {
+    display: none;
   }
 
   .line-numbers::after {
@@ -1702,12 +1715,15 @@ h1, h2, h3, h4, h5, h6 {
 
   .line-numbers {
     min-width: 42px;
+    min-height: 150px;
+    max-height: 300px;
     padding: var(--gap-sm) 4px;
     font-size: 11px;
   }
 
   .code-textarea {
     min-height: 150px;
+    max-height: 300px;
     padding: var(--gap-sm);
     font-size: 11px;
   }

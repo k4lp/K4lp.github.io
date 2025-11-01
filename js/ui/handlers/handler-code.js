@@ -41,20 +41,8 @@ function syncScroll() {
 
   if (!codeInput || !lineNumbers) return;
 
+  // Sync line numbers scroll with textarea scroll
   lineNumbers.scrollTop = codeInput.scrollTop;
-}
-
-/**
- * Handle textarea resize
- */
-function handleResize() {
-  const codeInput = qs('#codeInput');
-  const lineNumbers = qs('#lineNumbers');
-
-  if (!codeInput || !lineNumbers) return;
-
-  // Match the height
-  lineNumbers.style.height = codeInput.scrollHeight + 'px';
 }
 
 /**
@@ -70,10 +58,7 @@ function initCodeEditor() {
   updateLineNumbers();
 
   // Setup event listeners
-  codeInput.addEventListener('input', () => {
-    updateLineNumbers();
-    handleResize();
-  });
+  codeInput.addEventListener('input', updateLineNumbers);
 
   codeInput.addEventListener('scroll', syncScroll);
 
@@ -92,12 +77,6 @@ function initCodeEditor() {
       updateLineNumbers();
     }
   });
-
-  // Update on window resize
-  window.addEventListener('resize', handleResize);
-
-  // Initial resize
-  handleResize();
 }
 
 /**
