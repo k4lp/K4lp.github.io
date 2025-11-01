@@ -943,85 +943,64 @@ h1, h2, h3, h4, h5, h6 {
   word-break: break-word;
 }
 
-/* Modern, Sleek Reasoning Blocks */
+/* Swiss Minimalist Reasoning Blocks - Monochrome */
 .reasoning-block {
-  margin-bottom: 20px;
-  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  border-radius: 2px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
+  transition: all 0.15s ease;
 }
 
 .reasoning-block:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  border-color: #d4d4d4;
 }
 
-/* Sophisticated color-coded backgrounds */
-.reasoning-block.reasoning-type.odd {
-  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+/* Subtle alternating backgrounds - barely noticeable */
+.reasoning-block.odd {
+  background: #ffffff;
 }
 
-.reasoning-block.reasoning-type.even {
-  background: linear-gradient(to bottom, #f0f7ff, #e8f2fe);
+.reasoning-block.even {
+  background: #fafafa;
 }
 
-.reasoning-block.execution-type {
-  background: linear-gradient(to bottom, #fffbf5, #fff8ed);
-}
-
-.reasoning-block.vault-type {
-  background: linear-gradient(to bottom, #faf7fd, #f5f0fc);
-}
-
-.reasoning-block.memory-type {
-  background: linear-gradient(to bottom, #f0fdf9, #e8fbf3);
-}
-
-.reasoning-block.task-type {
-  background: linear-gradient(to bottom, #fff7ed, #ffedd5);
-}
-
-.reasoning-block.goal-type {
-  background: linear-gradient(to bottom, #f0fdfd, #e6fbfc);
-}
-
+/* Minimal accent for activity types - just a subtle left border */
+.reasoning-block.execution-type,
+.reasoning-block.vault-type,
+.reasoning-block.memory-type,
+.reasoning-block.task-type,
+.reasoning-block.goal-type,
 .reasoning-block.output-type {
-  background: linear-gradient(to bottom, #fdf4ff, #fae8ff);
+  border-left: 2px solid #000000;
 }
 
 .reasoning-block.success {
-  border-left: 2px solid #10b981;
+  border-left: 2px solid #000000;
 }
 
 .reasoning-block.error {
-  border-left: 2px solid #ef4444;
-  background: linear-gradient(to bottom, #fef2f2, #fee2e2) !important;
+  border-left: 2px solid #000000;
+  background: #fafafa;
 }
 
-/* Clean, Minimal Block Header */
+/* Minimalist Block Header */
 .block-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 36px;
-  backdrop-filter: blur(8px);
-}
-
-@media (prefers-color-scheme: dark) {
-  .block-header {
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-  }
+  gap: 16px;
+  min-height: 40px;
+  background: transparent;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex: 1;
   min-width: 0;
 }
@@ -1029,124 +1008,127 @@ h1, h2, h3, h4, h5, h6 {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-/* Compact, Modern Iteration Badge */
+/* Clean Iteration Badge - Monochrome */
 .iteration-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
+  background: #000000;
+  color: #ffffff;
   font-family: var(--fs-mono);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 4px;
-  min-width: 28px;
-  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.2);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 0;
+  min-width: 32px;
+  letter-spacing: 0.05em;
 }
 
-/* Activity Icon - Refined */
+/* Activity Icon - Minimal */
 .activity-icon {
-  font-size: 15px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   line-height: 1;
+  opacity: 0.8;
 }
 
 .block-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.01em;
+  color: #000000;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-/* Inline Metadata - Compact & Clean */
+/* Inline Metadata - Monochrome */
 .block-meta-compact {
   font-family: var(--fs-mono);
   font-size: 9px;
-  color: var(--text-muted);
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  color: #737373;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
-/* Minimal Status Badge */
+/* Minimal Status Badge - No gradients */
 .status-badge-compact {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  font-size: 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  font-size: 9px;
   font-weight: 700;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: 1px solid #000000;
 }
 
 .status-badge-compact.success {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  background: #000000;
+  color: #ffffff;
 }
 
 .status-badge-compact.error {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
+  background: #ffffff;
+  color: #000000;
 }
 
-/* Content Areas - Generous Spacing, Smaller Fonts */
+/* Content Areas - Generous Spacing, Clean Typography */
 .reasoning-content {
-  padding: 16px 18px;
-  font-size: 11px;
-  line-height: 1.6;
-  color: #1f2937;
+  padding: 20px 24px;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #171717;
 }
 
 .reasoning-content p {
-  margin-bottom: 12px;
-  color: #1f2937;
+  margin-bottom: 14px;
+  color: #171717;
 }
 
 .reasoning-content code {
-  font-size: 10px;
-  color: #1f2937;
+  font-size: 9px;
+  color: #171717;
 }
 
 .reasoning-content pre {
-  font-size: 10px;
-  color: #1f2937;
+  font-size: 9px;
+  color: #171717;
 }
 
 .activity-body {
-  padding: 14px 16px;
+  padding: 20px 24px;
 }
 
 .activity-error {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  background-color: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 6px;
-  font-size: 10px;
-  color: #dc2626;
+  gap: 12px;
+  padding: 16px 20px;
+  background-color: #fafafa;
+  border: 1px solid #e5e5e5;
+  border-radius: 0;
+  font-size: 9px;
+  color: #171717;
   font-family: var(--fs-mono);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .error-icon {
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
   line-height: 1;
+  opacity: 0.8;
 }
 
 .error-message {
   flex: 1;
-  line-height: 1.6;
-  color: #dc2626;
+  line-height: 1.7;
+  color: #171717;
 }
 
 /* Mobile Responsive - Maintains Clean Design */
@@ -2043,145 +2025,180 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
-/* Markdown Styles - Compact and Clean */
+/* Markdown Styles - Swiss Minimalism */
 .markdown-body {
   font-family: var(--fs);
-  font-size: 11px;
-  line-height: 1.6;
-  color: #1f2937;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #171717;
 }
 
 .markdown-body h1 {
-  font-size: 1.4em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.3em;
-  margin: 16px 0 12px 0;
-  color: #1f2937;
+  font-size: 1.3em;
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 6px;
+  margin: 20px 0 14px 0;
+  color: #000000;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .markdown-body h2 {
   font-size: 1.2em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.2em;
-  margin: 14px 0 10px 0;
-  color: #1f2937;
+  border-bottom: 1px solid #f5f5f5;
+  padding-bottom: 4px;
+  margin: 18px 0 12px 0;
+  color: #000000;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .markdown-body h3 {
   font-size: 1.1em;
-  margin: 12px 0 8px 0;
-  color: #1f2937;
+  margin: 16px 0 10px 0;
+  color: #000000;
+  font-weight: 600;
 }
 
 .markdown-body p {
-  margin-bottom: 12px;
-  color: #1f2937;
+  margin-bottom: 14px;
+  color: #171717;
 }
 
 .markdown-body ul, .markdown-body ol {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   padding-left: 1.5em;
 }
 
 .markdown-body li {
-  color: #1f2937;
-  margin-bottom: 4px;
+  color: #171717;
+  margin-bottom: 6px;
 }
 
 .markdown-body code {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 2px 5px;
-  border-radius: 3px;
+  background-color: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 0;
   font-family: var(--fs-mono);
-  font-size: 10px;
-  color: #1f2937;
+  font-size: 9px;
+  color: #171717;
 }
 
 .markdown-body pre {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 12px;
-  border-radius: 6px;
+  background-color: #f5f5f5;
+  padding: 16px;
+  border-radius: 0;
   overflow: auto;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  border: 1px solid #e5e5e5;
 }
 
 .markdown-body pre code {
   background: none;
   padding: 0;
-  color: #1f2937;
+  color: #171717;
 }
 
 .markdown-body table {
   border-collapse: collapse;
   width: 100%;
-  margin-bottom: 12px;
-  font-size: 10px;
+  margin-bottom: 14px;
+  font-size: 9px;
 }
 
 .markdown-body th, .markdown-body td {
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  color: #1f2937;
+  border: 1px solid #e5e5e5;
+  padding: 8px 12px;
+  color: #171717;
 }
 
 .markdown-body th {
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: #fafafa;
   font-weight: 600;
+  text-transform: uppercase;
+  font-size: 8px;
+  letter-spacing: 0.05em;
 }
 
 .markdown-body blockquote {
-  border-left: 3px solid var(--accent);
-  padding-left: 12px;
-  color: #4b5563;
-  margin: 12px 0;
+  border-left: 2px solid #000000;
+  padding-left: 16px;
+  color: #525252;
+  margin: 14px 0;
+  font-style: italic;
 }
 
 .markdown-body a {
-  color: var(--accent);
-  text-decoration: none;
+  color: #000000;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .markdown-body a:hover {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 
 .markdown-body strong {
   font-weight: 600;
-  color: #1f2937;
+  color: #000000;
 }
 
-/* Dark mode support for reasoning blocks */
+/* Dark mode - Monochrome inversion */
 @media (prefers-color-scheme: dark) {
-  .reasoning-block.reasoning-type.odd {
-    background: linear-gradient(to bottom, #1e293b, #334155);
+  .reasoning-block {
+    background: #0a0a0a;
+    border-color: #262626;
   }
 
-  .reasoning-block.reasoning-type.even {
-    background: linear-gradient(to bottom, #1e3a5f, #2d4a6f);
+  .reasoning-block.odd {
+    background: #0a0a0a;
   }
 
-  .reasoning-block.execution-type {
-    background: linear-gradient(to bottom, #3d2817, #4a351f);
+  .reasoning-block.even {
+    background: #171717;
   }
 
-  .reasoning-block.vault-type {
-    background: linear-gradient(to bottom, #2d1b3d, #3d2550);
+  .reasoning-block.execution-type,
+  .reasoning-block.vault-type,
+  .reasoning-block.memory-type,
+  .reasoning-block.task-type,
+  .reasoning-block.goal-type,
+  .reasoning-block.output-type,
+  .reasoning-block.success,
+  .reasoning-block.error {
+    border-left-color: #ffffff;
   }
 
-  .reasoning-block.memory-type {
-    background: linear-gradient(to bottom, #1a3d2d, #234d3a);
+  .block-header {
+    border-bottom-color: #262626;
   }
 
-  .reasoning-block.task-type {
-    background: linear-gradient(to bottom, #3d2817, #4d3520);
+  .iteration-badge {
+    background: #ffffff;
+    color: #000000;
   }
 
-  .reasoning-block.goal-type {
-    background: linear-gradient(to bottom, #1a3d3d, #244d4d);
+  .block-title {
+    color: #ffffff;
   }
 
-  .reasoning-block.output-type {
-    background: linear-gradient(to bottom, #3d1a3d, #4d244d);
+  .block-meta-compact {
+    color: #737373;
+  }
+
+  .status-badge-compact {
+    border-color: #ffffff;
+  }
+
+  .status-badge-compact.success {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .status-badge-compact.error {
+    background: #000000;
+    color: #ffffff;
   }
 
   .reasoning-content,
@@ -2197,22 +2214,31 @@ h1, h2, h3, h4, h5, h6 {
   .markdown-body th,
   .markdown-body td,
   .markdown-body strong {
-    color: #f0f6fc;
+    color: #ededed;
   }
 
   .markdown-body code {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .markdown-body pre {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .markdown-body th {
     background-color: rgba(255, 255, 255, 0.05);
   }
 
+  .markdown-body pre {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .markdown-body th {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
   .markdown-body blockquote {
-    color: #8b949e;
+    color: #a3a3a3;
+  }
+
+  .activity-error {
+    background-color: #171717;
+    border-color: #262626;
+  }
+
+  .error-message {
+    color: #ededed;
   }
 }
