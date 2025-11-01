@@ -1077,27 +1077,38 @@ h1, h2, h3, h4, h5, h6 {
   color: #000000;
 }
 
-/* Content Areas - Generous Spacing, Clean Typography */
+/* Content Areas - Generous Spacing, Clean Typography, FORCED COLORS */
 .reasoning-content {
   padding: 20px 24px;
   font-size: 10px;
   line-height: 1.7;
-  color: #171717;
+  color: #171717 !important;
 }
 
 .reasoning-content p {
   margin-bottom: 14px;
-  color: #171717;
+  color: #171717 !important;
 }
 
 .reasoning-content code {
   font-size: 9px;
-  color: #171717;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  padding: 3px 6px !important;
 }
 
 .reasoning-content pre {
   font-size: 9px;
-  color: #171717;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  padding: 16px 20px !important;
+  border: 2px solid #000000;
+}
+
+.reasoning-content pre code {
+  background: transparent !important;
+  color: #ffffff !important;
+  padding: 0 !important;
 }
 
 .activity-body {
@@ -2025,30 +2036,30 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
-/* Markdown Styles - Swiss Minimalism */
+/* Markdown Styles - Swiss Minimalism with PROPER CONTRAST */
 .markdown-body {
   font-family: var(--fs);
   font-size: 10px;
   line-height: 1.7;
-  color: #171717;
+  color: #171717 !important;
 }
 
 .markdown-body h1 {
   font-size: 1.3em;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid #d4d4d4;
   padding-bottom: 6px;
   margin: 20px 0 14px 0;
-  color: #000000;
+  color: #000000 !important;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .markdown-body h2 {
   font-size: 1.2em;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid #e5e5e5;
   padding-bottom: 4px;
   margin: 18px 0 12px 0;
-  color: #000000;
+  color: #000000 !important;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -2056,13 +2067,13 @@ h1, h2, h3, h4, h5, h6 {
 .markdown-body h3 {
   font-size: 1.1em;
   margin: 16px 0 10px 0;
-  color: #000000;
+  color: #000000 !important;
   font-weight: 600;
 }
 
 .markdown-body p {
   margin-bottom: 14px;
-  color: #171717;
+  color: #171717 !important;
 }
 
 .markdown-body ul, .markdown-body ol {
@@ -2071,32 +2082,37 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .markdown-body li {
-  color: #171717;
+  color: #171717 !important;
   margin-bottom: 6px;
 }
 
+/* INLINE CODE - High contrast, bordered */
 .markdown-body code {
-  background-color: #f5f5f5;
-  padding: 2px 6px;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  padding: 3px 6px !important;
   border-radius: 0;
   font-family: var(--fs-mono);
   font-size: 9px;
-  color: #171717;
+  font-weight: 500;
 }
 
+/* CODE BLOCKS - Inverted with border */
 .markdown-body pre {
-  background-color: #f5f5f5;
-  padding: 16px;
+  background-color: #000000 !important;
+  padding: 16px 20px !important;
   border-radius: 0;
   overflow: auto;
   margin-bottom: 14px;
-  border: 1px solid #e5e5e5;
+  border: 2px solid #000000;
 }
 
 .markdown-body pre code {
-  background: none;
-  padding: 0;
-  color: #171717;
+  background: transparent !important;
+  color: #ffffff !important;
+  padding: 0 !important;
+  font-size: 9px;
+  font-weight: 400;
 }
 
 .markdown-body table {
@@ -2104,35 +2120,52 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   margin-bottom: 14px;
   font-size: 9px;
+  border: 1px solid #d4d4d4;
 }
 
 .markdown-body th, .markdown-body td {
-  border: 1px solid #e5e5e5;
+  border: 1px solid #d4d4d4;
   padding: 8px 12px;
-  color: #171717;
+  color: #171717 !important;
 }
 
 .markdown-body th {
-  background-color: #fafafa;
+  background-color: #f5f5f5;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 8px;
   letter-spacing: 0.05em;
+  color: #000000 !important;
 }
 
+/* BLOCKQUOTE - Clear visual distinction */
 .markdown-body blockquote {
-  border-left: 2px solid #000000;
+  border-left: 3px solid #000000;
   padding-left: 16px;
-  color: #525252;
+  padding-right: 16px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  color: #525252 !important;
   margin: 14px 0;
   font-style: italic;
+  background-color: #fafafa;
+}
+
+.markdown-body blockquote p {
+  color: #525252 !important;
+}
+
+.markdown-body blockquote code {
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
 .markdown-body a {
-  color: #000000;
+  color: #000000 !important;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+  font-weight: 500;
 }
 
 .markdown-body a:hover {
@@ -2140,11 +2173,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .markdown-body strong {
-  font-weight: 600;
-  color: #000000;
+  font-weight: 700;
+  color: #000000 !important;
 }
 
-/* Dark mode - Monochrome inversion */
+.markdown-body em {
+  font-style: italic;
+  color: #171717 !important;
+}
+
+/* Dark mode - Monochrome inversion with PROPER CONTRAST */
 @media (prefers-color-scheme: dark) {
   .reasoning-block {
     background: #0a0a0a;
@@ -2180,11 +2218,11 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .block-title {
-    color: #ffffff;
+    color: #ffffff !important;
   }
 
   .block-meta-compact {
-    color: #737373;
+    color: #a3a3a3 !important;
   }
 
   .status-badge-compact {
@@ -2199,46 +2237,81 @@ h1, h2, h3, h4, h5, h6 {
   .status-badge-compact.error {
     background: #000000;
     color: #ffffff;
+    border-color: #ffffff;
   }
 
   .reasoning-content,
   .reasoning-content p,
-  .reasoning-content code,
-  .reasoning-content pre,
   .markdown-body,
   .markdown-body h1,
   .markdown-body h2,
   .markdown-body h3,
   .markdown-body p,
   .markdown-body li,
-  .markdown-body th,
   .markdown-body td,
-  .markdown-body strong {
-    color: #ededed;
+  .markdown-body strong,
+  .markdown-body em {
+    color: #ededed !important;
   }
 
+  /* Code blocks in dark mode - INVERTED for maximum readability */
+  .reasoning-content code,
   .markdown-body code {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: #ffffff !important;
+    color: #000000 !important;
   }
 
+  .reasoning-content pre,
   .markdown-body pre {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: #ffffff !important;
+    border-color: #ffffff;
+  }
+
+  .reasoning-content pre code,
+  .markdown-body pre code {
+    background: transparent !important;
+    color: #000000 !important;
   }
 
   .markdown-body th {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: #262626;
+    color: #ffffff !important;
+  }
+
+  .markdown-body table {
+    border-color: #404040;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    border-color: #404040;
   }
 
   .markdown-body blockquote {
-    color: #a3a3a3;
+    background-color: #171717;
+    color: #a3a3a3 !important;
+    border-left-color: #ffffff;
+  }
+
+  .markdown-body blockquote p {
+    color: #a3a3a3 !important;
+  }
+
+  .markdown-body blockquote code {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .markdown-body a {
+    color: #ffffff !important;
   }
 
   .activity-error {
     background-color: #171717;
-    border-color: #262626;
+    border-color: #404040;
   }
 
   .error-message {
-    color: #ededed;
+    color: #ededed !important;
   }
 }
