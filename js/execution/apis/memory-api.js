@@ -49,10 +49,22 @@ export class MemoryAPI {
         const existingIndex = memoryData.findIndex(m => m.identifier === id);
         const timestamp = nowISO();
 
+        // Serialize content if it's an object, otherwise convert to string
+        let serializedContent;
+        if (typeof content === 'object' && content !== null) {
+            try {
+                serializedContent = JSON.stringify(content, null, 2);
+            } catch {
+                serializedContent = String(content); // Fallback
+            }
+        } else {
+            serializedContent = String(content);
+        }
+
         const entry = {
             identifier: id,
             heading: heading || id,
-            content: String(content),
+            content: serializedContent,
             notes: String(notes),
             createdAt: existingIndex >= 0 ? memoryData[existingIndex].createdAt : timestamp,
             updatedAt: timestamp,
