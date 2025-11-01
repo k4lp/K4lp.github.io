@@ -24,7 +24,9 @@ export function renderReasoningLog() {
   let html = '';
   logEntries.forEach((entry, i) => {
     const iterationNumber = i + 1;
-    const timestamp = new Date().toLocaleTimeString();
+    const isEven = iterationNumber % 2 === 0;
+    const wordCount = entry.split(/\s+/).length;
+    const charCount = entry.length;
 
     // Render reasoning as markdown
     const reasoningHtml = window.marked ? marked.parse(entry) : encodeHTML(entry);
@@ -34,33 +36,27 @@ export function renderReasoningLog() {
     const hasActivities = iterationActivities.length > 0;
 
     html += `
-      <div class="reasoning-iteration">
-        <div class="iteration-header">
-          <div class="iteration-badge">
-            <span class="iteration-number">${iterationNumber}</span>
-            <span class="iteration-label">ITERATION</span>
+      <div class="reasoning-block ${isEven ? 'even' : 'odd'}">
+        <div class="block-header reasoning">
+          <div class="header-left">
+            <span class="iteration-badge">#${iterationNumber}</span>
+            <span class="block-icon">💭</span>
+            <span class="block-title">Reasoning Process</span>
           </div>
-          <div class="iteration-meta">
-            <span class="iteration-time">${timestamp}</span>
-            ${hasActivities ? `<span class="iteration-activities-count">${iterationActivities.length} ${iterationActivities.length === 1 ? 'activity' : 'activities'}</span>` : ''}
+          <div class="header-right">
+            <span class="meta-item"><span class="meta-label">Words:</span> ${wordCount}</span>
+            <span class="meta-item"><span class="meta-label">Chars:</span> ${charCount}</span>
+            ${hasActivities ? `<span class="meta-badge">${iterationActivities.length} activities</span>` : ''}
           </div>
         </div>
-
-        <div class="iteration-content">
-          <div class="reasoning-block">
-            <div class="reasoning-header">
-              <span class="reasoning-icon">💭</span>
-              <span class="reasoning-title">Reasoning</span>
-            </div>
-            <div class="markdown-body reasoning-text">${reasoningHtml}</div>
-          </div>
-
-          ${hasActivities ? renderToolActivities(iterationActivities) : ''}
-        </div>
-
-        ${i < logEntries.length - 1 ? '<div class="iteration-connector"></div>' : ''}
+        <div class="markdown-body reasoning-content">${reasoningHtml}</div>
       </div>
     `;
+
+    // Render tool activities
+    iterationActivities.forEach(activity => {
+      html += renderToolActivities(activity, i);
+    });
   });
 
   logEl.innerHTML = html;
