@@ -15,19 +15,21 @@ function updateLineNumbers() {
 
   if (!codeInput || !lineNumbers) return;
 
-  const lines = codeInput.value.split('\n');
-  const lineCount = lines.length;
+  // Get the actual content (not placeholder)
+  const content = codeInput.value || '';
 
-  // Generate line numbers HTML
-  let lineNumbersHTML = '';
+  // Count lines properly - split by newline
+  const lines = content.split('\n');
+  const lineCount = Math.max(lines.length, 1);
+
+  // Generate line numbers
+  const lineNumbersArray = [];
   for (let i = 1; i <= lineCount; i++) {
-    lineNumbersHTML += `<div>${i}</div>`;
+    lineNumbersArray.push(i);
   }
 
-  lineNumbers.innerHTML = lineNumbersHTML;
-
-  // Sync scroll
-  lineNumbers.scrollTop = codeInput.scrollTop;
+  // Update line numbers display
+  lineNumbers.textContent = lineNumbersArray.join('\n');
 }
 
 /**
@@ -43,12 +45,67 @@ function syncScroll() {
 }
 
 /**
+ * Handle textarea resize
+ */
+function handleResize() {
+  const codeInput = qs('#codeInput');
+  const lineNumbers = qs('#lineNumbers');
+
+  if (!codeInput || !lineNumbers) return;
+
+  // Match the height
+  lineNumbers.style.height = codeInput.scrollHeight + 'px';
+}
+
+/**
+ * Initialize code editor
+ */
+function initCodeEditor() {
+  const codeInput = qs('#codeInput');
+  const lineNumbers = qs('#lineNumbers');
+
+  if (!codeInput || !lineNumbers) return;
+
+  // Set initial line numbers
+  updateLineNumbers();
+
+  // Setup event listeners
+  codeInput.addEventListener('input', () => {
+    updateLineNumbers();
+    handleResize();
+  });
+
+  codeInput.addEventListener('scroll', syncScroll);
+
+  codeInput.addEventListener('keydown', (e) => {
+    // Handle tab key
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = codeInput.selectionStart;
+      const end = codeInput.selectionEnd;
+      const value = codeInput.value;
+
+      // Insert 2 spaces
+      codeInput.value = value.substring(0, start) + '  ' + value.substring(end);
+      codeInput.selectionStart = codeInput.selectionEnd = start + 2;
+
+      updateLineNumbers();
+    }
+  });
+
+  // Update on window resize
+  window.addEventListener('resize', handleResize);
+
+  // Initial resize
+  handleResize();
+}
+
+/**
  * Bind code execution handlers
  */
 export function bindCodeHandlers() {
   const execBtn = qs('#execBtn');
   const clearExecBtn = qs('#clearExec');
-  const codeInput = qs('#codeInput');
 
   if (execBtn) {
     execBtn.addEventListener('click', () => {
@@ -57,21 +114,14 @@ export function bindCodeHandlers() {
   }
 
   if (clearExecBtn) {
-    clearExecBtn.addEventListener('click', () => CodeExecutor.clear());
+    clearExecBtn.addEventListener('click', () => {
+      CodeExecutor.clear();
+      // Update line numbers after clear
+      setTimeout(updateLineNumbers, 0);
+    });
   }
 
-  // Initialize and update line numbers
-  if (codeInput) {
-    // Initial line numbers
-    updateLineNumbers();
-
-    // Update on input
-    codeInput.addEventListener('input', updateLineNumbers);
-
-    // Update on scroll
-    codeInput.addEventListener('scroll', syncScroll);
-
-    // Update on any change
-    codeInput.addEventListener('change', updateLineNumbers);
-  }
+  // Initialize code editor with line numbers
+  initCodeEditor();
 }
+
