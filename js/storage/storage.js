@@ -173,7 +173,9 @@ export const Storage = {
 
   // === LOGGING ===
   loadReasoningLog() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.REASONING_LOG), []);
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.REASONING_LOG), [])
+    );
   },
   
   saveReasoningLog(log) {
@@ -190,7 +192,9 @@ export const Storage = {
 
   // === EXECUTION TRACKING ===
   loadExecutionLog() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.EXECUTION_LOG), []);
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.EXECUTION_LOG), [])
+    );
   },
   
   saveExecutionLog(log) {
@@ -214,7 +218,9 @@ export const Storage = {
 
   // === TOOL ACTIVITY ===
   loadToolActivityLog() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.TOOL_ACTIVITY_LOG), []);
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.TOOL_ACTIVITY_LOG), [])
+    );
   },
   
   saveToolActivityLog(log) {
@@ -232,3 +238,24 @@ export const Storage = {
     this.saveToolActivityLog(log);
   }
 };
+
+function normalizeArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  // Legacy fallback: convert array-like objects to arrays
+  if (typeof value === 'object') {
+    try {
+      return Array.from(value);
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}

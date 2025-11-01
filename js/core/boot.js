@@ -9,7 +9,6 @@ import { VaultManager } from '../storage/vault-manager.js';
 import { KeyManager } from '../api/key-manager.js';
 import { GeminiAPI } from '../api/gemini-client.js';
 import { Renderer } from '../ui/renderer.js';
-import { bindEvents } from '../ui/events.js';
 
 /**
  * Cooldown ticker that preserves focus
@@ -54,9 +53,6 @@ export function boot() {
 
   // Initial render
   Renderer.renderAll();
-
-  // Bind events
-  bindEvents();
 
   // Start tickers
   startCooldownTicker();

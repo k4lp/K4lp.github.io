@@ -150,6 +150,7 @@ import { bindEvents } from './ui/events.js';
     // ==========================================
     // Initialize renderer with event bus
     Renderer.init();
+    bindEvents();
 
     // Run boot sequence
     boot();
