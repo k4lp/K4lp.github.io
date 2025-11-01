@@ -11,8 +11,7 @@ import { VaultManager } from '../../storage/vault-manager.js';
 import { JSExecutor } from '../../execution/js-executor.js';
 import { eventBus, Events } from '../../core/event-bus.js';
 import { nowISO } from '../../core/utils.js';
-
-const TASK_STATUSES = ['pending', 'ongoing', 'finished', 'paused'];
+import { TASK_STATUSES } from '../../config/tool-registry-config.js';
 
 /**
  * Apply the full operation bundle.

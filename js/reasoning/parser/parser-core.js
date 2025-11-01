@@ -1,29 +1,24 @@
 /**
  * Parser Core
  *
- * Main coordination module for parsing LLM responses
- * This module provides the same API as the original reasoning-parser.js
+ * Main coordination module for parsing LLM responses.
+ * Now uses the centralized unified-tool-parser for extraction and validation.
  */
 
 import {
   extractReasoningBlocks,
   extractPureReasoningText,
   extractJSExecutionBlocks,
-  extractFinalOutputBlocks,
-  extractMemoryOperations,
-  extractTaskOperations,
-  extractGoalOperations,
-  extractVaultSelfClosingOperations,
-  extractVaultBlockOperations
+  extractFinalOutputBlocks
 } from './parser-extractors.js';
 
 import {
-  parseAttributes,
-  validateMemoryOperation,
-  validateTaskOperation,
-  validateGoalOperation,
-  validateVaultOperation
-} from './parser-validators.js';
+  extractAllToolOperations,
+  parseToolOperations,
+  extractToolOperations
+} from './unified-tool-parser.js';
+
+import { parseAttributes } from '../../config/tool-registry-config.js';
 
 import {
   applyOperations,
@@ -36,7 +31,8 @@ import {
 /**
  * ReasoningParser
  *
- * Main parser object that coordinates extraction, parsing, and application of operations
+ * Main parser object that coordinates extraction, parsing, and application of operations.
+ * Uses centralized unified-tool-parser for dynamic, registry-based parsing.
  */
 export const ReasoningParser = {
   /**
@@ -69,6 +65,7 @@ export const ReasoningParser = {
 
   /**
    * Parse all operations from block text
+   * Uses centralized unified-tool-parser for dynamic extraction
    * @param {string} blockText - Text block containing operations
    * @returns {Object} Parsed operations object
    */
@@ -82,65 +79,50 @@ export const ReasoningParser = {
       finalOutput: []
     };
 
-    // Parse memory operations
-    const memoryOps = extractMemoryOperations(blockText);
+    // Use centralized tool extraction for storage tools
+    const memoryOps = extractToolOperations(blockText, 'memory');
     memoryOps.forEach(op => {
-      const attrs = parseAttributes(op.attributes);
-      if (attrs && (attrs.identifier || attrs.heading)) {
-        operations.memories.push(attrs);
+      if (op.attributes && (op.attributes.identifier || op.attributes.heading)) {
+        operations.memories.push(op.attributes);
       }
     });
 
-    // Parse task operations
-    const taskOps = extractTaskOperations(blockText);
+    const taskOps = extractToolOperations(blockText, 'task');
     taskOps.forEach(op => {
-      const attrs = parseAttributes(op.attributes);
-      if (attrs && (attrs.identifier || attrs.heading)) {
-        operations.tasks.push(attrs);
+      if (op.attributes && (op.attributes.identifier || op.attributes.heading)) {
+        operations.tasks.push(op.attributes);
       }
     });
 
-    // Parse goal operations
-    const goalOps = extractGoalOperations(blockText);
+    const goalOps = extractToolOperations(blockText, 'goal');
     goalOps.forEach(op => {
-      const attrs = parseAttributes(op.attributes);
-      if (attrs && (attrs.identifier || attrs.heading)) {
-        operations.goals.push(attrs);
+      if (op.attributes && (op.attributes.identifier || op.attributes.heading)) {
+        operations.goals.push(op.attributes);
       }
     });
 
-    // Parse vault self-closing operations
-    const vaultSelfOps = extractVaultSelfClosingOperations(blockText);
-    vaultSelfOps.forEach(op => {
-      const attrs = parseAttributes(op.attributes);
-      if (attrs && attrs.id) {
+    const vaultOps = extractToolOperations(blockText, 'datavault');
+    vaultOps.forEach(op => {
+      if (op.attributes && op.attributes.id) {
+        // Merge content if it's a block operation
+        const attrs = { ...op.attributes };
+        if (op.content) {
+          attrs.content = op.content;
+        }
         operations.vault.push(attrs);
       }
     });
 
-    // Parse vault block operations (with content)
-    const vaultBlockOps = extractVaultBlockOperations(blockText);
-    vaultBlockOps.forEach(op => {
-      const attrs = parseAttributes(op.attributes);
-      if (attrs && attrs.id) {
-        attrs.content = op.content;
-        operations.vault.push(attrs);
-      }
-    });
-
-    // Parse JavaScript execution blocks
-    const jsExecuteBlocks = extractJSExecutionBlocks(blockText);
-    operations.jsExecute = jsExecuteBlocks;
-
-    // Parse final output blocks
-    const finalOutputBlocks = extractFinalOutputBlocks(blockText);
-    operations.finalOutput = finalOutputBlocks;
+    // Extract execution and output blocks
+    operations.jsExecute = extractJSExecutionBlocks(blockText);
+    operations.finalOutput = extractFinalOutputBlocks(blockText);
 
     return operations;
   },
 
   /**
    * Parse attributes from tag attribute string
+   * Uses centralized parser from tool-registry-config
    * @param {string} attrString - Attribute string
    * @returns {Object} Parsed attributes
    */
@@ -176,7 +158,23 @@ export const ReasoningParser = {
    * Apply goal operation
    * @param {Object} op - Goal operation
    */
-  applyGoalOperation
+  applyGoalOperation,
+
+  /**
+   * Advanced: Extract all tool operations using unified parser
+   * @param {string} text - Text to parse
+   * @param {Object} options - Extraction options
+   * @returns {Object} Map of toolId -> operations array
+   */
+  extractAllToolOperations,
+
+  /**
+   * Advanced: Parse specific tool operations with validation
+   * @param {string} text - Text to parse
+   * @param {string} toolId - Tool ID from registry
+   * @returns {Object} Parse result with validation
+   */
+  parseToolOperations
 };
 
 // Export individual functions for tree-shaking
@@ -190,5 +188,7 @@ export {
   applyVaultOperation,
   applyMemoryOperation,
   applyTaskOperation,
-  applyGoalOperation
+  applyGoalOperation,
+  extractAllToolOperations,
+  parseToolOperations
 };
