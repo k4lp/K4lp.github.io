@@ -9,13 +9,14 @@
 import { ConsoleCapture } from './console-capture.js';
 import { Storage } from '../storage/storage.js';
 import { nowISO } from '../core/utils.js';
-
-const VAULT_REF_REGEX = /{{<vaultref\s+id=["']([^"']+)["']\s*\/>}}/gi;
-const DEFAULT_TIMEOUT_MS = 15000;
+import {
+  EXECUTION_DEFAULT_TIMEOUT_MS,
+  EXECUTION_VAULT_REF_PATTERN
+} from '../config/execution-config.js';
 
 export class ExecutionRunner {
   constructor(options = {}) {
-    this.timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : DEFAULT_TIMEOUT_MS;
+    this.timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : EXECUTION_DEFAULT_TIMEOUT_MS;
   }
 
   /**
@@ -75,7 +76,9 @@ export class ExecutionRunner {
       runner = new Function(
         '"use strict";\n' +
         'return (async () => {\n' +
+        '  return await (async () => {\n' +
         `${resolvedCode}\n` +
+        '  })();\n' +
         '})();'
       );
     } catch (error) {
@@ -100,7 +103,8 @@ function expandVaultReferences(rawCode) {
   }
 
   const vault = Storage.loadVault();
-  const resolvedCode = rawCode.replace(VAULT_REF_REGEX, (match, vaultId) => {
+  const vaultRefRegex = new RegExp(EXECUTION_VAULT_REF_PATTERN.source, EXECUTION_VAULT_REF_PATTERN.flags);
+  const resolvedCode = rawCode.replace(vaultRefRegex, (match, vaultId) => {
     vaultRefs.push(vaultId);
     const entry = vault.find((item) => item.identifier === vaultId);
     if (!entry) {

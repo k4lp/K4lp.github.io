@@ -10,8 +10,7 @@ import { ExecutionRunner } from './execution-runner.js';
 import { Storage } from '../storage/storage.js';
 import { eventBus, Events } from '../core/event-bus.js';
 import { generateId, nowISO } from '../core/utils.js';
-
-const DEFAULT_SOURCE = 'auto';
+import { EXECUTION_DEFAULT_SOURCE } from '../config/execution-config.js';
 
 class ExecutionManager {
   constructor() {
@@ -128,7 +127,7 @@ function createRequest(options = {}) {
   return {
     id: options.id || generateId('exec'),
     code,
-    source: options.source || DEFAULT_SOURCE,
+    source: options.source || EXECUTION_DEFAULT_SOURCE,
     submittedAt: nowISO(),
     timeoutMs: Number.isFinite(options.timeoutMs) ? Number(options.timeoutMs) : undefined,
     context: options.context ? { ...options.context } : {},

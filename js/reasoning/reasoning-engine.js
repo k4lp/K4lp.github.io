@@ -60,9 +60,6 @@ ${recentExecutions || 'None yet - Leverage computational power for accuracy'}
 **Recent Reasoning Log:**
 ${recentLog || 'Starting fresh - Apply strategic intelligence framework'}
 
-**Response Limits:**
-Max Output Tokens: ${maxOutputTokens} (user-configured)
-
 **Iteration:** ${iteration}/2000
 
 ---

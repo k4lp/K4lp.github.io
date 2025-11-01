@@ -343,7 +343,6 @@ async function processExecutionBlocks(codeBlocks, summary) {
     const code = codeBlocks[index];
     const execResult = await JSExecutor.executeCode(code, {
       source: 'auto',
-      updateUI: false,
       context: {
         blockIndex: index
       },

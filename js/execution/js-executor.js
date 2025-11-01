@@ -9,6 +9,7 @@
 import { executionManager } from './execution-manager.js';
 import { Storage } from '../storage/storage.js';
 import { eventBus, Events } from '../core/event-bus.js';
+import { EXECUTION_STATUS_RESET_DELAY_MS } from '../config/execution-config.js';
 
 export const JSExecutor = {
   /**
@@ -146,6 +147,5 @@ function resetStatusLater(element) {
     element.textContent = 'READY';
     element.style.background = '';
     element.style.color = '';
-  }, 2500);
+  }, EXECUTION_STATUS_RESET_DELAY_MS);
 }
-
