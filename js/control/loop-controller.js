@@ -151,6 +151,7 @@ async function runIteration() {
       const logEntries = Storage.loadReasoningLog();
       logEntries.push(`=== ITERATION ${iterationCount} ===\n${pureReasoningTexts.join('\n\n')}`);
       Storage.saveReasoningLog(logEntries);
+      Renderer.renderReasoningLog(); // Re-render UI to show new reasoning blocks
     }
 
     // Apply operations with proper async support
