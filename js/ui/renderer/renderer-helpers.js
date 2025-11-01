@@ -92,7 +92,7 @@ function getActivityInfo(type) {
 /**
  * Render tool activity block
  * @param {Object} activity - Tool activity object
- * @param {number} iteration - Iteration index for alternating colors
+ * @param {number} iteration - Iteration number for grouping
  * @returns {string} HTML string for activity
  */
 export function renderToolActivities(activity, iteration) {
@@ -101,20 +101,32 @@ export function renderToolActivities(activity, iteration) {
   const details = formatActivityDetails(activity);
   const hasError = activity.status === 'error';
 
-  // Parse metadata from details
-  const metaItems = details ? details.split(' • ') : [];
+  // Get activity type class for specific styling
+  let activityTypeClass = 'activity-type';
+  if (activity.type === 'js_execute' || activity.type === 'js-execute') {
+    activityTypeClass = 'execution-type';
+  } else if (activity.type === 'vault') {
+    activityTypeClass = 'vault-type';
+  } else if (activity.type === 'memory') {
+    activityTypeClass = 'memory-type';
+  } else if (activity.type === 'task') {
+    activityTypeClass = 'task-type';
+  } else if (activity.type === 'goal') {
+    activityTypeClass = 'goal-type';
+  } else if (activity.type === 'final_output' || activity.type === 'final-output') {
+    activityTypeClass = 'output-type';
+  }
 
   let html = `
-    <div class="reasoning-block ${isEven ? 'even' : 'odd'} ${hasError ? 'error' : 'success'}">
+    <div class="reasoning-block ${activityTypeClass} ${isEven ? 'even' : 'odd'} ${hasError ? 'error' : 'success'}">
       <div class="block-header activity">
         <div class="header-left">
           <span class="activity-icon">${info.icon}</span>
           <span class="block-title">${info.name}</span>
-          ${activity.action ? `<span class="activity-action">${encodeHTML(activity.action)}</span>` : ''}
+          ${details ? `<span class="block-meta-compact">${details}</span>` : ''}
         </div>
         <div class="header-right">
-          ${metaItems.map(item => `<span class="meta-item">${item}</span>`).join('')}
-          <span class="status-badge ${hasError ? 'error' : 'success'}">${hasError ? '✗ Failed' : '✓ Success'}</span>
+          <span class="status-badge-compact ${hasError ? 'error' : 'success'}">${hasError ? '✗' : '✓'}</span>
         </div>
       </div>
   `;
@@ -123,7 +135,7 @@ export function renderToolActivities(activity, iteration) {
     html += `
       <div class="activity-body">
         <div class="activity-error">
-          <span class="error-icon">⚠️</span>
+          <span class="error-icon">⚠</span>
           <span class="error-message">${encodeHTML(activity.error)}</span>
         </div>
       </div>
