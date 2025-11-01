@@ -5,21 +5,13 @@
 
 import { isNonEmptyString } from '../core/utils.js';
 import { Storage } from './storage.js';
+import { resolveVaultReferencesSimple } from '../utils/vault-reference-resolver.js';
 
 export const VaultManager = {
   resolveVaultRefsInText(inputText) {
     if (!isNonEmptyString(inputText)) return inputText;
-    const regex = /{{<vaultref\s+id=["']([^"']+)["']\s*\/>}}/g;
-    const vault = Storage.loadVault();
-
-    return inputText.replace(regex, (match, vaultId) => {
-      const entry = vault.find(v => v.identifier === vaultId);
-      if (!entry) {
-        console.warn(`⚠️ Missing vault reference: ${vaultId}`);
-        return `/* [MISSING_VAULT:${vaultId}] */`;
-      }
-      return entry.content || '';
-    });
+    // Use centralized vault reference resolution
+    return resolveVaultReferencesSimple(inputText);
   },
 
   getVaultSummary() {

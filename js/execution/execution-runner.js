@@ -7,12 +7,9 @@
  */
 
 import { ConsoleCapture } from './console-capture.js';
-import { Storage } from '../storage/storage.js';
 import { nowISO } from '../core/utils.js';
-import {
-  EXECUTION_DEFAULT_TIMEOUT_MS,
-  EXECUTION_VAULT_REF_PATTERN
-} from '../config/execution-config.js';
+import { EXECUTION_DEFAULT_TIMEOUT_MS } from '../config/execution-config.js';
+import { expandVaultReferences } from '../utils/vault-reference-resolver.js';
 
 export class ExecutionRunner {
   constructor(options = {}) {
@@ -29,7 +26,11 @@ export class ExecutionRunner {
   async run(request) {
     const capture = new ConsoleCapture();
     const analysis = analyseCode(request.code || '');
-    const { resolvedCode, vaultRefs } = expandVaultReferences(request.code || '');
+
+    // Use centralized vault reference expansion
+    const expansion = expandVaultReferences(request.code || '');
+    const resolvedCode = expansion.resolvedCode;
+    const vaultRefs = expansion.vaultRefs;
 
     const startedAt = Date.now();
     capture.start();
@@ -91,30 +92,6 @@ export class ExecutionRunner {
       ? await runWithTimeout(promise, this.timeoutMs)
       : promise;
   }
-}
-
-/**
- * Replace vault references with stored content and collect metadata.
- */
-function expandVaultReferences(rawCode) {
-  const vaultRefs = [];
-  if (!rawCode) {
-    return { resolvedCode: '', vaultRefs };
-  }
-
-  const vault = Storage.loadVault();
-  const vaultRefRegex = new RegExp(EXECUTION_VAULT_REF_PATTERN.source, EXECUTION_VAULT_REF_PATTERN.flags);
-  const resolvedCode = rawCode.replace(vaultRefRegex, (match, vaultId) => {
-    vaultRefs.push(vaultId);
-    const entry = vault.find((item) => item.identifier === vaultId);
-    if (!entry) {
-      console.warn(`⚠️ Missing vault reference: ${vaultId}`);
-      return `/* [MISSING_VAULT:${vaultId}] */`;
-    }
-    return entry.content || '';
-  });
-
-  return { resolvedCode, vaultRefs };
 }
 
 /**
