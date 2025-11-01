@@ -23,11 +23,13 @@ export function renderReasoningLog() {
 
   let html = '';
   logEntries.forEach((entry, i) => {
+    // Render reasoning as markdown, just like final output
+    const reasoningHtml = window.marked ? marked.parse(entry) : encodeHTML(entry);
     html += `
       <div class="li reasoning-entry">
         <div>
           <div class="mono">#${i + 1}</div>
-          <pre class="mono reasoning-text">${encodeHTML(entry)}</pre>
+          <div class="markdown-body reasoning-text">${reasoningHtml}</div>
         </div>
       </div>
     `;
