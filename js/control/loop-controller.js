@@ -127,7 +127,7 @@ async function runIteration() {
     }
 
     // Generate LLM response
-    const prompt = ReasoningEngine.buildContextPrompt(currentQuery, iterationCount);
+    const prompt = await ReasoningEngine.buildContextPrompt(currentQuery, iterationCount);
     console.log(`\ud83e\udde0 Iteration ${iterationCount} - Prompt: ${prompt.length} chars`);
     
     const response = await GeminiAPI.generateContent(modelId, prompt);

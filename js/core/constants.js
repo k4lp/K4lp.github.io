@@ -57,3 +57,18 @@ export {
   VAULT_TYPES,
   CONSOLE_STYLES
 } from '../config/ui-config.js';
+
+// Re-export reasoning configuration
+export {
+  REASONING_CONTEXT_LIMITS,
+  REASONING_CONTEXT_SECTIONS,
+  REASONING_PROMPT_FRAGMENTS,
+  REASONING_STRATEGIC_INSTRUCTION,
+  GOAL_COMPLETION_RULES
+} from '../config/reasoning-config.js';
+
+// Re-export tool usage configuration
+export {
+  TOOL_OPERATION_PIPELINE,
+  TOOL_SUMMARY_BLUEPRINT
+} from '../config/tool-usage-config.js';
