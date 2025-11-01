@@ -111,10 +111,13 @@
                     </div>
                     
                     <div class="code-editor">
-                        <textarea id="codeInput" class="code-textarea" 
-                                  placeholder="// Use {{&lt;vaultref id=&quot;vault_id&quot; /&gt;}} to inline vault content
+                        <div class="code-editor-container">
+                            <div id="lineNumbers" class="line-numbers" aria-hidden="true"></div>
+                            <textarea id="codeInput" class="code-textarea"
+                                      placeholder="// Use {{&lt;vaultref id=&quot;vault_id&quot; /&gt;}} to inline vault content
 console.log('Hello GDRS');
 return { status: 'ready', timestamp: new Date() };"></textarea>
+                        </div>
                     </div>
                     
                     <div class="code-actions">
