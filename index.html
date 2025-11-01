@@ -229,6 +229,97 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
         
     </div>
 
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Task Details</h3>
+                <button id="taskModalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <span><strong>ID:</strong> <span id="taskModalId"></span></span>
+                    <span><strong>Status:</strong> <span id="taskModalStatus"></span></span>
+                </div>
+                <div class="modal-section">
+                    <strong>Heading:</strong>
+                    <p id="taskModalHeading"></p>
+                </div>
+                <div class="modal-section">
+                    <strong>Content:</strong>
+                    <pre id="taskModalContent"></pre>
+                </div>
+                <div class="modal-section" id="taskModalNotesSection" style="display: none;">
+                    <strong>Notes:</strong>
+                    <pre id="taskModalNotes"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="taskModalExport" class="btn btn-secondary">📥 Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memory Modal -->
+    <div id="memoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Memory Details</h3>
+                <button id="memoryModalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <span><strong>ID:</strong> <span id="memoryModalId"></span></span>
+                </div>
+                <div class="modal-section">
+                    <strong>Heading:</strong>
+                    <p id="memoryModalHeading"></p>
+                </div>
+                <div class="modal-section">
+                    <strong>Content:</strong>
+                    <pre id="memoryModalContent"></pre>
+                </div>
+                <div class="modal-section" id="memoryModalNotesSection" style="display: none;">
+                    <strong>Notes:</strong>
+                    <pre id="memoryModalNotes"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="memoryModalExport" class="btn btn-secondary">📥 Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div id="goalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Goal Details</h3>
+                <button id="goalModalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <span><strong>ID:</strong> <span id="goalModalId"></span></span>
+                </div>
+                <div class="modal-section">
+                    <strong>Heading:</strong>
+                    <p id="goalModalHeading"></p>
+                </div>
+                <div class="modal-section">
+                    <strong>Content:</strong>
+                    <pre id="goalModalContent"></pre>
+                </div>
+                <div class="modal-section" id="goalModalNotesSection" style="display: none;">
+                    <strong>Notes:</strong>
+                    <pre id="goalModalNotes"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="goalModalExport" class="btn btn-secondary">📥 Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Vault Modal -->
     <div id="vaultModal" class="modal">
         <div class="modal-content">
@@ -237,17 +328,20 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                 <button id="vaultModalClose" class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="vault-meta">
+                <div class="modal-meta">
                     <span><strong>ID:</strong> <span id="vaultModalId"></span></span>
                     <span><strong>Type:</strong> <span id="vaultModalType"></span></span>
                 </div>
-                <div class="vault-description">
+                <div class="modal-section">
                     <strong>Description:</strong>
                     <p id="vaultModalDesc"></p>
                 </div>
-                <div class="vault-content">
+                <div class="modal-section">
                     <strong>Content:</strong>
                     <pre id="vaultModalContent"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="vaultModalExport" class="btn btn-secondary">📥 Export</button>
                 </div>
             </div>
         </div>

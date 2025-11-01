@@ -169,12 +169,12 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Storage Section - Enhanced Card Style */
 .storage-section {
-  margin-bottom: var(--gap-lg);
+  margin-bottom: var(--gap-md);
   background-color: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--gap-md);
+  padding: var(--gap-sm) var(--gap-md);
   transition: all 0.3s ease;
 }
 
@@ -187,13 +187,13 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--gap-md);
-  padding-bottom: var(--gap-sm);
+  margin-bottom: var(--gap-sm);
+  padding-bottom: var(--gap-xs);
   border-bottom: 1px solid var(--border);
 }
 
 .section-header h2 {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -201,7 +201,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .section-desc {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -835,8 +835,8 @@ h1, h2, h3, h4, h5, h6 {
 .li {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-sm);
-  padding: var(--gap-md);
+  gap: var(--gap-xs);
+  padding: var(--gap-sm) var(--gap-md);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -874,15 +874,15 @@ h1, h2, h3, h4, h5, h6 {
   overflow-wrap: break-word;
   word-wrap: break-word;
   word-break: break-word;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-primary);
   line-height: 1.4;
 }
 
 .li .pm {
   margin-bottom: 4px;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 10px;
+  line-height: 1.4;
   overflow-wrap: break-word;
   word-wrap: break-word;
   word-break: break-word;
@@ -1512,6 +1512,68 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1;
 }
 
+.modal-meta {
+  display: flex;
+  gap: var(--gap-lg);
+  margin-bottom: var(--gap-md);
+  padding: var(--gap-sm) var(--gap-md);
+  background-color: var(--bg-alt);
+  border-radius: var(--radius);
+  font-size: 11px;
+}
+
+.modal-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-xs);
+}
+
+.modal-section {
+  margin-bottom: var(--gap-md);
+}
+
+.modal-section strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--gap-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal-section p {
+  margin-top: var(--gap-xs);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.modal-section pre {
+  max-height: 300px;
+  overflow: auto;
+  background-color: var(--bg-alt);
+  padding: var(--gap-md);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-family: var(--fs-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: var(--gap-xs);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gap-sm);
+  margin-top: var(--gap-lg);
+  padding-top: var(--gap-md);
+  border-top: 1px solid var(--border);
+}
+
+/* Legacy vault styling - deprecated */
 .vault-meta {
   display: flex;
   gap: var(--gap-lg);
