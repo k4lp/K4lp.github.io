@@ -1,23 +1,23 @@
 /**
- * Final Output Renderer
- * Handles final research output and status rendering
+ * Final Output Renderer - SIMPLE VERSION
  */
 
 import { Storage } from '../../storage/storage.js';
 import { qs } from '../../core/utils.js';
 
-/**
- * Render final research output and status
- */
 export function renderFinalOutput() {
   const output = Storage.loadFinalOutput();
   const finalEl = qs('#finalOutput');
   const statusEl = qs('#finalStatus');
 
   if (finalEl) {
-    finalEl.innerHTML = (!output.html || output.html.includes('goal validation')) ?
-      '<div class="output-placeholder"><p>Comprehensive research report will render here after intelligent analysis and goal completion.</p></div>' :
-      output.html;
+    if (!output.html || output.html.includes('goal validation')) {
+      finalEl.innerHTML = '<div class="output-placeholder"><p>Report will render here...</p></div>';
+    } else {
+      // Just render as markdown, period.
+      const html = window.marked ? marked.parse(output.html) : output.html;
+      finalEl.innerHTML = `<div class="markdown-body">${html}</div>`;
+    }
   }
 
   if (statusEl) {

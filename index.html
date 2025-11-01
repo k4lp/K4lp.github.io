@@ -140,7 +140,7 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                         </div>
                     </div>
                     <div class="output-actions">
-                        <button id="exportTxt" class="btn btn-secondary">Export TXT</button>
+                        <button id="exportTxt" class="btn btn-secondary">📄 Export Markdown</button>
                     </div>
                 </div>
                 
@@ -250,8 +250,10 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
         </div>
     </div>
 
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
+
     <!-- Scripts: Modular Architecture -->
-    <!-- All modules now loaded through ES6 imports in main.js -->
     <script src="js/main.js" type="module"></script>
     
 </body>

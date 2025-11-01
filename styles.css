@@ -1359,3 +1359,95 @@ h1, h2, h3, h4, h5, h6 {
 .hidden {
   display: none !important;
 }
+
+/* Markdown Styles */
+.markdown-body {
+  font-family: var(--fs);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.3em;
+  margin: 24px 0 16px 0;
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+  margin: 24px 0 16px 0;
+}
+
+.markdown-body h3 {
+  font-size: 1.25em;
+  margin: 24px 0 16px 0;
+}
+
+.markdown-body p {
+  margin-bottom: 16px;
+}
+
+.markdown-body ul, .markdown-body ol {
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.markdown-body code {
+  background-color: var(--bg-alt);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: var(--fs-mono);
+  font-size: 85%;
+}
+
+.markdown-body pre {
+  background-color: var(--bg-alt);
+  padding: 16px;
+  border-radius: 6px;
+  overflow: auto;
+  margin-bottom: 16px;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--border);
+  padding: 8px 13px;
+}
+
+.markdown-body th {
+  background-color: var(--bg-alt);
+  font-weight: 600;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--accent);
+  padding-left: 16px;
+  color: var(--text-secondary);
+  margin: 16px 0;
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+}
