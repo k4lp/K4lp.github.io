@@ -1112,27 +1112,30 @@ h1, h2, h3, h4, h5, h6 {
 .line-numbers {
   position: relative;
   padding: var(--gap-md) var(--gap-sm);
+  padding-right: var(--gap-md);
   background-color: #252526;
-  border-right: 1px solid #3e3e42;
+  border-right: 2px solid #3e3e42;
   color: #858585;
   font-family: var(--fs-mono);
   font-size: 12px;
   line-height: 1.6;
   text-align: right;
   user-select: none;
-  min-width: 42px;
-  counter-reset: line;
-  overflow: hidden;
+  min-width: 54px;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  white-space: pre-line;
 }
 
-.line-numbers::before {
+.line-numbers::after {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
-  width: 1px;
+  width: 2px;
   height: 100%;
   background: linear-gradient(to bottom, transparent, #3e3e42 10%, #3e3e42 90%, transparent);
+  pointer-events: none;
 }
 
 /* Code Textarea */
@@ -1176,12 +1179,12 @@ h1, h2, h3, h4, h5, h6 {
 
   .line-numbers {
     background-color: #f5f5f5;
-    border-right-color: #e1e4e8;
+    border-right-color: #d0d7de;
     color: #6e7781;
   }
 
-  .line-numbers::before {
-    background: linear-gradient(to bottom, transparent, #e1e4e8 10%, #e1e4e8 90%, transparent);
+  .line-numbers::after {
+    background: linear-gradient(to bottom, transparent, #d0d7de 10%, #d0d7de 90%, transparent);
   }
 
   .code-textarea {
@@ -1691,6 +1694,35 @@ h1, h2, h3, h4, h5, h6 {
 
   .modal-header, .modal-body {
     padding: var(--gap-md);
+  }
+
+  .code-editor-container {
+    border-width: 1px;
+  }
+
+  .line-numbers {
+    min-width: 42px;
+    padding: var(--gap-sm) 4px;
+    font-size: 11px;
+  }
+
+  .code-textarea {
+    min-height: 150px;
+    padding: var(--gap-sm);
+    font-size: 11px;
+  }
+
+  .console-output {
+    min-height: 100px;
+    padding: var(--gap-sm);
+    padding-left: calc(var(--gap-sm) + 16px);
+    font-size: 10px;
+  }
+
+  .console-output::before {
+    left: var(--gap-sm);
+    top: var(--gap-sm);
+    font-size: 11px;
   }
 }
 
