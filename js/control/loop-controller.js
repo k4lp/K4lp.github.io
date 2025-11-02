@@ -239,6 +239,77 @@ async function runIteration() {
     console.log(`[${applyEndTime}] Operations applied - Duration: ${operationSummary.duration}ms`);
     recordOperationSummary(operationSummary, iterationCount);
 
+    // Step 4: Check for reference errors and attempt silent recovery
+    const SilentErrorRecovery = window.SilentErrorRecovery;
+    if (SilentErrorRecovery && SilentErrorRecovery.isEnabled()) {
+      const errorDetails = SilentErrorRecovery.detectReferenceErrors(operationSummary);
+
+      if (errorDetails) {
+        console.log(`[${nowISO()}] Reference errors detected - attempting silent recovery...`);
+
+        // Collect previous reasoning steps from reasoning log
+        const reasoningLog = Storage.loadReasoningLog();
+        const previousSteps = extractPreviousReasoningSteps(reasoningLog, iterationCount);
+
+        // Attempt silent recovery
+        const recoveryContext = {
+          originalPrompt: prompt,
+          previousReasoningSteps: previousSteps,
+          errorDetails: errorDetails,
+          modelId: modelId,
+          iterationCount: iterationCount
+        };
+
+        const correctedResponse = await SilentErrorRecovery.performSilentRecovery(recoveryContext);
+
+        if (correctedResponse) {
+          console.log(`[${nowISO()}] Silent recovery succeeded - processing corrected response`);
+
+          // Extract corrected response text
+          const correctedText = GeminiAPI.extractResponseText(correctedResponse);
+
+          if (correctedText?.trim()) {
+            // Re-extract reasoning blocks from corrected response
+            const correctedReasoningBlocks = ReasoningParser.extractReasoningBlocks(correctedText);
+            const correctedReasoningTexts = correctedReasoningBlocks
+              .map(block => ReasoningParser.extractPureReasoningText(block))
+              .filter(text => text.length > 0);
+
+            // Replace the failed reasoning with corrected reasoning
+            // Remove the last entry (failed attempt) and add corrected one
+            const reasoningLogAfterRecovery = Storage.loadReasoningLog();
+            if (reasoningLogAfterRecovery.length > 0 &&
+                reasoningLogAfterRecovery[reasoningLogAfterRecovery.length - 1].includes(`=== ITERATION ${iterationCount} ===`)) {
+              reasoningLogAfterRecovery.pop(); // Remove failed attempt
+            }
+
+            if (correctedReasoningTexts.length > 0) {
+              reasoningLogAfterRecovery.push(`=== ITERATION ${iterationCount} ===\n${correctedReasoningTexts.join('\n\n')}`);
+              Storage.saveReasoningLog(reasoningLogAfterRecovery);
+              Renderer.renderReasoningLog();
+              console.log(`[${nowISO()}] Replaced with ${correctedReasoningTexts.length} corrected reasoning block(s)`);
+            }
+
+            // Re-parse operations from corrected response
+            console.log(`[${nowISO()}] Re-parsing operations from corrected response...`);
+            const correctedOperations = ReasoningParser.parseOperations(correctedText);
+            console.log(`[${nowISO()}] Corrected operations parsed - jsExecute: ${correctedOperations.jsExecute?.length || 0}, finalOutput: ${correctedOperations.finalOutput?.length || 0}, vault: ${correctedOperations.vault?.length || 0}, tasks: ${correctedOperations.tasks?.length || 0}, goals: ${correctedOperations.goals?.length || 0}, memories: ${correctedOperations.memories?.length || 0}`);
+
+            // Re-apply corrected operations
+            console.log(`[${nowISO()}] Re-applying corrected operations...`);
+            const correctedSummary = await ReasoningParser.applyOperations(correctedOperations);
+            console.log(`[${nowISO()}] Corrected operations applied - Duration: ${correctedSummary.duration}ms`);
+
+            // Don't record the corrected summary errors (it should be clean)
+            // Continue with normal flow using corrected state
+            console.log(`[${nowISO()}] Silent recovery complete - continuing with corrected state`);
+          }
+        } else {
+          console.warn(`[${nowISO()}] Silent recovery failed - continuing with original (possibly erroneous) state`);
+        }
+      }
+    }
+
     // Emit iteration complete event
     const totalOps = (allOperations.jsExecute?.length || 0) +
                      (allOperations.finalOutput?.length || 0) +
@@ -372,4 +443,40 @@ function recordOperationSummary(summary, iteration) {
 
   Storage.saveReasoningLog(logEntries);
   Renderer.renderReasoningLog();
+}
+
+/**
+ * Extract previous reasoning steps from reasoning log
+ * Used for silent error recovery to provide context
+ */
+function extractPreviousReasoningSteps(reasoningLog, currentIteration) {
+  if (!reasoningLog || reasoningLog.length === 0) return [];
+
+  const steps = [];
+
+  // Parse reasoning log to extract iterations before current one
+  for (let i = 0; i < reasoningLog.length; i++) {
+    const entry = reasoningLog[i];
+
+    // Look for iteration markers
+    const iterationMatch = entry.match(/=== ITERATION (\d+) ===/);
+
+    if (iterationMatch) {
+      const iterationNum = parseInt(iterationMatch[1]);
+
+      // Only include iterations before current one
+      if (iterationNum < currentIteration) {
+        // Extract the reasoning text (everything after the iteration marker)
+        const lines = entry.split('\n');
+        const reasoningText = lines.slice(1).join('\n').trim();
+
+        if (reasoningText) {
+          steps.push(reasoningText);
+        }
+      }
+    }
+  }
+
+  console.log(`[${nowISO()}] Extracted ${steps.length} previous reasoning steps for recovery`);
+  return steps;
 }
