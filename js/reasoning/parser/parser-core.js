@@ -25,6 +25,8 @@ import {
   applyGoalOperation
 } from './parser-appliers.js';
 
+import { nowISO } from '../../core/utils.js';
+
 /**
  * ReasoningParser
  *
@@ -53,10 +55,16 @@ export const ReasoningParser = {
    * @returns {Object} Parsed operations object
    */
   parseOperations(blockText) {
+    const parseStartTime = nowISO();
+    console.log(`[${parseStartTime}] 🔍 ReasoningParser.parseOperations() - Input length: ${blockText.length} chars`);
+
     // Use the unified parser to find ALL tools dynamically
+    const extractStartTime = nowISO();
     const allOps = extractAllToolOperations(blockText);
+    console.log(`[${nowISO()}] 🔧 Extracted tool operations - memory: ${(allOps.memory || []).length}, task: ${(allOps.task || []).length}, goal: ${(allOps.goal || []).length}, datavault: ${(allOps.datavault || []).length}, js_execute: ${(allOps.js_execute || []).length}, final_output: ${(allOps.final_output || []).length}`);
 
     // Translate the unified format to the format applyOperations expects
+    const translateStartTime = nowISO();
     const operations = {
       memories: (allOps.memory || []).map(op => op.attributes),
       tasks: (allOps.task || []).map(op => op.attributes),
@@ -73,6 +81,7 @@ export const ReasoningParser = {
       finalOutput: (allOps.final_output || []).map(op => op.content)
     };
 
+    console.log(`[${nowISO()}] ✅ Operations translated to normalized format`);
     return operations;
   },
 

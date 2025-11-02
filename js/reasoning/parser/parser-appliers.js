@@ -6,6 +6,7 @@
  */
 
 import { ToolOperationPipeline } from '../tools/tool-operation-pipeline.js';
+import { nowISO } from '../../core/utils.js';
 
 let activePipeline = new ToolOperationPipeline();
 
@@ -44,7 +45,20 @@ export function getToolPipeline() {
 }
 
 export async function applyOperations(operations, options = {}) {
-  return activePipeline.run(normalizeOperations(operations), options);
+  const applyStartTime = nowISO();
+  console.log(`[${applyStartTime}] 🔧 applyOperations() called`);
+
+  const normalized = normalizeOperations(operations);
+  const totalOps = normalized.vault.length + normalized.memories.length +
+                   normalized.tasks.length + normalized.goals.length +
+                   normalized.jsExecute.length + normalized.finalOutput.length;
+
+  console.log(`[${nowISO()}] 📊 Operations normalized - Total: ${totalOps} (vault: ${normalized.vault.length}, memories: ${normalized.memories.length}, tasks: ${normalized.tasks.length}, goals: ${normalized.goals.length}, jsExecute: ${normalized.jsExecute.length}, finalOutput: ${normalized.finalOutput.length})`);
+
+  const result = await activePipeline.run(normalized, options);
+
+  console.log(`[${nowISO()}] ✅ applyOperations() completed`);
+  return result;
 }
 
 export function applyVaultOperation(op) {
