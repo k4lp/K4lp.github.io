@@ -247,8 +247,15 @@ async function runIteration() {
     recordOperationSummary(operationSummary, iterationCount);
 
     // Step 5: Check for reference errors (both operation and code execution) and attempt silent recovery
+    // IMPORTANT: Skip recovery if final output was already generated
     const SilentErrorRecovery = window.SilentErrorRecovery;
-    if (SilentErrorRecovery && SilentErrorRecovery.isEnabled()) {
+    const skipRecovery = Storage.isFinalOutputVerified();
+
+    if (skipRecovery) {
+      console.log(`[${nowISO()}] Skipping silent recovery - final output already verified`);
+    }
+
+    if (SilentErrorRecovery && SilentErrorRecovery.isEnabled() && !skipRecovery) {
       // Check for operation-level reference errors
       const operationErrorDetails = SilentErrorRecovery.detectReferenceErrors(operationSummary);
 

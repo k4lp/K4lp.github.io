@@ -327,7 +327,15 @@ class SilentErrorRecovery {
     // Console logging (detailed but not visible to user)
     console.group(`[${new Date().toISOString()}] Silent Error Recovery: Iteration ${iterationCount}`);
     console.log('Error Details:', errorDetails);
-    console.log('Missing References:', errorDetails.errors.map(e => e.missingId));
+
+    // Handle different error structures (operation-level vs code execution)
+    if (errorDetails.errors && Array.isArray(errorDetails.errors)) {
+      // Operation-level errors
+      console.log('Missing References:', errorDetails.errors.map(e => e.missingId));
+    } else if (errorDetails.failedAccesses && Array.isArray(errorDetails.failedAccesses)) {
+      // Code execution errors
+      console.log('Failed Accesses:', errorDetails.failedAccesses.map(a => `${a.entityType}.${a.id}`));
+    }
 
     try {
       // Collect available entity references
@@ -446,9 +454,11 @@ class SilentErrorRecovery {
    * @returns {Object|null} Error details or null if no reference errors
    */
   detectCodeExecutionReferenceErrors(executionResult) {
-    // Check if execution failed
+    // IMPORTANT: Only detect errors if execution actually failed
+    // Don't trigger recovery just because code accessed non-existent entities
+    // (it might have handled nulls gracefully)
     if (!executionResult || executionResult.success) {
-      return null; // No error or execution succeeded
+      return null; // No error or execution succeeded (even if it accessed missing entities)
     }
 
     // Get access tracking data
