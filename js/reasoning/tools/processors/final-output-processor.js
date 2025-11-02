@@ -7,31 +7,36 @@ export const finalOutputProcessor = {
     const processStartTime = nowISO();
 
     if (!Array.isArray(operations) || operations.length === 0) {
-      console.log(`[${processStartTime}] ℹ️  finalOutputProcessor.process() - No operations to process`);
+      console.log(`[${processStartTime}] finalOutputProcessor.process() - No operations to process`);
       return;
     }
 
-    console.log(`[${processStartTime}] 🎯 finalOutputProcessor.process() starting - ${operations.length} operation(s)`);
+    console.log(`[${processStartTime}] finalOutputProcessor.process() starting - ${operations.length} operation(s)`);
 
     const summary = context.getSummary();
 
     operations.forEach((htmlContent, index) => {
       const opStartTime = nowISO();
-      console.log(`[${opStartTime}] 📝 Processing final output operation ${index + 1}/${operations.length} - Content length: ${htmlContent.length} chars`);
+      console.log(`[${opStartTime}] ========== Processing final output operation ${index + 1}/${operations.length} ==========`);
+      console.log(`[${opStartTime}] Input - Type: ${typeof htmlContent}, Length: ${htmlContent?.length || 0} chars, Empty: ${!htmlContent || htmlContent.trim().length === 0}`);
 
       const result = { index, status: 'success' };
 
       try {
         const resolveStartTime = nowISO();
-        console.log(`[${resolveStartTime}] 🔗 Resolving vault references...`);
+        console.log(`[${resolveStartTime}] Calling VaultManager.resolveVaultRefsInText()...`);
         const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
-        console.log(`[${nowISO()}] ✅ Vault references resolved - Processed length: ${processedHTML.length} chars`);
+        console.log(`[${nowISO()}] Vault resolution complete - Input: ${htmlContent?.length || 0} chars, Output: ${processedHTML.length} chars`);
 
         const saveStartTime = nowISO();
-        console.log(`[${saveStartTime}] 💾 Saving final output with VERIFICATION=true...`);
+        console.log(`[${saveStartTime}] CRITICAL: Calling context.storage.saveFinalOutput() with verified=true`);
+        console.log(`[${saveStartTime}] Parameters - html length: ${processedHTML.length}, verified: true (boolean), source: 'llm'`);
+
         context.storage.saveFinalOutput(processedHTML, true, 'llm');
+
         const saveEndTime = nowISO();
-        console.log(`[${saveEndTime}] ✅ Final output SAVED and VERIFIED`);
+        console.log(`[${saveEndTime}] context.storage.saveFinalOutput() returned`);
+        console.log(`[${saveEndTime}] This should have set the verification flag in localStorage`);
 
         context.logActivity({
           type: 'final_output',
@@ -54,10 +59,10 @@ export const finalOutputProcessor = {
           ].join('\n')
         );
         context.storage.saveReasoningLog(logEntries);
-        console.log(`[${nowISO()}] ✅ Final output operation ${index + 1} completed successfully`);
+        console.log(`[${nowISO()}] Final output operation ${index + 1} completed successfully`);
       } catch (error) {
         const errorTime = nowISO();
-        console.error(`[${errorTime}] ❌ Error processing final output operation ${index + 1}: ${error.message}`);
+        console.error(`[${errorTime}] Error processing final output operation ${index + 1}: ${error.message}`);
 
         result.status = 'error';
         result.error = error.message;
@@ -76,13 +81,13 @@ export const finalOutputProcessor = {
           message: error.message
         });
 
-        console.error(`[${nowISO()}] ⚠️  Final output operation ${index + 1} failed with error`);
+        console.error(`[${nowISO()}] Final output operation ${index + 1} failed with error`);
       }
 
       summary.finalOutput.push(result);
     });
 
-    console.log(`[${nowISO()}] ✅ finalOutputProcessor.process() completed - Processed ${operations.length} operation(s)`);
+    console.log(`[${nowISO()}] finalOutputProcessor.process() completed - Processed ${operations.length} operation(s)`);
   }
 };
 

@@ -146,29 +146,86 @@ export const Storage = {
   },
   
   saveFinalOutput(htmlString, verified = false, source = 'auto') {
+    const saveTime = nowISO();
+    console.log(`[${saveTime}] ========== Storage.saveFinalOutput() CALLED ==========`);
+    console.log(`[${saveTime}] PARAMETERS:`);
+    console.log(`   - htmlString: ${htmlString ? 'provided' : 'null/undefined'}, length: ${htmlString?.length || 0} chars, type: ${typeof htmlString}`);
+    console.log(`   - verified: ${verified} (type: ${typeof verified}, truthy: ${!!verified})`);
+    console.log(`   - source: '${source}'`);
+
     const output = {
-      timestamp: nowISO(),
+      timestamp: saveTime,
       html: htmlString || '',
       verified,
       source
     };
-    
-    localStorage.setItem(LS_KEYS.FINAL_OUTPUT, JSON.stringify(output));
-    
+
+    const serialized = JSON.stringify(output);
+    console.log(`[${nowISO()}] Serialized output object - length: ${serialized.length} chars`);
+    console.log(`[${nowISO()}] Writing to localStorage key: '${LS_KEYS.FINAL_OUTPUT}'`);
+    localStorage.setItem(LS_KEYS.FINAL_OUTPUT, serialized);
+    console.log(`[${nowISO()}] localStorage.setItem() completed`);
+
+    // Critical verification flag logic
+    console.log(`[${nowISO()}] Checking if verification flag should be set: verified = ${verified}, if(verified) = ${!!verified}`);
     if (verified) {
+      console.log(`[${nowISO()}] CONDITION MET - verified is truthy`);
+      console.log(`[${nowISO()}] Setting localStorage['${LS_KEYS.FINAL_OUTPUT_VERIFIED}'] = 'true'`);
       localStorage.setItem(LS_KEYS.FINAL_OUTPUT_VERIFIED, 'true');
+      const checkValue = localStorage.getItem(LS_KEYS.FINAL_OUTPUT_VERIFIED);
+      console.log(`[${nowISO()}] VERIFICATION FLAG SET SUCCESSFULLY - Readback: '${checkValue}' (type: ${typeof checkValue})`);
+    } else {
+      console.log(`[${nowISO()}] CONDITION NOT MET - verified is falsy, NOT setting verification flag`);
+      console.log(`[${nowISO()}] This means isFinalOutputVerified() will return false`);
     }
-    
+
+    console.log(`[${nowISO()}] Emitting event '${Events.FINAL_OUTPUT_UPDATED}'`);
     eventBus.emit(Events.FINAL_OUTPUT_UPDATED, output);
-    console.log(`\ud83d\udcc4 Final output saved - Source: ${source}, Verified: ${verified}`);
+    console.log(`[${nowISO()}] ========== Storage.saveFinalOutput() COMPLETE ==========`);
   },
 
   isFinalOutputVerified() {
-    return localStorage.getItem(LS_KEYS.FINAL_OUTPUT_VERIFIED) === 'true';
+    const checkTime = nowISO();
+    console.log(`[${checkTime}] ========== Storage.isFinalOutputVerified() CALLED ==========`);
+    console.log(`[${checkTime}] Call stack: ${new Error().stack.split('\n').slice(1, 4).join(' << ')}`);
+
+    const rawValue = localStorage.getItem(LS_KEYS.FINAL_OUTPUT_VERIFIED);
+    console.log(`[${nowISO()}] Reading localStorage['${LS_KEYS.FINAL_OUTPUT_VERIFIED}']`);
+    console.log(`[${nowISO()}] Value: '${rawValue}' (type: ${typeof rawValue}, null: ${rawValue === null})`);
+
+    const result = rawValue === 'true';
+    console.log(`[${nowISO()}] Comparison logic: '${rawValue}' === 'true' => ${result}`);
+
+    // Also log the actual final output object for debugging
+    const finalOutputRaw = localStorage.getItem(LS_KEYS.FINAL_OUTPUT);
+    console.log(`[${nowISO()}] Reading localStorage['${LS_KEYS.FINAL_OUTPUT}'] for additional context`);
+    if (finalOutputRaw) {
+      try {
+        const finalOutputObj = JSON.parse(finalOutputRaw);
+        console.log(`[${nowISO()}] FINAL_OUTPUT object exists in storage:`);
+        console.log(`   - timestamp: ${finalOutputObj.timestamp}`);
+        console.log(`   - verified field: ${finalOutputObj.verified} (type: ${typeof finalOutputObj.verified})`);
+        console.log(`   - source: ${finalOutputObj.source}`);
+        console.log(`   - html exists: ${!!finalOutputObj.html}, length: ${finalOutputObj.html?.length || 0} chars`);
+      } catch (e) {
+        console.error(`[${nowISO()}] Error parsing FINAL_OUTPUT from storage: ${e.message}`);
+      }
+    } else {
+      console.log(`[${nowISO()}] FINAL_OUTPUT key not found in localStorage (value is null)`);
+    }
+
+    console.log(`[${nowISO()}] ========== Storage.isFinalOutputVerified() RETURNING: ${result} ==========`);
+    return result;
   },
 
   clearFinalOutputVerification() {
+    const clearTime = nowISO();
+    console.log(`[${clearTime}] ========== Storage.clearFinalOutputVerification() CALLED ==========`);
+    console.log(`[${clearTime}] Removing localStorage['${LS_KEYS.FINAL_OUTPUT_VERIFIED}']`);
     localStorage.removeItem(LS_KEYS.FINAL_OUTPUT_VERIFIED);
+    const checkValue = localStorage.getItem(LS_KEYS.FINAL_OUTPUT_VERIFIED);
+    console.log(`[${nowISO()}] Verification flag cleared - Readback value: ${checkValue === null ? 'null' : `'${checkValue}'`}`);
+    console.log(`[${nowISO()}] ========== Storage.clearFinalOutputVerification() COMPLETE ==========`);
   },
 
   // === LOGGING ===
