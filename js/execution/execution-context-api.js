@@ -12,11 +12,14 @@ import { MemoryAPI } from './apis/memory-api.js';
 import { TasksAPI } from './apis/tasks-api.js';
 import { GoalsAPI } from './apis/goals-api.js';
 import { nowISO } from '../core/utils.js';
+import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
 
 /**
  * Build execution context with all APIs
  * This is injected into the JavaScript execution environment
  *
+ * @param {Object} options - Options for context building
+ * @param {boolean} options.instrumented - Whether to use instrumented APIs for tracking (default: true)
  * @returns {Object} Execution context with APIs
  *
  * @example
@@ -25,8 +28,11 @@ import { nowISO } from '../core/utils.js';
  * memory.set('key', 'value', 'My heading');
  * tasks.setStatus('task_001', 'finished');
  */
-export function buildExecutionContext() {
-    return {
+export function buildExecutionContext(options = {}) {
+    const { instrumented = true } = options;
+
+    // Create base API instances
+    const baseAPIs = {
         // DataVault API
         vault: new VaultAPI(),
 
@@ -73,6 +79,13 @@ export function buildExecutionContext() {
             sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
         },
     };
+
+    // Return instrumented or base APIs based on options
+    if (instrumented) {
+        return createInstrumentedAPIs(baseAPIs);
+    } else {
+        return baseAPIs;
+    }
 }
 
 /**
