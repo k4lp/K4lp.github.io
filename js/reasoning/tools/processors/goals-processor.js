@@ -5,6 +5,7 @@ export const goalsProcessor = {
 
     const summary = context.getSummary();
     let goals = context.getSnapshot('goals');
+    const referenceMonitor = context.getReferenceMonitor();
 
     for (const op of operations) {
       const result = {
@@ -15,6 +16,31 @@ export const goalsProcessor = {
 
       try {
         if (op.delete) {
+          if (!referenceMonitor.ensureExists({
+            entityType: 'goal',
+            identifier: op.identifier,
+            snapshot: goals,
+            operationType: 'delete',
+            notes: 'LLM attempted to delete a goal that does not exist in storage'
+          })) {
+            result.status = 'error';
+            result.error = `Goal not found: ${op.identifier}`;
+            context.recordError({
+              type: 'goal',
+              id: op?.identifier || 'unknown',
+              message: result.error
+            });
+            context.logActivity({
+              type: 'goal',
+              action: 'delete',
+              id: op?.identifier || 'unknown',
+              status: 'error',
+              error: result.error
+            });
+            summary.goals.push(result);
+            continue;
+          }
+
           const updated = goals.filter((item) => item.identifier !== op.identifier);
           if (updated.length !== goals.length) {
             summary._snapshots.goals = updated;
@@ -51,7 +77,29 @@ export const goalsProcessor = {
           });
         } else if (op.identifier) {
           const existing = goals.find((item) => item.identifier === op.identifier);
-          if (existing && op.notes !== undefined) {
+          if (!existing) {
+            referenceMonitor.ensureExists({
+              entityType: 'goal',
+              identifier: op.identifier,
+              snapshot: goals,
+              operationType: 'update',
+              notes: 'LLM attempted to update a goal that does not exist in storage'
+            });
+            result.status = 'error';
+            result.error = `Goal not found for update: ${op.identifier}`;
+            context.recordError({
+              type: 'goal',
+              id: op.identifier,
+              message: result.error
+            });
+            context.logActivity({
+              type: 'goal',
+              action: 'update',
+              id: op.identifier,
+              status: 'error',
+              error: result.error
+            });
+          } else if (op.notes !== undefined) {
             existing.notes = op.notes;
             context.markDirty('goals');
             context.logActivity({
@@ -61,6 +109,8 @@ export const goalsProcessor = {
               status: 'success'
             });
           }
+        } else {
+          throw new Error('Goal operation missing identifier');
         }
       } catch (error) {
         result.status = 'error';

@@ -3,6 +3,7 @@ import { JSExecutor } from '../../execution/js-executor.js';
 import { eventBus, Events } from '../../core/event-bus.js';
 import { nowISO } from '../../core/utils.js';
 import { TOOL_SUMMARY_BLUEPRINT } from '../../config/tool-usage-config.js';
+import { ReferenceIntegrityMonitor } from './reference-integrity-monitor.js';
 
 export class ToolOperationContext {
   constructor({
@@ -18,6 +19,9 @@ export class ToolOperationContext {
     this.events = events;
     this.jsExecutor = jsExecutor;
     this.clock = clock;
+    this.referenceMonitor = new ReferenceIntegrityMonitor({
+      timeProvider: () => this.now()
+    });
 
     this.summary = createSummary(summaryBlueprint);
     this.summary._dirty = {
@@ -36,6 +40,10 @@ export class ToolOperationContext {
 
   getSummary() {
     return this.summary;
+  }
+
+  getReferenceMonitor() {
+    return this.referenceMonitor;
   }
 
   markDirty(key) {

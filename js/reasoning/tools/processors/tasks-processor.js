@@ -14,6 +14,7 @@ export const tasksProcessor = {
 
     const summary = context.getSummary();
     const tasks = context.getSnapshot('tasks');
+    const referenceMonitor = context.getReferenceMonitor();
 
     for (const op of operations) {
       const result = { id: op?.identifier, action: 'upsert', status: 'success' };
@@ -31,7 +32,29 @@ export const tasksProcessor = {
           existing.status = resolveStatus(op, existing);
         } else {
           if (!op.heading || !op.content) {
-            throw new Error('New tasks require heading and content');
+            referenceMonitor.ensureExists({
+              entityType: 'task',
+              identifier: op.identifier,
+              snapshot: tasks,
+              operationType: 'update',
+              notes: 'LLM attempted to update a task that does not exist in storage'
+            });
+            result.status = 'error';
+            result.error = `Task not found for update: ${op.identifier}`;
+            context.recordError({
+              type: 'task',
+              id: op.identifier,
+              message: result.error
+            });
+            context.logActivity({
+              type: 'task',
+              action: 'update',
+              id: op.identifier,
+              status: 'error',
+              error: result.error
+            });
+            summary.tasks.push(result);
+            continue;
           }
 
           tasks.push({

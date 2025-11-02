@@ -8,9 +8,10 @@ function detectVaultAction(op) {
 function deleteVaultEntry(vault, op) {
   const index = vault.findIndex((entry) => entry.identifier === op.id);
   if (index === -1) {
-    throw new Error(`Vault entry not found: ${op.id}`);
+    return false;
   }
   vault.splice(index, 1);
+  return true;
 }
 
 function upsertVaultEntry(context, vault, op) {
@@ -47,9 +48,16 @@ function upsertVaultEntry(context, vault, op) {
   }
 }
 
-function handleVaultRead(context, op, vaultSnapshot, summary) {
+function handleVaultRead(context, referenceMonitor, op, vaultSnapshot) {
   const entry = vaultSnapshot.find((item) => item.identifier === op.id);
   if (!entry) {
+    referenceMonitor.ensureExists({
+      entityType: 'vault',
+      identifier: op.id,
+      snapshot: vaultSnapshot,
+      operationType: 'read',
+      notes: 'LLM requested vault content for an identifier that does not exist'
+    });
     context.logActivity({
       type: 'vault',
       action: 'read',
@@ -62,7 +70,7 @@ function handleVaultRead(context, op, vaultSnapshot, summary) {
       id: op.id || 'unknown',
       message: `Vault entry not found: ${op.id}`
     });
-    return;
+    return false;
   }
 
   const limit = op.limit === 'full-length' ? entry.content.length : parseInt(op.limit || '0', 10);
@@ -87,6 +95,8 @@ function handleVaultRead(context, op, vaultSnapshot, summary) {
     dataSize: content.length,
     limit: op.limit || 'none'
   });
+
+  return true;
 }
 
 export const vaultProcessor = {
@@ -96,13 +106,40 @@ export const vaultProcessor = {
 
     const summary = context.getSummary();
     const vaultSnapshot = context.getSnapshot('vault');
+    const referenceMonitor = context.getReferenceMonitor();
 
     for (const op of operations) {
       const result = { id: op?.id, action: detectVaultAction(op), status: 'success' };
 
       try {
         if (op.delete) {
-          deleteVaultEntry(vaultSnapshot, op);
+          const deleted = deleteVaultEntry(vaultSnapshot, op);
+          if (!deleted) {
+            referenceMonitor.ensureExists({
+              entityType: 'vault',
+              identifier: op.id,
+              snapshot: vaultSnapshot,
+              operationType: 'delete',
+              notes: 'LLM attempted to delete a vault entry that does not exist'
+            });
+            result.status = 'error';
+            result.error = `Vault entry not found: ${op.id}`;
+            context.recordError({
+              type: 'vault',
+              id: op?.id || 'unknown',
+              message: result.error
+            });
+            context.logActivity({
+              type: 'vault',
+              action: 'delete',
+              id: op.id,
+              status: 'error',
+              error: result.error
+            });
+            summary.vault.push(result);
+            continue;
+          }
+
           context.markDirty('vault');
           context.logActivity({
             type: 'vault',
@@ -111,7 +148,11 @@ export const vaultProcessor = {
             status: 'success'
           });
         } else if (op.action === 'request_read') {
-          handleVaultRead(context, op, vaultSnapshot, summary);
+          const readSuccess = handleVaultRead(context, referenceMonitor, op, vaultSnapshot);
+          if (!readSuccess) {
+            result.status = 'error';
+            result.error = `Vault entry not found for read: ${op.id}`;
+          }
         } else if (op.id && op.content !== undefined) {
           upsertVaultEntry(context, vaultSnapshot, op);
           context.markDirty('vault');
