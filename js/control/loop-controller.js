@@ -231,7 +231,14 @@ async function runIteration() {
     }
     console.log(`[${nowISO()}] ========== END OF OPERATIONS METADATA ==========`);
 
-    // Step 3: Apply all found operations
+    // Step 3: Reset API access tracker for this iteration
+    const ApiAccessTracker = window.ApiAccessTracker;
+    if (ApiAccessTracker) {
+      ApiAccessTracker.reset();
+      console.log(`[${nowISO()}] API Access Tracker reset for iteration ${iterationCount}`);
+    }
+
+    // Step 4: Apply all found operations
     const applyStartTime = nowISO();
     console.log(`[${applyStartTime}] Applying operations...`);
     const operationSummary = await ReasoningParser.applyOperations(allOperations);
@@ -239,13 +246,31 @@ async function runIteration() {
     console.log(`[${applyEndTime}] Operations applied - Duration: ${operationSummary.duration}ms`);
     recordOperationSummary(operationSummary, iterationCount);
 
-    // Step 4: Check for reference errors and attempt silent recovery
+    // Step 5: Check for reference errors (both operation and code execution) and attempt silent recovery
     const SilentErrorRecovery = window.SilentErrorRecovery;
     if (SilentErrorRecovery && SilentErrorRecovery.isEnabled()) {
-      const errorDetails = SilentErrorRecovery.detectReferenceErrors(operationSummary);
+      // Check for operation-level reference errors
+      const operationErrorDetails = SilentErrorRecovery.detectReferenceErrors(operationSummary);
+
+      // Check for code execution reference errors
+      let codeErrorDetails = null;
+      if (operationSummary.executions && operationSummary.executions.length > 0) {
+        // Check each execution result
+        for (const execResult of operationSummary.executions) {
+          const execError = SilentErrorRecovery.detectCodeExecutionReferenceErrors(execResult);
+          if (execError) {
+            codeErrorDetails = execError;
+            break; // Found at least one code execution error
+          }
+        }
+      }
+
+      // Combine both error types
+      const errorDetails = operationErrorDetails || codeErrorDetails;
 
       if (errorDetails) {
-        console.log(`[${nowISO()}] Reference errors detected - attempting silent recovery...`);
+        const errorType = operationErrorDetails ? 'operation-level' : 'code execution';
+        console.log(`[${nowISO()}] Reference errors detected (${errorType}) - attempting silent recovery...`);
 
         // Collect previous reasoning steps from reasoning log
         const reasoningLog = Storage.loadReasoningLog();

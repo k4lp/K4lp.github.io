@@ -437,6 +437,84 @@ class SilentErrorRecovery {
   isEnabled() {
     return this.enabled;
   }
+
+  /**
+   * Detect if code execution failed due to reference errors
+   * Uses the ApiAccessTracker to check for failed entity accesses
+   *
+   * @param {Object} executionResult - Result from code execution
+   * @returns {Object|null} Error details or null if no reference errors
+   */
+  detectCodeExecutionReferenceErrors(executionResult) {
+    // Check if execution failed
+    if (!executionResult || executionResult.success) {
+      return null; // No error or execution succeeded
+    }
+
+    // Get access tracking data
+    const ApiAccessTracker = window.ApiAccessTracker;
+    if (!ApiAccessTracker) {
+      return null; // Tracker not available
+    }
+
+    const errorReport = ApiAccessTracker.getErrorReport();
+
+    // If there were failed accesses, this is a reference error
+    if (errorReport && errorReport.hasErrors) {
+      console.log(
+        `[${new Date().toISOString()}] Code execution reference errors detected:`,
+        errorReport.failedAccesses
+      );
+
+      return {
+        hasErrors: true,
+        type: 'code_execution',
+        executionResult: executionResult,
+        failedAccesses: errorReport.failedAccesses,
+        attemptedIds: errorReport.attemptedIds,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    // Also check if the error message itself indicates a reference error
+    if (executionResult.error) {
+      const errorMessage = executionResult.error.message || String(executionResult.error);
+
+      // Check for common patterns indicating entity access issues
+      const codeReferencePatterns = [
+        /Cannot read propert(y|ies) .* of null/i,
+        /Cannot read propert(y|ies) .* of undefined/i,
+        /null is not an object/i,
+        /undefined is not an object/i,
+        /\.get\(\) returned null/i,
+        /entity not found/i,
+        /identifier .* does not exist/i
+      ];
+
+      const isCodeReferenceError = codeReferencePatterns.some(pattern =>
+        pattern.test(errorMessage)
+      );
+
+      if (isCodeReferenceError) {
+        console.log(
+          `[${new Date().toISOString()}] Code execution error appears to be reference-related:`,
+          errorMessage
+        );
+
+        return {
+          hasErrors: true,
+          type: 'code_execution',
+          executionResult: executionResult,
+          failedAccesses: [],
+          attemptedIds: ApiAccessTracker ? ApiAccessTracker.getAttemptedIds() : {},
+          errorMessage: errorMessage,
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+
+    return null; // Not a reference error
+  }
 }
 
 // Create global singleton instance
