@@ -160,5 +160,3 @@ window.ApiAccessTracker = window.ApiAccessTracker || new ApiAccessTracker();
 window.getApiAccessReport = () => window.ApiAccessTracker.getAll();
 
 console.log('[API Access Tracker] Module loaded and ready');
-
-export default window.ApiAccessTracker;
