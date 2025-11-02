@@ -11,6 +11,7 @@ import {
 } from '../core/constants.js';
 import { ReasoningContextBuilder } from './context/context-builder.js';
 import { goalCompletionEvaluator as defaultGoalEvaluator } from './goal-completion-evaluator.js';
+import { nowISO } from '../core/utils.js';
 
 let contextBuilder = new ReasoningContextBuilder();
 let goalEvaluator = defaultGoalEvaluator;
@@ -38,13 +39,21 @@ export const ReasoningEngine = {
    * @returns {Promise<string>}
    */
   async buildContextPrompt(query, iteration) {
-    return contextBuilder.buildPrompt({
+    const buildStartTime = nowISO();
+    console.log(`[${buildStartTime}] ReasoningEngine.buildContextPrompt() called`);
+    console.log(`[${buildStartTime}] Parameters: query length=${query?.length || 0}, iteration=${iteration}, maxIterations=${MAX_ITERATIONS}`);
+
+    const prompt = await contextBuilder.buildPrompt({
       query,
       iteration,
       maxIterations: MAX_ITERATIONS,
       systemPrompt: SYSTEM_PROMPT,
       instructions: REASONING_STRATEGIC_INSTRUCTION
     });
+
+    console.log(`[${nowISO()}] Prompt built - Final length: ${prompt.length} chars`);
+    console.log(`[${nowISO()}] Prompt includes: System prompt, Instructions, Query, Iteration=${iteration}/${MAX_ITERATIONS}`);
+    return prompt;
   },
 
   /**
