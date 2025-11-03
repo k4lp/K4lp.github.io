@@ -8,7 +8,8 @@
  * This enables silent error recovery for code execution failures.
  */
 
-import ApiAccessTracker from './api-access-tracker.js';
+// ApiAccessTracker is loaded globally via <script> tag in index.html
+// Access it via window.ApiAccessTracker
 
 /**
  * Create an instrumented version of an API that tracks accesses
@@ -61,7 +62,9 @@ export function createInstrumentedAPI(apiInstance, entityType) {
  * Track an API access
  */
 function trackAccess(entityType, operation, id, result, error = null) {
-  if (!ApiAccessTracker.isEnabled()) return;
+  // Get the global ApiAccessTracker instance
+  const ApiAccessTracker = window.ApiAccessTracker;
+  if (!ApiAccessTracker || !ApiAccessTracker.isEnabled()) return;
 
   // Determine if entity exists based on operation and result
   let exists = true;
