@@ -154,9 +154,13 @@ class ApiAccessTracker {
 }
 
 // Create global singleton instance
-window.ApiAccessTracker = window.ApiAccessTracker || new ApiAccessTracker();
+const trackerInstance = new ApiAccessTracker();
+window.ApiAccessTracker = window.ApiAccessTracker || trackerInstance;
 
 // Expose utility for debugging
 window.getApiAccessReport = () => window.ApiAccessTracker.getAll();
 
 console.log('[API Access Tracker] Module loaded and ready');
+
+// Export for ES6 module usage
+export default window.ApiAccessTracker;
