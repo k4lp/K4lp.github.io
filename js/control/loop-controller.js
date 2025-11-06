@@ -19,10 +19,12 @@ import {
 
 const MAX_CONSECUTIVE_ERRORS = 3;
 
-let active = false;
-let iterationCount = 0;
+// MODULAR: OLD manual state removed, replaced with session manager
+// OLD CODE REMOVED: let active = false;
+// OLD CODE REMOVED: let iterationCount = 0;
+// OLD CODE REMOVED: let consecutiveErrors = 0;
+let currentSessionId = null; // MODULAR: Track active session via session manager
 let loopTimer = null;
-let consecutiveErrors = 0;
 
 export const LoopController = {
   async startSession() {
@@ -49,11 +51,23 @@ export const LoopController = {
       return;
     }
 
-    // Initialize session
+    // MODULAR: Initialize session using ReasoningSessionManager
     const sessionStartTime = nowISO();
-    active = true;
-    iterationCount = 0;
-    consecutiveErrors = 0;
+    const sessionManager = window.GDRS_ReasoningSessionManager;
+
+    if (sessionManager) {
+      const session = sessionManager.createSession(rawQuery, {
+        maxIterations: MAX_ITERATIONS,
+        maxConsecutiveErrors: MAX_CONSECUTIVE_ERRORS,
+        model: modelSelect.value
+      });
+      currentSessionId = session.id;
+      console.log(`[${sessionStartTime}] MODULAR SESSION CREATED - ID: ${currentSessionId}, Query: "${rawQuery}"`);
+    } else {
+      // Fallback if modular system not loaded
+      console.warn('[ModularSystem] ReasoningSessionManager not available - using legacy mode');
+      currentSessionId = 'legacy-' + Date.now();
+    }
 
     console.log(`[${sessionStartTime}] SESSION STARTING - Query: "${rawQuery}"`);
 
@@ -84,16 +98,27 @@ export const LoopController = {
 
   stopSession() {
     const stopTime = nowISO();
-    console.log(`[${stopTime}] STOPPING SESSION - Iteration count: ${iterationCount}`);
 
-    active = false;
-    consecutiveErrors = 0;
+    // MODULAR: Use session manager to stop session
+    const sessionManager = window.GDRS_ReasoningSessionManager;
+    if (sessionManager && currentSessionId) {
+      const session = sessionManager.getSession(currentSessionId);
+      if (session) {
+        console.log(`[${stopTime}] STOPPING SESSION - ID: ${currentSessionId}, Iterations: ${session.metrics.iterations}`);
+        sessionManager.stopSession(currentSessionId);
+      }
+    }
+
+    // OLD CODE REMOVED: active = false;
+    // OLD CODE REMOVED: consecutiveErrors = 0;
 
     if (loopTimer) {
       clearTimeout(loopTimer);
       loopTimer = null;
       console.log(`[${nowISO()}] Loop timer cleared`);
     }
+
+    currentSessionId = null; // MODULAR: Clear session reference
 
     const sessionPill = qs('#sessionStatus');
     if (sessionPill) sessionPill.textContent = 'IDLE';
@@ -105,7 +130,7 @@ export const LoopController = {
     console.log(`[${nowISO()}] Session stopped`);
   },
 
-  isActive: () => active
+  isActive: () => currentSessionId !== null // MODULAR: Check if session exists
 };
 
 /**
@@ -114,8 +139,10 @@ export const LoopController = {
 async function runIteration() {
   const iterationStartTime = nowISO();
 
-  if (!active) {
-    console.log(`[${iterationStartTime}] Iteration skipped - session not active`);
+  // MODULAR: Check if session should continue using session manager
+  const sessionManager = window.GDRS_ReasoningSessionManager;
+  if (!currentSessionId || (sessionManager && !sessionManager.shouldContinue(currentSessionId))) {
+    console.log(`[${iterationStartTime}] Iteration skipped - session not active or should not continue`);
     return;
   }
 
@@ -128,7 +155,20 @@ async function runIteration() {
     return;
   }
 
-  iterationCount++;
+  // MODULAR: Get session and prepare iteration context
+  const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
+  const iterationCount = session ? session.metrics.iterations + 1 : (window.GDRS.currentIteration || 0) + 1;
+
+  // MODULAR: Run pre-iteration middleware hooks
+  let iterationContext = { query: currentQuery, iteration: iterationCount, modelId };
+  if (session && session.middleware) {
+    try {
+      iterationContext = await session.middleware.runPreIteration(iterationContext);
+    } catch (middlewareError) {
+      console.error('[Middleware] Pre-iteration hook failed:', middlewareError);
+    }
+  }
+
   window.GDRS.currentIteration = iterationCount;
   updateIterationDisplay();
 
@@ -350,10 +390,45 @@ async function runIteration() {
                      (allOperations.goals?.length || 0) +
                      (allOperations.vault?.length || 0);
 
+    // MODULAR: Record iteration with session manager
+    if (sessionManager && session) {
+      sessionManager.recordIteration(currentSessionId, {
+        errors: operationSummary.errors || [],
+        executionResults: operationSummary.executions || [],
+        progress: goalsComplete ? 100 : (iterationCount / MAX_ITERATIONS) * 100
+      });
+    }
+
+    // MODULAR: Run post-iteration middleware hooks
+    const iterationResult = { totalOps, operations: allOperations, summary: operationSummary };
+    if (session && session.middleware) {
+      try {
+        await session.middleware.runPostIteration(iterationContext, iterationResult);
+      } catch (middlewareError) {
+        console.error('[Middleware] Post-iteration hook failed:', middlewareError);
+      }
+    }
+
     eventBus.emit(Events.ITERATION_COMPLETE, {
       iteration: iterationCount,
       operations: totalOps
     });
+
+    // MODULAR: Check session health status
+    if (sessionManager && session) {
+      const health = sessionManager.getSessionHealth(currentSessionId);
+      console.log(`[${nowISO()}] Session health: ${health.status} (score: ${health.score})`);
+
+      if (health.status === 'critical') {
+        console.error(`[${nowISO()}] Session health critical - stopping session`);
+        sessionManager.failSession(currentSessionId, {
+          reason: 'Critical health status',
+          health: health
+        });
+        finishSession('Session health critical - too many errors or low progress');
+        return;
+      }
+    }
 
     // Check completion conditions
     const postCheckTime = nowISO();
@@ -387,7 +462,7 @@ async function runIteration() {
     console.log(`[${iterationEndTime}] ========== ITERATION ${iterationCount} END ==========`);
     console.log(`[${nowISO()}] Scheduling next iteration in ${ITERATION_DELAY}ms...`);
 
-    if (active) {
+    if (currentSessionId) { // MODULAR: Check session exists instead of active flag
       loopTimer = setTimeout(() => runIteration(), ITERATION_DELAY);
     }
     
@@ -400,27 +475,50 @@ async function runIteration() {
  * Handle iteration errors with retry logic
  */
 function handleIterationError(err) {
-  consecutiveErrors++;
+  // MODULAR: Get current session info (OLD CODE REMOVED: consecutiveErrors++)
+  const sessionManager = window.GDRS_ReasoningSessionManager;
+  const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
+  const iterationCount = session ? session.metrics.iterations : window.GDRS.currentIteration || 0;
+  const consecutiveErrors = session ? session.metrics.consecutiveErrors + 1 : 1;
+
   console.error(`\u274c Iteration ${iterationCount} error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`, err);
-  
+
+  // MODULAR: Record error with session manager
+  if (sessionManager && session) {
+    sessionManager.recordIteration(currentSessionId, {
+      errors: [{ type: 'ITERATION_ERROR', message: err.message }],
+      executionResults: [],
+      progress: 0
+    });
+  }
+
   // Log error
   const logEntries = Storage.loadReasoningLog();
   logEntries.push(`=== ITERATION ${iterationCount} ERROR ===\nError: ${err.message}\nConsecutive: ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}`);
   Storage.saveReasoningLog(logEntries);
   Renderer.renderReasoningLog();
-  
+
   if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
     console.error(`\ud83d\uded1 Too many consecutive errors - stopping session`);
     logEntries.push('=== SESSION TERMINATED ===\nStopped due to consecutive errors');
     Storage.saveReasoningLog(logEntries);
+
+    // MODULAR: Fail session
+    if (sessionManager && session) {
+      sessionManager.failSession(currentSessionId, {
+        reason: 'Too many consecutive errors',
+        lastError: err.message
+      });
+    }
+
     LoopController.stopSession();
     return;
   }
-  
+
   // Retry with delay for recoverable errors
   if (err.message.includes('Empty response') || err.message.includes('timeout')) {
     console.warn(`\u23f3 Retrying in ${EMPTY_RESPONSE_RETRY_DELAY * 2}ms`);
-    if (active) {
+    if (currentSessionId) { // MODULAR: Check session exists (OLD: active)
       loopTimer = setTimeout(() => runIteration(), EMPTY_RESPONSE_RETRY_DELAY * 2);
     }
   } else {
@@ -433,12 +531,24 @@ function handleIterationError(err) {
  */
 function finishSession(reason) {
   const finishTime = nowISO();
+
+  // MODULAR: Get session info
+  const sessionManager = window.GDRS_ReasoningSessionManager;
+  const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
+  const iterationCount = session ? session.metrics.iterations : window.GDRS.currentIteration || 0;
+
   console.log(`[${finishTime}] FINISHING SESSION - Reason: ${reason}`);
 
   const logEntries = Storage.loadReasoningLog();
   logEntries.push(`=== SESSION COMPLETE ===\nTimestamp: ${finishTime}\n${reason}\nIterations: ${iterationCount}`);
   Storage.saveReasoningLog(logEntries);
   Renderer.renderReasoningLog();
+
+  // MODULAR: Complete session with session manager
+  if (sessionManager && session) {
+    sessionManager.completeSession(currentSessionId);
+    console.log(`[${nowISO()}] Modular session completed - ID: ${currentSessionId}`);
+  }
 
   console.log(`[${nowISO()}] Session finished successfully`);
   LoopController.stopSession();
@@ -448,6 +558,11 @@ function finishSession(reason) {
  * Update iteration counter in UI
  */
 function updateIterationDisplay() {
+  // MODULAR: Get iteration count from session (OLD: global iterationCount variable)
+  const sessionManager = window.GDRS_ReasoningSessionManager;
+  const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
+  const iterationCount = session ? session.metrics.iterations : window.GDRS.currentIteration || 0;
+
   const iterCountEl = qs('#iterationCount');
   if (iterCountEl) iterCountEl.textContent = String(iterationCount);
 }
