@@ -525,6 +525,82 @@ class SilentErrorRecovery {
 
     return null; // Not a reference error
   }
+
+  /**
+   * Detect RUNTIME and SYNTAX errors in code execution
+   * ONLY handles these two error types as requested by user
+   *
+   * @param {Object} executionResult - Result from code execution
+   * @returns {Object|null} Error details or null if no errors
+   */
+  detectCodeExecutionError(executionResult) {
+    // If execution succeeded, no error to handle
+    if (!executionResult || executionResult.success) {
+      return null;
+    }
+
+    // If there's an error, check if it's syntax or runtime
+    if (executionResult.error) {
+      const error = executionResult.error;
+      const errorMessage = error.message || String(error);
+      const errorType = error.name || 'Error';
+
+      // Categorize error type
+      let category = null;
+      let shouldRecover = false;
+
+      // SYNTAX ERRORS
+      if (errorType === 'SyntaxError' || errorMessage.match(/syntax/i)) {
+        category = 'syntax';
+        shouldRecover = true;
+      }
+      // RUNTIME ERRORS (generic runtime issues, not type/reference)
+      else if (errorType === 'Error' ||
+               errorMessage.match(/runtime/i) ||
+               errorMessage.match(/unexpected/i) ||
+               errorMessage.match(/invalid/i)) {
+        category = 'runtime';
+        shouldRecover = true;
+      }
+
+      // ONLY recover syntax and runtime errors
+      if (!shouldRecover) {
+        console.log(
+          `[${new Date().toISOString()}] Code execution error detected but NOT handling (not syntax/runtime):`,
+          `Type: ${errorType}, Message: ${errorMessage}`
+        );
+        return null; // Don't handle this error type
+      }
+
+      console.log(
+        `[${new Date().toISOString()}] Code execution ${category} error detected - will attempt recovery:`,
+        `Message: ${errorMessage}`
+      );
+
+      // Get attempted entity accesses if available
+      const ApiAccessTracker = window.ApiAccessTracker;
+      const attemptedIds = ApiAccessTracker ? ApiAccessTracker.getAttemptedIds() : {};
+      const failedAccesses = ApiAccessTracker ? ApiAccessTracker.getErrorReport()?.failedAccesses || [] : [];
+
+      return {
+        hasErrors: true,
+        type: 'code_execution',
+        category: category,
+        executionResult: executionResult,
+        error: {
+          name: errorType,
+          message: errorMessage,
+          stack: error.stack || ''
+        },
+        code: executionResult.code || executionResult.resolvedCode || '',
+        attemptedIds: attemptedIds,
+        failedAccesses: failedAccesses,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    return null;
+  }
 }
 
 // Create global singleton instance

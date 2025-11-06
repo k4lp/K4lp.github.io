@@ -300,12 +300,13 @@ async function runIteration() {
       // Check for operation-level reference errors
       const operationErrorDetails = SilentErrorRecovery.detectReferenceErrors(operationSummary);
 
-      // Check for code execution reference errors
+      // Check for ANY code execution errors (syntax, runtime, type, reference, etc.)
       let codeErrorDetails = null;
       if (operationSummary.executions && operationSummary.executions.length > 0) {
         // Check each execution result
         for (const execResult of operationSummary.executions) {
-          const execError = SilentErrorRecovery.detectCodeExecutionReferenceErrors(execResult);
+          // NEW: Detect ALL error types, not just reference errors
+          const execError = SilentErrorRecovery.detectCodeExecutionError(execResult);
           if (execError) {
             codeErrorDetails = execError;
             break; // Found at least one code execution error
