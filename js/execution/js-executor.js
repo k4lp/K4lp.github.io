@@ -33,7 +33,44 @@ export const JSExecutor = {
     };
 
     const result = await executionManager.enqueue(request);
-    this._recordReasoningLog(result);
+
+    // MODULAR: Enhanced error handling with classification and recovery
+    if (!result.success && result.error) {
+      const errorHandler = window.GDRS_ExecutionErrorHandler;
+
+      if (errorHandler) {
+        try {
+          const recommendation = await errorHandler.getRecoveryRecommendation(
+            result.error,
+            result.context || {}
+          );
+
+          // Attach error handling metadata to result
+          result.errorHandling = {
+            recommendation,
+            timestamp: new Date().toISOString()
+          };
+
+          // MODULAR: Emit event if reasoning chain needs to handle this error
+          if (recommendation.shouldNotifyReasoning) {
+            eventBus.emit('EXECUTION_ERROR_NEEDS_REASONING', {
+              error: result.error,
+              classification: recommendation,
+              recommendation,
+              executionId: result.id,
+              code: result.code
+            });
+          }
+        } catch (handlerError) {
+          console.error('[JSExecutor] Error handler failed:', handlerError);
+        }
+      }
+    }
+
+    // MODULAR: Only log if this isn't a retry attempt (shouldLog set by ResultHandler)
+    if (result.shouldLog !== false) {
+      this._recordReasoningLog(result);
+    }
 
     if (options.updateUI !== false) {
       this._updateUI(result);
@@ -61,14 +98,27 @@ export const JSExecutor = {
         `RETURN VALUE:\n${stringifyReturn(result.result)}`
       ].join('\n'));
     } else {
-      entries.push([
+      const logEntry = [
         '=== JAVASCRIPT EXECUTION ERROR ===',
         `ID: ${result.id}`,
         `SOURCE: ${result.source}`,
         `CODE:\n${result.code}`,
         `ERROR: ${result.error?.message || 'Unknown error'}`,
         `STACK: ${result.error?.stack || 'No stack trace'}`
-      ].join('\n'));
+      ];
+
+      // MODULAR: Include error classification if available
+      if (result.errorHandling?.recommendation) {
+        const rec = result.errorHandling.recommendation;
+        logEntry.push(
+          `\nERROR ANALYSIS:`,
+          `- Severity: ${rec.severity || 'unknown'}`,
+          `- Retryable: ${rec.shouldRetry ? 'Yes' : 'No'}`,
+          `- Recovery: ${rec.message || 'No recommendation'}`
+        );
+      }
+
+      entries.push(logEntry.join('\n'));
     }
 
     Storage.saveReasoningLog(entries);
