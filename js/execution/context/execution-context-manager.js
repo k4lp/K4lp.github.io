@@ -12,6 +12,8 @@
  * - Lifecycle management
  */
 
+import { Storage } from '../../storage/storage.js';
+
 class ExecutionContextManager {
   constructor() {
     this.contexts = new Map();

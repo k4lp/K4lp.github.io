@@ -12,6 +12,8 @@
  * - Context snapshot restoration
  */
 
+import { Storage } from '../../storage/storage.js';
+
 class ErrorContextCleaner {
   constructor() {
     this.cleaningStrategies = new Map();
@@ -67,7 +69,7 @@ class ErrorContextCleaner {
         if (failedAccesses.length > 0) {
           // Remove failed executions from execution log
           if (typeof Storage !== 'undefined') {
-            const executionLog = Storage.getExecutionLog();
+            const executionLog = Storage.loadExecutionLog();
             const cleanedLog = executionLog.filter(entry =>
               !this._hasReferenceErrors(entry)
             );
@@ -94,7 +96,7 @@ class ErrorContextCleaner {
 
         // Remove failed execution from log
         if (typeof Storage !== 'undefined') {
-          const executionLog = Storage.getExecutionLog();
+          const executionLog = Storage.loadExecutionLog();
           const cleanedLog = executionLog.filter(entry =>
             !this._hasReferenceErrors(entry)
           );
@@ -117,7 +119,7 @@ class ErrorContextCleaner {
     this.registerStrategy('TIMEOUT', (context, classification) => {
       // Remove last execution from log
       if (typeof Storage !== 'undefined') {
-        const executionLog = Storage.getExecutionLog();
+        const executionLog = Storage.loadExecutionLog();
         if (executionLog.length > 0) {
           executionLog.pop();
           Storage.saveExecutionLog(executionLog);
@@ -197,10 +199,10 @@ class ErrorContextCleaner {
     }
 
     return {
-      vault: (Storage.getVault() || []).map(e => e.id),
-      memory: (Storage.getMemory() || []).map(e => e.key),
-      tasks: (Storage.getTasks() || []).map(e => e.id),
-      goals: (Storage.getGoals() || []).map(e => e.id)
+      vault: (Storage.loadVault() || []).map(e => e.identifier),
+      memory: (Storage.loadMemory() || []).map(e => e.identifier),
+      tasks: (Storage.loadTasks() || []).map(e => e.identifier),
+      goals: (Storage.loadGoals() || []).map(e => e.identifier)
     };
   }
 
@@ -210,7 +212,7 @@ class ErrorContextCleaner {
   cleanReasoningLog() {
     if (typeof Storage === 'undefined') return;
 
-    const reasoningLog = Storage.getReasoningLog();
+    const reasoningLog = Storage.loadReasoningLog();
 
     // Keep only successful reasoning steps
     const cleanedLog = reasoningLog.filter(entry =>
@@ -235,7 +237,7 @@ class ErrorContextCleaner {
   cleanExecution(executionId) {
     if (typeof Storage === 'undefined') return;
 
-    const executionLog = Storage.getExecutionLog();
+    const executionLog = Storage.loadExecutionLog();
     const cleanedLog = executionLog.filter(e => e.id !== executionId);
     Storage.saveExecutionLog(cleanedLog);
   }
