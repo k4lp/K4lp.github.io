@@ -52,6 +52,7 @@ import { LoopController } from './control/loop-controller.js';
 // ==========================================
 import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
+import { getModularInitialization } from './core/modular-system-init.js';
 
 /**
  * Self-executing bootstrap with clean module organization
@@ -71,6 +72,8 @@ import { bindEvents } from './ui/events.js';
    */
   async function initializeGDRS() {
     console.log('%cGDRS v' + VERSION + ' - Streamlined Modular Architecture', 'color: #00ff00; font-weight: bold;');
+
+    await getModularInitialization();
 
     // ==========================================
     // PHASE 1: Load Providers from Manifest

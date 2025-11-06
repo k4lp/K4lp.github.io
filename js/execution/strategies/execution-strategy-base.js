@@ -20,7 +20,7 @@
  * Mount different strategies like train adapters!
  */
 
-class ExecutionStrategyBase {
+export class ExecutionStrategyBase {
   /**
    * Create execution strategy
    * @param {Object} config - Strategy configuration
@@ -230,12 +230,7 @@ class ExecutionStrategyBase {
   }
 }
 
-// Export to window for global access
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ExecutionStrategyBase = ExecutionStrategyBase;
-}
-
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ExecutionStrategyBase;
 }

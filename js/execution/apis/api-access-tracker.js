@@ -10,7 +10,7 @@
  * This is the "clever" part of silent error recovery for code blocks.
  */
 
-class ApiAccessTracker {
+export class ApiAccessTracker {
   constructor() {
     this.reset();
   }
@@ -153,14 +153,11 @@ class ApiAccessTracker {
   }
 }
 
-// Create global singleton instance
-const trackerInstance = new ApiAccessTracker();
-window.ApiAccessTracker = window.ApiAccessTracker || trackerInstance;
+export const apiAccessTracker = new ApiAccessTracker();
 
-// Expose utility for debugging
-window.getApiAccessReport = () => window.ApiAccessTracker.getAll();
+if (typeof window !== 'undefined') {
+  window.ApiAccessTracker = apiAccessTracker;
+  window.getApiAccessReport = () => apiAccessTracker.getAll();
+}
 
 console.log('[API Access Tracker] Module loaded and ready');
-
-// Export for ES6 module usage
-export default window.ApiAccessTracker;

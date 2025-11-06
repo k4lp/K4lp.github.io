@@ -13,6 +13,7 @@ import { nowISO } from '../core/utils.js';
 import { EXECUTION_DEFAULT_TIMEOUT_MS } from '../config/execution-config.js';
 import { expandVaultReferences } from '../utils/vault-reference-resolver.js';
 import { buildExecutionContext } from './execution-context-api.js';
+import { ExecutionStateMachine } from './core/execution-state-machine.js';
 
 export class ExecutionRunner {
   constructor(options = {}) {
@@ -28,13 +29,8 @@ export class ExecutionRunner {
    */
   async run(request) {
     // MODULAR: Initialize state machine for formal state tracking
-    const stateMachine = window.ExecutionStateMachine
-      ? new window.ExecutionStateMachine(request.id)
-      : null;
-
-    if (stateMachine) {
-      stateMachine.transition('preparing');
-    }
+    const stateMachine = new ExecutionStateMachine(request.id);
+    stateMachine.transition('preparing');
 
     const capture = new ConsoleCapture();
     const analysis = analyseCode(request.code || '');

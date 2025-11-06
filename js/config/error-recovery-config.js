@@ -5,7 +5,7 @@
  * Defines recovery behavior and context cleaning.
  */
 
-const ERROR_RECOVERY_CONFIG = {
+export const ERROR_RECOVERY_CONFIG = {
   // Enable automatic error recovery
   enableRecovery: true,
 
@@ -70,12 +70,11 @@ const ERROR_RECOVERY_CONFIG = {
   }
 };
 
-// Export for ES6 modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ERROR_RECOVERY_CONFIG };
+export function getErrorRecoveryStrategy(errorName) {
+  return ERROR_RECOVERY_CONFIG.errorRecoveryStrategies[errorName] || null;
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ERROR_RECOVERY_CONFIG = ERROR_RECOVERY_CONFIG;
 }

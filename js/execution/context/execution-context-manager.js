@@ -13,8 +13,9 @@
  */
 
 import { Storage } from '../../storage/storage.js';
+import { apiAccessTracker } from '../apis/api-access-tracker.js';
 
-class ExecutionContextManager {
+export class ExecutionContextManager {
   constructor() {
     this.contexts = new Map();
     this.contextSnapshots = new Map();
@@ -103,9 +104,7 @@ class ExecutionContextManager {
 
     // Remove failed entity access logs
     if (error && error.name === 'ReferenceError') {
-      if (typeof window !== 'undefined' && window.ApiAccessTracker) {
-        window.ApiAccessTracker.clearFailedAccesses?.();
-      }
+      apiAccessTracker?.clearFailedAccesses?.();
     }
 
     // Don't add error to execution log during retry
@@ -238,7 +237,3 @@ if (typeof window !== 'undefined') {
   window.ExecutionContextManager = ExecutionContextManager;
 }
 
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ExecutionContextManager;
-}

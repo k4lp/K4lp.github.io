@@ -1,207 +1,157 @@
-/**
- * ModularSystemInit
- *
- * Initializes all modular system components once their constructors
- * have been defined. This bridges the legacy global initialization
- * flow with the newer ES module loading strategy.
- */
+import { serviceContainer } from './service-container.js';
+import { eventBus } from './event-bus.js';
+import {
+  registerExecutionServices,
+  resolveExecutionServices,
+  EXECUTION_SERVICE_IDS
+} from '../execution/services.js';
+import {
+  registerReasoningServices,
+  resolveReasoningServices,
+  REASONING_SERVICE_IDS
+} from '../reasoning/services.js';
 
-(function() {
-  'use strict';
+let initializationPromise = null;
 
-  const REQUIRED_GLOBALS = [
-    'ExecutionPolicyManager',
-    'RetryPolicyManager',
-    'ErrorClassifier',
-    'ErrorContextCleaner',
-    'RetryStrategyManager',
-    'ExecutionErrorHandler',
-    'ExecutionContextManager',
-    'ExecutionResultHandler',
-    'ExecutionMetricsCollector',
-    'ReasoningSessionManager',
-    'ChainHealthMonitor'
-  ];
+function exposeLegacyGlobals(execution, reasoning) {
+  if (typeof window === 'undefined') return;
 
-  const DEP_CHECK_INTERVAL_MS = 25;
-  let lastMissingSignature = '';
+  window.GDRS_ExecutionPolicyManager = execution.policyManager;
+  window.GDRS_RetryPolicyManager = execution.retryPolicyManager;
+  window.GDRS_ErrorClassifier = execution.errorClassifier;
+  window.GDRS_ErrorContextCleaner = execution.errorContextCleaner;
+  window.GDRS_RetryStrategyManager = execution.retryStrategyManager;
+  window.GDRS_ExecutionErrorHandler = execution.errorHandler;
+  window.GDRS_ExecutionContextManager = execution.contextManager;
+  window.GDRS_ExecutionResultHandler = execution.resultHandler;
+  window.GDRS_ExecutionMetricsCollector = execution.metricsCollector;
 
-  function hasGlobal(name) {
-    const value = window[name];
-    return typeof value === 'function' || (typeof value === 'object' && value !== null);
-  }
+  window.GDRS_ReasoningSessionManager = reasoning.sessionManager;
+  window.GDRS_ChainHealthMonitor = reasoning.chainHealthMonitor;
+}
 
-  function getMissingGlobals() {
-    return REQUIRED_GLOBALS.filter(name => !hasGlobal(name));
-  }
+function exposeModularApi(execution, reasoning) {
+  if (typeof window === 'undefined') return;
 
-  function waitForDependencies() {
-    if (window.GDRS_ModularSystemInitialized) {
-      return;
-    }
+  window.GDRS_Modular = {
+    setExecutionPolicy: (policyName) => {
+      execution.policyManager.setCurrentPolicy(policyName);
+      console.log(`[Policy] Switched to execution policy: ${policyName}`);
+    },
+    getCurrentExecutionPolicy: () => execution.policyManager.getCurrentPolicy(),
+    getExecutionMetrics: () => execution.metricsCollector.getSummary(),
+    getSessionMetrics: (sessionId) => reasoning.sessionManager.getSessionMetrics(sessionId),
+    getSessionHealth: (sessionId) => reasoning.sessionManager.getSessionHealth(sessionId),
+    enableDebugMode: () => {
+      execution.policyManager.setCurrentPolicy('debug');
+      console.log('[Debug] Debug mode enabled');
+    },
+    enableSafeMode: () => {
+      execution.policyManager.setCurrentPolicy('safe');
+      console.log('[SafeMode] Safe mode enabled');
+    },
+    getSystemInfo: () => ({
+      executionPolicy: execution.policyManager.getCurrentPolicy(),
+      retryPolicy: execution.retryPolicyManager.getPolicy(
+        execution.retryPolicyManager.getDefaultPolicy?.() ? execution.retryPolicyManager.getDefaultPolicy().name : 'default'
+      ),
+      activeContexts: execution.contextManager.getContextCount(),
+      activeSessions: reasoning.sessionManager.getActiveSessionCount(),
+      metrics: execution.metricsCollector.getSummary(),
+      registeredServices: serviceContainer.listRegisteredServices()
+    })
+  };
+}
 
-    const missing = getMissingGlobals();
+function registerEventLogging() {
+  eventBus.on?.('EXECUTION_STATE_CHANGED', (data) => {
+    console.log(`[ExecutionState] ${data.fromState} -> ${data.toState}`);
+  });
 
-    if (missing.length === 0) {
-      initializeModularSystem();
-      return;
-    }
+  eventBus.on?.('SESSION_STATE_CHANGED', (data) => {
+    console.log(`[SessionState] ${data.fromState} -> ${data.toState}`);
+  });
 
-    const signature = missing.join(',');
-    if (signature !== lastMissingSignature) {
-      console.warn(`[ModularSystem] Waiting for dependencies: ${missing.join(', ')}`);
-      lastMissingSignature = signature;
-    }
+  eventBus.on?.('EXECUTION_RETRY_ATTEMPT', (data) => {
+    console.log(`[Retry] Attempt ${data.attempt}/${data.maxAttempts} for execution ${data.executionId}`);
+  });
 
-    window.setTimeout(waitForDependencies, DEP_CHECK_INTERVAL_MS);
-  }
+  eventBus.on?.('EXECUTION_CONTEXT_CLEANED', (data) => {
+    console.log(`[ContextCleaning] Cleaned context for ${data.executionId} (${data.errorType})`);
+  });
 
-  function startWhenReady() {
-    if (window.GDRS_ModularSystemInitialized) {
-      return;
-    }
+  eventBus.on?.('SESSION_HEALTH_DEGRADED', (data) => {
+    console.warn(`[Health] Session health degraded: ${data.status}`);
+  });
+}
 
-    waitForDependencies();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startWhenReady);
-  } else {
-    startWhenReady();
-  }
-
-  function initializeModularSystem() {
-    if (window.GDRS_ModularSystemInitialized) {
-      return;
-    }
-
-    console.log('[ModularSystem] Initializing modular architecture...');
-
-    // ==========================================================================
-    // EXECUTION SYSTEM INITIALIZATION
-    // ==========================================================================
-
-    // Policy Managers
-    window.GDRS_ExecutionPolicyManager = new ExecutionPolicyManager();
-    window.GDRS_RetryPolicyManager = new RetryPolicyManager();
-
-    // Error Handling
-    window.GDRS_ErrorClassifier = new ErrorClassifier();
-    window.GDRS_ErrorContextCleaner = new ErrorContextCleaner();
-    window.GDRS_RetryStrategyManager = new RetryStrategyManager();
-    window.GDRS_ExecutionErrorHandler = new ExecutionErrorHandler();
-
-    // Context Management
-    window.GDRS_ExecutionContextManager = new ExecutionContextManager();
-
-    // Result Processing
-    window.GDRS_ExecutionResultHandler = new ExecutionResultHandler();
-
-    // Monitoring
-    window.GDRS_ExecutionMetricsCollector = new ExecutionMetricsCollector();
-
-    console.log('[ModularSystem] \u2705 Execution system initialized');
-
-    // ==========================================================================
-    // REASONING SYSTEM INITIALIZATION
-    // ==========================================================================
-
-    // Session Management
-    window.GDRS_ReasoningSessionManager = new ReasoningSessionManager();
-
-    // Monitoring
-    window.GDRS_ChainHealthMonitor = new ChainHealthMonitor();
-
-    console.log('[ModularSystem] \u2705 Reasoning system initialized');
-
-    // ==========================================================================
-    // EVENT LISTENERS
-    // ==========================================================================
-
-    // Listen to metrics events for debugging (can be disabled in production)
-    if (typeof EventBus !== 'undefined' && EventBus && typeof EventBus.on === 'function') {
-      EventBus.on('EXECUTION_STATE_CHANGED', (data) => {
-        console.log(`[ExecutionState] ${data.fromState} -> ${data.toState}`);
-      });
-
-      EventBus.on('SESSION_STATE_CHANGED', (data) => {
-        console.log(`[SessionState] ${data.fromState} -> ${data.toState}`);
-      });
-
-      EventBus.on('EXECUTION_RETRY_ATTEMPT', (data) => {
-        console.log(`[Retry] Attempt ${data.attempt}/${data.maxAttempts} for execution ${data.executionId}`);
-      });
-
-      EventBus.on('EXECUTION_CONTEXT_CLEANED', (data) => {
-        console.log(`[ContextCleaning] Cleaned context for ${data.executionId} (${data.errorType})`);
-      });
-
-      EventBus.on('SESSION_HEALTH_DEGRADED', (data) => {
-        console.warn(`[Health] Session health degraded: ${data.status}`);
-      });
-    }
-
-    // ==========================================================================
-    // GLOBAL API EXPOSURE
-    // ==========================================================================
-
-    // Expose modular system API for console access
-    window.GDRS_Modular = {
-      // Policy Management
-      setExecutionPolicy: (policyName) => {
-        window.GDRS_ExecutionPolicyManager.setCurrentPolicy(policyName);
-        console.log(`[Policy] Switched to execution policy: ${policyName}`);
-      },
-
-      getCurrentExecutionPolicy: () => {
-        return window.GDRS_ExecutionPolicyManager.getCurrentPolicy();
-      },
-
-      // Metrics
-      getExecutionMetrics: () => {
-        return window.GDRS_ExecutionMetricsCollector.getSummary();
-      },
-
-      getSessionMetrics: (sessionId) => {
-        return window.GDRS_ReasoningSessionManager.getSessionMetrics(sessionId);
-      },
-
-      // Health
-      getSessionHealth: (sessionId) => {
-        return window.GDRS_ReasoningSessionManager.getSessionHealth(sessionId);
-      },
-
-      // Debugging
-      enableDebugMode: () => {
-        window.GDRS_ExecutionPolicyManager.setCurrentPolicy('debug');
-        console.log('[Debug] Debug mode enabled');
-      },
-
-      enableSafeMode: () => {
-        window.GDRS_ExecutionPolicyManager.setCurrentPolicy('safe');
-        console.log('[SafeMode] Safe mode enabled');
-      },
-
-      // System Info
-      getSystemInfo: () => {
-        return {
-          executionPolicy: window.GDRS_ExecutionPolicyManager.getCurrentPolicy(),
-          retryPolicy: window.GDRS_RetryPolicyManager.getCurrentPolicy(),
-          activeContexts: window.GDRS_ExecutionContextManager.getContextCount(),
-          activeSessions: window.GDRS_ReasoningSessionManager.getActiveSessionCount(),
-          metrics: window.GDRS_ExecutionMetricsCollector.getSummary()
-        };
-      }
-    };
-
-    console.log('[ModularSystem] \u2705 Global API exposed at window.GDRS_Modular');
-    console.log('[ModularSystem] \u2705 Initialization complete!');
-    console.log('[ModularSystem] Try: GDRS_Modular.getSystemInfo()');
-
+function markInitialized(execution, reasoning) {
+  if (typeof window !== 'undefined') {
     window.GDRS_ModularSystemInitialized = true;
-    lastMissingSignature = '';
+    exposeLegacyGlobals(execution, reasoning);
+    exposeModularApi(execution, reasoning);
+
     if (typeof window.CustomEvent === 'function') {
       document.dispatchEvent(new CustomEvent('gdrs:modular-system-initialized'));
     }
   }
-})();
+}
+
+export function initializeModularSystem() {
+  if (initializationPromise) return initializationPromise;
+
+  initializationPromise = (async () => {
+    console.log('[ModularSystem] Initializing modular architecture...');
+
+    const execution = registerExecutionServices(serviceContainer);
+    console.log('[ModularSystem] ✅ Execution system initialized');
+
+    const reasoning = registerReasoningServices(serviceContainer);
+    console.log('[ModularSystem] ✅ Reasoning system initialized');
+
+    registerEventLogging();
+    markInitialized(execution, reasoning);
+
+    console.log('[ModularSystem] ✅ Global API exposed at window.GDRS_Modular');
+    console.log('[ModularSystem] ✅ Initialization complete!');
+    console.log('[ModularSystem] Try: GDRS_Modular.getSystemInfo()');
+
+    return { execution, reasoning };
+  })();
+
+  return initializationPromise;
+}
+
+export function getModularInitialization() {
+  return initializationPromise ?? initializeModularSystem();
+}
+
+export function ensureModularServices() {
+  const executionKeys = Object.values(EXECUTION_SERVICE_IDS);
+  const reasoningKeys = Object.values(REASONING_SERVICE_IDS);
+  const missing = [...executionKeys, ...reasoningKeys].filter((id) => !serviceContainer.tryResolveService(id));
+  if (missing.length > 0) {
+    initializeModularSystem();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeModularSystem();
+    });
+  } else {
+    initializeModularSystem();
+  }
+}
+
+export function getExecutionServices() {
+  ensureModularServices();
+  return resolveExecutionServices(serviceContainer);
+}
+
+export function getReasoningServices() {
+  ensureModularServices();
+  return resolveReasoningServices(serviceContainer);
+}
+

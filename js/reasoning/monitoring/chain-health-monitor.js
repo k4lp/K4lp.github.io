@@ -13,7 +13,9 @@
  * - Issue reporting
  */
 
-class ChainHealthMonitor {
+import { eventBus } from '../../core/event-bus.js';
+
+export class ChainHealthMonitor {
   constructor(thresholds = {}) {
     this.healthMetrics = {
       iterations: [],
@@ -55,12 +57,10 @@ class ChainHealthMonitor {
 
     // Emit event if degraded
     if (this.healthMetrics.status !== 'healthy') {
-      if (typeof EventBus !== 'undefined') {
-        EventBus.emit('SESSION_HEALTH_DEGRADED', {
-          status: this.healthMetrics.status,
-          issues: this.healthMetrics.issues.slice(-5)
-        });
-      }
+      eventBus.emit?.('SESSION_HEALTH_DEGRADED', {
+        status: this.healthMetrics.status,
+        issues: this.healthMetrics.issues.slice(-5)
+      });
     }
   }
 
@@ -275,12 +275,7 @@ class ChainHealthMonitor {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ChainHealthMonitor = ChainHealthMonitor;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ChainHealthMonitor;
 }

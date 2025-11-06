@@ -13,8 +13,9 @@
  */
 
 import { Storage } from '../../storage/storage.js';
+import { apiAccessTracker } from '../apis/api-access-tracker.js';
 
-class ErrorContextCleaner {
+export class ErrorContextCleaner {
   constructor() {
     this.cleaningStrategies = new Map();
     this._initializeStrategies();
@@ -63,8 +64,8 @@ class ErrorContextCleaner {
     // Strategy: Undefined Reference
     this.registerStrategy('UNDEFINED_REFERENCE', (context, classification) => {
       // Clear API access tracker failed accesses
-      if (typeof window !== 'undefined' && window.ApiAccessTracker) {
-        const failedAccesses = window.ApiAccessTracker.getFailedAccesses();
+      if (apiAccessTracker) {
+        const failedAccesses = apiAccessTracker.getFailedAccesses();
 
         if (failedAccesses.length > 0) {
           // Remove failed executions from execution log
@@ -77,7 +78,7 @@ class ErrorContextCleaner {
           }
 
           // Clear tracker
-          window.ApiAccessTracker.clearFailedAccesses();
+          apiAccessTracker.clearFailedAccesses();
         }
       }
 
@@ -91,8 +92,8 @@ class ErrorContextCleaner {
     // Strategy: Entity Not Found
     this.registerStrategy('ENTITY_NOT_FOUND', (context, classification) => {
       // Clear API tracker
-      if (typeof window !== 'undefined' && window.ApiAccessTracker) {
-        window.ApiAccessTracker.clearFailedAccesses();
+      if (apiAccessTracker) {
+        apiAccessTracker.clearFailedAccesses();
 
         // Remove failed execution from log
         if (typeof Storage !== 'undefined') {
@@ -261,7 +262,3 @@ if (typeof window !== 'undefined') {
   window.ErrorContextCleaner = ErrorContextCleaner;
 }
 
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ErrorContextCleaner;
-}

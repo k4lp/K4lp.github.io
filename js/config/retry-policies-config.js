@@ -5,7 +5,7 @@
  * Defines retry behavior for different error types.
  */
 
-const RETRY_POLICIES_CONFIG = {
+export const RETRY_POLICIES_CONFIG = {
   // Default retry policy
   defaultPolicy: 'exponential',
 
@@ -68,12 +68,11 @@ const RETRY_POLICIES_CONFIG = {
   }
 };
 
-// Export for ES6 modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { RETRY_POLICIES_CONFIG };
+export function getRetryPolicy(name) {
+  return RETRY_POLICIES_CONFIG.policies[name] || null;
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.RETRY_POLICIES_CONFIG = RETRY_POLICIES_CONFIG;
 }

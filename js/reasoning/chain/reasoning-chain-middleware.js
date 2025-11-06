@@ -19,7 +19,9 @@
  * - Short-circuit execution
  */
 
-class ReasoningChainMiddleware {
+import { eventBus } from '../../core/event-bus.js';
+
+export class ReasoningChainMiddleware {
   constructor() {
     this.middlewares = [];
     this.enabled = true;
@@ -229,12 +231,10 @@ class ReasoningChainMiddleware {
       }
     }
 
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('MIDDLEWARE_ERROR', {
-        context,
-        error
-      });
-    }
+    eventBus.emit?.('MIDDLEWARE_ERROR', {
+      context,
+      error
+    });
   }
 
   /**
@@ -336,12 +336,7 @@ class ReasoningChainMiddleware {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ReasoningChainMiddleware = ReasoningChainMiddleware;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ReasoningChainMiddleware;
 }

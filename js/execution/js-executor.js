@@ -10,6 +10,7 @@ import { executionManager } from './execution-manager.js';
 import { Storage } from '../storage/storage.js';
 import { eventBus, Events } from '../core/event-bus.js';
 import { EXECUTION_STATUS_RESET_DELAY_MS } from '../config/execution-config.js';
+import { getExecutionServices } from './services.js';
 
 export const JSExecutor = {
   /**
@@ -36,7 +37,7 @@ export const JSExecutor = {
 
     // MODULAR: Enhanced error handling with classification and recovery
     if (!result.success && result.error) {
-      const errorHandler = window.GDRS_ExecutionErrorHandler;
+      const { errorHandler } = getExecutionServices();
 
       if (errorHandler) {
         try {

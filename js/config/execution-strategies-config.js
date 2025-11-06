@@ -5,7 +5,7 @@
  * Defines strategy selection and behavior.
  */
 
-const EXECUTION_STRATEGIES_CONFIG = {
+export const EXECUTION_STRATEGIES_CONFIG = {
   // Default strategy for automatic executions (from reasoning chain)
   defaultStrategy: 'retry',
 
@@ -60,12 +60,11 @@ const EXECUTION_STRATEGIES_CONFIG = {
   }
 };
 
-// Export for ES6 modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { EXECUTION_STRATEGIES_CONFIG };
+export function getStrategyDefinition(name) {
+  return EXECUTION_STRATEGIES_CONFIG.strategies[name] || null;
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.EXECUTION_STRATEGIES_CONFIG = EXECUTION_STRATEGIES_CONFIG;
 }

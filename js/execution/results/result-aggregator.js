@@ -11,7 +11,7 @@
  * - Performance metrics
  */
 
-class ResultAggregator {
+export class ResultAggregator {
   constructor() {
     this.reset();
   }
@@ -217,12 +217,7 @@ class ResultAggregator {
   }
 }
 
-// Export to window for global access
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ResultAggregator = ResultAggregator;
-}
-
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ResultAggregator;
 }

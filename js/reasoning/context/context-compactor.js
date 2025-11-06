@@ -12,7 +12,7 @@
  * - Summarization strategies
  */
 
-class ContextCompactor {
+export class ContextCompactor {
   constructor(config = {}) {
     this.config = {
       maxReasoningSteps: config.maxReasoningSteps || 5,
@@ -268,12 +268,6 @@ class ContextCompactor {
   }
 }
 
-// Export to window
 if (typeof window !== 'undefined') {
   window.ContextCompactor = ContextCompactor;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ContextCompactor;
 }

@@ -22,7 +22,9 @@
  * Any state -> CANCELLED
  */
 
-class ExecutionStateMachine {
+import { eventBus } from '../../core/event-bus.js';
+
+export class ExecutionStateMachine {
   /**
    * Execution states enum
    */
@@ -123,14 +125,12 @@ class ExecutionStateMachine {
     this._emitTransition(fromState, toState, metadata);
 
     // Emit state-specific event to EventBus if available
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('EXECUTION_STATE_CHANGED', {
-        executionId: this.executionId,
-        fromState,
-        toState,
-        metadata
-      });
-    }
+    eventBus.emit?.('EXECUTION_STATE_CHANGED', {
+      executionId: this.executionId,
+      fromState,
+      toState,
+      metadata
+    });
 
     return true;
   }
@@ -379,9 +379,4 @@ class ExecutionStateMachine {
 // Export to window for global access
 if (typeof window !== 'undefined') {
   window.ExecutionStateMachine = ExecutionStateMachine;
-}
-
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ExecutionStateMachine;
 }

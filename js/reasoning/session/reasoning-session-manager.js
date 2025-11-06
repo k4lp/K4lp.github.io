@@ -13,7 +13,13 @@
  * - Session archiving
  */
 
-class ReasoningSessionManager {
+import { SessionStateMachine } from './session-state-machine.js';
+import { IterationStateManager } from './iteration-state-manager.js';
+import { ChainHealthMonitor } from '../monitoring/chain-health-monitor.js';
+import { ReasoningChainMiddleware } from '../chain/reasoning-chain-middleware.js';
+import { eventBus } from '../../core/event-bus.js';
+
+export class ReasoningSessionManager {
   constructor() {
     this.activeSessions = new Map();
     this.sessionIdCounter = 0;
@@ -72,13 +78,11 @@ class ReasoningSessionManager {
     });
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_CREATED', {
-        sessionId,
-        query,
-        options: session.options
-      });
-    }
+    eventBus.emit?.('SESSION_CREATED', {
+      sessionId,
+      query,
+      options: session.options
+    });
 
     return session;
   }
@@ -117,13 +121,11 @@ class ReasoningSessionManager {
     this.activeSessions.delete(sessionId);
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_STOPPED', {
-        sessionId,
-        duration: session.duration,
-        metrics: session.metrics
-      });
-    }
+    eventBus.emit?.('SESSION_STOPPED', {
+      sessionId,
+      duration: session.duration,
+      metrics: session.metrics
+    });
   }
 
   /**
@@ -151,13 +153,11 @@ class ReasoningSessionManager {
     this.activeSessions.delete(sessionId);
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_COMPLETED', {
-        sessionId,
-        duration: session.duration,
-        metrics: session.metrics
-      });
-    }
+    eventBus.emit?.('SESSION_COMPLETED', {
+      sessionId,
+      duration: session.duration,
+      metrics: session.metrics
+    });
   }
 
   /**
@@ -180,12 +180,10 @@ class ReasoningSessionManager {
     this.activeSessions.delete(sessionId);
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_FAILED', {
-        sessionId,
-        metadata
-      });
-    }
+    eventBus.emit?.('SESSION_FAILED', {
+      sessionId,
+      metadata
+    });
   }
 
   /**
@@ -201,9 +199,7 @@ class ReasoningSessionManager {
     });
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_PAUSED', { sessionId });
-    }
+    eventBus.emit?.('SESSION_PAUSED', { sessionId });
   }
 
   /**
@@ -219,9 +215,7 @@ class ReasoningSessionManager {
     });
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_RESUMED', { sessionId });
-    }
+    eventBus.emit?.('SESSION_RESUMED', { sessionId });
   }
 
   /**
@@ -410,12 +404,7 @@ class ReasoningSessionManager {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ReasoningSessionManager = ReasoningSessionManager;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ReasoningSessionManager;
 }

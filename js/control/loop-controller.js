@@ -11,6 +11,9 @@ import { ReasoningParser } from '../reasoning/reasoning-parser.js';
 import { Renderer } from '../ui/renderer.js';
 import { eventBus, Events } from '../core/event-bus.js';
 import { qs, nowISO } from '../core/utils.js';
+import { getReasoningServices } from '../reasoning/services.js';
+import { apiAccessTracker } from '../execution/apis/api-access-tracker.js';
+import { silentErrorRecovery } from '../reasoning/tools/silent-error-recovery.js';
 import {
   MAX_ITERATIONS,
   ITERATION_DELAY,
@@ -25,6 +28,10 @@ const MAX_CONSECUTIVE_ERRORS = 3;
 // OLD CODE REMOVED: let consecutiveErrors = 0;
 let currentSessionId = null; // MODULAR: Track active session via session manager
 let loopTimer = null;
+
+function resolveSessionManager() {
+  return getReasoningServices().sessionManager;
+}
 
 export const LoopController = {
   async startSession() {
@@ -53,7 +60,7 @@ export const LoopController = {
 
     // MODULAR: Initialize session using ReasoningSessionManager
     const sessionStartTime = nowISO();
-    const sessionManager = window.GDRS_ReasoningSessionManager;
+    const sessionManager = resolveSessionManager();
 
     if (sessionManager) {
       const session = sessionManager.createSession(rawQuery, {
@@ -100,7 +107,7 @@ export const LoopController = {
     const stopTime = nowISO();
 
     // MODULAR: Use session manager to stop session
-    const sessionManager = window.GDRS_ReasoningSessionManager;
+    const sessionManager = resolveSessionManager();
     if (sessionManager && currentSessionId) {
       const session = sessionManager.getSession(currentSessionId);
       if (session) {
@@ -140,7 +147,7 @@ async function runIteration() {
   const iterationStartTime = nowISO();
 
   // MODULAR: Check if session should continue using session manager
-  const sessionManager = window.GDRS_ReasoningSessionManager;
+    const sessionManager = resolveSessionManager();
   if (!currentSessionId || (sessionManager && !sessionManager.shouldContinue(currentSessionId))) {
     console.log(`[${iterationStartTime}] Iteration skipped - session not active or should not continue`);
     return;
@@ -273,11 +280,8 @@ async function runIteration() {
     console.log(`[${nowISO()}] ========== END OF OPERATIONS METADATA ==========`);
 
     // Step 3: Reset API access tracker for this iteration
-    const ApiAccessTracker = window.ApiAccessTracker;
-    if (ApiAccessTracker) {
-      ApiAccessTracker.reset();
-      console.log(`[${nowISO()}] API Access Tracker reset for iteration ${iterationCount}`);
-    }
+    apiAccessTracker.reset();
+    console.log(`[${nowISO()}] API Access Tracker reset for iteration ${iterationCount}`);
 
     // Step 4: Apply all found operations
     const applyStartTime = nowISO();
@@ -289,16 +293,15 @@ async function runIteration() {
 
     // Step 5: Check for reference errors (both operation and code execution) and attempt silent recovery
     // IMPORTANT: Skip recovery if final output was already generated
-    const SilentErrorRecovery = window.SilentErrorRecovery;
     const skipRecovery = Storage.isFinalOutputVerified();
 
     if (skipRecovery) {
       console.log(`[${nowISO()}] Skipping silent recovery - final output already verified`);
     }
 
-    if (SilentErrorRecovery && SilentErrorRecovery.isEnabled() && !skipRecovery) {
+    if (silentErrorRecovery && silentErrorRecovery.isEnabled() && !skipRecovery) {
       // Check for operation-level reference errors
-      const operationErrorDetails = SilentErrorRecovery.detectReferenceErrors(operationSummary);
+      const operationErrorDetails = silentErrorRecovery.detectReferenceErrors(operationSummary);
 
       // Check for ANY code execution errors (syntax, runtime, type, reference, etc.)
       let codeErrorDetails = null;
@@ -306,7 +309,7 @@ async function runIteration() {
         // Check each execution result
         for (const execResult of operationSummary.executions) {
           // NEW: Detect ALL error types, not just reference errors
-          const execError = SilentErrorRecovery.detectCodeExecutionError(execResult);
+          const execError = silentErrorRecovery.detectCodeExecutionError(execResult);
           if (execError) {
             codeErrorDetails = execError;
             break; // Found at least one code execution error
@@ -334,7 +337,7 @@ async function runIteration() {
           iterationCount: iterationCount
         };
 
-        const correctedResponse = await SilentErrorRecovery.performSilentRecovery(recoveryContext);
+        const correctedResponse = await silentErrorRecovery.performSilentRecovery(recoveryContext);
 
         if (correctedResponse) {
           console.log(`[${nowISO()}] Silent recovery succeeded - processing corrected response`);
@@ -478,7 +481,7 @@ async function runIteration() {
  */
 function handleIterationError(err) {
   // MODULAR: Get current session info (OLD CODE REMOVED: consecutiveErrors++)
-  const sessionManager = window.GDRS_ReasoningSessionManager;
+    const sessionManager = resolveSessionManager();
   const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
   const iterationCount = session ? session.metrics.iterations : window.GDRS.currentIteration || 0;
   const consecutiveErrors = session ? session.metrics.consecutiveErrors + 1 : 1;
@@ -535,7 +538,7 @@ function finishSession(reason) {
   const finishTime = nowISO();
 
   // MODULAR: Get session info
-  const sessionManager = window.GDRS_ReasoningSessionManager;
+    const sessionManager = resolveSessionManager();
   const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
   const iterationCount = session ? session.metrics.iterations : window.GDRS.currentIteration || 0;
 
@@ -561,7 +564,7 @@ function finishSession(reason) {
  */
 function updateIterationDisplay() {
   // MODULAR: Get iteration count from session (OLD: global iterationCount variable)
-  const sessionManager = window.GDRS_ReasoningSessionManager;
+    const sessionManager = resolveSessionManager();
   const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
   const iterationCount = session ? session.metrics.iterations : window.GDRS.currentIteration || 0;
 

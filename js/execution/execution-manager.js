@@ -16,6 +16,8 @@ import { Storage } from '../storage/storage.js';
 import { eventBus, Events } from '../core/event-bus.js';
 import { generateId, nowISO } from '../core/utils.js';
 import { EXECUTION_DEFAULT_SOURCE } from '../config/execution-config.js';
+import { whenExecutionServicesReady } from './services.js';
+import { getModularInitialization } from '../core/modular-system-init.js';
 
 class ExecutionManager {
   constructor() {
@@ -24,28 +26,38 @@ class ExecutionManager {
     this.state = 'idle';
     this.runner = null;
 
-    // NEW: Modular system components
+    // Modular service bindings
     this.policyManager = null;
     this.resultHandler = null;
     this.metricsCollector = null;
-    this._initializeModularComponents();
+    this._servicesReadyPromise = this._bindExecutionServices();
   }
 
-  /**
-   * Initialize modular system components
-   * @private
-   */
-  _initializeModularComponents() {
-    if (typeof window !== 'undefined' && window.GDRS_ModularSystemInitialized) {
-      this.policyManager = window.GDRS_ExecutionPolicyManager;
-      this.resultHandler = window.GDRS_ExecutionResultHandler;
-      this.metricsCollector = window.GDRS_ExecutionMetricsCollector;
-    } else {
-      console.warn('[ExecutionManager] Modular system not initialized');
-      this.policyManager = new ExecutionPolicyManager();
-      this.resultHandler = new ExecutionResultHandler();
-      this.metricsCollector = new ExecutionMetricsCollector();
+  async _bindExecutionServices() {
+    try {
+      await getModularInitialization();
+      const services = await whenExecutionServicesReady();
+      this.policyManager = services.policyManager;
+      this.resultHandler = services.resultHandler;
+      this.metricsCollector = services.metricsCollector;
+      this.retryPolicyManager = services.retryPolicyManager;
+      this.retryStrategyManager = services.retryStrategyManager;
+      this.errorHandler = services.errorHandler;
+      this.contextManager = services.contextManager;
+      this.errorClassifier = services.errorClassifier;
+      this.errorContextCleaner = services.errorContextCleaner;
+      return services;
+    } catch (error) {
+      console.error('[ExecutionManager] Failed to bind execution services', error);
+      throw error;
     }
+  }
+
+  async _ensureServicesReady() {
+    if (!this._servicesReadyPromise) {
+      this._servicesReadyPromise = this._bindExecutionServices();
+    }
+    return this._servicesReadyPromise;
   }
 
   /**
@@ -86,6 +98,8 @@ class ExecutionManager {
     if (this.current || this.queue.length === 0) {
       return;
     }
+
+    await this._ensureServicesReady();
 
     this.current = this.queue.shift();
     this.state = 'running';

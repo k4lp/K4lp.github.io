@@ -1,19 +1,14 @@
+import { ErrorClassifier } from '../error-handling/error-classifier.js';
+import { ResultAggregator } from './result-aggregator.js';
+
 /**
  * ExecutionResultHandler
  *
  * Uniform processing and classification of execution results.
  * Pluggable result transformers for custom processing.
- *
- * Features:
- * - Result classification (success/error types)
- * - Result transformers (middleware for results)
- * - Logging decisions
- * - Retry decisions
- * - Metrics aggregation
  */
-
-class ExecutionResultHandler {
-  constructor(config = {}) {
+export class ExecutionResultHandler {
+  constructor(config = {}, deps = {}) {
     this.config = {
       maxRetries: config.maxRetries || 3,
       logSuccessful: config.logSuccessful !== false,
@@ -23,19 +18,10 @@ class ExecutionResultHandler {
     };
 
     this.transformers = [];
-    this.aggregator = new ResultAggregator();
-
-    // Initialize with ErrorClassifier if available
-    if (typeof ErrorClassifier !== 'undefined') {
-      this.errorClassifier = new ErrorClassifier();
-    }
+    this.aggregator = deps.aggregator || new ResultAggregator();
+    this.errorClassifier = deps.errorClassifier || new ErrorClassifier();
   }
 
-  /**
-   * Register result transformer (result middleware!)
-   * @param {Function} transformer - Transform function
-   * @param {Object} options - Transformer options
-   */
   registerTransformer(transformer, options = {}) {
     this.transformers.push({
       transform: transformer,
@@ -44,47 +30,29 @@ class ExecutionResultHandler {
       priority: options.priority || 100
     });
 
-    // Sort by priority
     this.transformers.sort((a, b) => (a.priority || 100) - (b.priority || 100));
   }
 
-  /**
-   * Process execution result
-   * @param {Object} rawResult - Raw execution result
-   * @returns {Promise<Object>} Processed result
-   */
   async process(rawResult) {
     let result = { ...rawResult };
 
-    // Apply transformers
     for (const transformer of this.transformers) {
       if (!transformer.enabled) continue;
-
       try {
-        result = await transformer.transform(result) || result;
+        result = (await transformer.transform(result)) || result;
       } catch (error) {
         console.error(`Error in result transformer ${transformer.name}:`, error);
       }
     }
 
-    // Classify result
     result.classification = this.classifyResult(result);
-
-    // Aggregate metrics
     this.aggregator.add(result);
-
-    // Make decisions
     result.shouldLog = this.shouldLog(result);
     result.shouldRetry = this.shouldRetry(result);
 
     return result;
   }
 
-  /**
-   * Classify execution result
-   * @param {Object} result - Execution result
-   * @returns {Object} Classification
-   */
   classifyResult(result) {
     if (result.success) {
       return {
@@ -95,19 +63,13 @@ class ExecutionResultHandler {
       };
     }
 
-    // Use ErrorClassifier if available
     if (this.errorClassifier && result.error) {
       return this.errorClassifier.classify(result.error);
     }
 
-    // Fallback classification
     return this._fallbackClassification(result);
   }
 
-  /**
-   * Fallback classification when ErrorClassifier not available
-   * @private
-   */
   _fallbackClassification(result) {
     const error = result.error;
 
@@ -163,41 +125,26 @@ class ExecutionResultHandler {
     };
   }
 
-  /**
-   * Decide if result should be logged
-   * @param {Object} result - Execution result
-   * @returns {boolean} Whether to log
-   */
   shouldLog(result) {
-    // Don't log intermediate retry attempts
     if (result.isRetry && !result.isFinalAttempt) {
       return this.config.logRetries;
     }
 
-    // Log successful executions
     if (result.success) {
       return this.config.logSuccessful;
     }
 
-    // Log failed executions
     return this.config.logFailed;
   }
 
-  /**
-   * Decide if execution should be retried
-   * @param {Object} result - Execution result
-   * @returns {boolean} Whether to retry
-   */
   shouldRetry(result) {
     if (result.success) return false;
 
-    // Check classification
     const classification = result.classification;
     if (!classification || !classification.retryable) {
       return false;
     }
 
-    // Check attempt count
     const attemptCount = result.attemptCount || 1;
     if (attemptCount >= this.config.maxRetries) {
       return false;
@@ -206,42 +153,22 @@ class ExecutionResultHandler {
     return true;
   }
 
-  /**
-   * Get aggregated metrics
-   * @returns {Object} Metrics
-   */
   getAggregatedMetrics() {
     return this.aggregator.getMetrics();
   }
 
-  /**
-   * Get recent results
-   * @param {number} count - Number of results
-   * @returns {Array} Recent results
-   */
   getRecentResults(count) {
     return this.aggregator.getRecentResults(count);
   }
 
-  /**
-   * Reset aggregator
-   */
   resetMetrics() {
     this.aggregator.reset();
   }
 
-  /**
-   * Remove transformer
-   * @param {string} name - Transformer name
-   */
   removeTransformer(name) {
     this.transformers = this.transformers.filter(t => t.name !== name);
   }
 
-  /**
-   * Enable transformer
-   * @param {string} name - Transformer name
-   */
   enableTransformer(name) {
     const transformer = this.transformers.find(t => t.name === name);
     if (transformer) {
@@ -249,10 +176,6 @@ class ExecutionResultHandler {
     }
   }
 
-  /**
-   * Disable transformer
-   * @param {string} name - Transformer name
-   */
   disableTransformer(name) {
     const transformer = this.transformers.find(t => t.name === name);
     if (transformer) {
@@ -260,37 +183,24 @@ class ExecutionResultHandler {
     }
   }
 
-  /**
-   * Get transformer names
-   * @returns {Array} Transformer names
-   */
   getTransformerNames() {
     return this.transformers.map(t => t.name);
   }
 
-  /**
-   * Update configuration
-   * @param {Object} updates - Config updates
-   */
   updateConfig(updates) {
     this.config = { ...this.config, ...updates };
   }
 
-  /**
-   * Get configuration
-   * @returns {Object} Current config
-   */
   getConfig() {
     return { ...this.config };
   }
 }
 
-// Export to window
-if (typeof window !== 'undefined') {
-  window.ExecutionResultHandler = ExecutionResultHandler;
+export function createExecutionResultHandler(config) {
+  return new ExecutionResultHandler(config);
 }
 
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ExecutionResultHandler;
+// Legacy bridge (deprecated)
+if (typeof window !== 'undefined') {
+  window.ExecutionResultHandler = ExecutionResultHandler;
 }

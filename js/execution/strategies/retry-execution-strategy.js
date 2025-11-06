@@ -1,18 +1,16 @@
+import { ExecutionStrategyBase } from './execution-strategy-base.js';
+import { RetryStrategyManager } from '../error-handling/retry-strategy-manager.js';
+import { ErrorClassifier } from '../error-handling/error-classifier.js';
+import { ExecutionContextManager } from '../context/execution-context-manager.js';
+import { eventBus } from '../../core/event-bus.js';
+
 /**
  * RetryExecutionStrategy
  *
  * Multi-attempt execution with intelligent retry logic.
  * Integrates context cleaning, error classification, and exponential backoff.
- *
- * Features:
- * - Configurable max attempts (default: 3)
- * - Exponential backoff with jitter
- * - Error classification-based retry decisions
- * - Context cleaning between retries
- * - Snapshot/restore for rollback
  */
-
-class RetryExecutionStrategy extends ExecutionStrategyBase {
+export class RetryExecutionStrategy extends ExecutionStrategyBase {
   constructor(config = {}) {
     super({
       maxAttempts: config.maxAttempts || 3,
@@ -114,14 +112,12 @@ class RetryExecutionStrategy extends ExecutionStrategyBase {
         await this.onError(lastError, enrichedRequest);
 
         // Emit retry event
-        if (typeof EventBus !== 'undefined') {
-          EventBus.emit('EXECUTION_RETRY_ATTEMPT', {
-            executionId,
-            attempt,
-            maxAttempts: this.config.maxAttempts,
-            error: lastError
-          });
-        }
+        eventBus.emit?.('EXECUTION_RETRY_ATTEMPT', {
+          executionId,
+          attempt,
+          maxAttempts: this.config.maxAttempts,
+          error: lastError
+        });
 
         // Wait before retry (except on last attempt)
         if (attempt < this.config.maxAttempts) {
@@ -216,13 +212,11 @@ class RetryExecutionStrategy extends ExecutionStrategyBase {
     this.contextManager.cleanContext(request.id || context.id, error);
 
     // Emit cleaning event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('EXECUTION_CONTEXT_CLEANED', {
-        executionId: request.id || context.id,
-        errorType: error?.name,
-        cleaningType: 'retry'
-      });
-    }
+    eventBus.emit?.('EXECUTION_CONTEXT_CLEANED', {
+      executionId: request.id || context.id,
+      errorType: error?.name,
+      cleaningType: 'retry'
+    });
   }
 
   /**
@@ -259,12 +253,7 @@ class RetryExecutionStrategy extends ExecutionStrategyBase {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.RetryExecutionStrategy = RetryExecutionStrategy;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = RetryExecutionStrategy;
 }

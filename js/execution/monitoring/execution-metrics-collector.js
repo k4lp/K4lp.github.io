@@ -1,3 +1,5 @@
+import { eventBus } from '../../core/event-bus.js';
+
 /**
  * ExecutionMetricsCollector
  *
@@ -12,7 +14,7 @@
  * - Statistical calculations
  */
 
-class ExecutionMetricsCollector {
+export class ExecutionMetricsCollector {
   constructor() {
     this.metrics = {
       executions: [],
@@ -82,12 +84,10 @@ class ExecutionMetricsCollector {
     this.recordPerformance(result);
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('METRICS_RECORDED', {
-        result,
-        currentMetrics: this.getSummary()
-      });
-    }
+    eventBus.emit?.('METRICS_RECORDED', {
+      result,
+      currentMetrics: this.getSummary()
+    });
   }
 
   /**
@@ -255,12 +255,7 @@ class ExecutionMetricsCollector {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ExecutionMetricsCollector = ExecutionMetricsCollector;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ExecutionMetricsCollector;
 }

@@ -11,7 +11,9 @@
  * - Iteration history
  */
 
-class IterationStateManager {
+import { eventBus } from '../../core/event-bus.js';
+
+export class IterationStateManager {
   constructor(sessionId) {
     this.sessionId = sessionId;
     this.iterations = [];
@@ -42,12 +44,10 @@ class IterationStateManager {
 
     this.iterations.push(this.currentIteration);
 
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_ITERATION_START', {
-        sessionId: this.sessionId,
-        iterationNumber
-      });
-    }
+    eventBus.emit?.('SESSION_ITERATION_START', {
+      sessionId: this.sessionId,
+      iterationNumber
+    });
 
     return this.currentIteration;
   }
@@ -123,13 +123,11 @@ class IterationStateManager {
     const completed = this.currentIteration;
     this.currentIteration = null;
 
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_ITERATION_COMPLETE', {
-        sessionId: this.sessionId,
-        iterationNumber: completed.number,
-        result: completed.result
-      });
-    }
+    eventBus.emit?.('SESSION_ITERATION_COMPLETE', {
+      sessionId: this.sessionId,
+      iterationNumber: completed.number,
+      result: completed.result
+    });
 
     return completed;
   }
@@ -236,12 +234,7 @@ class IterationStateManager {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.IterationStateManager = IterationStateManager;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = IterationStateManager;
 }

@@ -12,7 +12,9 @@
  * - No retry (fail fast)
  */
 
-class SafeModeExecutionStrategy extends ExecutionStrategyBase {
+import { ExecutionStrategyBase } from './execution-strategy-base.js';
+
+export class SafeModeExecutionStrategy extends ExecutionStrategyBase {
   constructor(config = {}) {
     super({
       maxAttempts: 1,
@@ -229,12 +231,7 @@ class SafeModeExecutionStrategy extends ExecutionStrategyBase {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.SafeModeExecutionStrategy = SafeModeExecutionStrategy;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = SafeModeExecutionStrategy;
 }

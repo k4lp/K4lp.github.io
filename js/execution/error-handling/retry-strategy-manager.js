@@ -1,18 +1,15 @@
+import { ErrorClassifier } from './error-classifier.js';
+import { ErrorContextCleaner } from './error-context-cleaner.js';
+import { RetryPolicyManager } from '../../policy/retry-policy-manager.js';
+import { eventBus } from '../../core/event-bus.js';
+
 /**
  * RetryStrategyManager
  *
  * Manages retry logic with configurable policies and error-specific behavior.
  * Coordinates retry attempts, delays, and context cleaning.
- *
- * Features:
- * - Exponential backoff with jitter
- * - Error-specific retry policies
- * - Context cleaning between retries
- * - Configurable max attempts
- * - Smart retry decision logic
  */
-
-class RetryStrategyManager {
+export class RetryStrategyManager {
   constructor(config = {}) {
     this.config = {
       maxAttempts: config.maxAttempts || 3,
@@ -26,9 +23,7 @@ class RetryStrategyManager {
     // Initialize dependencies
     this.errorClassifier = new ErrorClassifier();
     this.contextCleaner = new ErrorContextCleaner();
-    this.retryPolicyManager = typeof RetryPolicyManager !== 'undefined'
-      ? new RetryPolicyManager()
-      : null;
+    this.retryPolicyManager = new RetryPolicyManager();
   }
 
   /**
@@ -66,14 +61,12 @@ class RetryStrategyManager {
           }
 
           // Emit retry event
-          if (typeof EventBus !== 'undefined') {
-            EventBus.emit('EXECUTION_RETRY_ATTEMPT', {
-              executionId: result.id,
-              attempt,
-              maxAttempts,
-              error: lastError
-            });
-          }
+          eventBus.emit?.('EXECUTION_RETRY_ATTEMPT', {
+            executionId: result.id,
+            attempt,
+            maxAttempts,
+            error: lastError
+          });
 
           // Wait before retry
           if (attempt < maxAttempts) {
@@ -223,12 +216,7 @@ class RetryStrategyManager {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.RetryStrategyManager = RetryStrategyManager;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = RetryStrategyManager;
 }

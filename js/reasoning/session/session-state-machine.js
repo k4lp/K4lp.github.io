@@ -19,7 +19,9 @@
  * Others -> (terminal, no transitions)
  */
 
-class SessionStateMachine {
+import { eventBus } from '../../core/event-bus.js';
+
+export class SessionStateMachine {
   /**
    * Session states enum
    */
@@ -98,14 +100,12 @@ class SessionStateMachine {
     this._recordState(toState, metadata);
     this._emitTransition(fromState, toState, metadata);
 
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('SESSION_STATE_CHANGED', {
-        sessionId: this.sessionId,
-        fromState,
-        toState,
-        metadata
-      });
-    }
+    eventBus.emit?.('SESSION_STATE_CHANGED', {
+      sessionId: this.sessionId,
+      fromState,
+      toState,
+      metadata
+    });
 
     return true;
   }
@@ -334,12 +334,7 @@ class SessionStateMachine {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.SessionStateMachine = SessionStateMachine;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = SessionStateMachine;
 }

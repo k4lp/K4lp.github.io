@@ -11,7 +11,9 @@
  * - Straightforward flow
  */
 
-class StandardExecutionStrategy extends ExecutionStrategyBase {
+import { ExecutionStrategyBase } from './execution-strategy-base.js';
+
+export class StandardExecutionStrategy extends ExecutionStrategyBase {
   constructor(config = {}) {
     super({
       maxAttempts: 1,
@@ -81,12 +83,7 @@ class StandardExecutionStrategy extends ExecutionStrategyBase {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.StandardExecutionStrategy = StandardExecutionStrategy;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = StandardExecutionStrategy;
 }

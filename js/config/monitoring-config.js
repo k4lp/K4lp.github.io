@@ -5,7 +5,7 @@
  * Defines metrics collection and health monitoring.
  */
 
-const MONITORING_CONFIG = {
+export const MONITORING_CONFIG = {
   // Enable metrics collection
   enableMetrics: true,
 
@@ -79,12 +79,11 @@ const MONITORING_CONFIG = {
   }
 };
 
-// Export for ES6 modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { MONITORING_CONFIG };
+export function getMonitoringSetting(path, fallback = undefined) {
+  return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), MONITORING_CONFIG) ?? fallback;
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.MONITORING_CONFIG = MONITORING_CONFIG;
 }

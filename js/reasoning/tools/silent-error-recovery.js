@@ -12,8 +12,9 @@
  */
 
 import { Storage } from '../../storage/storage.js';
+import { apiAccessTracker } from '../../execution/apis/api-access-tracker.js';
 
-class SilentErrorRecovery {
+export class SilentErrorRecovery {
   constructor() {
     this.recoveryAttempts = [];
     this.enabled = true;
@@ -479,12 +480,11 @@ Please reconsider this step more carefully and provide a complete, well-reasoned
     }
 
     // Get access tracking data
-    const ApiAccessTracker = window.ApiAccessTracker;
-    if (!ApiAccessTracker) {
+    if (!apiAccessTracker) {
       return null; // Tracker not available
     }
 
-    const errorReport = ApiAccessTracker.getErrorReport();
+    const errorReport = apiAccessTracker.getErrorReport();
 
     // If there were failed accesses, this is a reference error
     if (errorReport && errorReport.hasErrors) {
@@ -533,7 +533,7 @@ Please reconsider this step more carefully and provide a complete, well-reasoned
           type: 'code_execution',
           executionResult: executionResult,
           failedAccesses: [],
-          attemptedIds: ApiAccessTracker ? ApiAccessTracker.getAttemptedIds() : {},
+          attemptedIds: apiAccessTracker ? apiAccessTracker.getAttemptedIds() : {},
           errorMessage: errorMessage,
           timestamp: new Date().toISOString()
         };
@@ -595,9 +595,8 @@ Please reconsider this step more carefully and provide a complete, well-reasoned
       );
 
       // Get attempted entity accesses if available
-      const ApiAccessTracker = window.ApiAccessTracker;
-      const attemptedIds = ApiAccessTracker ? ApiAccessTracker.getAttemptedIds() : {};
-      const failedAccesses = ApiAccessTracker ? ApiAccessTracker.getErrorReport()?.failedAccesses || [] : [];
+        const attemptedIds = apiAccessTracker ? apiAccessTracker.getAttemptedIds() : {};
+        const failedAccesses = apiAccessTracker ? apiAccessTracker.getErrorReport()?.failedAccesses || [] : [];
 
       return {
         hasErrors: true,
@@ -620,10 +619,11 @@ Please reconsider this step more carefully and provide a complete, well-reasoned
   }
 }
 
-// Create global singleton instance
-window.SilentErrorRecovery = window.SilentErrorRecovery || new SilentErrorRecovery();
+export const silentErrorRecovery = new SilentErrorRecovery();
 
-// Expose stats to console for debugging
-window.getSilentRecoveryStats = () => window.SilentErrorRecovery.getStats();
+if (typeof window !== 'undefined') {
+  window.SilentErrorRecovery = silentErrorRecovery;
+  window.getSilentRecoveryStats = () => silentErrorRecovery.getStats();
+}
 
 console.log('[Silent Error Recovery] Module loaded and ready');

@@ -17,7 +17,7 @@
  * - Control retry/cleaning decisions per error type
  */
 
-class ErrorClassifier {
+export class ErrorClassifier {
   /**
    * Standard error types (extensible)
    */
@@ -338,12 +338,7 @@ class ErrorClassifier {
   }
 }
 
-// Export to window for global access
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ErrorClassifier = ErrorClassifier;
-}
-
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ErrorClassifier;
 }

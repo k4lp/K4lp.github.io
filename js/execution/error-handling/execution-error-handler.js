@@ -1,22 +1,19 @@
+import { ErrorClassifier } from './error-classifier.js';
+import { ErrorContextCleaner } from './error-context-cleaner.js';
+import { RetryStrategyManager } from './retry-strategy-manager.js';
+import { eventBus } from '../../core/event-bus.js';
+
 /**
  * ExecutionErrorHandler
  *
  * Centralized error handling for execution system.
  * Coordinates error classification, context cleaning, and recovery decisions.
- *
- * Features:
- * - Error classification via ErrorClassifier
- * - Context cleaning via ErrorContextCleaner
- * - Retry decision logic
- * - Pluggable error handlers per error type
- * - Recovery strategy recommendations
  */
-
-class ExecutionErrorHandler {
-  constructor() {
-    this.errorClassifier = new ErrorClassifier();
-    this.contextCleaner = new ErrorContextCleaner();
-    this.retryManager = new RetryStrategyManager();
+export class ExecutionErrorHandler {
+  constructor(deps = {}) {
+    this.errorClassifier = deps.errorClassifier || new ErrorClassifier();
+    this.contextCleaner = deps.contextCleaner || new ErrorContextCleaner();
+    this.retryManager = deps.retryManager || new RetryStrategyManager();
     this.errorHandlers = new Map();
 
     this._initializeHandlers();
@@ -40,13 +37,11 @@ class ExecutionErrorHandler {
     const handlerResult = await handler.handle(error, classification, executionContext);
 
     // Emit event
-    if (typeof EventBus !== 'undefined') {
-      EventBus.emit('EXECUTION_ERROR_HANDLED', {
-        error,
-        classification,
-        handlerResult
-      });
-    }
+    eventBus.emit?.('EXECUTION_ERROR_HANDLED', {
+      error,
+      classification,
+      handlerResult
+    });
 
     return {
       classification,
@@ -244,12 +239,7 @@ class ExecutionErrorHandler {
   }
 }
 
-// Export to window
+// Legacy bridge (deprecated)
 if (typeof window !== 'undefined') {
   window.ExecutionErrorHandler = ExecutionErrorHandler;
-}
-
-// Export for modules
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ExecutionErrorHandler;
 }
