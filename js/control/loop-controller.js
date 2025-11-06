@@ -396,7 +396,7 @@ async function runIteration() {
       sessionManager.recordIteration(currentSessionId, {
         errors: operationSummary.errors || [],
         executionResults: operationSummary.executions || [],
-        progress: goalsComplete ? 100 : (iterationCount / MAX_ITERATIONS) * 100
+        progress: (iterationCount / MAX_ITERATIONS) * 100 // Progress based on iterations
       });
     }
 
