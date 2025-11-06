@@ -62,10 +62,10 @@ class ExecutionContextManager {
     }
 
     return {
-      vault: this._deepClone(Storage.getVault()),
-      memory: this._deepClone(Storage.getMemory()),
-      tasks: this._deepClone(Storage.getTasks()),
-      goals: this._deepClone(Storage.getGoals()),
+      vault: this._deepClone(Storage.loadVault()),
+      memory: this._deepClone(Storage.loadMemory()),
+      tasks: this._deepClone(Storage.loadTasks()),
+      goals: this._deepClone(Storage.loadGoals()),
       timestamp: new Date().toISOString()
     };
   }
