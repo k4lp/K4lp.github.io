@@ -11,6 +11,8 @@
  * The retry appears as if it was the original response - no traces in UI or reasoning log.
  */
 
+import { Storage } from '../../storage/storage.js';
+
 class SilentErrorRecovery {
   constructor() {
     this.recoveryAttempts = [];
@@ -98,8 +100,6 @@ class SilentErrorRecovery {
    * Returns just identifiers, not full content
    */
   collectAvailableReferences() {
-    const Storage = window.Storage;
-
     const references = {
       memory: [],
       tasks: [],
