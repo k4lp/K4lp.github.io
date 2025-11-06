@@ -316,3 +316,10 @@ function normalizeArray(value) {
 
   return [];
 }
+
+// Expose storage helper to legacy global scripts while preserving ES module exports
+if (typeof window !== 'undefined') {
+  window.Storage = Storage;
+  window.GDRS = window.GDRS || {};
+  window.GDRS.Storage = Storage;
+}

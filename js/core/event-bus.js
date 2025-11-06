@@ -161,3 +161,13 @@ export const Events = {
   UI_REFRESH_REQUEST: 'ui:refresh:request',
   UI_REFRESH_COMPLETE: 'ui:refresh:complete'
 };
+
+// Bridge module exports to legacy global consumers
+if (typeof window !== 'undefined') {
+  window.EventBus = eventBus;
+  window.eventBus = eventBus;
+  window.GDRS = window.GDRS || {};
+  window.GDRS.EventBus = eventBus;
+  window.GDRS.EventBusClass = EventBus;
+  window.GDRS.Events = Events;
+}
