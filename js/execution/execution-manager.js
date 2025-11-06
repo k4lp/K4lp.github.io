@@ -18,6 +18,9 @@ import { generateId, nowISO } from '../core/utils.js';
 import { EXECUTION_DEFAULT_SOURCE } from '../config/execution-config.js';
 import { whenExecutionServicesReady } from './services.js';
 import { getModularInitialization } from '../core/modular-system-init.js';
+import { StandardExecutionStrategy } from './strategies/standard-execution-strategy.js';
+import { RetryExecutionStrategy } from './strategies/retry-execution-strategy.js';
+import { SafeModeExecutionStrategy } from './strategies/safe-mode-execution-strategy.js';
 
 class ExecutionManager {
   constructor() {
@@ -194,12 +197,12 @@ class ExecutionManager {
    */
   _getStrategyClass(strategyName) {
     const strategyMap = {
-      'standard': window.StandardExecutionStrategy,
-      'retry': window.RetryExecutionStrategy,
-      'safe': window.SafeModeExecutionStrategy
+      standard: StandardExecutionStrategy,
+      retry: RetryExecutionStrategy,
+      safe: SafeModeExecutionStrategy
     };
 
-    return strategyMap[strategyName.toLowerCase()] || window.StandardExecutionStrategy;
+    return strategyMap[strategyName.toLowerCase()] || StandardExecutionStrategy;
   }
 
   /**
