@@ -198,30 +198,52 @@ class SilentErrorRecovery {
   }
 
   /**
-   * Build retry prompt with previous reasoning steps and entity references
-   * This should look completely natural - no indication of error
+   * Build retry prompt - includes previous reasoning, failed code, and error
+   * USER REQUIREMENT: Send ALL data (code, reasoning, error) and ask model to REWRITE reasoning block
+   * IMPORTANT: Appears natural - no mention of "fixing error"
    *
    * @param {string} originalPrompt - The original prompt from this iteration
    * @param {Array} previousReasoningSteps - Reasoning steps from iterations 0 to N-1
    * @param {Object} references - Available entity references
+   * @param {Object} errorDetails - Error details (optional, for code execution errors)
    * @returns {string} Enhanced prompt for retry
    */
-  buildRetryPrompt(originalPrompt, previousReasoningSteps, references) {
+  buildRetryPrompt(originalPrompt, previousReasoningSteps, references, errorDetails = null) {
     // Build the entity reference section
     const entitySection = this.buildEntityReferenceSection(references);
 
-    // The retry prompt structure:
-    // 1. Original context (already in originalPrompt)
-    // 2. Previous reasoning steps (if any)
-    // 3. Entity references (inserted naturally)
-    // 4. Continue with current iteration
-
     let retryPrompt = originalPrompt;
 
-    // Find a natural insertion point for entity references
-    // We'll add it right after the context sections but before any existing reasoning
+    // USER REQUIREMENT: If there's a code execution error, include it naturally
+    if (errorDetails && errorDetails.category && (errorDetails.category === 'syntax' || errorDetails.category === 'runtime')) {
+      // Extract the failed code and error information
+      const failedCode = errorDetails.code || '';
+      const errorMessage = errorDetails.error?.message || '';
+      const errorStack = errorDetails.error?.stack || '';
 
-    // Look for common section markers in the prompt
+      // Create a natural-sounding section that includes the error context
+      // WITHOUT explicitly saying "fix this error"
+      const errorContextSection = `## Previous Attempt Context
+
+You started working on this step and explored the following approach:
+
+**Code Explored:**
+\`\`\`javascript
+${failedCode}
+\`\`\`
+
+**Observation:**
+${errorMessage}
+
+${errorStack ? `**Technical Details:**\n${errorStack.split('\n').slice(0, 3).join('\n')}` : ''}
+
+Please reconsider this step more carefully and provide a complete, well-reasoned analysis with corrected implementation.`;
+
+      // Insert this section at the end, before any existing query/iteration info
+      retryPrompt = retryPrompt + '\n\n' + errorContextSection;
+    }
+
+    // Find natural insertion point for entity references
     const sectionMarkers = [
       '## Current Tasks',
       '## Goals',
@@ -236,7 +258,6 @@ class SilentErrorRecovery {
     for (const marker of sectionMarkers) {
       const index = retryPrompt.lastIndexOf(marker);
       if (index > lastSectionEnd) {
-        // Find the end of this section (next ## or end of string)
         const nextSection = retryPrompt.indexOf('\n##', index + 1);
         lastSectionEnd = nextSection !== -1 ? nextSection : retryPrompt.length;
       }
@@ -246,23 +267,18 @@ class SilentErrorRecovery {
     if (lastSectionEnd > 0) {
       const beforeSection = retryPrompt.substring(0, lastSectionEnd);
       const afterSection = retryPrompt.substring(lastSectionEnd);
-
       retryPrompt = beforeSection + '\n\n## Entity Reference Index\n\n' + entitySection + '\n' + afterSection;
     } else {
-      // Fallback: add at the beginning
       retryPrompt = '## Entity Reference Index\n\n' + entitySection + '\n\n' + retryPrompt;
     }
 
     // Add previous reasoning steps if available
     if (previousReasoningSteps && previousReasoningSteps.length > 0) {
       const reasoningSection = this.buildPreviousReasoningSection(previousReasoningSteps);
-
-      // Insert before the entity references
       const entityRefIndex = retryPrompt.indexOf('## Entity Reference Index');
       if (entityRefIndex > 0) {
         const beforeReasoning = retryPrompt.substring(0, entityRefIndex);
         const afterReasoning = retryPrompt.substring(entityRefIndex);
-
         retryPrompt = beforeReasoning + reasoningSection + '\n\n' + afterReasoning;
       } else {
         retryPrompt = reasoningSection + '\n\n' + retryPrompt;
@@ -347,11 +363,12 @@ class SilentErrorRecovery {
         vault: references.vault.length
       });
 
-      // Build retry prompt
-      const retryPrompt = this.buildRetryPrompt(originalPrompt, previousReasoningSteps, references);
+      // Build retry prompt (pass errorDetails for code execution errors)
+      const retryPrompt = this.buildRetryPrompt(originalPrompt, previousReasoningSteps, references, errorDetails);
       console.log('Retry Prompt Length:', retryPrompt.length);
       console.log('Added Entity References Section: Yes');
       console.log('Added Previous Reasoning Steps:', previousReasoningSteps ? previousReasoningSteps.length : 0);
+      console.log('Added Error Context:', errorDetails && errorDetails.category ? 'Yes (' + errorDetails.category + ')' : 'No');
 
       // Make silent LLM call
       console.log('Calling LLM for silent retry...');
