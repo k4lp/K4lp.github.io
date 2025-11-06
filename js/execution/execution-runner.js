@@ -27,6 +27,15 @@ export class ExecutionRunner {
    * @returns {Promise<Object>} Structured execution outcome
    */
   async run(request) {
+    // MODULAR: Initialize state machine for formal state tracking
+    const stateMachine = window.ExecutionStateMachine
+      ? new window.ExecutionStateMachine(request.id)
+      : null;
+
+    if (stateMachine) {
+      stateMachine.transition('preparing');
+    }
+
     const capture = new ConsoleCapture();
     const analysis = analyseCode(request.code || '');
 
@@ -38,9 +47,19 @@ export class ExecutionRunner {
     const startedAt = Date.now();
     capture.start();
 
+    // MODULAR: Transition to executing state
+    if (stateMachine) {
+      stateMachine.transition('executing');
+    }
+
     try {
       const value = await this._executeWithTimeout(resolvedCode);
       const duration = Date.now() - startedAt;
+
+      // MODULAR: Transition to completed state
+      if (stateMachine) {
+        stateMachine.transition('completed');
+      }
 
       return {
         success: true,
@@ -50,10 +69,18 @@ export class ExecutionRunner {
         analysis: { ...analysis, vaultRefs },
         duration,
         finishedAt: nowISO(),
-        startedAt: new Date(startedAt).toISOString()
+        startedAt: new Date(startedAt).toISOString(),
+        // MODULAR: Include state information
+        state: stateMachine ? stateMachine.getCurrentState() : 'completed'
       };
     } catch (error) {
       const duration = Date.now() - startedAt;
+
+      // MODULAR: Transition to failed state with error details
+      if (stateMachine) {
+        stateMachine.transition('failed', { error: error.message });
+      }
+
       return {
         success: false,
         error,
@@ -62,7 +89,9 @@ export class ExecutionRunner {
         analysis: { ...analysis, vaultRefs },
         duration,
         finishedAt: nowISO(),
-        startedAt: new Date(startedAt).toISOString()
+        startedAt: new Date(startedAt).toISOString(),
+        // MODULAR: Include state information
+        state: stateMachine ? stateMachine.getCurrentState() : 'failed'
       };
     } finally {
       capture.stop();
