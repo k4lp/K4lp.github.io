@@ -354,6 +354,53 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
     <script src="js/execution/apis/api-access-tracker.js" type="module"></script>
     <script src="js/reasoning/tools/silent-error-recovery.js"></script>
 
+    <!-- ============================================== -->
+    <!-- MODULAR SYSTEM - Core Architecture (Phase 1-5) -->
+    <!-- IMPORTANT: Load these BEFORE main.js -->
+    <!-- ============================================== -->
+
+    <!-- BATCH 1: Core Modules (No Dependencies) -->
+    <script src="js/execution/core/execution-state-machine.js"></script>
+    <script src="js/execution/strategies/execution-strategy-base.js"></script>
+    <script src="js/execution/results/result-aggregator.js"></script>
+    <script src="js/execution/error-handling/error-classifier.js"></script>
+    <script src="js/reasoning/session/session-state-machine.js"></script>
+    <script src="js/reasoning/session/iteration-state-manager.js"></script>
+    <script src="js/reasoning/chain/reasoning-chain-middleware.js"></script>
+    <script src="js/reasoning/context/context-compactor.js"></script>
+
+    <!-- Configuration Files -->
+    <script src="js/config/execution-strategies-config.js"></script>
+    <script src="js/config/retry-policies-config.js"></script>
+    <script src="js/config/error-recovery-config.js"></script>
+    <script src="js/config/monitoring-config.js"></script>
+
+    <!-- BATCH 2: Dependent Components (Require Batch 1 + Config) -->
+    <script src="js/execution/error-handling/error-context-cleaner.js"></script>
+    <script src="js/execution/results/execution-result-handler.js"></script>
+    <script src="js/execution/strategies/standard-execution-strategy.js"></script>
+    <script src="js/execution/strategies/safe-mode-execution-strategy.js"></script>
+    <script src="js/policy/execution-policy-manager.js"></script>
+    <script src="js/policy/retry-policy-manager.js"></script>
+    <script src="js/execution/monitoring/execution-metrics-collector.js"></script>
+    <script src="js/reasoning/monitoring/chain-health-monitor.js"></script>
+
+    <!-- BATCH 3-4: Advanced Components (Require Batch 1-2) -->
+    <script src="js/execution/error-handling/retry-strategy-manager.js"></script>
+    <script src="js/execution/context/execution-context-manager.js"></script>
+    <script src="js/execution/strategies/retry-execution-strategy.js"></script>
+    <script src="js/execution/error-handling/execution-error-handler.js"></script>
+
+    <!-- BATCH 5: Session Management (Requires All Previous) -->
+    <script src="js/reasoning/session/reasoning-session-manager.js"></script>
+
+    <!-- CRITICAL: Initialize Modular System (Must Load LAST) -->
+    <script src="js/core/modular-system-init.js"></script>
+
+    <!-- ============================================== -->
+    <!-- End of Modular System Scripts -->
+    <!-- ============================================== -->
+
     <!-- Scripts: Modular Architecture -->
     <script src="js/main.js" type="module"></script>
     
