@@ -18,14 +18,91 @@ import {
     parseAttributes,
     getToolDefinition,
     getAllToolPatterns,
+    isValidIdentifier,
+    isValidContentSize,
+    normalizeVaultType,
+    normalizeTaskStatus,
+    sanitizeText,
 } from '../../config/tool-registry-config.js';
+
+// ============================================================================
+// REGEX CACHE - Performance optimization
+// ============================================================================
+
+const REGEX_CACHE = new Map();
+
+/**
+ * Get cached compiled regex pattern
+ * @param {Object} tool - Tool definition
+ * @param {string} patternKey - Pattern key (block/selfClosing)
+ * @returns {RegExp} Compiled regex
+ */
+function getCompiledPattern(tool, patternKey) {
+    const cacheKey = `${tool.id}:${patternKey}`;
+    if (!REGEX_CACHE.has(cacheKey)) {
+        const patternString = tool.patterns[patternKey];
+        if (patternString) {
+            REGEX_CACHE.set(cacheKey, new RegExp(patternString));
+        }
+    }
+    return REGEX_CACHE.get(cacheKey);
+}
 
 // ============================================================================
 // EXTRACTION
 // ============================================================================
 
 /**
+ * Helper: Extract operations using a specific pattern
+ * @param {string} text - Text to parse
+ * @param {RegExp} pattern - Cached compiled regex pattern
+ * @param {Object} tool - Tool definition
+ * @param {string} type - Operation type (block/self_closing)
+ * @param {boolean} isBlock - Whether this is a block pattern
+ * @returns {Array} Extracted operations
+ */
+function extractByPattern(text, pattern, tool, type, isBlock) {
+    const operations = [];
+    let match;
+
+    while ((match = pattern.exec(text)) !== null) {
+        if (isBlock) {
+            // Block format: match[1] = attributes (optional), match[2] or match[1] = content
+            const hasAttributes = match[2] !== undefined;
+            const attrString = hasAttributes ? match[1] : '';
+            const content = hasAttributes ? match[2] : match[1];
+            const attributes = attrString ? parseAttributes(attrString) : {};
+
+            operations.push({
+                toolId: tool.id,
+                type,
+                raw: match[0],
+                content,
+                attributes,
+                hasContent: true,
+            });
+        } else {
+            // Self-closing format: match[1] = attributes
+            const attrString = match[1] || '';
+            const attributes = parseAttributes(attrString);
+
+            operations.push({
+                toolId: tool.id,
+                type,
+                raw: match[0],
+                content: null,
+                attributes,
+                hasContent: false,
+            });
+        }
+    }
+
+    return operations;
+}
+
+/**
  * Extract all operations for a specific tool from text
+ * OPTIMIZED: Uses cached regex patterns, no redundant code
  * @param {string} text - Text to parse
  * @param {string} toolId - Tool ID from TOOL_DEFINITIONS
  * @returns {Array} Array of extracted operations
@@ -39,83 +116,34 @@ export function extractToolOperations(text, toolId) {
 
     const operations = [];
 
-    // Extract based on tool type
-    if (tool.type === TOOL_TYPES.BLOCK) {
-        // Block-style tool: {{<tool>}}content{{</tool>}}
-        const pattern = new RegExp(tool.patterns.block);
-        let match;
-
-        while ((match = pattern.exec(text)) !== null) {
-            operations.push({
-                toolId: tool.id,
-                type: 'block',
-                raw: match[0],
-                content: match[1],
-                attributes: {},
-                hasContent: true,
-            });
+    // Extract based on tool type - using cached regex patterns
+    if (tool.type === TOOL_TYPES.BLOCK && tool.patterns.block) {
+        const pattern = getCompiledPattern(tool, 'block');
+        if (pattern) {
+            operations.push(...extractByPattern(text, pattern, tool, 'block', true));
         }
+    }
 
-    } else if (tool.type === TOOL_TYPES.SELF_CLOSING) {
-        // Self-closing tool: {{<tool attr="value" />}}
-        const pattern = new RegExp(tool.patterns.selfClosing);
-        let match;
-
-        while ((match = pattern.exec(text)) !== null) {
-            const attrString = match[1];
-            const attributes = parseAttributes(attrString);
-
-            operations.push({
-                toolId: tool.id,
-                type: 'self_closing',
-                raw: match[0],
-                content: null,
-                attributes,
-                hasContent: false,
-            });
+    if (tool.type === TOOL_TYPES.SELF_CLOSING && tool.patterns.selfClosing) {
+        const pattern = getCompiledPattern(tool, 'selfClosing');
+        if (pattern) {
+            operations.push(...extractByPattern(text, pattern, tool, 'self_closing', false));
         }
+    }
 
-    } else if (tool.type === TOOL_TYPES.HYBRID) {
+    if (tool.type === TOOL_TYPES.HYBRID) {
         // Hybrid: supports both formats
-
-        // Extract self-closing first
         if (tool.patterns.selfClosing) {
-            const pattern = new RegExp(tool.patterns.selfClosing);
-            let match;
-
-            while ((match = pattern.exec(text)) !== null) {
-                const attrString = match[1];
-                const attributes = parseAttributes(attrString);
-
-                operations.push({
-                    toolId: tool.id,
-                    type: 'self_closing',
-                    raw: match[0],
-                    content: null,
-                    attributes,
-                    hasContent: false,
-                });
+            const pattern = getCompiledPattern(tool, 'selfClosing');
+            if (pattern) {
+                operations.push(...extractByPattern(text, pattern, tool, 'self_closing', false));
             }
         }
 
-        // Extract block format
         if (tool.patterns.block) {
-            const pattern = new RegExp(tool.patterns.block);
-            let match;
-
-            while ((match = pattern.exec(text)) !== null) {
-                const attrString = match[1];
-                const content = match[2];
-                const attributes = parseAttributes(attrString);
-
-                operations.push({
-                    toolId: tool.id,
-                    type: 'block',
-                    raw: match[0],
-                    content,
-                    attributes,
-                    hasContent: true,
-                });
+            const pattern = getCompiledPattern(tool, 'block');
+            if (pattern) {
+                operations.push(...extractByPattern(text, pattern, tool, 'block', true));
             }
         }
     }
@@ -216,135 +244,127 @@ export function validateOperation(operation) {
     const schema = tool.schema;
     const attrs = operation.attributes || {};
 
-    // Import validation functions from registry
-    import('../../config/tool-registry-config.js').then(registry => {
-        const {
-            isValidIdentifier,
-            isValidContentSize,
-            normalizeVaultType,
-            normalizeTaskStatus,
-            sanitizeText,
-        } = registry;
+    // FIXED: Use statically imported validation functions (not async import)
+    // This ensures validation actually executes before the function returns
 
-        // Validate attributes
-        Object.entries(schema.attributes || {}).forEach(([attrName, attrSchema]) => {
-            const value = attrs[attrName];
+    // Validate attributes
+    Object.entries(schema.attributes || {}).forEach(([attrName, attrSchema]) => {
+        const value = attrs[attrName];
 
-            // Check required attributes
-            if (attrSchema.required) {
-                // Check for alternative keys
-                if (attrSchema.alternativeKeys) {
-                    const hasAny = attrSchema.alternativeKeys.some(key => attrs[key]);
-                    if (!value && !hasAny) {
-                        result.valid = false;
-                        result.errors.push({
-                            field: attrName,
-                            message: `Required attribute missing. Provide ${attrName} or one of: ${attrSchema.alternativeKeys.join(', ')}`,
-                        });
-                    }
-                } else if (!value && value !== false && value !== 0) {
+        // Check required attributes
+        if (attrSchema.required) {
+            // Check for alternative keys
+            if (attrSchema.alternativeKeys) {
+                const hasAny = attrSchema.alternativeKeys.some(key => attrs[key]);
+                if (!value && !hasAny) {
                     result.valid = false;
                     result.errors.push({
                         field: attrName,
-                        message: `Required attribute missing: ${attrName}`,
+                        message: `Required attribute missing. Provide ${attrName} or one of: ${attrSchema.alternativeKeys.join(', ')}`,
                     });
                 }
+            } else if (!value && value !== false && value !== 0) {
+                result.valid = false;
+                result.errors.push({
+                    field: attrName,
+                    message: `Required attribute missing: ${attrName}`,
+                });
+            }
+        }
+
+        // Skip validation if no value and not required
+        if (!value && value !== false && value !== 0) {
+            return;
+        }
+
+        // Validate by type
+        if (attrSchema.type === 'string') {
+            if (typeof value !== 'string') {
+                result.warnings.push({
+                    field: attrName,
+                    message: `Expected string, got ${typeof value}`,
+                });
             }
 
-            // Skip validation if no value and not required
-            if (!value && value !== false && value !== 0) {
-                return;
+            // Check max length
+            if (attrSchema.maxLength && value.length > attrSchema.maxLength) {
+                result.valid = false;
+                result.errors.push({
+                    field: attrName,
+                    message: `Value exceeds maximum length of ${attrSchema.maxLength}`,
+                });
             }
-
-            // Validate by type
-            if (attrSchema.type === 'string') {
-                if (typeof value !== 'string') {
+        } else if (attrSchema.type === 'enum') {
+            if (!attrSchema.values.includes(value)) {
+                // Use default if available
+                if (attrSchema.default) {
+                    result.normalized[attrName] = attrSchema.default;
                     result.warnings.push({
                         field: attrName,
-                        message: `Expected string, got ${typeof value}`,
-                    });
-                }
-
-                // Check max length
-                if (attrSchema.maxLength && value.length > attrSchema.maxLength) {
-                    result.valid = false;
-                    result.errors.push({
-                        field: attrName,
-                        message: `Value exceeds maximum length of ${attrSchema.maxLength}`,
-                    });
-                }
-            } else if (attrSchema.type === 'enum') {
-                if (!attrSchema.values.includes(value)) {
-                    // Use default if available
-                    if (attrSchema.default) {
-                        result.normalized[attrName] = attrSchema.default;
-                        result.warnings.push({
-                            field: attrName,
-                            message: `Invalid value "${value}", using default: ${attrSchema.default}`,
-                        });
-                    } else {
-                        result.valid = false;
-                        result.errors.push({
-                            field: attrName,
-                            message: `Invalid value. Allowed values: ${attrSchema.values.join(', ')}`,
-                        });
-                    }
-                } else {
-                    result.normalized[attrName] = value;
-                }
-            } else if (attrSchema.type === 'number') {
-                const num = Number(value);
-                if (isNaN(num)) {
-                    result.valid = false;
-                    result.errors.push({
-                        field: attrName,
-                        message: `Expected number, got ${typeof value}`,
+                        message: `Invalid value "${value}", using default: ${attrSchema.default}`,
                     });
                 } else {
-                    result.normalized[attrName] = num;
-                }
-            } else if (attrSchema.type === 'flag') {
-                result.normalized[attrName] = Boolean(value);
-            }
-
-            // Custom validators
-            if (attrSchema.validate === 'identifier' && value) {
-                if (!isValidIdentifier(value)) {
                     result.valid = false;
                     result.errors.push({
                         field: attrName,
-                        message: `Invalid identifier format: ${value}`,
+                        message: `Invalid value. Allowed values: ${attrSchema.values.join(', ')}`,
                     });
                 }
+            } else {
+                result.normalized[attrName] = value;
             }
-
-            // Normalization
-            if (attrSchema.normalize && value) {
-                if (attrName === 'type' && tool.id === 'datavault') {
-                    result.normalized[attrName] = normalizeVaultType(value);
-                } else if (attrName === 'status' && tool.id === 'task') {
-                    result.normalized[attrName] = normalizeTaskStatus(value);
-                }
+        } else if (attrSchema.type === 'number') {
+            const num = Number(value);
+            if (isNaN(num)) {
+                result.valid = false;
+                result.errors.push({
+                    field: attrName,
+                    message: `Expected number, got ${typeof value}`,
+                });
+            } else {
+                result.normalized[attrName] = num;
             }
-        });
-
-        // Validate content
-        if (schema.requiresContent && !operation.content) {
-            result.valid = false;
-            result.errors.push({
-                field: 'content',
-                message: 'Content is required for this tool',
-            });
+        } else if (attrSchema.type === 'flag') {
+            result.normalized[attrName] = Boolean(value);
         }
 
-        if (operation.content && !isValidContentSize(operation.content)) {
-            result.valid = false;
-            result.errors.push({
-                field: 'content',
-                message: 'Content exceeds maximum size',
-            });
+        // Custom validators
+        if (attrSchema.validate === 'identifier' && value) {
+            if (!isValidIdentifier(value)) {
+                result.valid = false;
+                result.errors.push({
+                    field: attrName,
+                    message: `Invalid identifier format: ${value}`,
+                });
+            }
+        }
+
+        // Normalization
+        if (attrSchema.normalize && value) {
+            if (attrName === 'type' && tool.id === 'datavault') {
+                result.normalized[attrName] = normalizeVaultType(value);
+            } else if (attrName === 'status' && tool.id === 'task') {
+                result.normalized[attrName] = normalizeTaskStatus(value);
+            }
         }
     });
+
+    // Validate content
+    if (schema.requiresContent && !operation.content) {
+        result.valid = false;
+        result.errors.push({
+            field: 'content',
+            message: 'Content is required for this tool',
+        });
+    }
+
+    if (operation.content && !isValidContentSize(operation.content)) {
+        result.valid = false;
+        result.errors.push({
+            field: 'content',
+            message: 'Content exceeds maximum size',
+        });
+    }
 
     return result;
 }
