@@ -1,9 +1,14 @@
 /**
- * ExecutionManager
+ * ExecutionManager (MODULAR ARCHITECTURE)
  *
- * Coordinates JavaScript execution requests through a single queue so every
- * run (manual or automatic) flows through the same lifecycle. This eliminates
- * the previous dual-path behaviour and provides consistent state handling.
+ * Coordinates JavaScript execution requests using pluggable execution strategies.
+ * OLD CODE REMOVED - Now uses modular architecture exclusively.
+ *
+ * Integrates:
+ * - ExecutionPolicyManager for strategy selection
+ * - ExecutionStrategy implementations (Standard/Retry/SafeMode)
+ * - ExecutionResultHandler for result processing
+ * - ExecutionMetricsCollector for metrics
  */
 
 import { ExecutionRunner } from './execution-runner.js';
@@ -18,6 +23,29 @@ class ExecutionManager {
     this.current = null;
     this.state = 'idle';
     this.runner = null;
+
+    // NEW: Modular system components
+    this.policyManager = null;
+    this.resultHandler = null;
+    this.metricsCollector = null;
+    this._initializeModularComponents();
+  }
+
+  /**
+   * Initialize modular system components
+   * @private
+   */
+  _initializeModularComponents() {
+    if (typeof window !== 'undefined' && window.GDRS_ModularSystemInitialized) {
+      this.policyManager = window.GDRS_ExecutionPolicyManager;
+      this.resultHandler = window.GDRS_ExecutionResultHandler;
+      this.metricsCollector = window.GDRS_ExecutionMetricsCollector;
+    } else {
+      console.warn('[ExecutionManager] Modular system not initialized');
+      this.policyManager = new ExecutionPolicyManager();
+      this.resultHandler = new ExecutionResultHandler();
+      this.metricsCollector = new ExecutionMetricsCollector();
+    }
   }
 
   /**
@@ -50,7 +78,8 @@ class ExecutionManager {
   }
 
   /**
-   * Internal: process the next item if the manager is idle.
+   * NEW MODULAR ARCHITECTURE: Process execution using strategy pattern.
+   * OLD direct execution code REMOVED.
    * @private
    */
   async _drain() {
@@ -69,18 +98,55 @@ class ExecutionManager {
     });
 
     try {
-      const runner = new ExecutionRunner({ timeoutMs: this.current.timeoutMs });
-      const outcome = await runner.run(this.current);
-      const result = buildResult(this.current, outcome, this.queue.length);
+      // === NEW MODULAR ARCHITECTURE ===
 
-      persistResult(result);
-      notifyToolActivity(result);
+      // 1. Get execution policy
+      const policy = this.policyManager.getCurrentPolicy();
 
-      this.current._resolve(result);
+      // 2. Get strategy class
+      const strategyName = policy.strategy || 'standard';
+      const StrategyClass = this._getStrategyClass(strategyName);
+
+      if (!StrategyClass) {
+        throw new Error(`Unknown execution strategy: ${strategyName}`);
+      }
+
+      // 3. Create strategy instance
+      const strategy = new StrategyClass(policy);
+
+      // 4. Create runner
+      const runner = new ExecutionRunner({ timeoutMs: this.current.timeoutMs || policy.timeoutMs });
+
+      // 5. Execute with strategy (handles retry, context cleaning, etc.)
+      const strategyResult = await strategy.execute(this.current, runner);
+
+      // 6. Build result
+      const result = buildResult(this.current, strategyResult, this.queue.length);
+
+      // 7. Process result through result handler
+      const processedResult = await this.resultHandler.process(result);
+
+      // 8. Record metrics
+      this.metricsCollector.recordExecution(processedResult);
+
+      // 9. Persist if should log
+      if (processedResult.shouldLog !== false) {
+        persistResult(processedResult);
+        notifyToolActivity(processedResult);
+      }
+
+      // 10. Resolve promise
+      this.current._resolve(processedResult);
+
     } catch (error) {
-      const failedOutcome = buildResult(this.current, {
+      // Handle catastrophic errors
+      const failedResult = buildResult(this.current, {
         success: false,
-        error,
+        error: {
+          name: error.name || 'Error',
+          message: error.message || String(error),
+          stack: error.stack
+        },
         logs: [],
         resolvedCode: this.current.code,
         analysis: {
@@ -88,25 +154,38 @@ class ExecutionManager {
           lineCount: this.current.code.split(/\r?\n/).length,
           vaultRefs: []
         },
-        duration: 0,
+        executionTime: 0,
         finishedAt: nowISO(),
         startedAt: nowISO()
       }, this.queue.length);
 
-      persistResult(failedOutcome);
-      notifyToolActivity(failedOutcome);
+      persistResult(failedResult);
+      notifyToolActivity(failedResult);
 
-      this.current._resolve(failedOutcome);
+      this.current._resolve(failedResult);
     } finally {
       this.current = null;
       this.state = 'idle';
       this._emitQueueChange();
 
       if (this.queue.length > 0) {
-        // Process next task in microtask queue to avoid deep recursion.
         queueMicrotask(() => this._drain());
       }
     }
+  }
+
+  /**
+   * Get strategy class by name
+   * @private
+   */
+  _getStrategyClass(strategyName) {
+    const strategyMap = {
+      'standard': window.StandardExecutionStrategy,
+      'retry': window.RetryExecutionStrategy,
+      'safe': window.SafeModeExecutionStrategy
+    };
+
+    return strategyMap[strategyName.toLowerCase()] || window.StandardExecutionStrategy;
   }
 
   /**
@@ -136,7 +215,7 @@ function createRequest(options = {}) {
 }
 
 /**
- * Transform the runner outcome + request metadata into a persistable result.
+ * Transform the strategy result + request metadata into a persistable result.
  */
 function buildResult(request, outcome, queueLengthOnFinish) {
   const success = !!outcome.success && !outcome.error;
@@ -150,15 +229,19 @@ function buildResult(request, outcome, queueLengthOnFinish) {
     metadata: request.metadata,
     submittedAt: request.submittedAt,
     success,
-    result: success ? serializeValue(outcome.value) : undefined,
+    result: success ? serializeValue(outcome.value || outcome.result) : undefined,
     resolvedCode: outcome.resolvedCode,
     logs: normalizedLogs,
     error: !success ? serializeError(outcome.error) : undefined,
     analysis: outcome.analysis,
-    executionTime: outcome.duration,
+    executionTime: outcome.duration || outcome.executionTime,
     startedAt: outcome.startedAt,
     finishedAt: outcome.finishedAt,
-    queueLengthOnFinish
+    queueLengthOnFinish,
+    // NEW: Include strategy metadata
+    attemptCount: outcome.attemptCount,
+    retried: outcome.retried,
+    classification: outcome.classification
   };
 
   return resultPayload;
