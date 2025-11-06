@@ -55,6 +55,7 @@ class ReasoningSessionManager {
         iterations: 0,
         successfulExecutions: 0,
         failedExecutions: 0,
+        consecutiveErrors: 0, // CRITICAL: Track consecutive errors for session health
         errors: [],
         contextCleanings: 0,
         recoveryAttempts: 0
@@ -272,13 +273,22 @@ class ReasoningSessionManager {
 
     session.metrics.iterations++;
 
-    // Record errors
-    if (iterationData.hasErrors || (iterationData.errors && iterationData.errors.length > 0)) {
+    // CRITICAL: Manage consecutive errors counter
+    const hasErrors = iterationData.hasErrors || (iterationData.errors && iterationData.errors.length > 0);
+
+    if (hasErrors) {
+      // Increment consecutive errors on failure
+      session.metrics.consecutiveErrors++;
+
+      // Record error details
       session.metrics.errors.push({
         iteration: session.metrics.iterations,
         errors: iterationData.errors || [],
         timestamp: new Date().toISOString()
       });
+    } else {
+      // Reset consecutive errors on success
+      session.metrics.consecutiveErrors = 0;
     }
 
     // Record execution results
@@ -361,6 +371,14 @@ class ReasoningSessionManager {
    */
   getActiveSessionIds() {
     return Array.from(this.activeSessions.keys());
+  }
+
+  /**
+   * Get all active sessions
+   * @returns {Array} Session objects
+   */
+  getActiveSessions() {
+    return Array.from(this.activeSessions.values());
   }
 
   /**

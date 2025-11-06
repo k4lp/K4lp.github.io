@@ -209,7 +209,8 @@ async function runIteration() {
 
     console.log(`[${nowISO()}] Response extracted: ${responseText.length} chars`);
     console.log(`[${nowISO()}] Response metadata - Contains <final_output>: ${responseText.includes('<final_output>')}, Contains <js_execute>: ${responseText.includes('<js_execute>')}`);
-    consecutiveErrors = 0; // Reset on success
+
+    // MODULAR: consecutiveErrors reset handled automatically by session manager on successful iteration recording
 
     // --- MODULAR FIX: Parse entire response, not just reasoning blocks ---
 
