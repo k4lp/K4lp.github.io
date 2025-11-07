@@ -25,6 +25,22 @@ import {
     sanitizeText,
 } from '../../config/tool-registry-config.js';
 
+function flagSuspiciousAttributes(attrString, toolId) {
+    if (!attrString) return;
+    const doubleQuotes = (attrString.match(/"/g) || []).length;
+    const singleQuotes = (attrString.match(/'/g) || []).length;
+    const hasUnbalancedQuotes =
+        (doubleQuotes % 2 !== 0) || (singleQuotes % 2 !== 0);
+    const hasEmptyBraces = /\{\{\s*\}\}/.test(attrString);
+
+    if (hasUnbalancedQuotes || hasEmptyBraces) {
+        const preview = attrString.slice(0, 160).replace(/\s+/g, ' ');
+        console.warn(
+            `[ToolParser] Suspicious attribute block for '${toolId}' (possible truncation): ${preview}${attrString.length > 160 ? '…' : ''}`
+        );
+    }
+}
+
 // ============================================================================
 // REGEX CACHE - Performance optimization
 // ============================================================================
@@ -70,6 +86,7 @@ function extractByPattern(text, pattern, tool, type, isBlock) {
             // Block format: match[1] = attributes (optional), match[2] or match[1] = content
             const hasAttributes = match[2] !== undefined;
             const attrString = hasAttributes ? match[1] : '';
+            flagSuspiciousAttributes(attrString, tool.id);
             const content = hasAttributes ? match[2] : match[1];
             const attributes = attrString ? parseAttributes(attrString) : {};
 
@@ -84,6 +101,7 @@ function extractByPattern(text, pattern, tool, type, isBlock) {
         } else {
             // Self-closing format: match[1] = attributes
             const attrString = match[1] || '';
+            flagSuspiciousAttributes(attrString, tool.id);
             const attributes = parseAttributes(attrString);
 
             operations.push({

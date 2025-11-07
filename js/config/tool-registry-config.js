@@ -36,6 +36,14 @@ export const COMMON_PATTERNS = {
     DANGEROUS_CHARS: /<script|javascript:|onerror=|onclick=/gi,
 };
 
+function buildSelfClosingPattern(tagName) {
+    return new RegExp(String.raw`{{<${tagName}(?:\s+([\s\S]*?))?\s*\/>}}`, 'g');
+}
+
+function buildBlockPattern(tagName) {
+    return new RegExp(String.raw`{{<${tagName}(?:\s+([\s\S]*?))?>}}([\s\S]*?){{<\/${tagName}>}}`, 'g');
+}
+
 /**
  * Validation constants
  */
@@ -149,7 +157,7 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.SELF_CLOSING,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<memory\s+([\s\S]*?)\s*\/>}}/g,
+            selfClosing: buildSelfClosingPattern('memory'),
         },
         schema: {
             hasContent: false,
@@ -193,7 +201,7 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.SELF_CLOSING,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<task\s+([\s\S]*?)\s*\/>}}/g,
+            selfClosing: buildSelfClosingPattern('task'),
         },
         schema: {
             hasContent: false,
@@ -244,7 +252,7 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.SELF_CLOSING,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<goal\s+([\s\S]*?)\s*\/>}}/g,
+            selfClosing: buildSelfClosingPattern('goal'),
         },
         schema: {
             hasContent: false,
@@ -288,8 +296,8 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.HYBRID,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<datavault\s+([\s\S]*?)\s*\/>}}/g,
-            block: /{{<datavault\s+([\s\S]*?)>}}([\s\S]*?){{<\/datavault>}}/g,
+            selfClosing: buildSelfClosingPattern('datavault'),
+            block: buildBlockPattern('datavault'),
         },
         schema: {
             hasContent: true, // Can have content
@@ -532,17 +540,65 @@ export function parseAttributes(attrString) {
     const attrs = {};
     if (!attrString) return attrs;
 
-    const pattern = new RegExp(COMMON_PATTERNS.ATTRIBUTES);
-    let match;
+    let i = 0;
+    const len = attrString.length;
 
-    while ((match = pattern.exec(attrString)) !== null) {
-        if (match[1] && match[2] !== undefined) {
-            // key="value" or key='value'
-            attrs[match[1]] = match[2];
-        } else if (match[3]) {
-            // standalone flag
-            attrs[match[3]] = true;
+    const isKeyChar = (char) => /[A-Za-z0-9_-]/.test(char);
+
+    while (i < len) {
+        // Skip whitespace
+        while (i < len && /\s/.test(attrString[i])) i++;
+        if (i >= len) break;
+
+        let key = '';
+        while (i < len && isKeyChar(attrString[i])) {
+            key += attrString[i++];
         }
+
+        if (!key) {
+            // Skip unknown token
+            i++;
+            continue;
+        }
+
+        // Skip whitespace before '='
+        while (i < len && /\s/.test(attrString[i])) i++;
+
+        if (attrString[i] !== '=') {
+            // Flag-style attribute (e.g., delete)
+            attrs[key] = true;
+            continue;
+        }
+
+        i++; // Skip '='
+        while (i < len && /\s/.test(attrString[i])) i++;
+
+        let value = '';
+        const quote = attrString[i];
+        if (quote === '"' || quote === "'") {
+            i++; // Skip opening quote
+            while (i < len) {
+                const char = attrString[i];
+                if (char === '\\' && i + 1 < len) {
+                    value += attrString[i + 1];
+                    i += 2;
+                    continue;
+                }
+                if (char === quote) {
+                    i++;
+                    break;
+                }
+                value += char;
+                i++;
+            }
+        } else {
+            // Unquoted value
+            while (i < len && !/\s/.test(attrString[i])) {
+                value += attrString[i++];
+            }
+        }
+
+        attrs[key] = value;
     }
 
     return attrs;

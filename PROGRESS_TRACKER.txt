@@ -16,3 +16,8 @@ PROGRESS TRACKER
 [2025-11-07T21:50:00Z] Removed ReasoningSessionManager.shouldContinue guard and LoopController check so sessions no longer auto-stop from guard logic.
 [2025-11-07T22:08:00Z] Documented Phase 3 plan targeting self-closing tool parser truncation after formatting audit.
 [2025-11-07T22:12:00Z] Updated memory/task/goal/datavault regex patterns to use non-greedy [\\s\\S]*? captures (block + self-closing) so quoted text with '>' or newlines stays intact.
+[2025-11-07T22:20:00Z] Rolled back interim regex tweak to follow the requested comprehensive plan before re-implementing the formatting fix.
+[2025-11-07T22:25:00Z] Authored FORMATTING_FIX_PLAN.txt outlining regex helper, attribute parser, and telemetry steps.
+[2025-11-07T22:32:00Z] Implemented reusable regex builders for block/self-closing tools and applied them to memory/task/goal/datavault definitions.
+[2025-11-07T22:36:00Z] Replaced regex-based parseAttributes with a quote-aware state machine so multiline content survives extraction.
+[2025-11-07T22:38:00Z] Added parser telemetry to warn when attribute blobs look truncated (unbalanced quotes or stray {{}}).
