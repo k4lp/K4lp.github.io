@@ -7,6 +7,11 @@ import { LS_KEYS, DEFAULT_KEYPOOL, createKeyFromText } from '../core/constants.j
 import { safeJSONParse, isNonEmptyString, nowISO } from '../core/utils.js';
 import { eventBus, Events } from '../core/event-bus.js';
 
+const TRANSIENT_REASONING_PATTERNS = [
+  /^=== JAVASCRIPT EXECUTION ERROR ===/,
+  /^=== FINAL OUTPUT VERIFICATION FAILED ===/
+];
+
 export const Storage = {
   // === KEYPOOL MANAGEMENT ===
   loadKeypool() {
@@ -364,6 +369,22 @@ export const Storage = {
   
   saveReasoningLog(log) {
     localStorage.setItem(LS_KEYS.REASONING_LOG, JSON.stringify(log));
+  },
+
+  pruneReasoningLog(patterns = TRANSIENT_REASONING_PATTERNS) {
+    const log = this.loadReasoningLog();
+    if (!Array.isArray(log) || log.length === 0) {
+      return;
+    }
+
+    const filtered = log.filter((entry) => {
+      if (typeof entry !== 'string') return true;
+      return !patterns.some((pattern) => pattern.test(entry));
+    });
+
+    if (filtered.length !== log.length) {
+      localStorage.setItem(LS_KEYS.REASONING_LOG, JSON.stringify(filtered));
+    }
   },
 
   loadCurrentQuery() {

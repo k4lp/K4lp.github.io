@@ -9,3 +9,9 @@ PLAN CROSS-VERIFICATION NOTES
 7. unified-tool-parser's extractByPattern (js/reasoning/parser/unified-tool-parser.js lines 32-74) simply trusts the captured attribute blob; once the regex is broadened, no other modules need adjustments because attribute parsing already tolerates embedded '>' characters via [^"']*.
 8. Verified regex builder usage (js/config/tool-registry-config.js lines 34-110 & 150-305) to ensure every tool now routes through the helper and accepts multiline attributes.
 9. Spot-checked the new attribute state machine and telemetry (js/config/tool-registry-config.js:520+, js/reasoning/parser/unified-tool-parser.js:13-40,90-120) with manual fixtures to confirm `{{<task notes="Line > Line" />}}` parses without truncation and suspicious blocks emit warnings only when quotes are unbalanced.
+10. JSExecutor._recordReasoningLog (js/execution/js-executor.js lines ~70-150) is the sole writer of '=== JAVASCRIPT EXECUTION ERROR ===' entries; ReasoningContextBuilder consumes Storage.loadReasoningLog directly, so stripping or scrubbing entries there will remove them from the prompt without side effects.
+11. Storage.saveReasoningLog/loadReasoningLog (js/storage/storage.js lines 120-220) simply persist arrays; adding a filter helper plus a call site in loop-controller ensures transient error strings are purged before the next iteration executes.
+
+12. Verified js/execution/js-executor.js now short-circuits on failures and prunes logs before logging successes, ensuring no new '=== JAVASCRIPT EXECUTION ERROR ===' entries appear.
+13. Confirmed Storage.pruneReasoningLog (js/storage/storage.js) + loop-controller call scrub legacy error entries the moment the next iteration (or successful JS run) begins.
+

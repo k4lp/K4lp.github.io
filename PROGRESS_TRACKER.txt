@@ -21,3 +21,6 @@ PROGRESS TRACKER
 [2025-11-07T22:32:00Z] Implemented reusable regex builders for block/self-closing tools and applied them to memory/task/goal/datavault definitions.
 [2025-11-07T22:36:00Z] Replaced regex-based parseAttributes with a quote-aware state machine so multiline content survives extraction.
 [2025-11-07T22:38:00Z] Added parser telemetry to warn when attribute blobs look truncated (unbalanced quotes or stray {{}}).
+[2025-11-07T22:57:00Z] Logged CONTEXT_CLEANUP_PLAN.txt + PLAN_VERIFICATION updates for removing transient JS error entries from reasoning log.
+[2025-11-07T23:05:00Z] Updated JSExecutor._recordReasoningLog to skip error entries and prune logs after successful runs, relying entirely on the pending-error context.
+[2025-11-07T23:07:00Z] Added Storage.pruneReasoningLog + loop-controller hook so transient error strings are scrubbed at iteration boundaries.

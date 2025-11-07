@@ -91,6 +91,7 @@ export const JSExecutor = {
     const entries = Storage.loadReasoningLog();
 
     if (result.success) {
+      Storage.pruneReasoningLog();
       entries.push([
         '=== JAVASCRIPT EXECUTION ===',
         `ID: ${result.id}`,
@@ -101,26 +102,9 @@ export const JSExecutor = {
         `RETURN VALUE:\n${stringifyReturn(result.result)}`
       ].join('\n'));
     } else {
-      const logEntry = [
-        '=== JAVASCRIPT EXECUTION ERROR ===',
-        `ID: ${result.id}`,
-        `SOURCE: ${result.source}`,
-        `ERROR: ${result.error?.message || 'Unknown error'}`,
-        'DETAILS: Code and stack captured in pending execution error context to avoid polluting reasoning history.'
-      ];
-
-      // MODULAR: Include error classification if available
-      if (result.errorHandling?.recommendation) {
-        const rec = result.errorHandling.recommendation;
-        logEntry.push(
-          `\nERROR ANALYSIS:`,
-          `- Severity: ${rec.severity || 'unknown'}`,
-          `- Retryable: ${rec.shouldRetry ? 'Yes' : 'No'}`,
-          `- Recovery: ${rec.message || 'No recommendation'}`
-        );
-      }
-
-      entries.push(logEntry.join('\n'));
+      // Error details are handled through the pending execution error context,
+      // so we skip writing anything to the reasoning log to keep it clean.
+      return;
     }
 
     Storage.saveReasoningLog(entries);

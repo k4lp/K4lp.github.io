@@ -159,6 +159,8 @@ async function runIteration() {
     return;
   }
 
+  Storage.pruneReasoningLog();
+
   let modelId = Storage.loadSelectedModel();
   if (!modelId) {
     const fallbackSelect = qs('#modelSelect');
