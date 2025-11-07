@@ -81,6 +81,20 @@ export class ConsoleCapture {
       .map((arg) => {
         if (typeof arg === 'string') return arg;
 
+        // Handle Error objects specially (Error properties are non-enumerable)
+        if (arg instanceof Error) {
+          const errorObj = {
+            name: arg.name,
+            message: arg.message,
+            stack: arg.stack
+          };
+          // Include any additional enumerable properties
+          Object.keys(arg).forEach(key => {
+            errorObj[key] = arg[key];
+          });
+          return JSON.stringify(errorObj, null, 2);
+        }
+
         try {
           return JSON.stringify(arg, null, 2);
         } catch {

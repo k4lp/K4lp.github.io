@@ -28,6 +28,22 @@ export const finalOutputProcessor = {
         const processedHTML = VaultManager.resolveVaultRefsInText(htmlContent);
         console.log(`[${nowISO()}] Vault resolution complete - Input: ${htmlContent?.length || 0} chars, Output: ${processedHTML.length} chars`);
 
+        // Check for missing vault references
+        const hasMissingVault = /\/\*\s*\[MISSING_VAULT:[^\]]+\]\s*\*\//i.test(processedHTML);
+        const hasVaultError = /\/\*\s*\[VAULT_ERROR:[^\]]+\]\s*\*\//i.test(processedHTML);
+
+        if (hasMissingVault || hasVaultError) {
+          // Extract missing vault IDs for reporting
+          const missingMatches = processedHTML.match(/\/\*\s*\[MISSING_VAULT:([^\]]+)\]\s*\*\//gi) || [];
+          const errorMatches = processedHTML.match(/\/\*\s*\[VAULT_ERROR:([^\]]+)\]\s*\*\//gi) || [];
+          const issues = [...missingMatches, ...errorMatches];
+
+          const errorMsg = `Final output contains unresolved vault references: ${issues.join(', ')}`;
+          console.error(`[${nowISO()}] Verification FAILED: ${errorMsg}`);
+
+          throw new Error(errorMsg);
+        }
+
         const saveStartTime = nowISO();
         console.log(`[${saveStartTime}] CRITICAL: Calling context.storage.saveFinalOutput() with verified=true`);
         console.log(`[${saveStartTime}] Parameters - html length: ${processedHTML.length}, verified: true (boolean), source: 'llm'`);
