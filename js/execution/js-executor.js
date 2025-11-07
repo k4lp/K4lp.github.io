@@ -68,6 +68,8 @@ export const JSExecutor = {
       }
     }
 
+    this._syncPendingExecutionErrorContext(result);
+
     // MODULAR: Only log if this isn't a retry attempt (shouldLog set by ResultHandler)
     if (result.shouldLog !== false) {
       this._recordReasoningLog(result);
@@ -152,6 +154,35 @@ export const JSExecutor = {
       execStatus.textContent = 'ERROR';
       execStatus.style.background = '#f48771';
       execStatus.style.color = 'white';
+    }
+  },
+
+  /**
+   * Persist pending execution error context for auto runs so the next reasoning
+   * iteration can inject the required instruction payload.
+   * @private
+   */
+  _syncPendingExecutionErrorContext(result) {
+    if (result.source !== 'auto') {
+      return;
+    }
+
+    if (!result.success) {
+      const references = Array.isArray(result.analysis?.vaultRefs)
+        ? result.analysis.vaultRefs.filter(Boolean)
+        : [];
+
+      Storage.savePendingExecutionError({
+        code: result.resolvedCode || result.code || '',
+        errorMessage: result.error?.message || 'Unknown error',
+        stack: result.error?.stack || '',
+        source: result.source,
+        references,
+        timestamp: result.finishedAt || new Date().toISOString(),
+        iteration: typeof window?.GDRS?.currentIteration === 'number'
+          ? window.GDRS.currentIteration
+          : null
+      });
     }
   }
 };

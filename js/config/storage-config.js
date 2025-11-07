@@ -52,7 +52,10 @@ export const LS_KEYS = {
   LAST_EXECUTED_CODE: 'gdrs_last_executed_code',
 
   /** Maximum output tokens setting */
-  MAX_OUTPUT_TOKENS: 'gdrs_max_output_tokens'
+  MAX_OUTPUT_TOKENS: 'gdrs_max_output_tokens',
+
+  /** Pending execution error context (single-use warning for next iteration) */
+  PENDING_EXECUTION_ERROR: 'gdrs_pending_execution_error'
 };
 
 /**

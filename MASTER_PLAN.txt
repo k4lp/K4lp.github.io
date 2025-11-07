@@ -1,0 +1,30 @@
+MASTER PLAN - RUNTIME CONTEXT HARDENING
+=======================================
+Goal: ensure runtime/syntax execution failures automatically inject a single-use corrective instruction into the very next reasoning iteration, keep the reasoning log/UI clean, and answer the "where is this located" traceability question.
+
+1. Traceability confirmation
+   - Document that Storage.isFinalOutputVerified/saveFinalOutput in js/storage/storage.js plus LoopController iteration logs in js/control/loop-controller.js produce the console lines provided.
+   - No code change, but this informs the response and anchors subsequent edits.
+
+2. Introduce durable-yet-transient error context storage
+   - Extend LS_KEYS (js/config/storage-config.js) and Storage helpers (js/storage/storage.js) with load/save/mark/clear APIs for `gdrs_pending_execution_error` records that capture code, error, stack, source, timestamps, and whether the warning has already been served to an iteration.
+   - Ensure setters normalise strings and log actions for debugging.
+
+3. Populate pending error context from execution failures
+   - Update JSExecutor.executeCode (js/execution/js-executor.js) so failed runs persist the structured payload via Storage.savePendingExecutionError, while successful runs do not clear it immediately (it must survive until the next iteration consumes it).
+   - When successes occur while a previously served warning exists, keep the record untouched until LoopController clears it after the success iteration completes.
+
+4. Surface the warning inside the next reasoning prompt
+   - Create a dedicated context provider (js/reasoning/context/providers/pending-error-provider.js) that reads Storage.loadPendingExecutionError and emits the exact instruction text required by the user, embedding captured code/error in raw blocks.
+   - Register this provider in the default registry and add a high-priority section (config/reasoning-config.js) so the prompt always opens with the warning when pending data exists.
+
+5. Consume + clear the warning lifecycle
+   - In LoopController.runIteration, detect pending warnings at the start of an iteration, mark them as served for the current iteration, and after operations complete (or errors bubble), clear them only if no newer error overwrote the record.
+   - This guarantees single-iteration visibility while allowing back-to-back failures to refresh the payload.
+
+6. Render execution snippets verbatim
+   - Enhance renderReasoningLog (js/ui/renderer/renderer-reasoning.js) with a formatter that wraps CODE / CONSOLE OUTPUT / RETURN VALUE / ERROR / STACK sections in escaped <pre> elements before markdown parsing, preventing marked from altering their contents.
+   - Keep other reasoning prose markdown-enabled.
+
+7. Progress + verification hygiene
+   - Maintain TEMP_KNOWLEDGE.txt (already started), append PLAN verification notes, and log every implementation milestone in PROGRESS_TRACKER.txt until work finishes.

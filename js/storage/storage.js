@@ -288,6 +288,73 @@ export const Storage = {
     console.log(`[${nowISO()}] ========== Storage.clearFinalOutputVerification() COMPLETE ==========`);
   },
 
+  // === TRANSIENT EXECUTION ERROR CONTEXT ===
+  loadPendingExecutionError() {
+    const raw = safeJSONParse(localStorage.getItem(LS_KEYS.PENDING_EXECUTION_ERROR), null);
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+    return normalizePendingError(raw);
+  },
+
+  savePendingExecutionError(payload = {}) {
+    const pending = normalizePendingError({
+      code: payload.code,
+      errorMessage: payload.errorMessage,
+      stack: payload.stack,
+      source: payload.source || 'auto',
+      references: Array.isArray(payload.references) ? payload.references.filter(Boolean) : [],
+      timestamp: payload.timestamp || nowISO(),
+      iteration: typeof payload.iteration === 'number'
+        ? payload.iteration
+        : window.GDRS?.currentIteration ?? null,
+      servedIteration: null
+    });
+
+    localStorage.setItem(LS_KEYS.PENDING_EXECUTION_ERROR, JSON.stringify(pending));
+    console.log(`[${nowISO()}] Stored pending execution error context (iteration: ${pending.iteration ?? 'n/a'})`);
+    return pending;
+  },
+
+  markPendingExecutionErrorServed(iterationNumber) {
+    const existing = this.loadPendingExecutionError();
+    if (!existing) return null;
+
+    const iteration = typeof iterationNumber === 'number'
+      ? iterationNumber
+      : window.GDRS?.currentIteration ?? null;
+
+    if (existing.servedIteration === iteration) {
+      return existing;
+    }
+
+    const updated = { ...existing, servedIteration: iteration };
+    localStorage.setItem(LS_KEYS.PENDING_EXECUTION_ERROR, JSON.stringify(updated));
+    console.log(`[${nowISO()}] Marked pending execution error as served for iteration ${iteration ?? 'n/a'}`);
+    return updated;
+  },
+
+  clearPendingExecutionError() {
+    const hadValue = localStorage.getItem(LS_KEYS.PENDING_EXECUTION_ERROR) !== null;
+    localStorage.removeItem(LS_KEYS.PENDING_EXECUTION_ERROR);
+    if (hadValue) {
+      console.log(`[${nowISO()}] Cleared pending execution error context`);
+    }
+  },
+
+  clearPendingExecutionErrorIfServed(iterationNumber) {
+    const existing = this.loadPendingExecutionError();
+    if (!existing) return;
+
+    const iteration = typeof iterationNumber === 'number'
+      ? iterationNumber
+      : window.GDRS?.currentIteration ?? null;
+
+    if (existing.servedIteration === iteration) {
+      this.clearPendingExecutionError();
+    }
+  },
+
   // === LOGGING ===
   loadReasoningLog() {
     return normalizeArray(
@@ -367,6 +434,29 @@ function sanitizeLabel(value) {
   if (!isNonEmptyString(value)) return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizePendingError(raw) {
+  return {
+    code: normalizeMultiline(raw.code),
+    errorMessage: normalizeSingleLine(raw.errorMessage),
+    stack: normalizeMultiline(raw.stack),
+    source: isNonEmptyString(raw.source) ? raw.source : 'auto',
+    references: Array.isArray(raw.references) ? raw.references.filter(Boolean) : [],
+    timestamp: raw.timestamp || nowISO(),
+    iteration: typeof raw.iteration === 'number' ? raw.iteration : null,
+    servedIteration: typeof raw.servedIteration === 'number' ? raw.servedIteration : null
+  };
+}
+
+function normalizeMultiline(value) {
+  if (!isNonEmptyString(value)) return '';
+  return value.replace(/\r\n/g, '\n');
+}
+
+function normalizeSingleLine(value) {
+  if (!isNonEmptyString(value)) return '';
+  return value.replace(/[\r\n]+/g, ' ').trim();
 }
 
 function normalizeArray(value) {

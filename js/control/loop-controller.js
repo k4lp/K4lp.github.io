@@ -179,6 +179,11 @@ async function runIteration() {
   const session = sessionManager ? sessionManager.getSession(currentSessionId) : null;
   const iterationCount = session ? session.metrics.iterations + 1 : (window.GDRS.currentIteration || 0) + 1;
 
+  const pendingErrorContext = Storage.loadPendingExecutionError();
+  if (pendingErrorContext && pendingErrorContext.servedIteration == null) {
+    Storage.markPendingExecutionErrorServed(iterationCount);
+  }
+
   // MODULAR: Run pre-iteration middleware hooks
   let iterationContext = { query: currentQuery, iteration: iterationCount, modelId };
   if (session && session.middleware) {
@@ -489,6 +494,8 @@ async function runIteration() {
     
   } catch (err) {
     handleIterationError(err);
+  } finally {
+    Storage.clearPendingExecutionErrorIfServed(iterationCount);
   }
 }
 

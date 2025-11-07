@@ -1,0 +1,9 @@
+TEMP KNOWLEDGE LOG - 2025-11-07
+================================
+1. storage.js (js/storage/storage.js) owns all localStorage access layers and prints the verbose logs shown in the console snippet, including Storage.isFinalOutputVerified and Storage.saveFinalOutput.
+2. loop-controller.js (js/control/loop-controller.js) runs the main iteration loop and logs POST-ITERATION checks, scheduling, and session state which matches the provided console output lines ~457-484.
+3. JSExecutor (js/execution/js-executor.js) queues JS code, records executions into the reasoning log, and currently persists raw code/error details simply as markdown text blocks.
+4. ToolOperationPipeline + processors (js/reasoning/tools/...) convert parsed LLM operations into Storage mutations; js-execute-processor funnels code to JSExecutor, and final-output-processor-v2 handles vault resolution + verification before writing Storage.saveFinalOutput(true).
+5. Renderer.renderReasoningLog (js/ui/renderer/renderer-reasoning.js) pulls Storage.loadReasoningLog() entries, pipes them through marked markdown rendering, and alternates block styling; code/console output strings are not currently wrapped in <pre> which causes markdown interpretation.
+6. ReasoningSessionManager + ChainHealthMonitor provide bookkeeping for iteration counts, error metrics, and middleware hooks (on session.middleware) that we can leverage for injecting transient instructions if needed.
+7. There is no existing mechanism for a transient "pending execution error context"; errors are appended to reasoning log entries permanently, so implementing the requested contextual cleanup will require a new storage slot + prompt injection + lifecycle hooks.

@@ -1,0 +1,7 @@
+PLAN CROSS-VERIFICATION NOTES
+=============================
+1. Storage capabilities check (js/storage/storage.js lines 13-350) shows no helper for transient execution errors; only reasoning/execution/tool logs exist, therefore introducing LS_KEYS + helpers is safe and necessary.
+2. JSExecutor (js/execution/js-executor.js lines 1-150) serialises every automatic code run and already has the error metadata we need before persisting reasoning logs, confirming it is the right interception point for populating the pending context.
+3. Reasoning context assembly (js/reasoning/context/providers/index.js & js/config/reasoning-config.js) clearly enumerates provider IDs; adding a new provider + section will automatically flow into ReasoningEngine.buildContextPrompt without touching parser code.
+4. LoopController.runIteration (js/control/loop-controller.js lines 150-520) gates every iteration start/end, so marking pending warnings as served and clearing them after scheduling the next iteration can be centralised there without missing cases.
+5. Renderer.renderReasoningLog (js/ui/renderer/renderer-reasoning.js) currently pipes entire entries through marked.parse without special casing CODE/ERROR blocks, so augmenting it with <pre>-wrapping is both feasible and aligns with the user requirement.

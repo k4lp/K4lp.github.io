@@ -22,6 +22,13 @@ export const REASONING_CONTEXT_LIMITS = {
  */
 export const REASONING_CONTEXT_SECTIONS = [
   {
+    id: 'pendingExecutionError',
+    providerId: 'pendingExecutionError',
+    heading: '**Execution Error Follow-up:**',
+    fallback: '',
+    includeWhenEmpty: false
+  },
+  {
     id: 'userQuery',
     providerId: 'userQuery',
     heading: '**User Query:**',
