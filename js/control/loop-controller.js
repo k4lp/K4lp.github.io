@@ -435,16 +435,19 @@ async function runIteration() {
     // MODULAR: Check session health status
     if (sessionManager && session) {
       const health = sessionManager.getSessionHealth(currentSessionId);
-      console.log(`[${nowISO()}] Session health: ${health.status} (score: ${health.score})`);
+      if (health && health.status && health.status !== 'disabled') {
+        const score = typeof health.score !== 'undefined' ? health.score : 'n/a';
+        console.log(`[${nowISO()}] Session health: ${health.status} (score: ${score})`);
 
-      if (health.status === 'critical') {
-        console.error(`[${nowISO()}] Session health critical - stopping session`);
-        sessionManager.failSession(currentSessionId, {
-          reason: 'Critical health status',
-          health: health
-        });
-        finishSession('Session health critical - too many errors or low progress');
-        return;
+        if (health.status === 'critical') {
+          console.error(`[${nowISO()}] Session health critical - stopping session`);
+          sessionManager.failSession(currentSessionId, {
+            reason: 'Critical health status',
+            health: health
+          });
+          finishSession('Session health critical - too many errors or low progress');
+          return;
+        }
       }
     }
 

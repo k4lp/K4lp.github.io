@@ -107,10 +107,16 @@ export const GOAL_COMPLETION_RULES = {
   activeTaskStatuses: ['pending', 'ongoing']
 };
 
+/**
+ * Toggle reasoning session health monitoring. Disabled to unblock testing.
+ */
+export const REASONING_HEALTH_MONITORING_ENABLED = false;
+
 export default {
   REASONING_CONTEXT_LIMITS,
   REASONING_CONTEXT_SECTIONS,
   REASONING_PROMPT_FRAGMENTS,
   REASONING_STRATEGIC_INSTRUCTION,
-  GOAL_COMPLETION_RULES
+  GOAL_COMPLETION_RULES,
+  REASONING_HEALTH_MONITORING_ENABLED
 };

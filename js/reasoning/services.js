@@ -1,6 +1,8 @@
 import { serviceContainer } from '../core/service-container.js';
 import { ReasoningSessionManager } from './session/reasoning-session-manager.js';
 import { ChainHealthMonitor } from './monitoring/chain-health-monitor.js';
+import { DisabledHealthMonitor } from './monitoring/disabled-health-monitor.js';
+import { REASONING_HEALTH_MONITORING_ENABLED } from '../config/reasoning-config.js';
 
 export const REASONING_SERVICE_IDS = {
   sessionManager: 'reasoning.sessionManager',
@@ -8,8 +10,12 @@ export const REASONING_SERVICE_IDS = {
 };
 
 export function createReasoningServiceInstances(overrides = {}) {
-  const chainHealthMonitor = overrides.chainHealthMonitor || new ChainHealthMonitor(overrides.thresholds);
-  const sessionManager = overrides.sessionManager || new ReasoningSessionManager();
+  const healthMonitoringEnabled = overrides.healthMonitoringEnabled ?? REASONING_HEALTH_MONITORING_ENABLED;
+  const chainHealthMonitor = overrides.chainHealthMonitor ||
+    (healthMonitoringEnabled
+      ? new ChainHealthMonitor(overrides.thresholds)
+      : new DisabledHealthMonitor());
+  const sessionManager = overrides.sessionManager || new ReasoningSessionManager({ healthMonitoringEnabled });
 
   return {
     sessionManager,
@@ -43,4 +49,3 @@ export function getReasoningServices() {
   ensureReasoningServicesRegistered();
   return resolveReasoningServices();
 }
-

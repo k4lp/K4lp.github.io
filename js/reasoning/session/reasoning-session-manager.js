@@ -16,13 +16,16 @@
 import { SessionStateMachine } from './session-state-machine.js';
 import { IterationStateManager } from './iteration-state-manager.js';
 import { ChainHealthMonitor } from '../monitoring/chain-health-monitor.js';
+import { DisabledHealthMonitor } from '../monitoring/disabled-health-monitor.js';
 import { ReasoningChainMiddleware } from '../chain/reasoning-chain-middleware.js';
 import { eventBus } from '../../core/event-bus.js';
+import { REASONING_HEALTH_MONITORING_ENABLED } from '../../config/reasoning-config.js';
 
 export class ReasoningSessionManager {
-  constructor() {
+  constructor(options = {}) {
     this.activeSessions = new Map();
     this.sessionIdCounter = 0;
+    this.defaultHealthMonitoringEnabled = options.healthMonitoringEnabled ?? REASONING_HEALTH_MONITORING_ENABLED;
   }
 
   /**
@@ -34,12 +37,15 @@ export class ReasoningSessionManager {
   createSession(query, options = {}) {
     const sessionId = this.generateSessionId();
 
+    const healthMonitoringEnabled = options.healthMonitoringEnabled ?? this.defaultHealthMonitoringEnabled;
+
     const session = {
       id: sessionId,
       query,
       options: {
         maxIterations: options.maxIterations || 30,
         maxConsecutiveErrors: options.maxConsecutiveErrors || 3,
+        healthMonitoringEnabled,
         ...options
       },
       startedAt: new Date().toISOString(),
@@ -50,11 +56,13 @@ export class ReasoningSessionManager {
 
       // Middleware and monitoring
       middleware: new ReasoningChainMiddleware(),
-      healthMonitor: new ChainHealthMonitor({
-        maxConsecutiveErrors: options.maxConsecutiveErrors || 3,
-        maxErrorRate: options.maxErrorRate || 0.5,
-        minProgressRate: options.minProgressRate || 0.1
-      }),
+      healthMonitor: healthMonitoringEnabled
+        ? new ChainHealthMonitor({
+            maxConsecutiveErrors: options.maxConsecutiveErrors || 3,
+            maxErrorRate: options.maxErrorRate || 0.5,
+            minProgressRate: options.minProgressRate || 0.1
+          })
+        : new DisabledHealthMonitor(),
 
       // Metrics
       metrics: {
