@@ -82,6 +82,66 @@ export const Storage = {
     return false;
   },
 
+  // === MODEL PREFERENCES ===
+  loadSelectedModelInfo() {
+    const rawValue = localStorage.getItem(LS_KEYS.SELECTED_MODEL);
+    if (!rawValue) return null;
+
+    const parsed = safeJSONParse(rawValue, null);
+    if (parsed && typeof parsed === 'object') {
+      const normalizedId = normalizeModelId(parsed.id || parsed.modelId);
+      if (!normalizedId) return null;
+      return {
+        id: normalizedId,
+        label: sanitizeLabel(parsed.label || parsed.name),
+        savedAt: parsed.savedAt || parsed.timestamp || null,
+        source: parsed.source || 'imported'
+      };
+    }
+
+    const fallbackId = normalizeModelId(rawValue);
+    if (!fallbackId) return null;
+    return {
+      id: fallbackId,
+      label: null,
+      savedAt: null,
+      source: 'legacy-string'
+    };
+  },
+
+  loadSelectedModel() {
+    return this.loadSelectedModelInfo()?.id || '';
+  },
+
+  saveSelectedModel(modelId, metadata = {}) {
+    if (!isNonEmptyString(modelId)) {
+      this.clearSelectedModel();
+      return null;
+    }
+
+    const normalizedId = normalizeModelId(modelId);
+    if (!normalizedId) {
+      this.clearSelectedModel();
+      return null;
+    }
+
+    const record = {
+      id: normalizedId,
+      label: sanitizeLabel(metadata.label || metadata.name) || null,
+      savedAt: nowISO(),
+      source: metadata.source || 'manual'
+    };
+
+    localStorage.setItem(LS_KEYS.SELECTED_MODEL, JSON.stringify(record));
+    eventBus.emit(Events.MODEL_SELECTION_CHANGED, { ...record });
+    return record;
+  },
+
+  clearSelectedModel() {
+    localStorage.removeItem(LS_KEYS.SELECTED_MODEL);
+    eventBus.emit(Events.MODEL_SELECTION_CHANGED, null);
+  },
+
   // === CORE ENTITIES (with event-driven UI updates) ===
   loadGoals() {
     return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []);
@@ -295,6 +355,19 @@ export const Storage = {
     this.saveToolActivityLog(log);
   }
 };
+
+function normalizeModelId(modelId) {
+  if (!isNonEmptyString(modelId)) return '';
+  const trimmed = modelId.trim();
+  if (!trimmed) return '';
+  return trimmed.startsWith('models/') ? trimmed : `models/${trimmed}`;
+}
+
+function sanitizeLabel(value) {
+  if (!isNonEmptyString(value)) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 function normalizeArray(value) {
   if (Array.isArray(value)) {

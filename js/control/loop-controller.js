@@ -53,9 +53,15 @@ export const LoopController = {
     }
 
     const modelSelect = qs('#modelSelect');
-    if (!modelSelect?.value) {
+    let activeModelId = Storage.loadSelectedModel();
+    if (!modelSelect?.value && !activeModelId) {
       alert('Please select a model from the dropdown');
       return;
+    }
+
+    if (modelSelect?.value) {
+      const persisted = persistModelSelection(modelSelect, 'loop:start-session');
+      activeModelId = persisted?.id || modelSelect.value;
     }
 
     // MODULAR: Initialize session using ReasoningSessionManager
@@ -66,7 +72,7 @@ export const LoopController = {
       const session = sessionManager.createSession(rawQuery, {
         maxIterations: MAX_ITERATIONS,
         maxConsecutiveErrors: MAX_CONSECUTIVE_ERRORS,
-        model: modelSelect.value
+        model: activeModelId
       });
       currentSessionId = session.id;
       console.log(`[${sessionStartTime}] MODULAR SESSION CREATED - ID: ${currentSessionId}, Query: "${rawQuery}"`);
@@ -153,7 +159,14 @@ async function runIteration() {
     return;
   }
 
-  const modelId = qs('#modelSelect')?.value;
+  let modelId = Storage.loadSelectedModel();
+  if (!modelId) {
+    const fallbackSelect = qs('#modelSelect');
+    if (fallbackSelect?.value) {
+      const persisted = persistModelSelection(fallbackSelect, 'loop:iteration-fallback');
+      modelId = persisted?.id || fallbackSelect.value;
+    }
+  }
   const currentQuery = Storage.loadCurrentQuery();
 
   if (!modelId || !currentQuery) {
@@ -595,6 +608,12 @@ function recordOperationSummary(summary, iteration) {
 
   Storage.saveReasoningLog(logEntries);
   Renderer.renderReasoningLog();
+}
+
+function persistModelSelection(selectEl, source) {
+  if (!selectEl?.value) return null;
+  const label = selectEl.selectedOptions?.[0]?.textContent || selectEl.value.replace(/^models\//, '');
+  return Storage.saveSelectedModel(selectEl.value, { label, source });
 }
 
 /**

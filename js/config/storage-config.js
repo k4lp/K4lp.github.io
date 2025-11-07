@@ -39,6 +39,9 @@ export const LS_KEYS = {
   /** Current user query */
   CURRENT_QUERY: 'gdrs_current_query',
 
+  /** Persisted model selection */
+  SELECTED_MODEL: 'gdrs_selected_model',
+
   /** Code execution history */
   EXECUTION_LOG: 'gdrs_execution_log',
 

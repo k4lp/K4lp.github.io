@@ -1,0 +1,8 @@
+# Progress Log
+
+- 2025-11-07T09:51:15+05:30 - Captured failure trace from logs showing `Storage.loadSelectedModel` is missing, mapped the call path via `final-output-processor-v2 -> llm-verification-service -> Storage`, and confirmed the TypeError originates at verification.
+- 2025-11-07T09:51:15+05:30 - Audited storage, UI handler, renderer dropdown, loop controller, and Gemini client modules against the plan to verify scope: confirmed no persistence layer for model selection exists and only DOM accessors are wired, so storage/config/UI/control all require updates.
+- 2025-11-07T09:52:39+05:30 - Added persistent model selection support: introduced `LS_KEYS.SELECTED_MODEL`, emitted `Events.MODEL_SELECTION_CHANGED`, and implemented `loadSelectedModel*`, `saveSelectedModel`, and `clearSelectedModel` helpers with normalization and event emission to keep the system modular.
+- 2025-11-07T09:53:54+05:30 - Wired the UI to the new storage API: session handler now hydrates the dropdown with saved selections, persists changes, and renderer population honors stored choices (with automatic fallback plus persistence) so control flow stays in sync with storage.
+- 2025-11-07T09:55:27+05:30 - Shifted control/verification flows to the new persistence layer: LoopController now sources models via Storage (with DOM fallback plus persistence) and LLMVerificationService reads the normalized record, ensuring verification runs never fail due to missing DOM state.
+- 2025-11-07T09:58:16+05:30 - Completed compliance check: re-reviewed plan versus implemented modules, confirmed all code paths (storage/UI/control/verification) now reference the shared API, and captured git status for final validation.

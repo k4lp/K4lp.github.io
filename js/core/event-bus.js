@@ -158,6 +158,7 @@ export const Events = {
   ITERATION_COMPLETE: 'iteration:complete',
   
   // UI events
+  MODEL_SELECTION_CHANGED: 'model:selection-changed',
   UI_REFRESH_REQUEST: 'ui:refresh:request',
   UI_REFRESH_COMPLETE: 'ui:refresh:complete'
 };

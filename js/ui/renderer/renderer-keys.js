@@ -144,6 +144,8 @@ export function populateModelDropdown(modelsArray) {
   if (!modelSelect) return;
 
   const currentValue = modelSelect.value;
+  const storedInfo = Storage.loadSelectedModelInfo();
+  const storedValue = storedInfo?.id || '';
   modelSelect.innerHTML = `<option value="">-- select model --</option>`;
 
   modelsArray.forEach(m => {
@@ -154,10 +156,25 @@ export function populateModelDropdown(modelsArray) {
     modelSelect.appendChild(opt);
   });
 
-  if (currentValue && modelsArray.some(m => m.name === currentValue)) {
-    modelSelect.value = currentValue;
+  const hasModel = (value) => value && modelsArray.some(m => m.name === value);
+  let targetValue = '';
+
+  if (hasModel(storedValue)) {
+    targetValue = storedValue;
+  } else if (hasModel(currentValue)) {
+    targetValue = currentValue;
   } else if (modelsArray.length > 0) {
     const preferred = modelsArray.find(m => m.name.includes('gemini-1.5-pro')) || modelsArray[0];
-    modelSelect.value = preferred.name;
+    targetValue = preferred.name;
+  }
+
+  if (targetValue) {
+    modelSelect.value = targetValue;
+    const selectedOption = Array.from(modelSelect.options).find(opt => opt.value === targetValue);
+    const label = selectedOption?.textContent || targetValue.replace(/^models\//, '');
+
+    if (targetValue !== storedValue || (label && label !== storedInfo?.label)) {
+      Storage.saveSelectedModel(targetValue, { label, source: 'ui:model-populate' });
+    }
   }
 }

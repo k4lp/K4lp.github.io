@@ -48,12 +48,27 @@ export class LLMVerificationService {
 
       // Send to LLM for verification using same path as main reasoning loop
       // Use currently selected model to ensure consistency with main loop
-      const modelId = Storage.loadSelectedModel();
+      let modelInfo = Storage.loadSelectedModelInfo();
+      let modelId = modelInfo?.id || '';
+
+      if (!modelId && typeof document !== 'undefined') {
+        const selectEl = document.querySelector('#modelSelect');
+        if (selectEl?.value) {
+          const persisted = Storage.saveSelectedModel(selectEl.value, {
+            label: selectEl.selectedOptions?.[0]?.textContent || selectEl.value.replace(/^models\//, ''),
+            source: 'verification:fallback'
+          });
+          modelInfo = persisted || modelInfo;
+          modelId = persisted?.id || selectEl.value;
+        }
+      }
+
       if (!modelId) {
         throw new Error('No model selected - cannot perform verification');
       }
 
-      console.log(`[${nowISO()}] [LLMVerification] Using model: ${modelId}`);
+      const modelLabel = modelInfo?.label ? ` (${modelInfo.label})` : '';
+      console.log(`[${nowISO()}] [LLMVerification] Using model: ${modelId}${modelLabel}`);
       const response = await GeminiAPI.generateContent(modelId, verificationPrompt);
 
       console.log(`[${nowISO()}] [LLMVerification] Received LLM response, extracting text...`);
