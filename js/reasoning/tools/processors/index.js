@@ -3,7 +3,7 @@ import { memoryProcessor } from './memory-processor.js';
 import { tasksProcessor } from './tasks-processor.js';
 import { goalsProcessor } from './goals-processor.js';
 import { jsExecuteProcessor } from './js-execute-processor.js';
-import { finalOutputProcessor } from './final-output-processor.js';
+import { finalOutputProcessorV2 as finalOutputProcessor } from './final-output-processor-v2.js';
 
 const processorList = [
   vaultProcessor,
