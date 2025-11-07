@@ -14,3 +14,5 @@ PROGRESS TRACKER
 [2025-11-07T21:34:00Z] Updated ReasoningSessionManager.shouldContinue + LoopController gate so only true consecutive error streaks halt sessions and the guard now finishes the session cleanly.
 [2025-11-07T21:36:00Z] Sanitized JS execution error logging so failed code/stack is redacted from the reasoning log (details live only in the pending error context).
 [2025-11-07T21:50:00Z] Removed ReasoningSessionManager.shouldContinue guard and LoopController check so sessions no longer auto-stop from guard logic.
+[2025-11-07T22:08:00Z] Documented Phase 3 plan targeting self-closing tool parser truncation after formatting audit.
+[2025-11-07T22:12:00Z] Updated memory/task/goal/datavault regex patterns to use non-greedy [\\s\\S]*? captures (block + self-closing) so quoted text with '>' or newlines stays intact.

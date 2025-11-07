@@ -149,7 +149,7 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.SELF_CLOSING,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<memory\s+([^>]*)\s*\/>}}/g,
+            selfClosing: /{{<memory\s+([\s\S]*?)\s*\/>}}/g,
         },
         schema: {
             hasContent: false,
@@ -193,7 +193,7 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.SELF_CLOSING,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<task\s+([^>]*)\s*\/>}}/g,
+            selfClosing: /{{<task\s+([\s\S]*?)\s*\/>}}/g,
         },
         schema: {
             hasContent: false,
@@ -244,7 +244,7 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.SELF_CLOSING,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<goal\s+([^>]*)\s*\/>}}/g,
+            selfClosing: /{{<goal\s+([\s\S]*?)\s*\/>}}/g,
         },
         schema: {
             hasContent: false,
@@ -288,8 +288,8 @@ export const TOOL_DEFINITIONS = {
         type: TOOL_TYPES.HYBRID,
         category: TOOL_CATEGORIES.STORAGE,
         patterns: {
-            selfClosing: /{{<datavault\s+([^>]*)\s*\/>}}/g,
-            block: /{{<datavault\s+([^>]*)>}}([\s\S]*?){{<\/datavault>}}/g,
+            selfClosing: /{{<datavault\s+([\s\S]*?)\s*\/>}}/g,
+            block: /{{<datavault\s+([\s\S]*?)>}}([\s\S]*?){{<\/datavault>}}/g,
         },
         schema: {
             hasContent: true, // Can have content

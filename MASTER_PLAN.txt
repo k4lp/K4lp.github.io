@@ -35,3 +35,10 @@ PHASE 2 - SESSION GUARD & LOG HYGIENE
 2. Replace the static recent-error check with the actual `metrics.consecutiveErrors` counter and have LoopController stop gracefully (finish session + UI sync) whenever the guard triggers legitimately.
 3. Sanitize reasoning log entries so failing JS runs no longer embed full code/stack; the pending error context already carries that payload for the next iteration and should be the single source of truth.
 4. Re-verify by tracing the runIteration + session manager pipeline mentally to ensure the loop keeps running until actual stop conditions (paused/completed/max iterations/critical health) and that no erroring code lingers once the pending context is cleared.
+
+PHASE 3 - TOOL PARSER FORMAT RELIABILITY
+========================================
+1. Confirm root cause: self-closing tool regexes (`{{<memory ... />}}`, etc.) capture attributes via `[^>]*`, so any `>` or newline inside quoted values truncates the match, chopping stored text.
+2. Update the registry patterns to use non-greedy `[\s\S]*?` capture up to the terminating `/>}}`, keeping compatibility with multiline + Markdown payloads.
+3. Re-run attribute parsing/operation application mentally to ensure no unintended over-capture (verify boundaries with nested tools and existing tests/logs).
+4. Track every change in PROGRESS_TRACKER and refresh PLAN_VERIFICATION once the cross-check (by grepping final regex behavior) passes.
