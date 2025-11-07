@@ -46,15 +46,29 @@ export class LLMVerificationService {
       console.log(`[${nowISO()}] [LLMVerification] Output length: ${finalOutput.length} chars`);
       console.log(`[${nowISO()}] [LLMVerification] Prompt length: ${verificationPrompt.length} chars`);
 
-      // Send to LLM for verification
-      // Use the model that's currently selected, or default
-      const modelId = options.modelId || Storage.loadSelectedModel() || 'gemini-2.0-flash-exp';
+      // Send to LLM for verification using same path as main reasoning loop
+      // Use currently selected model to ensure consistency with main loop
+      const modelId = Storage.loadSelectedModel();
+      if (!modelId) {
+        throw new Error('No model selected - cannot perform verification');
+      }
+
+      console.log(`[${nowISO()}] [LLMVerification] Using model: ${modelId}`);
       const response = await GeminiAPI.generateContent(modelId, verificationPrompt);
 
-      console.log(`[${nowISO()}] [LLMVerification] Received LLM response`);
+      console.log(`[${nowISO()}] [LLMVerification] Received LLM response, extracting text...`);
+
+      // Extract response text using same method as loop-controller
+      const responseText = GeminiAPI.extractResponseText(response);
+
+      if (!responseText?.trim()) {
+        throw new Error('Empty response from verification LLM');
+      }
+
+      console.log(`[${nowISO()}] [LLMVerification] Response text length: ${responseText.length} chars`);
 
       // Parse LLM verification response
-      const result = this.parseVerificationResponse(response);
+      const result = this.parseVerificationResponse(responseText);
       result.metadata.duration = Date.now() - startTime;
       result.metadata.timestamp = nowISO();
 
