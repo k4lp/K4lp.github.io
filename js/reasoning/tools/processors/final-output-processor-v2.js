@@ -12,7 +12,7 @@
 
 import { VaultResolutionService } from '../../../storage/vault-resolution-service.js';
 import { createDefaultValidator } from '../../../validation/content-validator.js';
-import { LLMVerificationService } from '../../../validation/llm-verification-service.js';
+import { LLMVerificationService } from '../../../verification/llm-verification-service.js';
 import { Storage } from '../../../storage/storage.js';
 import { nowISO } from '../../../core/utils.js';
 
