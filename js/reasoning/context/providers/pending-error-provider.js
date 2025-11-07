@@ -45,11 +45,8 @@ export const pendingErrorProvider = {
 };
 
 function wrapBlock(content) {
-  return [
-    '<<BEGIN_BLOCK>>',
-    content,
-    '<<END_BLOCK>>'
-  ].join('\n');
+  const safeContent = isNonEmptyString(content) ? content : '(empty)';
+  return `<pre data-context="pending-execution">\n${safeContent}\n</pre>`;
 }
 
 export default pendingErrorProvider;

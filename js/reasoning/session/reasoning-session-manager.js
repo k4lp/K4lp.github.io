@@ -250,9 +250,8 @@ export class ReasoningSessionManager {
       return false;
     }
 
-    // Check error threshold
-    const recentErrors = session.metrics.errors.slice(-5).length;
-    if (recentErrors >= session.options.maxConsecutiveErrors) {
+    // Check error threshold (consecutive failures only)
+    if (session.metrics.consecutiveErrors >= session.options.maxConsecutiveErrors) {
       return false;
     }
 

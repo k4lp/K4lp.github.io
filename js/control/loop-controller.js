@@ -153,9 +153,15 @@ async function runIteration() {
   const iterationStartTime = nowISO();
 
   // MODULAR: Check if session should continue using session manager
-    const sessionManager = resolveSessionManager();
-  if (!currentSessionId || (sessionManager && !sessionManager.shouldContinue(currentSessionId))) {
-    console.log(`[${iterationStartTime}] Iteration skipped - session not active or should not continue`);
+  const sessionManager = resolveSessionManager();
+  if (!currentSessionId) {
+    console.log(`[${iterationStartTime}] Iteration skipped - no active session id`);
+    return;
+  }
+
+  if (sessionManager && !sessionManager.shouldContinue(currentSessionId)) {
+    console.warn(`[${iterationStartTime}] Session manager requested stop - finishing session to keep UI in sync`);
+    finishSession('Session halted by guard (state, max iterations, or consecutive errors)');
     return;
   }
 

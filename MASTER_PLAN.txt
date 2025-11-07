@@ -28,3 +28,10 @@ Goal: ensure runtime/syntax execution failures automatically inject a single-use
 
 7. Progress + verification hygiene
    - Maintain TEMP_KNOWLEDGE.txt (already started), append PLAN verification notes, and log every implementation milestone in PROGRESS_TRACKER.txt until work finishes.
+
+PHASE 2 - SESSION GUARD & LOG HYGIENE
+=====================================
+1. Diagnose premature session halts - ReasoningSessionManager.shouldContinue currently counts total recent errors instead of consecutive failures, causing hard stops even after recovery.
+2. Replace the static recent-error check with the actual `metrics.consecutiveErrors` counter and have LoopController stop gracefully (finish session + UI sync) whenever the guard triggers legitimately.
+3. Sanitize reasoning log entries so failing JS runs no longer embed full code/stack; the pending error context already carries that payload for the next iteration and should be the single source of truth.
+4. Re-verify by tracing the runIteration + session manager pipeline mentally to ensure the loop keeps running until actual stop conditions (paused/completed/max iterations/critical health) and that no erroring code lingers once the pending context is cleared.

@@ -105,9 +105,8 @@ export const JSExecutor = {
         '=== JAVASCRIPT EXECUTION ERROR ===',
         `ID: ${result.id}`,
         `SOURCE: ${result.source}`,
-        `CODE:\n${result.code}`,
         `ERROR: ${result.error?.message || 'Unknown error'}`,
-        `STACK: ${result.error?.stack || 'No stack trace'}`
+        'DETAILS: Code and stack captured in pending execution error context to avoid polluting reasoning history.'
       ];
 
       // MODULAR: Include error classification if available
