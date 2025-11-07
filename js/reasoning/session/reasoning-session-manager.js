@@ -227,43 +227,6 @@ export class ReasoningSessionManager {
   }
 
   /**
-   * Check if session should continue
-   * @param {string} sessionId - Session ID
-   * @returns {boolean} Whether session should continue
-   */
-  shouldContinue(sessionId) {
-    const session = this.activeSessions.get(sessionId);
-    if (!session) return false;
-
-    // Check state
-    const state = session.stateMachine.getCurrentState();
-    if (state === 'stopped' || state === 'completed' || state === 'failed') {
-      return false;
-    }
-
-    if (state === 'paused') {
-      return false;
-    }
-
-    // Check iteration limit
-    if (session.metrics.iterations >= session.options.maxIterations) {
-      return false;
-    }
-
-    // Check error threshold (consecutive failures only)
-    if (session.metrics.consecutiveErrors >= session.options.maxConsecutiveErrors) {
-      return false;
-    }
-
-    // Check health status
-    if (session.healthMonitor.isCritical()) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
    * Record iteration
    * @param {string} sessionId - Session ID
    * @param {Object} iterationData - Iteration data
