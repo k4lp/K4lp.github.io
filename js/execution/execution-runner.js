@@ -111,6 +111,11 @@ export class ExecutionRunner {
 
     // Build the execution context with all APIs
     const context = buildExecutionContext();
+    try {
+      console.debug('[ExecutionRunner] attachments.hasWorkbook():', context.attachments?.hasWorkbook?.());
+    } catch (err) {
+      console.warn('[ExecutionRunner] Unable to log attachment status:', err);
+    }
 
     // Normalize the code to handle both raw scripts and async IIFEs
     let codeToRun = resolvedCode.trim();
@@ -126,9 +131,9 @@ export class ExecutionRunner {
 
     try {
       // Create function with injected context parameters
-      // The executed code can access: vault, memory, tasks, goals, utils
+      // The executed code can access: vault, memory, tasks, goals, utils, attachments
       runner = new Function(
-        'vault', 'memory', 'tasks', 'goals', 'utils',
+        'vault', 'memory', 'tasks', 'goals', 'utils', 'attachments',
         '"use strict";\n' +
         'return (async () => {\n' +
         `  return await ${codeToRun};\n` +
@@ -145,7 +150,8 @@ export class ExecutionRunner {
       context.memory,
       context.tasks,
       context.goals,
-      context.utils
+      context.utils,
+      context.attachments
     );
 
     return this.timeoutMs

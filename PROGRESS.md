@@ -28,3 +28,6 @@
 | 24 | 2025-11-08T19:01:14Z | Made the runtime attachment store available via `window.GDRS.attachments` for dev introspection. |
 | 25 | 2025-11-08T19:02:18Z | Runtime store now emits attachment events globally for UI/reasoning hooks. |
 | 26 | 2025-11-08T19:03:48Z | Verified working tree state after implementation via `git status -sb`. |
+| 27 | 2025-11-08T19:23:15Z | Diagnosed attachments access failure inside execution sandbox; fix requires passing API into runner. |
+| 28 | 2025-11-08T19:26:32Z | Execution sandbox now receives attachments API and logs availability. |
+| 29 | 2025-11-08T19:26:32Z | Runtime store instrumentation added for import/mutate/reset/restore events. |

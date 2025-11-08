@@ -28,3 +28,6 @@
 | 24 | 2025-11-08T19:01:14Z | Exposed `ExcelRuntimeStore` via `window.GDRS.attachments` for debugging/inspection. |
 | 25 | 2025-11-08T19:02:18Z | Hooked `ExcelRuntimeStore` notifications into the event bus for global updates. |
 | 26 | 2025-11-08T19:03:48Z | Captured working tree summary via `git status -sb` for verification. |
+| 27 | 2025-11-08T19:23:15Z | Investigated runtime \"attachments is not defined\" errors affecting jsExecute; identified execution context runner injection gap. |
+| 28 | 2025-11-08T19:26:32Z | Patched `ExecutionRunner` to pass the attachments API into sandboxed code and log context readiness. |
+| 29 | 2025-11-08T19:26:32Z | Added detailed logging inside `ExcelRuntimeStore` for import/mutate/reset/restore events. |

@@ -46,6 +46,10 @@ class ExcelRuntimeStoreClass {
     this._state.working = working ? deepClone(working) : null;
     this._state.mutationLog = [];
     this._state.version = 0;
+    console.log('[ExcelRuntimeStore] Workbook imported:', {
+      name: metadata?.name,
+      sheets: metadata?.sheetNames?.length || 0
+    });
 
     this._notify('import');
   }
@@ -58,6 +62,7 @@ class ExcelRuntimeStoreClass {
       mutationLog: [],
       version: 0
     };
+    console.log('[ExcelRuntimeStore] Workbook cleared from memory');
 
     this._notify('remove');
   }
@@ -102,6 +107,7 @@ class ExcelRuntimeStoreClass {
       timestamp: new Date().toISOString(),
       version: this._state.version
     });
+    console.log('[ExcelRuntimeStore] Sheet mutated:', sheetName, 'version', this._state.version);
 
     this._notify('update');
   }
@@ -109,6 +115,7 @@ class ExcelRuntimeStoreClass {
   resetWorkingCopy() {
     if (!this._state.original) {
       this._state.working = null;
+      console.warn('[ExcelRuntimeStore] resetWorkingCopy() called without original data');
       return;
     }
 
@@ -119,6 +126,7 @@ class ExcelRuntimeStoreClass {
       timestamp: new Date().toISOString(),
       version: this._state.version
     });
+    console.log('[ExcelRuntimeStore] Working copy reset to original snapshot');
 
     this._notify('reset');
   }
@@ -129,6 +137,7 @@ class ExcelRuntimeStoreClass {
 
   restoreWorking(snapshot) {
     this._state.working = snapshot ? deepClone(snapshot) : null;
+    console.log('[ExcelRuntimeStore] Working copy restored from snapshot');
     this._notify('restore');
   }
 
