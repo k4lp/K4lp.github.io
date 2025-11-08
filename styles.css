@@ -660,6 +660,15 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #bd2130;
 }
 
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.session-actions.secondary {
+  justify-content: flex-start;
+}
+
 .btn-large {
   padding: var(--gap-sm) var(--gap-lg);
   font-size: 13px;

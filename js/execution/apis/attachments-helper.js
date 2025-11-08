@@ -201,10 +201,23 @@ export function createAttachmentsHelper(store = ExcelRuntimeStore) {
         summary: store.getSheetSummary(name)
       }));
     },
+    getSheetNames: () => {
+      ensureWorkbook();
+      return store.getSheetNames();
+    },
     selectSheet: (identifier) => {
       ensureWorkbook();
       const sheetName = resolveSheetName(identifier);
       return buildSheetHandle(sheetName);
+    },
+    getSheet: (identifier) => buildSheetHandle(resolveSheetName(identifier)),
+    getWorkbookSummary: () => {
+      ensureWorkbook();
+      const summaries = {};
+      store.getSheetNames().forEach((name) => {
+        summaries[name] = store.getSheetSummary(name);
+      });
+      return summaries;
     },
     getSummary: () => {
       ensureWorkbook();

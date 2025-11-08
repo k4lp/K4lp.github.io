@@ -4,24 +4,48 @@
  */
 
 import { LS_KEYS } from '../../core/constants.js';
+import { Storage } from '../../storage/storage.js';
+import { ExcelRuntimeStore } from '../../state/excel-runtime-store.js';
 
 /**
  * Bind global event handlers
  */
 export function bindGlobalHandlers() {
   bindClearAllDataHotkey();
+  bindClearAllDataButton();
 }
 
 /**
  * Bind Ctrl+Shift+D hotkey to clear all data
  */
+function getKeepKeys() {
+  return [
+    LS_KEYS.SELECTED_MODEL,
+    LS_KEYS.MAX_OUTPUT_TOKENS,
+    LS_KEYS.KEYPOOL
+  ];
+}
+
+function clearPersistedData() {
+  if (!confirm('Clear all GDRS data (except keys/model/tokens)? This cannot be undone.')) {
+    return;
+  }
+  Storage.clearAllExcept(getKeepKeys());
+  ExcelRuntimeStore.clearWorkbook?.();
+  localStorage.removeItem('attachmentStatusCache');
+  location.reload();
+}
+
 function bindClearAllDataHotkey() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-      if (confirm('Clear all GDRS data? This cannot be undone.')) {
-        Object.values(LS_KEYS).forEach(key => localStorage.removeItem(key));
-        location.reload();
-      }
+      clearPersistedData();
     }
   });
+}
+
+function bindClearAllDataButton() {
+  const btn = document.getElementById('clearAllDataBtn');
+  if (!btn) return;
+  btn.addEventListener('click', () => clearPersistedData());
 }

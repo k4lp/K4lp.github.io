@@ -43,3 +43,5 @@
 | 39 | 2025-11-08T20:37:13Z | Embedded Excel Attachment Protocol instructions into SYSTEM_PROMPT (with corrupted logs removed). |
 | 40 | 2025-11-08T20:37:55Z | Authored `docs/attachments-guide.md` covering helper usage and best practices. |
 | 41 | 2025-11-08T20:41:49Z | Implemented sleek attachment card UI with tabs, quick actions, and renderer overhaul. |
+| 42 | 2025-11-08T20:44:45Z | Added selective data reset (UI button + hotkey) preserving keys/model/token settings. |
+| 43 | 2025-11-08T20:45:12Z | Extended attachments helper API with legacy-compatible methods and updated guide. |

@@ -43,3 +43,5 @@
 | 39 | 2025-11-08T20:37:13Z | SYSTEM_PROMPT now includes Excel protocol instructions when workbook exists. |
 | 40 | 2025-11-08T20:37:55Z | Added developer-facing attachments guide documenting helper APIs. |
 | 41 | 2025-11-08T20:41:49Z | Attachment UI redesigned (card layout, tabs, quick actions, diff views). |
+| 42 | 2025-11-08T20:44:45Z | Introduced selective data reset feature (UI button + hotkey) preserving keys/model/tokens. |
+| 43 | 2025-11-08T20:45:12Z | Helper API compatibility + summary utilities implemented (docs updated). |

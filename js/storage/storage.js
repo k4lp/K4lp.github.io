@@ -441,6 +441,18 @@ export const Storage = {
     });
     if (log.length > 500) log.splice(0, log.length - 500);
     this.saveToolActivityLog(log);
+  },
+
+  /**
+   * Clear all persisted data except the provided LS keys.
+   */
+  clearAllExcept(keepKeys = []) {
+    const keepSet = new Set(keepKeys);
+    Object.values(LS_KEYS).forEach((key) => {
+      if (!keepSet.has(key)) {
+        localStorage.removeItem(key);
+      }
+    });
   }
 };
 
