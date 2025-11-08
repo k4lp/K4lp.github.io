@@ -14,6 +14,7 @@ import { GoalsAPI } from './apis/goals-api.js';
 import { nowISO } from '../core/utils.js';
 import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
 import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
+import { createAttachmentsHelper } from './apis/attachments-helper.js';
 
 /**
  * Build execution context with all APIs
@@ -32,14 +33,29 @@ import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
 export function buildExecutionContext(options = {}) {
     const { instrumented = true } = options;
 
+    const helper = createAttachmentsHelper(ExcelRuntimeStore);
     const attachmentsAPI = {
         hasWorkbook: () => ExcelRuntimeStore.hasWorkbook(),
+        ensureWorkbook: () => {
+            if (!ExcelRuntimeStore.hasWorkbook()) {
+                throw new Error('No workbook attached. Upload a file before calling attachments APIs.');
+            }
+        },
         getMetadata: () => ExcelRuntimeStore.getMetadata(),
         getOriginal: () => ExcelRuntimeStore.getOriginal(),
         getWorkingCopy: () => ExcelRuntimeStore.getWorkingCopy(),
+        getSheetNames: () => ExcelRuntimeStore.getSheetNames(),
+        getDiffIndex: () => ExcelRuntimeStore.getDiffIndex(),
         updateSheet: (sheetName, mutator) => ExcelRuntimeStore.mutateSheet(sheetName, mutator),
         resetWorkingCopy: () => ExcelRuntimeStore.resetWorkingCopy(),
-        getMutationLog: () => ExcelRuntimeStore.getMutationLog()
+        getMutationLog: () => ExcelRuntimeStore.getMutationLog(),
+        logSummary: () => console.table(helper.listSheets({ includeStats: true }).map(({ name, summary }) => ({
+            sheet: name,
+            rows: summary?.rowCount,
+            columns: summary?.columnCount,
+            changedCells: summary?.diff?.changedCells
+        })) || []),
+        helper
     };
 
     // Create base API instances

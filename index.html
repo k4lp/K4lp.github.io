@@ -51,10 +51,23 @@
                 </div>
 
                 <!-- Data Attachment Section -->
-                <div class="config-section" id="attachmentSection">
-                    <div class="section-header">
-                        <h2>DATA ATTACHMENT</h2>
-                        <span class="section-desc">Upload Excel/CSV (in-memory only)</span>
+                <div class="attachment-card" id="attachmentSection">
+                    <div class="attachment-card__header">
+                        <div>
+                            <h2>Data Attachment</h2>
+                            <p class="attachment-card__subtitle">Excel ingestion • Runtime only</p>
+                        </div>
+                        <div class="attachment-card__actions">
+                            <span id="attachmentStatusPill" class="status-pill status-idle">NONE</span>
+                            <button id="attachmentDownloadOriginal" class="icon-btn" title="Download original" disabled>
+                                ⤓
+                            </button>
+                            <button id="attachmentDownloadWorking" class="icon-btn" title="Download working copy" disabled>
+                                ⤓*
+                            </button>
+                            <button id="attachmentReset" class="icon-btn" title="Reset working copy" disabled>↺</button>
+                            <button id="attachmentRemove" class="icon-btn danger" title="Remove attachment" disabled>✕</button>
+                        </div>
                     </div>
 
                     <div class="attachment-dropzone" id="attachmentDropzone">
@@ -62,19 +75,22 @@
                         <input type="file" id="attachmentInput" accept=".xlsx,.xls,.csv" hidden>
                     </div>
 
-                    <div class="attachment-status" id="attachmentStatus">
-                        <p>No workbook attached.</p>
+                    <div class="attachment-tabs" role="tablist">
+                        <button class="attachment-tab active" data-panel="summary" id="attachmentTabSummary">Summary</button>
+                        <button class="attachment-tab" data-panel="sheets" id="attachmentTabSheets">Sheets</button>
+                        <button class="attachment-tab" data-panel="mutations" id="attachmentTabMutations">Mutations</button>
                     </div>
 
-                    <div class="attachment-actions">
-                        <button id="attachmentDownloadOriginal" class="btn btn-secondary" disabled>Download Original</button>
-                        <button id="attachmentDownloadWorking" class="btn btn-secondary" disabled>Download Working</button>
-                        <button id="attachmentReset" class="btn btn-secondary" disabled>Reset Working Copy</button>
-                        <button id="attachmentRemove" class="btn btn-danger" disabled>Remove</button>
+                    <div class="attachment-panels">
+                        <div class="attachment-panel active" id="attachmentSummaryPanel"></div>
+                        <div class="attachment-panel" id="attachmentSheetsPanel"></div>
+                        <div class="attachment-panel" id="attachmentMutationsPanel"></div>
                     </div>
 
-                    <div id="attachmentPreview" class="attachment-preview">
-                        <p class="attachment-preview-placeholder">Sheet preview will appear once a workbook is attached.</p>
+                    <div class="attachment-quick-actions" id="attachmentQuickActions">
+                        <button class="btn btn-secondary" data-action="previewRows" disabled>Preview rows</button>
+                        <button class="btn btn-secondary" data-action="logSummary" disabled>Log summary</button>
+                        <button class="btn btn-secondary" data-action="openGuide">Guide</button>
                     </div>
                 </div>
 

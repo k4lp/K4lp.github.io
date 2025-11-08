@@ -1,4 +1,4 @@
-import { deepClone } from './deep-utils.js';
+import { deepClone, arrayBufferToBase64 } from './deep-utils.js';
 
 /**
  * Parse an Excel/CSV ArrayBuffer into JSON-friendly structures.
@@ -32,11 +32,7 @@ export function parseWorkbook(arrayBuffer, { fileName = 'workbook.xlsx', sizeByt
 
     const headers = rowsArray[0] ? rowsArray[0].map((header, idx) => header || `column_${idx + 1}`) : [];
     const rows = rowsArray.slice(1).map((row) => {
-      const record = {};
-      headers.forEach((header, index) => {
-        record[header] = row[index] ?? null;
-      });
-      return record;
+      return headers.map((_, index) => row[index] ?? null);
     });
 
     sheets[sheetName] = {
@@ -45,6 +41,5 @@ export function parseWorkbook(arrayBuffer, { fileName = 'workbook.xlsx', sizeByt
     };
   });
 
-  return { metadata, sheets };
+  return { metadata, sheets, bufferBase64: arrayBufferToBase64(arrayBuffer) };
 }
-

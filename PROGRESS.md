@@ -31,3 +31,15 @@
 | 27 | 2025-11-08T19:23:15Z | Diagnosed attachments access failure inside execution sandbox; fix requires passing API into runner. |
 | 28 | 2025-11-08T19:26:32Z | Execution sandbox now receives attachments API and logs availability. |
 | 29 | 2025-11-08T19:26:32Z | Runtime store instrumentation added for import/mutate/reset/restore events. |
+| 30 | 2025-11-08T20:07:15Z | Launched follow-up planning effort for richer Excel attachment capabilities. |
+| 31 | 2025-11-08T20:10:49Z | Planning scope expanded to include premium UI/UX revamp for attachment controls. |
+| 32 | 2025-11-08T20:12:43Z | Implementation Phase 1 (runtime store redesign) kicked off. |
+| 33 | 2025-11-08T20:14:13Z | Parser now returns normalized rows + buffer reference for improved runtime store ingestion. |
+| 34 | 2025-11-08T20:16:41Z | Runtime store upgraded with diff tracking, immutable originals, and metadata totals. |
+| 35 | 2025-11-08T20:18:18Z | Attachment handler now aligned with new store contract (buffer + normalized sheets). |
+| 36 | 2025-11-08T20:20:43Z | Attachments helper API introduced (sheet selection, ranges, CRUD with char limits). |
+| 37 | 2025-11-08T20:23:18Z | Execution context now exposes helper + safety logging to sandboxed JS. |
+| 38 | 2025-11-08T20:26:07Z | Attachments provider/config now conditional with diff-aware summaries. |
+| 39 | 2025-11-08T20:37:13Z | SYSTEM_PROMPT now includes Excel protocol instructions when workbook exists. |
+| 40 | 2025-11-08T20:37:55Z | Added developer-facing attachments guide documenting helper APIs. |
+| 41 | 2025-11-08T20:41:49Z | Attachment UI redesigned (card layout, tabs, quick actions, diff views). |

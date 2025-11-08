@@ -26,12 +26,9 @@ async function handleFile(file) {
 
     ExcelRuntimeStore.setWorkbook({
       metadata: parsed.metadata,
-      original: parsed.sheets,
-      working: parsed.sheets
+      sheets: parsed.sheets,
+      bufferBase64: parsed.bufferBase64
     });
-
-    eventBus.emit(Events.EXCEL_ATTACHMENT_IMPORTED, parsed.metadata);
-    emitUpdate('import');
   } catch (error) {
     console.error('[AttachmentHandler] Failed to parse workbook', error);
     alert('Failed to parse file. Check console for details.');
@@ -107,4 +104,3 @@ export function bindAttachmentHandlers() {
 
   setupButtons();
 }
-
