@@ -160,7 +160,13 @@ export const Events = {
   // UI events
   MODEL_SELECTION_CHANGED: 'model:selection-changed',
   UI_REFRESH_REQUEST: 'ui:refresh:request',
-  UI_REFRESH_COMPLETE: 'ui:refresh:complete'
+  UI_REFRESH_COMPLETE: 'ui:refresh:complete',
+
+  // Attachment events
+  EXCEL_ATTACHMENT_IMPORTED: 'attachment:imported',
+  EXCEL_ATTACHMENT_UPDATED: 'attachment:updated',
+  EXCEL_ATTACHMENT_RESET: 'attachment:reset',
+  EXCEL_ATTACHMENT_REMOVED: 'attachment:removed'
 };
 
 // Bridge module exports to legacy global consumers

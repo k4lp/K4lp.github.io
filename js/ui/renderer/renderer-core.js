@@ -11,6 +11,7 @@ import { renderTasks, renderMemories, renderGoals } from './renderer-entities.js
 import { renderVault } from './renderer-vault.js';
 import { renderReasoningLog } from './renderer-reasoning.js';
 import { renderFinalOutput } from './renderer-output.js';
+import { renderAttachmentPanel } from './renderer-attachments.js';
 
 /**
  * Renderer Core object
@@ -49,6 +50,7 @@ export const RendererCore = {
     eventBus.removeAllListeners(Events.VAULT_UPDATED);
     eventBus.removeAllListeners(Events.FINAL_OUTPUT_UPDATED);
     eventBus.removeAllListeners(Events.UI_REFRESH_REQUEST);
+    eventBus.removeAllListeners(Events.EXCEL_ATTACHMENT_UPDATED);
     
     // Bind with debugging
     eventBus.on(Events.MEMORY_UPDATED, (data) => {
@@ -93,6 +95,13 @@ export const RendererCore = {
       this.renderAll();
     });
     
+    eventBus.on(Events.EXCEL_ATTACHMENT_UPDATED, () => {
+      if (window.GDRS_DEBUG_EVENTS) {
+        console.log("EXCEL_ATTACHMENT_UPDATED received, rendering attachment panel...");
+      }
+      renderAttachmentPanel();
+    });
+
     console.log('✅ Event listeners bound successfully');
   },
 
@@ -111,6 +120,7 @@ export const RendererCore = {
     renderVault();
     renderReasoningLog();
     renderFinalOutput();
+    renderAttachmentPanel();
     CodeExecutor.restoreLastExecutedCode();
     
     eventBus.emit(Events.UI_REFRESH_COMPLETE);

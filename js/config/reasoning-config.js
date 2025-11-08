@@ -36,6 +36,13 @@ export const REASONING_CONTEXT_SECTIONS = [
     includeWhenEmpty: true
   },
   {
+    id: 'attachments',
+    providerId: 'attachments',
+    heading: '**Data Attachment:**',
+    fallback: 'No workbook attached.',
+    includeWhenEmpty: true
+  },
+  {
     id: 'tasks',
     providerId: 'tasks',
     heading: '**Current Tasks:**',

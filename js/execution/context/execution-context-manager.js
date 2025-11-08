@@ -14,6 +14,7 @@
 
 import { Storage } from '../../storage/storage.js';
 import { apiAccessTracker } from '../apis/api-access-tracker.js';
+import { ExcelRuntimeStore } from '../../state/excel-runtime-store.js';
 
 export class ExecutionContextManager {
   constructor() {
@@ -69,6 +70,7 @@ export class ExecutionContextManager {
       memory: this._deepClone(Storage.loadMemory()),
       tasks: this._deepClone(Storage.loadTasks()),
       goals: this._deepClone(Storage.loadGoals()),
+      attachmentWorking: ExcelRuntimeStore.snapshotWorking(),
       timestamp: new Date().toISOString()
     };
   }
@@ -89,6 +91,9 @@ export class ExecutionContextManager {
     Storage.saveMemory(context.snapshot.memory);
     Storage.saveTasks(context.snapshot.tasks);
     Storage.saveGoals(context.snapshot.goals);
+    if ('attachmentWorking' in context.snapshot) {
+      ExcelRuntimeStore.restoreWorking(context.snapshot.attachmentWorking);
+    }
 
     return true;
   }

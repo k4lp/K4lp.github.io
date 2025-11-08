@@ -6,6 +6,7 @@ import { vaultSummaryProvider } from './vault-summary-provider.js';
 import { recentExecutionsProvider } from './recent-executions-provider.js';
 import { recentReasoningProvider } from './recent-reasoning-provider.js';
 import { pendingErrorProvider } from './pending-error-provider.js';
+import { attachmentsProvider } from './attachments-provider.js';
 
 export class ContextProviderRegistry {
   constructor(providers = []) {
@@ -36,6 +37,7 @@ export class ContextProviderRegistry {
 export const defaultContextProviderRegistry = new ContextProviderRegistry([
   pendingErrorProvider,
   userQueryProvider,
+  attachmentsProvider,
   tasksProvider,
   goalsProvider,
   memoryProvider,
@@ -56,7 +58,8 @@ export {
   vaultSummaryProvider,
   recentExecutionsProvider,
   recentReasoningProvider,
-  pendingErrorProvider
+  pendingErrorProvider,
+  attachmentsProvider
 };
 
 export default defaultContextProviderRegistry;

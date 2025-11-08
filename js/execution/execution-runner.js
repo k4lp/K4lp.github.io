@@ -14,6 +14,7 @@ import { EXECUTION_DEFAULT_TIMEOUT_MS } from '../config/execution-config.js';
 import { expandVaultReferences } from '../utils/vault-reference-resolver.js';
 import { buildExecutionContext } from './execution-context-api.js';
 import { ExecutionStateMachine } from './core/execution-state-machine.js';
+import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
 
 export class ExecutionRunner {
   constructor(options = {}) {
@@ -57,6 +58,8 @@ export class ExecutionRunner {
         stateMachine.transition('completed');
       }
 
+      const attachmentState = ExcelRuntimeStore.getPublicState ? ExcelRuntimeStore.getPublicState() : null;
+
       return {
         success: true,
         value,
@@ -67,7 +70,8 @@ export class ExecutionRunner {
         finishedAt: nowISO(),
         startedAt: new Date(startedAt).toISOString(),
         // MODULAR: Include state information
-        state: stateMachine ? stateMachine.getCurrentState() : 'completed'
+        state: stateMachine ? stateMachine.getCurrentState() : 'completed',
+        attachmentVersion: attachmentState?.version ?? 0
       };
     } catch (error) {
       const duration = Date.now() - startedAt;
@@ -76,6 +80,8 @@ export class ExecutionRunner {
       if (stateMachine) {
         stateMachine.transition('failed', { error: error.message });
       }
+
+      const attachmentState = ExcelRuntimeStore.getPublicState ? ExcelRuntimeStore.getPublicState() : null;
 
       return {
         success: false,
@@ -87,7 +93,8 @@ export class ExecutionRunner {
         finishedAt: nowISO(),
         startedAt: new Date(startedAt).toISOString(),
         // MODULAR: Include state information
-        state: stateMachine ? stateMachine.getCurrentState() : 'failed'
+        state: stateMachine ? stateMachine.getCurrentState() : 'failed',
+        attachmentVersion: attachmentState?.version ?? 0
       };
     } finally {
       capture.stop();

@@ -13,6 +13,7 @@ import { TasksAPI } from './apis/tasks-api.js';
 import { GoalsAPI } from './apis/goals-api.js';
 import { nowISO } from '../core/utils.js';
 import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
+import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
 
 /**
  * Build execution context with all APIs
@@ -30,6 +31,16 @@ import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
  */
 export function buildExecutionContext(options = {}) {
     const { instrumented = true } = options;
+
+    const attachmentsAPI = {
+        hasWorkbook: () => ExcelRuntimeStore.hasWorkbook(),
+        getMetadata: () => ExcelRuntimeStore.getMetadata(),
+        getOriginal: () => ExcelRuntimeStore.getOriginal(),
+        getWorkingCopy: () => ExcelRuntimeStore.getWorkingCopy(),
+        updateSheet: (sheetName, mutator) => ExcelRuntimeStore.mutateSheet(sheetName, mutator),
+        resetWorkingCopy: () => ExcelRuntimeStore.resetWorkingCopy(),
+        getMutationLog: () => ExcelRuntimeStore.getMutationLog()
+    };
 
     // Create base API instances
     const baseAPIs = {
@@ -81,11 +92,11 @@ export function buildExecutionContext(options = {}) {
     };
 
     // Return instrumented or base APIs based on options
-    if (instrumented) {
-        return createInstrumentedAPIs(baseAPIs);
-    } else {
-        return baseAPIs;
-    }
+    const finalAPIs = instrumented ? createInstrumentedAPIs(baseAPIs) : baseAPIs;
+    return {
+        ...finalAPIs,
+        attachments: attachmentsAPI
+    };
 }
 
 /**

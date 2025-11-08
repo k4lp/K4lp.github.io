@@ -14,6 +14,7 @@ import { bindCodeHandlers } from './handlers/handler-code.js';
 import { bindExportHandler } from './handlers/handler-export.js';
 import { bindModalHandlers } from './handlers/handler-modal.js';
 import { bindStorageHandlers } from './handlers/handler-storage.js';
+import { bindAttachmentHandlers } from './handlers/handler-attachments.js';
 import { bindGlobalHandlers } from './handlers/handler-global.js';
 
 /**
@@ -23,6 +24,7 @@ import { bindGlobalHandlers } from './handlers/handler-global.js';
 export function bindEvents() {
   // Storage event listeners (must be first for reactive UI updates)
   bindStorageHandlers();
+  bindAttachmentHandlers();
 
   // Configuration handlers
   bindConfigHandlers();

@@ -50,6 +50,34 @@
                     </div>
                 </div>
 
+                <!-- Data Attachment Section -->
+                <div class="config-section" id="attachmentSection">
+                    <div class="section-header">
+                        <h2>DATA ATTACHMENT</h2>
+                        <span class="section-desc">Upload Excel/CSV (in-memory only)</span>
+                    </div>
+
+                    <div class="attachment-dropzone" id="attachmentDropzone">
+                        <p>Drop .xlsx/.xls/.csv here or click to select</p>
+                        <input type="file" id="attachmentInput" accept=".xlsx,.xls,.csv" hidden>
+                    </div>
+
+                    <div class="attachment-status" id="attachmentStatus">
+                        <p>No workbook attached.</p>
+                    </div>
+
+                    <div class="attachment-actions">
+                        <button id="attachmentDownloadOriginal" class="btn btn-secondary" disabled>Download Original</button>
+                        <button id="attachmentDownloadWorking" class="btn btn-secondary" disabled>Download Working</button>
+                        <button id="attachmentReset" class="btn btn-secondary" disabled>Reset Working Copy</button>
+                        <button id="attachmentRemove" class="btn btn-danger" disabled>Remove</button>
+                    </div>
+
+                    <div id="attachmentPreview" class="attachment-preview">
+                        <p class="attachment-preview-placeholder">Sheet preview will appear once a workbook is attached.</p>
+                    </div>
+                </div>
+
                 <!-- Session Configuration -->
                 <div class="config-section">
                     <div class="section-header">
@@ -348,6 +376,7 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="js/main.js" type="module"></script>
     
 </body>
