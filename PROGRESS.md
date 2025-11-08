@@ -45,3 +45,4 @@
 | 41 | 2025-11-08T20:41:49Z | Attachment UI redesigned (card layout, tabs, quick actions, diff views). |
 | 42 | 2025-11-08T20:44:45Z | Introduced selective data reset feature (UI button + hotkey) preserving keys/model/tokens. |
 | 43 | 2025-11-08T20:45:12Z | Helper API compatibility + summary utilities implemented (docs updated). |
+| 44 | 2025-11-08T21:13:05Z | Parser + runtime store now pad merged cells (data no longer erased). |

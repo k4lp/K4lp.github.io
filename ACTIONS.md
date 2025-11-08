@@ -45,3 +45,4 @@
 | 41 | 2025-11-08T20:41:49Z | Implemented sleek attachment card UI with tabs, quick actions, and renderer overhaul. |
 | 42 | 2025-11-08T20:44:45Z | Added selective data reset (UI button + hotkey) preserving keys/model/token settings. |
 | 43 | 2025-11-08T20:45:12Z | Extended attachments helper API with legacy-compatible methods and updated guide. |
+| 44 | 2025-11-08T21:13:05Z | Reworked workbook parsing/runtime storage to handle merged cells and preserve column data. |

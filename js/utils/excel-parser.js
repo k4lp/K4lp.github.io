@@ -28,11 +28,26 @@ export function parseWorkbook(arrayBuffer, { fileName = 'workbook.xlsx', sizeByt
 
   workbook.SheetNames.forEach((sheetName) => {
     const worksheet = workbook.Sheets[sheetName];
-    const rowsArray = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, blankrows: false });
+    const rowsArray = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      raw: false,
+      blankrows: false,
+      defval: null
+    });
 
-    const headers = rowsArray[0] ? rowsArray[0].map((header, idx) => header || `column_${idx + 1}`) : [];
+    const maxColumns = rowsArray.reduce((max, row) => Math.max(max, row.length || 0), 0);
+    const headerRow = rowsArray[0] || [];
+    const headers = headerRow.map((header, idx) => header || `column_${idx + 1}`);
+    while (headers.length < maxColumns) {
+      headers.push(`column_${headers.length + 1}`);
+    }
+
     const rows = rowsArray.slice(1).map((row) => {
-      return headers.map((_, index) => row[index] ?? null);
+      const normalized = [];
+      for (let i = 0; i < maxColumns; i += 1) {
+        normalized.push(row[i] ?? null);
+      }
+      return normalized;
     });
 
     sheets[sheetName] = {

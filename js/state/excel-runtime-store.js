@@ -40,6 +40,10 @@ class ExcelRuntimeStoreClass {
       ? sheetPayload.headers.map((header, index) => header || `column_${index + 1}`)
       : [];
     const rows = Array.isArray(sheetPayload.rows) ? sheetPayload.rows : [];
+    const maxColumns = Math.max(headers.length, ...rows.map((row) => row.length || 0));
+    while (headers.length < maxColumns) {
+      headers.push(`column_${headers.length + 1}`);
+    }
     const cellRows = rows.map((rowArray = []) => {
       return headers.map((_, colIndex) => this._createCell(rowArray[colIndex]));
     });
