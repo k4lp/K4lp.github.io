@@ -7,12 +7,23 @@
 
 ## Quick Start
 ```js
-attachments.helper.ensureWorkbook();
-const sheetNames = attachments.helper.getSheetNames();
-const sheet = attachments.helper.selectSheet(sheetNames[0]);
+attachments.ensureWorkbook();
+const sheetNames = attachments.getSheetNames();
+const sheet = attachments.getSheet(sheetNames[0]); // alias for helper.getSheet()
 const summary = sheet.summary();
 const preview = sheet.sliceRows({ offset: 0, limit: 5 });
 ```
+
+## API Layers
+- **Top-level (`attachments.*`)**
+  - `ensureWorkbook()`, `hasWorkbook()`
+  - `getSheetNames()`, `listSheets({ includeStats })`
+  - `getSheet(nameOrIndex)` / `selectSheet(...)` return the sheet helper described below.
+  - `getWorkbook()` returns `{ getSheetNames(), getSheetByName(), summary() }`.
+  - `getWorkbookSummary()` mirrors `listSheets({ includeStats: true })`.
+  - `updateSheet()`, `resetWorkingCopy()`, `getMutationLog()` mutate or inspect the working copy.
+- **Helper (`attachments.helper` / sheet handles)**
+  - Full set of sheet operations plus metadata helpers. Use this when you need fine-grained row/range access or mutations.
 
 ## Helper API Reference
 - `attachments.helper.listSheets({ includeStats })`

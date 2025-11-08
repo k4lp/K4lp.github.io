@@ -55,7 +55,16 @@ export function buildExecutionContext(options = {}) {
             columns: summary?.columnCount,
             changedCells: summary?.diff?.changedCells
         })) || []),
-        helper
+        // Convenience passthroughs so execution code can stay in one namespace
+        listSheets: (options) => helper.listSheets(options),
+        getWorkbook: () => helper.getWorkbook(),
+        getWorkbookSummary: () => helper.getWorkbookSummary(),
+        getSheet: (identifier) => helper.getSheet(identifier),
+        selectSheet: (identifier) => helper.selectSheet(identifier),
+        helper,
+        get sheet() {
+            throw new Error('Use attachments.getSheet(nameOrIndex) or attachments.helper.getSheet(nameOrIndex) instead of attachments.sheet.');
+        }
     };
 
     // Create base API instances

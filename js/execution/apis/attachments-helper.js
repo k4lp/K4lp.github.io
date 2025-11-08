@@ -185,7 +185,30 @@ function buildSheetHandle(sheetName) {
   };
 }
 
+function buildWorkbookFacade() {
+  return {
+    getSheetNames: () => ExcelRuntimeStore.getSheetNames(),
+    getSheetByName: (identifier) => {
+      const sheetName = resolveSheetName(identifier);
+      return buildSheetHandle(sheetName);
+    },
+    summary: () => {
+      const summary = {};
+      ExcelRuntimeStore.getSheetNames().forEach((name) => {
+        summary[name] = ExcelRuntimeStore.getSheetSummary(name);
+      });
+      return summary;
+    }
+  };
+}
+
 export function createAttachmentsHelper(store = ExcelRuntimeStore) {
+  const selectSheetHandle = (identifier) => {
+    ensureWorkbook();
+    const sheetName = resolveSheetName(identifier);
+    return buildSheetHandle(sheetName);
+  };
+
   return {
     hasWorkbook: () => store.hasWorkbook(),
     ensureWorkbook,
@@ -205,12 +228,16 @@ export function createAttachmentsHelper(store = ExcelRuntimeStore) {
       ensureWorkbook();
       return store.getSheetNames();
     },
-    selectSheet: (identifier) => {
+    selectSheet: (identifier) => selectSheetHandle(identifier),
+    getSheet: (identifier) => selectSheetHandle(identifier),
+    getWorkbook: () => {
       ensureWorkbook();
-      const sheetName = resolveSheetName(identifier);
-      return buildSheetHandle(sheetName);
+      return buildWorkbookFacade();
     },
-    getSheet: (identifier) => buildSheetHandle(resolveSheetName(identifier)),
+    getWorkingCopy: () => {
+      ensureWorkbook();
+      return store.getWorkingCopy();
+    },
     getWorkbookSummary: () => {
       ensureWorkbook();
       const summaries = {};
