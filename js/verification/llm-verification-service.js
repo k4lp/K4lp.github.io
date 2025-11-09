@@ -179,6 +179,8 @@ WARNINGS:
 - [List any non-critical issues, or write "None"]
 SUMMARY:
 [Brief 2-3 sentence summary of your verification assessment]
+ACTIONS TO TAKE:
+[Explain what has to be done in short but precise and perfect way. Tell it to use tools again to get the required knowledge if required.]
 
 Be strict and thorough. If there are ANY issues that would prevent this from being a high-quality final output, mark as FAIL.`;
   }
