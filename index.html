@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Deep Computation & Research System - Kalp Pariya</title>
+    <title>GDRS — Gemini Deep Research System</title>
     <meta name="description" content="Browser-based research assistant with iterative reasoning and unlimited code execution">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,392 +11,281 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Main Application Container -->
-    <div id="app" class="app-container">
-        
+
+    <div id="app">
+
         <!-- Header -->
-        <header class="app-header">
-            <h1 class="app-title">Gemini Deep Computation & Research System by Kalp Pariya</h1>
-            <div class="version-info">v1.1.4 - Modular Architecture + Unlimited Keys + Flexible Output</div>
+        <header>
+            <div class="container-header">
+                <div class="brand">
+                    <h1>GDRS</h1>
+                    <p class="brand-desc">Gemini Deep Research System</p>
+                </div>
+                <div class="meta">
+                    <span class="version">v1.1.4</span>
+                    <span class="divider">|</span>
+                    <span class="author">Kalp Pariya</span>
+                </div>
+            </div>
         </header>
 
-        <!-- Main Content Grid -->
-        <main class="main-grid">
-            
-            <!-- Left Panel: Configuration -->
-            <section class="left-panel">
-                
-                <!-- API Keys Section - NOW WITH TEXTAREA! -->
-                <div class="config-section">
-                    <div class="section-header">
-                        <h2>API KEYS</h2>
-                        <span class="section-desc">Unlimited keys • Auto rotation • Local only</span>
-                    </div>
-                    
-                    <!-- Container for textarea + stats -->
-                    <div id="keysContainer" class="keys-container">
-                        <!-- Will be populated by renderer -->
-                    </div>
-                    
-                    <div class="key-actions">
-                        <button id="validateKeys" class="btn btn-primary">Validate All</button>
-                        <button id="clearKeys" class="btn btn-secondary">Clear All</button>
-                        <span id="keyRotationPill" class="status-pill">NO KEY</span>
-                        <!-- Key rotation indicator -->
-                        <div id="keyRotationIndicator" class="key-rotation-indicator hidden">
-                            <span class="indicator-icon">🔄</span>
-                            <span class="indicator-text">Key rotated to #<span id="rotatedKeySlot">0</span></span>
+        <!-- Main Layout -->
+        <main>
+            <div class="container-main">
+
+                <!-- Configuration Panel -->
+                <aside class="panel panel-config">
+
+                    <!-- API Keys -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>API Keys</h2>
+                            <p class="block-meta">Unlimited • Auto-rotation • Local storage</p>
+                        </header>
+
+                        <div class="block-body">
+                            <div id="keysContainer"></div>
+
+                            <div class="action-group">
+                                <button id="validateKeys" class="btn btn-primary">Validate All</button>
+                                <button id="clearKeys" class="btn">Clear All</button>
+                            </div>
+
+                            <div class="status-bar">
+                                <span id="keyRotationPill" class="pill">NO KEY</span>
+                                <div id="keyRotationIndicator" class="indicator hidden">
+                                    <span class="indicator-icon">↻</span>
+                                    <span class="indicator-text">Rotated to #<span id="rotatedKeySlot">0</span></span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </section>
 
-                <!-- Data Attachment Section -->
-                <div class="attachment-card" id="attachmentSection">
-                    <div class="attachment-card__header">
-                        <div>
-                            <h2>Data Attachment</h2>
-                            <p class="attachment-card__subtitle">Excel ingestion • Runtime only</p>
+                    <!-- Session Configuration -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Session</h2>
+                        </header>
+
+                        <div class="block-body">
+                            <div class="field">
+                                <label for="modelSelect">Model</label>
+                                <select id="modelSelect">
+                                    <option value="">— select model —</option>
+                                </select>
+                            </div>
+
+                            <div class="field">
+                                <label for="maxOutputTokens">Max Output Tokens</label>
+                                <div class="field-with-suffix">
+                                    <input id="maxOutputTokens" type="number" value="4096" min="512" max="65536" step="256">
+                                    <span class="suffix">tokens</span>
+                                </div>
+                                <p class="field-hint">512 – 65,536</p>
+                            </div>
+
+                            <div class="field">
+                                <label for="userQuery">Research Query</label>
+                                <textarea id="userQuery" rows="4" placeholder="Enter your research question or task..."></textarea>
+                            </div>
+
+                            <div class="action-group">
+                                <button id="runQueryBtn" class="btn btn-primary btn-lg">Run Analysis</button>
+                                <span id="sessionStatus" class="pill">IDLE</span>
+                            </div>
                         </div>
-                        <div class="attachment-card__actions">
-                            <span id="attachmentStatusPill" class="status-pill status-idle">NONE</span>
-                            <button id="attachmentDownloadOriginal" class="icon-btn" title="Download original" disabled>
-                                ⤓
-                            </button>
-                            <button id="attachmentDownloadWorking" class="icon-btn" title="Download working copy" disabled>
-                                ⤓*
-                            </button>
-                            <button id="attachmentReset" class="icon-btn" title="Reset working copy" disabled>↺</button>
-                            <button id="attachmentRemove" class="icon-btn danger" title="Remove attachment" disabled>✕</button>
+                    </section>
+
+                </aside>
+
+                <!-- Processing Panel -->
+                <div class="panel panel-process">
+
+                    <!-- Reasoning Log -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Reasoning Log</h2>
+                            <p class="block-meta">Iteration <span id="iterationCount">0</span></p>
+                        </header>
+
+                        <div class="block-body">
+                            <div id="iterationLog" class="log">
+                                <div class="log-placeholder">Intelligent reasoning iterations will appear here</div>
+                            </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="attachment-dropzone" id="attachmentDropzone">
-                        <p>Drop .xlsx/.xls/.csv here or click to select</p>
-                        <input type="file" id="attachmentInput" accept=".xlsx,.xls,.csv" hidden>
-                    </div>
+                    <!-- Code Execution -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Code Execution</h2>
+                            <span id="execStatus" class="pill">READY</span>
+                        </header>
 
-                    <div class="attachment-tabs" role="tablist">
-                        <button class="attachment-tab active" data-panel="summary" id="attachmentTabSummary">Summary</button>
-                        <button class="attachment-tab" data-panel="sheets" id="attachmentTabSheets">Sheets</button>
-                        <button class="attachment-tab" data-panel="mutations" id="attachmentTabMutations">Mutations</button>
-                    </div>
-
-                    <div class="attachment-panels">
-                        <div class="attachment-panel active" id="attachmentSummaryPanel"></div>
-                        <div class="attachment-panel" id="attachmentSheetsPanel"></div>
-                        <div class="attachment-panel" id="attachmentMutationsPanel"></div>
-                    </div>
-
-                    <div class="attachment-quick-actions" id="attachmentQuickActions">
-                        <button class="btn btn-secondary" data-action="previewRows" disabled>Preview rows</button>
-                        <button class="btn btn-secondary" data-action="logSummary" disabled>Log summary</button>
-                        <button class="btn btn-secondary" data-action="openGuide">Guide</button>
-                    </div>
-                </div>
-
-                <!-- Session Configuration -->
-                <div class="config-section">
-                    <div class="section-header">
-                        <h2>SESSION</h2>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="modelSelect">Model</label>
-                        <select id="modelSelect" class="select-input">
-                            <option value="">-- select model --</option>
-                        </select>
-                    </div>
-                    
-                    <!-- NEW: Extended Max Output Tokens Configuration -->
-                    <div class="form-group">
-                        <label for="maxOutputTokens">Max Output Tokens</label>
-                        <div class="token-input-group">
-                            <input id="maxOutputTokens" type="number" class="number-input" 
-                                   value="4096" min="512" max="65536" step="256" 
-                                   title="Maximum number of tokens in the response (512-65536)">
-                            <span class="input-suffix">tokens</span>
-                        </div>
-                        <div class="form-hint">Default: 4096 • Range: 512-65536 • Flexible output format</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="userQuery">Research Query</label>
-                        <textarea id="userQuery" class="textarea-input" 
-                                  placeholder="Enter your research question or task..."></textarea>
-                    </div>
-                    
-                    <div class="session-actions">
-                        <button id="runQueryBtn" class="btn btn-primary btn-large">Run Analysis</button>
-                        <span id="sessionStatus" class="status-pill">IDLE</span>
-                    </div>
-                    <div class="session-actions secondary">
-                        <button id="clearAllDataBtn" class="btn btn-danger btn-small">Reset Session Data</button>
-                    </div>
-                </div>
-
-            </section>
-
-            <!-- Center Panel: Processing -->
-            <section class="center-panel">
-                
-                <!-- Reasoning Log -->
-                <div class="process-section">
-                    <div class="section-header">
-                        <h2>REASONING LOG</h2>
-                        <span class="section-desc">iter <span id="iterationCount">0</span></span>
-                    </div>
-                    <div id="iterationLog" class="log-container">
-                        <div class="log-placeholder">Reasoning iterations will appear here...</div>
-                    </div>
-                </div>
-
-                <!-- Code Execution -->
-                <div class="process-section">
-                    <div class="section-header">
-                        <h2>CODE EXECUTION</h2>
-                        <span id="execStatus" class="status-pill">READY</span>
-                    </div>
-                    
-                    <div class="code-editor">
-                        <div class="code-editor-container">
-                            <div id="lineNumbers" class="line-numbers" aria-hidden="true"></div>
-                            <textarea id="codeInput" class="code-textarea"
-                                      placeholder="// Use {{&lt;vaultref id=&quot;vault_id&quot; /&gt;}} to inline vault content
+                        <div class="block-body">
+                            <div class="code-editor">
+                                <textarea id="codeInput" rows="8" spellcheck="false" placeholder="// JavaScript execution environment
 console.log('Hello GDRS');
 return { status: 'ready', timestamp: new Date() };"></textarea>
+                            </div>
+
+                            <div class="action-group">
+                                <button id="execBtn" class="btn btn-primary">Execute</button>
+                                <button id="clearExec" class="btn">Clear</button>
+                            </div>
+
+                            <div class="console">
+                                <h3 class="console-label">Console</h3>
+                                <pre id="execOutput">Execution output will appear here</pre>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="code-actions">
-                        <button id="execBtn" class="btn btn-primary">Execute</button>
-                        <button id="clearExec" class="btn btn-secondary">Clear</button>
-                    </div>
-                    
-                    <div class="console-section">
-                        <h3>Console</h3>
-                        <pre id="execOutput" class="console-output">Execution output will appear here...</pre>
-                    </div>
-                </div>
+                    </section>
 
-                <!-- Final Output -->
-                <div class="process-section">
-                    <div class="section-header">
-                        <h2>FINAL OUTPUT</h2>
-                        <span id="finalStatus" class="status-pill">idle</span>
-                    </div>
-                    <div id="finalOutput" class="output-container">
-                        <div class="output-placeholder">
-                            <p>Research report will render here - now with flexible creative output format!</p>
+                    <!-- Final Output -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Final Output</h2>
+                            <span id="finalStatus" class="pill">IDLE</span>
+                        </header>
+
+                        <div class="block-body">
+                            <div id="finalOutput" class="output">
+                                <div class="output-placeholder">
+                                    <p>Research report will render here</p>
+                                </div>
+                            </div>
+
+                            <div class="action-group">
+                                <button id="exportTxt" class="btn">Export Markdown</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="output-actions">
-                        <button id="exportTxt" class="btn btn-secondary">📄 Export Markdown</button>
-                    </div>
-                </div>
-                
-            </section>
+                    </section>
 
-            <!-- Right Panel: Storage Systems -->
-            <section class="right-panel">
-                
-                <!-- Tasks Storage -->
-                <div class="storage-section">
-                    <div class="section-header">
-                        <h2>TASKS</h2>
-                        <span class="section-desc">All tasks</span>
-                    </div>
-                    <div id="tasksList" class="storage-list">
-                        <div class="storage-placeholder">No tasks yet</div>
-                    </div>
                 </div>
 
-                <!-- Memory Storage -->
-                <div class="storage-section">
-                    <div class="section-header">
-                        <h2>MEMORY</h2>
-                        <span class="section-desc">Long-term context</span>
-                    </div>
-                    <div id="memoryList" class="storage-list">
-                        <div class="storage-placeholder">No memories yet</div>
-                    </div>
-                    <div class="storage-actions">
-                        <button id="clearMemory" class="btn btn-danger btn-small">Clear All</button>
-                    </div>
-                </div>
+                <!-- Storage Panel -->
+                <aside class="panel panel-storage">
 
-                <!-- Goals Storage -->
-                <div class="storage-section">
-                    <div class="section-header">
-                        <h2>GOALS</h2>
-                        <span class="section-desc">Verification anchors</span>
-                    </div>
-                    <div id="goalsList" class="storage-list">
-                        <div class="storage-placeholder">No goals yet</div>
-                    </div>
-                    <div class="storage-actions">
-                        <button id="clearGoals" class="btn btn-danger btn-small">Clear All</button>
-                    </div>
-                </div>
+                    <!-- Tasks -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Tasks</h2>
+                        </header>
 
-                <!-- Data Vault -->
-                <div class="storage-section">
-                    <div class="section-header">
-                        <h2>DATA VAULT</h2>
-                        <span class="section-desc">Entries</span>
-                    </div>
-                    <div id="vaultList" class="storage-list">
-                        <div class="storage-placeholder">No vault entries yet</div>
-                    </div>
-                    
-                    <div class="storage-actions">
-                        <button id="clearVault" class="btn btn-danger btn-small">Clear All</button>
-                    </div>
-                    
-                    <!-- Vault Entry Form -->
-                    <div class="vault-form">
-                        <div class="form-group">
-                            <label for="vaultType">Type</label>
-                            <select id="vaultType" class="select-input">
-                                <option value="text">Text</option>
-                                <option value="code">Code</option>
-                                <option value="data">Data</option>
-                            </select>
+                        <div class="block-body">
+                            <div id="tasksList" class="list">
+                                <div class="storage-placeholder">No tasks yet</div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="vaultDesc">Description</label>
-                            <input id="vaultDesc" type="text" class="text-input" 
-                                   placeholder="Brief description...">
+                    </section>
+
+                    <!-- Memory -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Memory</h2>
+                        </header>
+
+                        <div class="block-body">
+                            <div id="memoryList" class="list">
+                                <div class="storage-placeholder">No memories yet</div>
+                            </div>
+                            <div class="action-group">
+                                <button id="clearMemory" class="btn btn-sm">Clear All</button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                
-            </section>
-            
+                    </section>
+
+                    <!-- Goals -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Goals</h2>
+                        </header>
+
+                        <div class="block-body">
+                            <div id="goalsList" class="list">
+                                <div class="storage-placeholder">No goals yet</div>
+                            </div>
+                            <div class="action-group">
+                                <button id="clearGoals" class="btn btn-sm">Clear All</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Data Vault -->
+                    <section class="block">
+                        <header class="block-header">
+                            <h2>Data Vault</h2>
+                        </header>
+
+                        <div class="block-body">
+                            <div id="vaultList" class="list">
+                                <div class="storage-placeholder">No vault entries yet</div>
+                            </div>
+
+                            <div class="action-group">
+                                <button id="clearVault" class="btn btn-sm">Clear All</button>
+                            </div>
+
+                            <div class="vault-form">
+                                <div class="field">
+                                    <label for="vaultType">Type</label>
+                                    <select id="vaultType">
+                                        <option value="text">Text</option>
+                                        <option value="code">Code</option>
+                                        <option value="data">Data</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="vaultDesc">Description</label>
+                                    <input id="vaultDesc" type="text" placeholder="Brief description">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </aside>
+
+            </div>
         </main>
-        
-    </div>
 
-    <!-- Task Modal -->
-    <div id="taskModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Task Details</h3>
-                <button id="taskModalClose" class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <span><strong>ID:</strong> <span id="taskModalId"></span></span>
-                    <span><strong>Status:</strong> <span id="taskModalStatus"></span></span>
-                </div>
-                <div class="modal-section">
-                    <strong>Heading:</strong>
-                    <p id="taskModalHeading"></p>
-                </div>
-                <div class="modal-section">
-                    <strong>Content:</strong>
-                    <pre id="taskModalContent"></pre>
-                </div>
-                <div class="modal-section" id="taskModalNotesSection" style="display: none;">
-                    <strong>Notes:</strong>
-                    <pre id="taskModalNotes"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="taskModalExport" class="btn btn-secondary">📥 Export</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Memory Modal -->
-    <div id="memoryModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Memory Details</h3>
-                <button id="memoryModalClose" class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <span><strong>ID:</strong> <span id="memoryModalId"></span></span>
-                </div>
-                <div class="modal-section">
-                    <strong>Heading:</strong>
-                    <p id="memoryModalHeading"></p>
-                </div>
-                <div class="modal-section">
-                    <strong>Content:</strong>
-                    <pre id="memoryModalContent"></pre>
-                </div>
-                <div class="modal-section" id="memoryModalNotesSection" style="display: none;">
-                    <strong>Notes:</strong>
-                    <pre id="memoryModalNotes"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="memoryModalExport" class="btn btn-secondary">📥 Export</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Goal Modal -->
-    <div id="goalModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Goal Details</h3>
-                <button id="goalModalClose" class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <span><strong>ID:</strong> <span id="goalModalId"></span></span>
-                </div>
-                <div class="modal-section">
-                    <strong>Heading:</strong>
-                    <p id="goalModalHeading"></p>
-                </div>
-                <div class="modal-section">
-                    <strong>Content:</strong>
-                    <pre id="goalModalContent"></pre>
-                </div>
-                <div class="modal-section" id="goalModalNotesSection" style="display: none;">
-                    <strong>Notes:</strong>
-                    <pre id="goalModalNotes"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="goalModalExport" class="btn btn-secondary">📥 Export</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Vault Modal -->
     <div id="vaultModal" class="modal">
+        <div class="modal-overlay"></div>
         <div class="modal-content">
-            <div class="modal-header">
+            <header class="modal-header">
                 <h3>Vault Entry</h3>
-                <button id="vaultModalClose" class="modal-close">&times;</button>
-            </div>
+                <button id="vaultModalClose" class="modal-close">×</button>
+            </header>
             <div class="modal-body">
                 <div class="modal-meta">
-                    <span><strong>ID:</strong> <span id="vaultModalId"></span></span>
-                    <span><strong>Type:</strong> <span id="vaultModalType"></span></span>
+                    <div class="meta-item">
+                        <span class="meta-label">ID</span>
+                        <span id="vaultModalId" class="meta-value"></span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Type</span>
+                        <span id="vaultModalType" class="meta-value"></span>
+                    </div>
                 </div>
                 <div class="modal-section">
-                    <strong>Description:</strong>
+                    <h4>Description</h4>
                     <p id="vaultModalDesc"></p>
                 </div>
                 <div class="modal-section">
-                    <strong>Content:</strong>
+                    <h4>Content</h4>
                     <pre id="vaultModalContent"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="vaultModalExport" class="btn btn-secondary">📥 Export</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Markdown Parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Scripts -->
     <script src="js/main.js" type="module"></script>
-    
+
 </body>
 </html>
