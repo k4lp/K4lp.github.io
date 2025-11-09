@@ -35,9 +35,12 @@ const EXCEL_API_QUICK_REFERENCE = `
 1. ALWAYS call \`sheet.summary()\` first to check dimensions
 2. NEVER dump entire sheets - use offset/limit (max 200 rows per call)
 3. Character Limits:
-   - Default: 50 chars per cell (use for initial scans)
-   - Medium: 100 chars (when you need more context)
-   - Maximum: 200 chars (only when absolutely needed)
+   - **Default: 50 chars** per cell (use for initial scans)
+   - **Medium: 100 chars** (when you need more context)
+   - **Large: 200 chars** (for longer text fields)
+   - **UNLIMITED: Infinity** (for copy-paste operations, full content extraction)
+     - Use \`charLimit: Infinity\` to get complete cell content without truncation
+     - Example: \`sheet.getColumnData({ columnIndex: 0, charLimit: Infinity })\`
 4. Store large results in Vault, don't print to reasoning
 5. All parameters use object format: \`{ paramName: value }\`
 6. Errors include 💡 suggestions and 📝 examples
@@ -136,12 +139,37 @@ allSheets.forEach((sheetName, index) => {
 **CHARACTER LIMIT STRATEGY:**
 - **50 chars** (default): Initial exploration, understanding structure
 - **100 chars**: When you need to see more content (product names, descriptions)
-- **200 chars** (max): Only for fields you know contain long text (notes, addresses)
+- **200 chars**: For longer text fields (notes, addresses, descriptions)
+- **Infinity** (unlimited): For copy-paste, exact data extraction, full content access
+
+**WHEN TO USE UNLIMITED (charLimit: Infinity):**
+\`\`\`javascript
+// Use Case 1: Extract complete data for copy-paste
+const fullData = sheet.getColumnData({
+  columnIndex: 0,
+  charLimit: Infinity  // Get complete content, no truncation
+});
+vault.set('full_content', fullData);
+
+// Use Case 2: Get complete rows for data export
+const completeRows = sheet.getRowsAsObjects({
+  offset: 0,
+  limit: 50,
+  charLimit: Infinity  // All cell content, no "..." truncation
+});
+
+// Use Case 3: Access long text fields completely
+const descriptions = sheet.getColumnData({
+  columnIndex: summary.headers.indexOf('Description'),
+  charLimit: Infinity  // Get full descriptions, not truncated
+});
+\`\`\`
 
 **BEST PRACTICES:**
 ✅ ALWAYS read summary first
 ✅ ALWAYS sample beginning AND end of sheet
 ✅ Start with charLimit=50, increase only if needed
+✅ Use charLimit: Infinity for copy-paste and exact extraction
 ✅ Store large results in Vault (use \`vault.set()\`)
 ✅ Use offset/limit to avoid loading entire sheets
 ✅ For large datasets (1000+ rows), sample beginning/middle/end
