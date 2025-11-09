@@ -8,41 +8,148 @@ const EXCEL_API_QUICK_REFERENCE = `
 **EXCEL ATTACHMENT API (Always Available)**
 
 **Check & Get Sheets:**
-- \`attachments.hasWorkbook()\` → boolean - Check if workbook loaded
-- \`attachments.getSheetNames()\` → string[] - Get all sheet names
-- \`attachments.getSheet(nameOrIndex)\` → SheetHandle - Get sheet by name/index (0-based)
+- \`attachments.hasWorkbook()\` → **boolean** - Check if workbook loaded
+- \`attachments.getSheetNames()\` → **string[]** - Get all sheet names
+- \`attachments.getSheet(nameOrIndex)\` → **SheetHandle** - Get sheet by name/index (0-based)
 
 **Sheet Reading (ALWAYS call .summary() first):**
-- \`sheet.summary()\` → { name, rowCount, columnCount, headers, diff }
-- \`sheet.getRowsAsObjects({ offset: 0, limit: 10 })\` → [{ col1: val, col2: val }]
-- \`sheet.sliceRows({ offset: 0, limit: 10 })\` → [[val1, val2], [val3, val4]]
-- \`sheet.getColumnData({ columnIndex: 2, limit: 100 })\` → [val1, val2, val3]
-- \`sheet.getRange({ startCell: 'A1', endCell: 'C10' })\` → 2D array
+- \`sheet.summary()\` → **{ name: string, rowCount: number, columnCount: number, headers: string[], diff: object }**
+- \`sheet.getRowsAsObjects({ offset?, limit?, charLimit? })\` → **Array<{ [header: string]: any }>**
+  - Returns: Array of objects where keys are column headers
+  - Default: offset=0, limit=10, charLimit=50
+- \`sheet.sliceRows({ offset?, limit?, charLimit? })\` → **any[][]** - Raw 2D array
+- \`sheet.getColumnData({ columnIndex, offset?, limit?, charLimit? })\` → **any[]** - Single column values
+- \`sheet.getRange({ startCell, endCell, charLimit? })\` → **any[][]** - 2D array for range (e.g., 'A1' to 'C10')
 
 **Sheet Writing:**
-- \`attachments.addSheet(name, { headers: [...], rows: [[...]] })\` - Create sheet
-- \`attachments.updateSheet(name, { headers, rows })\` - Replace sheet (data object)
-- \`sheet.appendRows([[val1, val2]])\` - Add rows to end
-- \`sheet.updateCell({ rowIndex: 0, columnIndex: 0, value: 'new' })\` - Update cell
-- \`sheet.deleteRows({ start: 5, count: 3 })\` - Delete rows
+- \`attachments.addSheet(name, { headers, rows })\` → **void** - Create new sheet
+- \`attachments.updateSheet(name, { headers, rows })\` → **void** - Replace entire sheet
+- \`sheet.appendRows(rowsArray)\` → **void** - Add rows to end (rowsArray: any[][])
+- \`sheet.updateCell({ rowIndex, columnIndex, value })\` → **void** - Update single cell
+- \`sheet.deleteRows({ start, count })\` → **void** - Delete rows starting at index
+
+**Export:**
+- \`attachments.downloadWorkbook(filename)\` → **void** - Download current state as .xlsx
 
 **CRITICAL RULES:**
-1. ALWAYS call \`sheet.summary()\` before reading to check dimensions
+1. ALWAYS call \`sheet.summary()\` first to check dimensions
 2. NEVER dump entire sheets - use offset/limit (max 200 rows per call)
-3. Default charLimit: 50 chars (increase only when needed, max 200)
+3. Character Limits:
+   - Default: 50 chars per cell (use for initial scans)
+   - Medium: 100 chars (when you need more context)
+   - Maximum: 200 chars (only when absolutely needed)
 4. Store large results in Vault, don't print to reasoning
 5. All parameters use object format: \`{ paramName: value }\`
 6. Errors include 💡 suggestions and 📝 examples
+`;
 
-**Common Pattern - Extract Column:**
+const EXCEL_EXPLORATION_GUIDE = `
+**📊 HOW TO EXPLORE & UNDERSTAND EXCEL DATA (Active Attachment Detected)**
+
+**STEP-BY-STEP WORKFLOW:**
+
+**1. Get Overview:**
 \`\`\`javascript
-const sheet = attachments.getSheet(0);
+// Start with summary to understand dimensions
+const sheet = attachments.getSheet(0); // or getSheet('Sheet1')
 const summary = sheet.summary();
-const colIndex = summary.headers.findIndex(h => h.includes('MPN'));
-const values = sheet.getColumnData({ columnIndex: colIndex, limit: summary.rowCount });
-const unique = [...new Set(values.filter(v => v))];
-vault.set('result', unique);
+// Returns: { name, rowCount, columnCount, headers, diff }
+console.log(\`Sheet: \${summary.name}, \${summary.rowCount} rows × \${summary.columnCount} cols\`);
+console.log('Headers:', summary.headers);
 \`\`\`
+
+**2. Sample Beginning of Sheet (First 10-20 rows):**
+\`\`\`javascript
+// Read first rows to understand data structure
+const firstRows = sheet.getRowsAsObjects({
+  offset: 0,
+  limit: 10,      // Start small (10-20 rows)
+  charLimit: 50   // Default 50 chars per cell
+});
+console.log('First 10 rows:', firstRows);
+
+// Or get raw array format:
+const firstRowsRaw = sheet.sliceRows({ offset: 0, limit: 10 });
+\`\`\`
+
+**3. Sample End of Sheet (Last 10-20 rows):**
+\`\`\`javascript
+// CRITICAL: Always check the END too to understand full data range
+const lastRowsOffset = Math.max(0, summary.rowCount - 10);
+const lastRows = sheet.getRowsAsObjects({
+  offset: lastRowsOffset,
+  limit: 10,
+  charLimit: 50
+});
+console.log(\`Last 10 rows (from row \${lastRowsOffset}):\`, lastRows);
+\`\`\`
+
+**4. Sample Middle Section (Optional - for large datasets):**
+\`\`\`javascript
+// For sheets with 1000+ rows, sample the middle too
+const middleOffset = Math.floor(summary.rowCount / 2) - 5;
+const middleRows = sheet.getRowsAsObjects({
+  offset: middleOffset,
+  limit: 10
+});
+console.log(\`Middle 10 rows (from row \${middleOffset}):\`, middleRows);
+\`\`\`
+
+**5. Extract Specific Column Data:**
+\`\`\`javascript
+// Find column by header name
+const mpnColIndex = summary.headers.findIndex(h =>
+  h.toLowerCase().includes('mpn') || h.toLowerCase().includes('part')
+);
+
+if (mpnColIndex >= 0) {
+  // Read entire column (for analysis, storage in vault)
+  const mpnValues = sheet.getColumnData({
+    columnIndex: mpnColIndex,
+    offset: 0,
+    limit: summary.rowCount,  // Get all rows
+    charLimit: 100            // Increase if values are long
+  });
+
+  // Process data
+  const uniqueMPNs = [...new Set(mpnValues.filter(v => v))];
+  vault.set('extracted_mpns', uniqueMPNs);
+  console.log(\`Found \${uniqueMPNs.length} unique MPNs\`);
+}
+\`\`\`
+
+**6. Scan Multiple Sheets:**
+\`\`\`javascript
+// When workbook has multiple sheets
+const allSheets = attachments.getSheetNames();
+allSheets.forEach((sheetName, index) => {
+  const sheet = attachments.getSheet(sheetName);
+  const summary = sheet.summary();
+  console.log(\`\${index + 1}. \${sheetName}: \${summary.rowCount} rows\`);
+
+  // Sample first 5 rows from each sheet
+  const preview = sheet.getRowsAsObjects({ limit: 5 });
+  vault.set(\`sheet_\${index}_preview\`, preview);
+});
+\`\`\`
+
+**CHARACTER LIMIT STRATEGY:**
+- **50 chars** (default): Initial exploration, understanding structure
+- **100 chars**: When you need to see more content (product names, descriptions)
+- **200 chars** (max): Only for fields you know contain long text (notes, addresses)
+
+**BEST PRACTICES:**
+✅ ALWAYS read summary first
+✅ ALWAYS sample beginning AND end of sheet
+✅ Start with charLimit=50, increase only if needed
+✅ Store large results in Vault (use \`vault.set()\`)
+✅ Use offset/limit to avoid loading entire sheets
+✅ For large datasets (1000+ rows), sample beginning/middle/end
+
+❌ NEVER dump entire sheets to console
+❌ NEVER use limit > 200 rows per call
+❌ NEVER skip checking the END of the sheet
+❌ NEVER assume data is clean - always filter nulls/empties
 `;
 
 export const attachmentsProvider = {
@@ -99,7 +206,9 @@ export const attachmentsProvider = {
       '**Current Sheets:**',
       sheetSummaries || '- No sheets detected.',
       '',
-      EXCEL_API_QUICK_REFERENCE
+      EXCEL_API_QUICK_REFERENCE,
+      '',
+      EXCEL_EXPLORATION_GUIDE
     ].join('\n');
   }
 };
