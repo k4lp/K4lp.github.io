@@ -13,6 +13,7 @@ import { ExcelRuntimeStore } from '../../excel/core/excel-store.js';
 export function bindGlobalHandlers() {
   bindClearAllDataHotkey();
   bindClearAllDataButton();
+  bindCollapsibleSections();
 }
 
 /**
@@ -48,4 +49,25 @@ function bindClearAllDataButton() {
   const btn = document.getElementById('clearAllDataBtn');
   if (!btn) return;
   btn.addEventListener('click', () => clearPersistedData());
+}
+
+/**
+ * Bind collapsible section functionality
+ */
+function bindCollapsibleSections() {
+  const toggleButtons = document.querySelectorAll('.collapse-toggle');
+
+  toggleButtons.forEach((button) => {
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetId = button.getAttribute('data-target');
+      const targetElement = document.getElementById(targetId);
+      const parentBlock = button.closest('.block');
+
+      if (parentBlock && targetElement) {
+        parentBlock.classList.toggle('collapsed');
+        button.textContent = parentBlock.classList.contains('collapsed') ? '+' : '−';
+      }
+    });
+  });
 }

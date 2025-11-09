@@ -260,6 +260,37 @@ main {
   gap: var(--space-md);
 }
 
+.collapse-toggle {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--gray-900);
+  background: transparent;
+  border: var(--border-width) solid var(--gray-900);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-toggle:hover {
+  background: var(--gray-900);
+  color: var(--white);
+}
+
+.block.collapsible.collapsed .block-body {
+  display: none;
+}
+
+.block.collapsible.collapsed .block-header {
+  margin-bottom: 0;
+}
+
 .block-meta {
   font-size: 0.6875rem;
   color: var(--gray-500);

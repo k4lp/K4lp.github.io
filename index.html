@@ -37,13 +37,15 @@
                 <aside class="panel panel-config">
 
                     <!-- API Keys -->
-                    <section class="block">
+                    <section class="block collapsible">
                         <header class="block-header">
                             <h2>API Keys</h2>
                             <p class="block-meta">Unlimited • Auto-rotation • Local storage</p>
+                            <button class="collapse-toggle" data-target="apiKeysBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="apiKeysBody" class="block-body">
+
                             <div id="keysContainer"></div>
 
                             <div class="action-group">
@@ -62,12 +64,16 @@
                     </section>
 
                     <!-- Data Attachment Section -->
-                    <section class="block">
+                    <section class="block collapsible collapsed">
                         <header class="block-header">
                             <div>
                                 <h2>Data Attachment</h2>
                                 <p class="block-meta">Excel • Runtime only</p>
                             </div>
+                            <button class="collapse-toggle" data-target="attachmentBody">+</button>
+                        </header>
+
+                        <div id="attachmentBody" class="block-body">
                             <div class="action-group">
                                 <span id="attachmentStatusPill" class="pill">NONE</span>
                                 <button id="attachmentDownloadOriginal" class="btn btn-sm" title="Download original" disabled>⤓</button>
@@ -75,9 +81,6 @@
                                 <button id="attachmentReset" class="btn btn-sm" title="Reset" disabled>↺</button>
                                 <button id="attachmentRemove" class="btn btn-sm" title="Remove" disabled>✕</button>
                             </div>
-                        </header>
-
-                        <div class="block-body">
                             <div class="attachment-dropzone" id="attachmentDropzone">
                                 <p>Drop .xlsx/.xls/.csv or click</p>
                                 <input type="file" id="attachmentInput" accept=".xlsx,.xls,.csv" hidden>
@@ -104,12 +107,13 @@
                     </section>
 
                     <!-- Session Configuration -->
-                    <section class="block">
+                    <section class="block collapsible">
                         <header class="block-header">
                             <h2>Session</h2>
+                            <button class="collapse-toggle" data-target="sessionBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="sessionBody" class="block-body">
                             <div class="field">
                                 <label for="modelSelect">Model</label>
                                 <select id="modelSelect">
@@ -209,12 +213,13 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                 <aside class="panel panel-storage">
 
                     <!-- Tasks -->
-                    <section class="block">
+                    <section class="block collapsible">
                         <header class="block-header">
                             <h2>Tasks</h2>
+                            <button class="collapse-toggle" data-target="tasksBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="tasksBody" class="block-body">
                             <div id="tasksList" class="list">
                                 <div class="storage-placeholder">No tasks yet</div>
                             </div>
@@ -222,12 +227,13 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                     </section>
 
                     <!-- Memory -->
-                    <section class="block">
+                    <section class="block collapsible">
                         <header class="block-header">
                             <h2>Memory</h2>
+                            <button class="collapse-toggle" data-target="memoryBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="memoryBody" class="block-body">
                             <div id="memoryList" class="list">
                                 <div class="storage-placeholder">No memories yet</div>
                             </div>
@@ -238,12 +244,13 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                     </section>
 
                     <!-- Goals -->
-                    <section class="block">
+                    <section class="block collapsible">
                         <header class="block-header">
                             <h2>Goals</h2>
+                            <button class="collapse-toggle" data-target="goalsBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="goalsBody" class="block-body">
                             <div id="goalsList" class="list">
                                 <div class="storage-placeholder">No goals yet</div>
                             </div>
@@ -254,12 +261,13 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                     </section>
 
                     <!-- Data Vault -->
-                    <section class="block">
+                    <section class="block collapsible">
                         <header class="block-header">
                             <h2>Data Vault</h2>
+                            <button class="collapse-toggle" data-target="vaultBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="vaultBody" class="block-body">
                             <div id="vaultList" class="list">
                                 <div class="storage-placeholder">No vault entries yet</div>
                             </div>
