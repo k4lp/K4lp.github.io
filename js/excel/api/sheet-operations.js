@@ -13,6 +13,8 @@ const MAX_COLUMNS_PER_READ = 50;
 function clampChar(value, charLimit = ATTACHMENT_DEFAULT_CHAR_LIMIT) {
   if (value === null || value === undefined) return null;
   const str = String(value);
+  // Support Infinity to get full content without truncation
+  if (charLimit === Infinity || charLimit < 0) return str;
   return str.length > charLimit ? `${str.slice(0, charLimit)}…` : str;
 }
 
