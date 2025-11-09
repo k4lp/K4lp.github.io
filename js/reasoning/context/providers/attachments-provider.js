@@ -30,12 +30,26 @@ export const attachmentsProvider = {
       sheetSummaries || '- No sheets detected.',
       '',
       '**Excel Attachment Protocol (Active):**',
-      '- Call `attachments.helper.ensureWorkbook()` before referencing sheets.',
-      '- Inspect `sheet.summary()` to understand row/column counts before printing anything.',
-      '- Use `sheet.sliceRows({ limit, charLimit })` or `sheet.getRange()` to fetch small subsets (default char limit 50).',
-      '- Never dump entire sheets; summarize or move data to the Vault instead.',
-      '- Mutations must follow: plan ➜ `sheet.update...()` ➜ describe changes ➜ verify via `sheet.summary()` ➜ log diff.',
-      '- Always check row/column counts prior to printing to avoid context overflow.'
+      '- Call `attachments.ensureWorkbook()` before accessing sheets',
+      '- Get sheets: `attachments.getSheet(nameOrIndex)` returns handle with methods',
+      '- **ALWAYS call `sheet.summary()` first** to check rowCount/columnCount',
+      '',
+      '**Reading Data:**',
+      '- `sheet.sliceRows({ offset: 0, limit: 10 })` - Get rows as 2D array',
+      '- `sheet.getRowsAsObjects({ offset: 0, limit: 10 })` - Get rows as objects with header keys',
+      '- `sheet.getColumnData({ columnIndex: 2, limit: 100 })` - Get entire column',
+      '- `sheet.getRange({ startCell: \'A1\', endCell: \'C10\' })` - Get cell range',
+      '- All methods use object params: `{ paramName: value }` format',
+      '- Default charLimit: 50 chars (increase only when needed)',
+      '',
+      '**Modifying Data:**',
+      '- Create sheet: `attachments.addSheet(\'NewSheet\', { headers: [\'A\'], rows: [[\'1\']] })`',
+      '- Update sheet: `attachments.updateSheet(\'Sheet1\', { headers, rows })` (data object)',
+      '- Or mutator: `attachments.updateSheet(\'Sheet1\', (draft) => { ... })`',
+      '- Append: `sheet.appendRows([[\'val1\', \'val2\']])`',
+      '- Update cell: `sheet.updateCell({ rowIndex: 0, columnIndex: 0, value: \'new\' })`',
+      '',
+      '**CRITICAL**: Never dump entire sheets. Use offset/limit. Store large data in Vault.'
     ].join('\n');
   }
 };

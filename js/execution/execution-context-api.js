@@ -46,7 +46,36 @@ export function buildExecutionContext(options = {}) {
         getWorkingCopy: () => ExcelRuntimeStore.getWorkingCopy(),
         getSheetNames: () => ExcelRuntimeStore.getSheetNames(),
         getDiffIndex: () => ExcelRuntimeStore.getDiffIndex(),
-        updateSheet: (sheetName, mutator) => ExcelRuntimeStore.mutateSheet(sheetName, mutator),
+        updateSheet: (sheetName, dataOrMutator) => {
+            if (typeof dataOrMutator === 'function') {
+                // Original mutator pattern
+                ExcelRuntimeStore.mutateSheet(sheetName, dataOrMutator);
+            } else if (dataOrMutator && typeof dataOrMutator === 'object') {
+                // Direct data replacement (easier for LLM)
+                ExcelRuntimeStore.mutateSheet(sheetName, (draft) => {
+                    const { headers, rows } = dataOrMutator;
+                    if (headers) {
+                        draft.headers = headers;
+                        draft.columnCount = headers.length;
+                    }
+                    if (rows) {
+                        const normalizedRows = rows.map(rowArray =>
+                            (draft.headers || headers || []).map((_, idx) => ({
+                                value: rowArray[idx] ?? null,
+                                originalValue: null,
+                                lastEditedAt: new Date().toISOString()
+                            }))
+                        );
+                        draft.rows = normalizedRows;
+                        draft.rowCount = normalizedRows.length;
+                    }
+                    return draft;
+                });
+            } else {
+                throw new Error(`updateSheet() expects a function or data object { headers, rows }, got ${typeof dataOrMutator}`);
+            }
+        },
+        addSheet: (sheetName, options) => ExcelRuntimeStore.addSheet(sheetName, options),
         resetWorkingCopy: () => ExcelRuntimeStore.resetWorkingCopy(),
         getMutationLog: () => ExcelRuntimeStore.getMutationLog(),
         logSummary: () => console.table(helper.listSheets({ includeStats: true }).map(({ name, summary }) => ({

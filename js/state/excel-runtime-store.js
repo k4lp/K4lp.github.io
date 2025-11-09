@@ -260,6 +260,39 @@ class ExcelRuntimeStoreClass {
     this._notify('update');
   }
 
+  addSheet(sheetName, { headers = ['column_1'], rows = [] } = {}) {
+    if (!this._state.working) {
+      throw new Error('No workbook loaded. Cannot add sheets to a non-existent workbook.');
+    }
+
+    if (this._state.working[sheetName]) {
+      throw new Error(`Sheet "${sheetName}" already exists. Use mutateSheet() to modify it or choose a different name.`);
+    }
+
+    const newSheet = this._createSheetData(sheetName, { headers, rows });
+    this._state.working[sheetName] = newSheet;
+
+    if (this._state.metadata?.sheetOrder) {
+      this._state.metadata.sheetOrder.push(sheetName);
+      this._state.metadata.totals.sheets = this._state.metadata.sheetOrder.length;
+      this._state.metadata.totals.rows += newSheet.rowCount;
+    }
+
+    this._state.version += 1;
+    this._state.diffIndex[sheetName] = { changedCells: 0, addedRows: rows.length, deletedRows: 0 };
+    this._state.mutationLog.push({
+      sheet: sheetName,
+      action: 'create',
+      timestamp: new Date().toISOString(),
+      version: this._state.version
+    });
+
+    console.log('[ExcelRuntimeStore] Sheet created:', sheetName, 'with', rows.length, 'rows');
+    this._notify('create');
+
+    return this.getSheetSummary(sheetName);
+  }
+
   resetWorkingCopy() {
     if (!this._state.original) {
       this._state.working = null;

@@ -111,6 +111,31 @@ function buildSheetHandle(sheetName) {
       }
       return rows;
     },
+    getColumnData: ({ columnIndex, offset = 0, limit = MAX_ROWS_PER_READ, charLimit = ATTACHMENT_DEFAULT_CHAR_LIMIT }) => {
+      const sheet = readSheetSnapshot(sheetName);
+      if (columnIndex < 0 || columnIndex >= sheet.columnCount) {
+        throw new Error(`Column ${columnIndex} out of bounds for sheet ${sheetName}. Sheet has ${sheet.columnCount} columns.`);
+      }
+      const cappedLimit = Math.min(limit, MAX_ROWS_PER_READ);
+      const result = [];
+      for (let r = offset; r < Math.min(sheet.rowCount, offset + cappedLimit); r += 1) {
+        result.push(clampChar(sheet.rows[r]?.[columnIndex]?.value, charLimit));
+      }
+      return result;
+    },
+    getRowsAsObjects: ({ offset = 0, limit = 10, charLimit = ATTACHMENT_DEFAULT_CHAR_LIMIT }) => {
+      const sheet = readSheetSnapshot(sheetName);
+      const cappedLimit = Math.min(limit, MAX_ROWS_PER_READ);
+      const result = [];
+      for (let r = offset; r < Math.min(sheet.rowCount, offset + cappedLimit); r += 1) {
+        const obj = {};
+        sheet.headers.forEach((header, colIdx) => {
+          obj[header] = clampChar(sheet.rows[r]?.[colIdx]?.value, charLimit);
+        });
+        result.push(obj);
+      }
+      return result;
+    },
     updateCell: ({ rowIndex, columnIndex, value }) => {
       mutateSheet(sheetName, (draft) => {
         while (draft.headers.length <= columnIndex) {
