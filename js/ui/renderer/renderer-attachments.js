@@ -1,4 +1,4 @@
-import { ExcelRuntimeStore } from '../../state/excel-runtime-store.js';
+import { ExcelRuntimeStore } from '../../excel/core/excel-store.js';
 
 const TAB_IDS = ['summary', 'sheets', 'mutations'];
 let subscribed = false;

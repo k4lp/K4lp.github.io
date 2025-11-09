@@ -1,4 +1,4 @@
-import { deepClone, arrayBufferToBase64 } from './deep-utils.js';
+import { deepClone, arrayBufferToBase64 } from '../../utils/deep-utils.js';
 
 /**
  * Parse an Excel/CSV ArrayBuffer into JSON-friendly structures.

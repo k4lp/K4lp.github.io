@@ -13,8 +13,8 @@ import { TasksAPI } from './apis/tasks-api.js';
 import { GoalsAPI } from './apis/goals-api.js';
 import { nowISO } from '../core/utils.js';
 import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
-import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
-import { createAttachmentsHelper } from './apis/attachments-helper.js';
+import { ExcelRuntimeStore } from '../excel/core/excel-store.js';
+import { createAttachmentsHelper } from '../excel/api/excel-helpers.js';
 import {
   WorkbookNotLoadedError,
   InvalidMutatorError

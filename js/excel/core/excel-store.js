@@ -1,11 +1,11 @@
-import { deepClone, deepFreeze } from '../utils/deep-utils.js';
-import { eventBus, Events } from '../core/event-bus.js';
+import { deepClone, deepFreeze } from '../../utils/deep-utils.js';
+import { eventBus, Events } from '../../core/event-bus.js';
 import {
   WorkbookNotLoadedError,
   SheetNotFoundError,
   SheetAlreadyExistsError,
   InvalidSheetDataError
-} from '../excel/errors/excel-errors.js';
+} from '../errors/excel-errors.js';
 
 const DEFAULT_CHAR_LIMIT = 50;
 
