@@ -61,6 +61,48 @@
                         </div>
                     </section>
 
+                    <!-- Data Attachment Section -->
+                    <section class="block">
+                        <header class="block-header">
+                            <div>
+                                <h2>Data Attachment</h2>
+                                <p class="block-meta">Excel • Runtime only</p>
+                            </div>
+                            <div class="action-group">
+                                <span id="attachmentStatusPill" class="pill">NONE</span>
+                                <button id="attachmentDownloadOriginal" class="btn btn-sm" title="Download original" disabled>⤓</button>
+                                <button id="attachmentDownloadWorking" class="btn btn-sm" title="Download working" disabled>⤓*</button>
+                                <button id="attachmentReset" class="btn btn-sm" title="Reset" disabled>↺</button>
+                                <button id="attachmentRemove" class="btn btn-sm" title="Remove" disabled>✕</button>
+                            </div>
+                        </header>
+
+                        <div class="block-body">
+                            <div class="attachment-dropzone" id="attachmentDropzone">
+                                <p>Drop .xlsx/.xls/.csv or click</p>
+                                <input type="file" id="attachmentInput" accept=".xlsx,.xls,.csv" hidden>
+                            </div>
+
+                            <div class="attachment-tabs">
+                                <button class="attachment-tab active" data-panel="summary">Summary</button>
+                                <button class="attachment-tab" data-panel="sheets">Sheets</button>
+                                <button class="attachment-tab" data-panel="mutations">Mutations</button>
+                            </div>
+
+                            <div class="attachment-panels">
+                                <div class="attachment-panel active" id="attachmentSummaryPanel"></div>
+                                <div class="attachment-panel" id="attachmentSheetsPanel"></div>
+                                <div class="attachment-panel" id="attachmentMutationsPanel"></div>
+                            </div>
+
+                            <div class="attachment-quick-actions" id="attachmentQuickActions">
+                                <button class="btn btn-sm" data-action="previewRows" disabled>Preview</button>
+                                <button class="btn btn-sm" data-action="logSummary" disabled>Summary</button>
+                                <button class="btn btn-sm" data-action="openGuide">Guide</button>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- Session Configuration -->
                     <section class="block">
                         <header class="block-header">
@@ -250,6 +292,112 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
 
     </div>
 
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Task Details</h3>
+                <button id="taskModalClose" class="modal-close">×</button>
+            </header>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">ID</span>
+                        <span id="taskModalId" class="meta-value"></span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Status</span>
+                        <span id="taskModalStatus" class="meta-value"></span>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <h4>Heading</h4>
+                    <p id="taskModalHeading"></p>
+                </div>
+                <div class="modal-section">
+                    <h4>Content</h4>
+                    <pre id="taskModalContent"></pre>
+                </div>
+                <div id="taskModalNotesSection" class="modal-section">
+                    <h4>Notes</h4>
+                    <pre id="taskModalNotes"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="taskModalExport" class="btn btn-sm">Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memory Modal -->
+    <div id="memoryModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Memory Details</h3>
+                <button id="memoryModalClose" class="modal-close">×</button>
+            </header>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">ID</span>
+                        <span id="memoryModalId" class="meta-value"></span>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <h4>Heading</h4>
+                    <p id="memoryModalHeading"></p>
+                </div>
+                <div class="modal-section">
+                    <h4>Content</h4>
+                    <pre id="memoryModalContent"></pre>
+                </div>
+                <div id="memoryModalNotesSection" class="modal-section">
+                    <h4>Notes</h4>
+                    <pre id="memoryModalNotes"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="memoryModalExport" class="btn btn-sm">Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div id="goalModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Goal Details</h3>
+                <button id="goalModalClose" class="modal-close">×</button>
+            </header>
+            <div class="modal-body">
+                <div class="modal-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">ID</span>
+                        <span id="goalModalId" class="meta-value"></span>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <h4>Heading</h4>
+                    <p id="goalModalHeading"></p>
+                </div>
+                <div class="modal-section">
+                    <h4>Content</h4>
+                    <pre id="goalModalContent"></pre>
+                </div>
+                <div id="goalModalNotesSection" class="modal-section">
+                    <h4>Notes</h4>
+                    <pre id="goalModalNotes"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="goalModalExport" class="btn btn-sm">Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Vault Modal -->
     <div id="vaultModal" class="modal">
         <div class="modal-overlay"></div>
@@ -276,6 +424,9 @@ return { status: 'ready', timestamp: new Date() };"></textarea>
                 <div class="modal-section">
                     <h4>Content</h4>
                     <pre id="vaultModalContent"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button id="vaultModalExport" class="btn btn-sm">Export</button>
                 </div>
             </div>
         </div>
