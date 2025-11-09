@@ -1,5 +1,11 @@
 import { deepClone, deepFreeze } from '../utils/deep-utils.js';
 import { eventBus, Events } from '../core/event-bus.js';
+import {
+  WorkbookNotLoadedError,
+  SheetNotFoundError,
+  SheetAlreadyExistsError,
+  InvalidSheetDataError
+} from '../excel/errors/excel-errors.js';
 
 const DEFAULT_CHAR_LIMIT = 50;
 
@@ -123,7 +129,7 @@ class ExcelRuntimeStoreClass {
    */
   setWorkbook({ metadata, sheets, bufferBase64 }) {
     if (!sheets || Object.keys(sheets).length === 0) {
-      throw new Error('Cannot set workbook without sheets.');
+      throw new InvalidSheetDataError('Workbook must contain at least one sheet.');
     }
 
     const normalizedSheets = {};
@@ -234,11 +240,11 @@ class ExcelRuntimeStoreClass {
 
   mutateSheet(sheetName, mutator) {
     if (!this._state.working) {
-      throw new Error('No workbook loaded.');
+      throw new WorkbookNotLoadedError('mutateSheet');
     }
 
     if (!this._state.working[sheetName]) {
-      throw new Error(`Sheet "${sheetName}" not found.`);
+      throw new SheetNotFoundError(sheetName, this.getSheetNames());
     }
 
     const draft = deepClone(this._state.working[sheetName]);
@@ -262,11 +268,11 @@ class ExcelRuntimeStoreClass {
 
   addSheet(sheetName, { headers = ['column_1'], rows = [] } = {}) {
     if (!this._state.working) {
-      throw new Error('No workbook loaded. Cannot add sheets to a non-existent workbook.');
+      throw new WorkbookNotLoadedError('addSheet');
     }
 
     if (this._state.working[sheetName]) {
-      throw new Error(`Sheet "${sheetName}" already exists. Use mutateSheet() to modify it or choose a different name.`);
+      throw new SheetAlreadyExistsError(sheetName);
     }
 
     const newSheet = this._createSheetData(sheetName, { headers, rows });

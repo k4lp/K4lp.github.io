@@ -1,4 +1,11 @@
 import { ExcelRuntimeStore, ATTACHMENT_DEFAULT_CHAR_LIMIT } from '../../state/excel-runtime-store.js';
+import {
+  WorkbookNotLoadedError,
+  SheetNotFoundError,
+  ColumnOutOfBoundsError,
+  RowOutOfBoundsError,
+  InvalidRangeError
+} from '../../excel/errors/excel-errors.js';
 
 const MAX_ROWS_PER_READ = 200;
 const MAX_COLUMNS_PER_READ = 50;
@@ -21,7 +28,7 @@ function columnLabelToIndex(label) {
 function parseCellRef(ref) {
   const match = /^([A-Za-z]+)(\d+)$/.exec(ref);
   if (!match) {
-    throw new Error(`Invalid cell reference: ${ref}`);
+    throw new InvalidRangeError(ref, 'unknown', 'Invalid cell reference format. Use format like "A1", "B5", or "C10".');
   }
   const [, colLetters, rowDigits] = match;
   return {
@@ -39,7 +46,7 @@ function clampIndexes({ rowIndex, columnIndex }, sheet) {
 
 function ensureWorkbook() {
   if (!ExcelRuntimeStore.hasWorkbook()) {
-    throw new Error('No workbook attached. Upload a workbook before using attachments helper.');
+    throw new WorkbookNotLoadedError('attachments helper');
   }
 }
 
@@ -47,12 +54,12 @@ function resolveSheetName(identifier) {
   const names = ExcelRuntimeStore.getSheetNames();
   if (typeof identifier === 'number') {
     if (identifier < 0 || identifier >= names.length) {
-      throw new Error(`Sheet index ${identifier} out of bounds.`);
+      throw new SheetNotFoundError(`[index ${identifier}]`, names);
     }
     return names[identifier];
   }
   if (!names.includes(identifier)) {
-    throw new Error(`Sheet "${identifier}" not found. Available: ${names.join(', ')}`);
+    throw new SheetNotFoundError(identifier, names);
   }
   return identifier;
 }
@@ -61,7 +68,7 @@ function readSheetSnapshot(sheetName) {
   ensureWorkbook();
   const snapshot = ExcelRuntimeStore.getSheetSnapshot(sheetName);
   if (!snapshot) {
-    throw new Error(`Sheet "${sheetName}" not available in working copy.`);
+    throw new SheetNotFoundError(sheetName, ExcelRuntimeStore.getSheetNames());
   }
   return snapshot;
 }
@@ -83,7 +90,7 @@ function buildSheetHandle(sheetName) {
     getRowData: ({ rowIndex, startColumn = 0, endColumn, charLimit = ATTACHMENT_DEFAULT_CHAR_LIMIT }) => {
       const sheet = readSheetSnapshot(sheetName);
       if (rowIndex < 0 || rowIndex >= sheet.rowCount) {
-        throw new Error(`Row ${rowIndex} out of bounds for sheet ${sheetName}.`);
+        throw new RowOutOfBoundsError(rowIndex, sheetName, sheet.rowCount);
       }
       const finalEnd = endColumn !== undefined ? Math.min(endColumn, sheet.columnCount - 1) : sheet.columnCount - 1;
       return buildRowPreview(sheet.rows[rowIndex], startColumn, finalEnd, charLimit);
@@ -114,7 +121,7 @@ function buildSheetHandle(sheetName) {
     getColumnData: ({ columnIndex, offset = 0, limit = MAX_ROWS_PER_READ, charLimit = ATTACHMENT_DEFAULT_CHAR_LIMIT }) => {
       const sheet = readSheetSnapshot(sheetName);
       if (columnIndex < 0 || columnIndex >= sheet.columnCount) {
-        throw new Error(`Column ${columnIndex} out of bounds for sheet ${sheetName}. Sheet has ${sheet.columnCount} columns.`);
+        throw new ColumnOutOfBoundsError(columnIndex, sheetName, sheet.columnCount);
       }
       const cappedLimit = Math.min(limit, MAX_ROWS_PER_READ);
       const result = [];

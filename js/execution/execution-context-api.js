@@ -15,6 +15,10 @@ import { nowISO } from '../core/utils.js';
 import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
 import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
 import { createAttachmentsHelper } from './apis/attachments-helper.js';
+import {
+  WorkbookNotLoadedError,
+  InvalidMutatorError
+} from '../excel/errors/excel-errors.js';
 
 /**
  * Build execution context with all APIs
@@ -38,7 +42,7 @@ export function buildExecutionContext(options = {}) {
         hasWorkbook: () => ExcelRuntimeStore.hasWorkbook(),
         ensureWorkbook: () => {
             if (!ExcelRuntimeStore.hasWorkbook()) {
-                throw new Error('No workbook attached. Upload a file before calling attachments APIs.');
+                throw new WorkbookNotLoadedError('attachments API');
             }
         },
         getMetadata: () => ExcelRuntimeStore.getMetadata(),
@@ -72,7 +76,7 @@ export function buildExecutionContext(options = {}) {
                     return draft;
                 });
             } else {
-                throw new Error(`updateSheet() expects a function or data object { headers, rows }, got ${typeof dataOrMutator}`);
+                throw new InvalidMutatorError(dataOrMutator);
             }
         },
         addSheet: (sheetName, options) => ExcelRuntimeStore.addSheet(sheetName, options),
