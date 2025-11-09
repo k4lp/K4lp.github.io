@@ -32,18 +32,29 @@ const EXCEL_API_QUICK_REFERENCE = `
 - \`attachments.downloadWorkbook(filename)\` → **void** - Download current state as .xlsx
 
 **CRITICAL RULES:**
-1. ALWAYS call \`sheet.summary()\` first to check dimensions
+1. ALWAYS call `sheet.summary()` first to check dimensions
 2. NEVER dump entire sheets - use offset/limit (max 200 rows per call)
-3. Character Limits:
-   - **Default: 50 chars** per cell (use for initial scans)
-   - **Medium: 100 chars** (when you need more context)
-   - **Large: 200 chars** (for longer text fields)
-   - **UNLIMITED: Infinity** (for copy-paste operations, full content extraction)
-     - Use \`charLimit: Infinity\` to get complete cell content without truncation
-     - Example: \`sheet.getColumnData({ columnIndex: 0, charLimit: Infinity })\`
-4. Store large results in Vault, don't print to reasoning
-5. All parameters use object format: \`{ paramName: value }\`
-6. Errors include 💡 suggestions and 📝 examples
+3. **Character Limits - CRITICAL DISTINCTION:**
+    - **50 chars (PREVIEW MODE)**: Use ONLY when you want to see/explore data structure
+      - Purpose: Initial scan, understanding schema, checking data types
+      - Example prompts: "What's in this sheet?", "Show me column names"
+
+    - **Infinity (OPERATION MODE)**: Use for ANY actual data work -- THIS IS THE DEFAULT FOR OPERATIONS
+      - Purpose: Extracting, calculating, processing, copying, analyzing
+      - Example prompts: "Get all product names", "Calculate totals", "Find duplicates"
+      - Usage: `sheet.getColumnData({ columnIndex: 0, charLimit: Infinity })`
+
+    - **100-200 chars (CONTEXT PREVIEW)**: Use when long text fields need partial visibility without full extraction
+
+    **DECISION TREE:**
+    - User wants to "see" or "show" data? -> `charLimit: 50`
+    - User wants to "extract", "calculate", "process", "find"? -> `charLimit: Infinity`
+    - User wants to "copy", "export", "analyze"? -> `charLimit: Infinity`
+
+4. **MANDATORY WORKFLOW: ALWAYS scan BEGINNING + END of sheet** (+ MIDDLE if large)
+5. Store large results in Vault, don't print to reasoning
+6. All parameters use object format: `{ paramName: value }`
+7. Errors include ?Y'? suggestions and ?Y"? examples
 `;
 
 const EXCEL_EXPLORATION_GUIDE = `
@@ -134,6 +145,63 @@ allSheets.forEach((sheetName, index) => {
   const preview = sheet.getRowsAsObjects({ limit: 5 });
   vault.set(\`sheet_\${index}_preview\`, preview);
 });
+\`\`\`
+
+**7. CRITICAL: MANDATORY BEGINNING + END SCANNING**
+\`\`\`javascript
+// THIS IS MANDATORY FOR ALL DATA EXPLORATION
+// Never skip this workflow - it's essential for understanding the data
+
+const sheet = attachments.getSheet(0);
+const summary = sheet.summary();
+
+// STEP 1: ALWAYS scan BEGINNING (first 10-20 rows)
+const beginning = sheet.getRowsAsObjects({
+  offset: 0,
+  limit: 15,
+  charLimit: 50  // Preview mode - just looking
+});
+console.log('BEGINNING (rows 0-14):', beginning);
+
+// STEP 2: ALWAYS scan END (last 10-20 rows)
+const endOffset = Math.max(0, summary.rowCount - 15);
+const ending = sheet.getRowsAsObjects({
+  offset: endOffset,
+  limit: 15,
+  charLimit: 50
+});
+console.log(`END (rows ${endOffset}-${summary.rowCount - 1}):`, ending);
+
+// STEP 3: For large datasets (>100 rows), scan MIDDLE too
+if (summary.rowCount > 100) {
+  const middleOffset = Math.floor(summary.rowCount / 2) - 10;
+  const middle = sheet.getRowsAsObjects({
+    offset: middleOffset,
+    limit: 20,
+    charLimit: 50
+  });
+  console.log(`MIDDLE (rows ${middleOffset}-${middleOffset + 19}):`, middle);
+}
+
+// NOW you understand:
+// - Data range and structure
+// - Column types and formats
+// - Whether data is sorted
+// - Presence of headers/footers/summaries
+// - Data quality (nulls, empties, inconsistencies)
+
+// STEP 4: Map user request to what the sheet actually contains
+// STEP 5: Switch to OPERATION MODE (charLimit: Infinity) for extraction/calculation
+const needsExtraction = true; // Replace based on user intent
+if (needsExtraction) {
+  const completeData = sheet.getRowsAsObjects({
+    offset: 0,
+    limit: summary.rowCount,
+    charLimit: Infinity  // Full content for real work
+  });
+  vault.set('complete_dataset', completeData);
+  console.log(`Stored ${completeData.length} rows in vault:complete_dataset`);
+}
 \`\`\`
 
 **CHARACTER LIMIT STRATEGY:**

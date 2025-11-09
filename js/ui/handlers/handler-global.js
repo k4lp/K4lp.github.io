@@ -58,16 +58,29 @@ function bindCollapsibleSections() {
   const toggleButtons = document.querySelectorAll('.collapse-toggle');
 
   toggleButtons.forEach((button) => {
+    const targetId = button.getAttribute('data-target');
+    const targetElement = targetId ? document.getElementById(targetId) : null;
+    const parentBlock = button.closest('.block');
+
+    const updateToggleState = () => {
+      if (!parentBlock) return;
+      const isCollapsed = parentBlock.classList.contains('collapsed');
+      button.textContent = isCollapsed ? '+' : '−';
+      button.setAttribute('aria-expanded', (!isCollapsed).toString());
+      if (targetElement) {
+        targetElement.setAttribute('aria-hidden', isCollapsed.toString());
+      }
+    };
+
+    updateToggleState();
+
     button.addEventListener('click', (e) => {
       e.stopPropagation();
-      const targetId = button.getAttribute('data-target');
-      const targetElement = document.getElementById(targetId);
-      const parentBlock = button.closest('.block');
-
-      if (parentBlock && targetElement) {
-        parentBlock.classList.toggle('collapsed');
-        button.textContent = parentBlock.classList.contains('collapsed') ? '+' : '−';
+      if (!parentBlock || !targetElement) {
+        return;
       }
+      parentBlock.classList.toggle('collapsed');
+      updateToggleState();
     });
   });
 }

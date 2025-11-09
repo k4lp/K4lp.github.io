@@ -91,12 +91,20 @@
                         </header>
 
                         <div id="attachmentBody" class="block-body">
-                            <div class="action-group">
+                            <div class="action-group attachment-actions">
                                 <span id="attachmentStatusPill" class="pill">NONE</span>
-                                <button id="attachmentDownloadOriginal" class="btn btn-sm" title="Download original" disabled>⤓</button>
-                                <button id="attachmentDownloadWorking" class="btn btn-sm" title="Download working" disabled>⤓*</button>
-                                <button id="attachmentReset" class="btn btn-sm" title="Reset" disabled>↺</button>
-                                <button id="attachmentRemove" class="btn btn-sm" title="Remove" disabled>✕</button>
+                                <button id="attachmentDownloadOriginal" class="btn btn-sm btn-icon" title="Download original file" disabled>
+                                    <span class="icon-large">&#x1f4e5;</span>
+                                </button>
+                                <button id="attachmentDownloadWorking" class="btn btn-sm btn-icon" title="Save current changes" disabled>
+                                    <span class="icon-large">&#x1f4be;</span>
+                                </button>
+                                <button id="attachmentReset" class="btn btn-sm btn-icon" title="Reset to original" disabled>
+                                    <span class="icon-large">&#x21ba;</span>
+                                </button>
+                                <button id="attachmentRemove" class="btn btn-sm btn-icon" title="Remove attachment" disabled>
+                                    <span class="icon-large">&#x1f5d1;</span>
+                                </button>
                             </div>
                             <div class="attachment-dropzone" id="attachmentDropzone">
                                 <p>Drop .xlsx/.xls/.csv or click</p>
@@ -171,13 +179,16 @@
                 <div class="panel panel-process">
 
                     <!-- Reasoning Log -->
-                    <section class="block">
+                    <section class="block collapsible" id="reasoningLogSection">
                         <header class="block-header">
-                            <h2>Reasoning Log</h2>
-                            <p class="block-meta">Iteration <span id="iterationCount">0</span></p>
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
+                                <h2>Reasoning Log</h2>
+                                <p class="block-meta">Iteration <span id="iterationCount">0</span></p>
+                            </div>
+                            <button class="collapse-toggle" data-target="reasoningLogBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="reasoningLogBody" class="block-body">
                             <div id="iterationLog" class="log">
                                 <div class="log-placeholder">Intelligent reasoning iterations will appear here</div>
                             </div>
@@ -185,13 +196,16 @@
                     </section>
 
                     <!-- Code Execution -->
-                    <section class="block">
+                    <section class="block collapsible" id="codeExecutionSection">
                         <header class="block-header">
-                            <h2>Code Execution</h2>
-                            <span id="execStatus" class="pill">READY</span>
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
+                                <h2>Code Execution</h2>
+                                <span id="execStatus" class="pill">READY</span>
+                            </div>
+                            <button class="collapse-toggle" data-target="codeExecutionBody">−</button>
                         </header>
 
-                        <div class="block-body">
+                        <div id="codeExecutionBody" class="block-body">
                             <div class="code-editor">
                                 <textarea id="codeInput" rows="8" spellcheck="false" placeholder="// JavaScript execution environment
 console.log('Hello GDRS');
