@@ -297,7 +297,36 @@ function bindQuickActions() {
     if (!btn || btn.disabled) return;
     const action = btn.dataset.action;
     if (action === 'openGuide') {
-      window.open('docs/EXCEL_API_REFERENCE.md', '_blank');
+      console.log('%c📚 EXCEL ATTACHMENT API REFERENCE', 'font-size: 16px; font-weight: bold; color: #2196F3;');
+      console.log('%cQuick Reference:', 'font-weight: bold; margin-top: 10px;');
+      console.log('');
+      console.log('Check & Get Sheets:');
+      console.log('  • attachments.hasWorkbook() → boolean');
+      console.log('  • attachments.getSheetNames() → string[]');
+      console.log('  • attachments.getSheet(nameOrIndex) → SheetHandle');
+      console.log('');
+      console.log('Sheet Reading (ALWAYS call .summary() first):');
+      console.log('  • sheet.summary() → { name, rowCount, columnCount, headers, diff }');
+      console.log('  • sheet.getRowsAsObjects({ offset: 0, limit: 10 })');
+      console.log('  • sheet.sliceRows({ offset: 0, limit: 10 })');
+      console.log('  • sheet.getColumnData({ columnIndex: 2, limit: 100 })');
+      console.log('  • sheet.getRange({ startCell: "A1", endCell: "C10" })');
+      console.log('');
+      console.log('Sheet Writing:');
+      console.log('  • attachments.addSheet(name, { headers: [...], rows: [[...]] })');
+      console.log('  • attachments.updateSheet(name, { headers, rows })');
+      console.log('  • sheet.appendRows([[val1, val2]])');
+      console.log('  • sheet.updateCell({ rowIndex: 0, columnIndex: 0, value: "new" })');
+      console.log('  • sheet.deleteRows({ start: 5, count: 3 })');
+      console.log('');
+      console.log('%cCRITICAL RULES:', 'font-weight: bold; color: #FF5722;');
+      console.log('  1. ALWAYS call sheet.summary() before reading');
+      console.log('  2. NEVER dump entire sheets - use offset/limit (max 200 rows)');
+      console.log('  3. Default charLimit: 50 chars (max 200)');
+      console.log('  4. Store large results in Vault');
+      console.log('  5. All parameters use object format: { paramName: value }');
+      console.log('');
+      console.log('%c💡 API reference logged to console', 'color: #4CAF50;');
       return;
     }
     if (!ExcelRuntimeStore.hasWorkbook()) {
