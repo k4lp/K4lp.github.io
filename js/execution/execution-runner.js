@@ -14,7 +14,7 @@ import { EXECUTION_DEFAULT_TIMEOUT_MS } from '../config/execution-config.js';
 import { expandVaultReferences } from '../utils/vault-reference-resolver.js';
 import { buildExecutionContext } from './execution-context-api.js';
 import { ExecutionStateMachine } from './core/execution-state-machine.js';
-import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
+import { ExcelRuntimeStore } from '../excel/core/excel-store.js';
 
 export class ExecutionRunner {
   constructor(options = {}) {
