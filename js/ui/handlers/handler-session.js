@@ -13,6 +13,7 @@ import { qs } from '../../core/utils.js';
  */
 export function bindSessionHandlers() {
   bindRunButton();
+  bindStickyStopButton();
   bindModelSelector();
 }
 
@@ -29,6 +30,18 @@ function bindRunButton() {
     } else {
       LoopController.startSession();
     }
+  });
+}
+
+/**
+ * Bind sticky stop button in status bar
+ */
+function bindStickyStopButton() {
+  const stickyStopBtn = qs('#stickyStopBtn');
+  if (!stickyStopBtn) return;
+
+  stickyStopBtn.addEventListener('click', () => {
+    LoopController.stopSession();
   });
 }
 

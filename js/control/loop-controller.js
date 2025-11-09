@@ -28,6 +28,8 @@ const MAX_CONSECUTIVE_ERRORS = 3;
 // OLD CODE REMOVED: let consecutiveErrors = 0;
 let currentSessionId = null; // MODULAR: Track active session via session manager
 let loopTimer = null;
+let sessionStartTime = null; // UI timer start timestamp
+let timerInterval = null; // UI timer update interval
 
 function resolveSessionManager() {
   return getReasoningServices().sessionManager;
@@ -65,7 +67,7 @@ export const LoopController = {
     }
 
     // MODULAR: Initialize session using ReasoningSessionManager
-    const sessionStartTime = nowISO();
+    const sessionStartISOTime = nowISO();
     const sessionManager = resolveSessionManager();
 
     if (sessionManager) {
@@ -75,16 +77,36 @@ export const LoopController = {
         model: activeModelId
       });
       currentSessionId = session.id;
-      console.log(`[${sessionStartTime}] MODULAR SESSION CREATED - ID: ${currentSessionId}, Query: "${rawQuery}"`);
+      console.log(`[${sessionStartISOTime}] MODULAR SESSION CREATED - ID: ${currentSessionId}, Query: "${rawQuery}"`);
     } else {
       // Fallback if modular system not loaded
       console.warn('[ModularSystem] ReasoningSessionManager not available - using legacy mode');
       currentSessionId = 'legacy-' + Date.now();
     }
 
-    console.log(`[${sessionStartTime}] SESSION STARTING - Query: "${rawQuery}"`);
+    console.log(`[${sessionStartISOTime}] SESSION STARTING - Query: "${rawQuery}"`);
 
     if (sessionPill) sessionPill.textContent = 'RUNNING';
+
+    // Show sticky status bar and start timer
+    sessionStartTime = Date.now();
+    const statusBar = document.getElementById('sessionStatusBar');
+    if (statusBar) {
+      statusBar.classList.remove('hidden');
+      document.body.classList.add('session-active');
+    }
+
+    // Update button state
+    const runBtn = qs('#runQueryBtn');
+    if (runBtn) {
+      runBtn.classList.add('btn-running');
+      const btnText = runBtn.querySelector('.btn-text');
+      const btnTimer = runBtn.querySelector('.btn-timer');
+      if (btnText) btnText.textContent = 'Running';
+      if (btnTimer) btnTimer.classList.remove('hidden');
+    }
+
+    timerInterval = setInterval(updateTimer, 1000);
 
     // Clean slate initialization
     Storage.saveCurrentQuery(rawQuery);
@@ -92,7 +114,7 @@ export const LoopController = {
     Storage.saveGoals([]);
     Storage.saveMemory([]);
     Storage.saveVault([]);
-    Storage.saveReasoningLog([`=== SESSION START ===\nTimestamp: ${sessionStartTime}\nQuery: ${rawQuery}\nInitiating intelligent analysis...`]);
+    Storage.saveReasoningLog([`=== SESSION START ===\nTimestamp: ${sessionStartISOTime}\nQuery: ${rawQuery}\nInitiating intelligent analysis...`]);
     Storage.saveExecutionLog([]);
     Storage.saveToolActivityLog([]);
     Storage.saveLastExecutedCode('');
@@ -131,13 +153,36 @@ export const LoopController = {
       console.log(`[${nowISO()}] Loop timer cleared`);
     }
 
+    // Clear timer and hide sticky bar
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    sessionStartTime = null;
+
+    const statusBar = document.getElementById('sessionStatusBar');
+    if (statusBar) {
+      statusBar.classList.add('hidden');
+      document.body.classList.remove('session-active');
+    }
+
     currentSessionId = null; // MODULAR: Clear session reference
 
     const sessionPill = qs('#sessionStatus');
     if (sessionPill) sessionPill.textContent = 'IDLE';
 
     const runBtn = qs('#runQueryBtn');
-    if (runBtn) runBtn.textContent = 'Run Analysis';
+    if (runBtn) {
+      runBtn.textContent = 'Run Analysis';
+      runBtn.classList.remove('btn-running');
+      const btnText = runBtn.querySelector('.btn-text');
+      const btnTimer = runBtn.querySelector('.btn-timer');
+      if (btnText) btnText.textContent = 'Run Analysis';
+      if (btnTimer) {
+        btnTimer.textContent = '00:00';
+        btnTimer.classList.add('hidden');
+      }
+    }
 
     eventBus.emit(Events.SESSION_STOP);
     console.log(`[${nowISO()}] Session stopped`);
@@ -585,6 +630,28 @@ function finishSession(reason) {
 }
 
 /**
+ * Update session timer display
+ */
+function updateTimer() {
+  if (!sessionStartTime) return;
+
+  const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+  const hours = Math.floor(elapsed / 3600);
+  const minutes = Math.floor((elapsed % 3600) / 60);
+  const seconds = elapsed % 60;
+
+  const display = hours > 0
+    ? `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+  const stickyTimer = document.getElementById('stickySessionTimer');
+  const btnTimer = document.getElementById('btnTimer');
+
+  if (stickyTimer) stickyTimer.textContent = display;
+  if (btnTimer) btnTimer.textContent = display;
+}
+
+/**
  * Update iteration counter in UI
  */
 function updateIterationDisplay() {
@@ -595,6 +662,21 @@ function updateIterationDisplay() {
 
   const iterCountEl = qs('#iterationCount');
   if (iterCountEl) iterCountEl.textContent = String(iterationCount);
+
+  // Update sticky bar iteration counter
+  const stickyCount = document.getElementById('stickyIterationCount');
+  if (stickyCount) stickyCount.textContent = String(iterationCount);
+
+  // Update session iteration display
+  const sessionIterDisplay = qs('#sessionIterationDisplay');
+  if (sessionIterDisplay) {
+    if (iterationCount > 0) {
+      sessionIterDisplay.textContent = `Iteration ${iterationCount}`;
+      sessionIterDisplay.classList.remove('hidden');
+    } else {
+      sessionIterDisplay.classList.add('hidden');
+    }
+  }
 }
 
 /**
