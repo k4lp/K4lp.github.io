@@ -13,8 +13,12 @@ import { TasksAPI } from './apis/tasks-api.js';
 import { GoalsAPI } from './apis/goals-api.js';
 import { nowISO } from '../core/utils.js';
 import { createInstrumentedAPIs } from './apis/instrumented-api-factory.js';
-import { ExcelRuntimeStore } from '../state/excel-runtime-store.js';
-import { createAttachmentsHelper } from './apis/attachments-helper.js';
+import { ExcelRuntimeStore } from '../excel/core/excel-store.js';
+import { createAttachmentsHelper } from '../excel/api/excel-helpers.js';
+import {
+  WorkbookNotLoadedError,
+  InvalidMutatorError
+} from '../excel/errors/excel-errors.js';
 
 /**
  * Build execution context with all APIs
@@ -38,7 +42,7 @@ export function buildExecutionContext(options = {}) {
         hasWorkbook: () => ExcelRuntimeStore.hasWorkbook(),
         ensureWorkbook: () => {
             if (!ExcelRuntimeStore.hasWorkbook()) {
-                throw new Error('No workbook attached. Upload a file before calling attachments APIs.');
+                throw new WorkbookNotLoadedError('attachments API');
             }
         },
         getMetadata: () => ExcelRuntimeStore.getMetadata(),
@@ -46,7 +50,36 @@ export function buildExecutionContext(options = {}) {
         getWorkingCopy: () => ExcelRuntimeStore.getWorkingCopy(),
         getSheetNames: () => ExcelRuntimeStore.getSheetNames(),
         getDiffIndex: () => ExcelRuntimeStore.getDiffIndex(),
-        updateSheet: (sheetName, mutator) => ExcelRuntimeStore.mutateSheet(sheetName, mutator),
+        updateSheet: (sheetName, dataOrMutator) => {
+            if (typeof dataOrMutator === 'function') {
+                // Original mutator pattern
+                ExcelRuntimeStore.mutateSheet(sheetName, dataOrMutator);
+            } else if (dataOrMutator && typeof dataOrMutator === 'object') {
+                // Direct data replacement (easier for LLM)
+                ExcelRuntimeStore.mutateSheet(sheetName, (draft) => {
+                    const { headers, rows } = dataOrMutator;
+                    if (headers) {
+                        draft.headers = headers;
+                        draft.columnCount = headers.length;
+                    }
+                    if (rows) {
+                        const normalizedRows = rows.map(rowArray =>
+                            (draft.headers || headers || []).map((_, idx) => ({
+                                value: rowArray[idx] ?? null,
+                                originalValue: null,
+                                lastEditedAt: new Date().toISOString()
+                            }))
+                        );
+                        draft.rows = normalizedRows;
+                        draft.rowCount = normalizedRows.length;
+                    }
+                    return draft;
+                });
+            } else {
+                throw new InvalidMutatorError(dataOrMutator);
+            }
+        },
+        addSheet: (sheetName, options) => ExcelRuntimeStore.addSheet(sheetName, options),
         resetWorkingCopy: () => ExcelRuntimeStore.resetWorkingCopy(),
         getMutationLog: () => ExcelRuntimeStore.getMutationLog(),
         logSummary: () => console.table(helper.listSheets({ includeStats: true }).map(({ name, summary }) => ({

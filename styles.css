@@ -2534,3 +2534,342 @@ h1, h2, h3, h4, h5, h6 {
     opacity: 0.4;
     cursor: not-allowed;
 }
+
+/* ==========================================
+   MODERN ATTACHMENTS UI - REDESIGN
+   ========================================== */
+
+/* Status Pill - Modern Design */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.status-pill--idle {
+    background: rgba(150, 150, 150, 0.1);
+    color: #999;
+}
+
+.status-pill--active {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-dot--idle {
+    background: #999;
+    animation: none;
+}
+
+.status-dot--active {
+    background: #4CAF50;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.empty-state__icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.empty-state__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.empty-state__description {
+    font-size: 13px;
+    color: #999;
+    line-height: 1.5;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.stat-card--highlight {
+    background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 193, 7, 0.1));
+    border-color: rgba(255, 152, 0, 0.3);
+}
+
+.stat-card__icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.stat-card__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-card__label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #999;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.stat-card__value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Changes Section */
+.changes-section {
+    background: rgba(255, 152, 0, 0.05);
+    border: 1px solid rgba(255, 152, 0, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+}
+
+.stat-row__value {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.badge--success {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+}
+
+.badge--warning {
+    background: rgba(255, 152, 0, 0.15);
+    color: #FF9800;
+}
+
+.badge--danger {
+    background: rgba(244, 67, 54, 0.15);
+    color: #F44336;
+}
+
+/* Sheet Cards */
+.sheet-card {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.sheet-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.sheet-card--modified {
+    border-left: 3px solid #FF9800;
+}
+
+.sheet-card__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.sheet-card__icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.sheet-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sheet-card__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.sheet-card__meta {
+    font-size: 12px;
+    color: #999;
+}
+
+.sheet-card__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #FF9800;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.sheet-card__badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* Mutations List */
+.mutations-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.mutation-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: all 0.15s ease;
+}
+
+.mutation-item:hover {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.mutation-item__icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.mutation-item__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.mutation-item__action {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.mutation-item__action strong {
+    text-transform: capitalize;
+    color: #333;
+}
+
+.mutation-sheet {
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #666;
+}
+
+.mutation-item__time {
+    font-size: 11px;
+    color: #999;
+}
+
+/* Scrollbar Styling */
+.mutations-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mutations-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 3px;
+}
+
+.mutations-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.mutations-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+

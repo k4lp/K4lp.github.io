@@ -1,6 +1,6 @@
-import { ExcelRuntimeStore } from '../../state/excel-runtime-store.js';
-import { parseWorkbook } from '../../utils/excel-parser.js';
-import { downloadWorkbook } from '../../utils/excel-exporter.js';
+import { ExcelRuntimeStore } from '../../excel/core/excel-store.js';
+import { parseWorkbook } from '../../excel/core/excel-parser.js';
+import { downloadWorkbook } from '../../excel/core/excel-exporter.js';
 import { eventBus, Events } from '../../core/event-bus.js';
 
 const MAX_ATTACHMENT_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB

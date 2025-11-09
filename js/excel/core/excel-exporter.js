@@ -29,4 +29,3 @@ export function downloadWorkbook(sheets, fileName = 'attachment.xlsx') {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-

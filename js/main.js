@@ -53,7 +53,7 @@ import { LoopController } from './control/loop-controller.js';
 import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
 import { getModularInitialization } from './core/modular-system-init.js';
-import { ExcelRuntimeStore } from './state/excel-runtime-store.js';
+import { ExcelRuntimeStore } from './excel/core/excel-store.js';
 
 /**
  * Self-executing bootstrap with clean module organization
