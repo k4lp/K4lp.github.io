@@ -5,7 +5,7 @@
 
 import { LS_KEYS } from '../../core/constants.js';
 import { Storage } from '../../storage/storage.js';
-import { ExcelRuntimeStore } from '../../state/excel-runtime-store.js';
+import { ExcelRuntimeStore } from '../../excel/core/excel-store.js';
 
 /**
  * Bind global event handlers
