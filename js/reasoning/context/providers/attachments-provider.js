@@ -32,7 +32,7 @@ const EXCEL_API_QUICK_REFERENCE = `
 - \`attachments.downloadWorkbook(filename)\` → **void** - Download current state as .xlsx
 
 **CRITICAL RULES:**
-1. ALWAYS call `sheet.summary()` first to check dimensions
+1. ALWAYS call \`sheet.summary()\` first to check dimensions
 2. NEVER dump entire sheets - use offset/limit (max 200 rows per call)
 3. **Character Limits - CRITICAL DISTINCTION:**
     - **50 chars (PREVIEW MODE)**: Use ONLY when you want to see/explore data structure
@@ -42,18 +42,18 @@ const EXCEL_API_QUICK_REFERENCE = `
     - **Infinity (OPERATION MODE)**: Use for ANY actual data work -- THIS IS THE DEFAULT FOR OPERATIONS
       - Purpose: Extracting, calculating, processing, copying, analyzing
       - Example prompts: "Get all product names", "Calculate totals", "Find duplicates"
-      - Usage: `sheet.getColumnData({ columnIndex: 0, charLimit: Infinity })`
+      - Usage: \`sheet.getColumnData({ columnIndex: 0, charLimit: Infinity })\`
 
     - **100-200 chars (CONTEXT PREVIEW)**: Use when long text fields need partial visibility without full extraction
 
     **DECISION TREE:**
-    - User wants to "see" or "show" data? -> `charLimit: 50`
-    - User wants to "extract", "calculate", "process", "find"? -> `charLimit: Infinity`
-    - User wants to "copy", "export", "analyze"? -> `charLimit: Infinity`
+    - User wants to "see" or "show" data? -> \`charLimit: 50\`
+    - User wants to "extract", "calculate", "process", "find"? -> \`charLimit: Infinity\`
+    - User wants to "copy", "export", "analyze"? -> \`charLimit: Infinity\`
 
 4. **MANDATORY WORKFLOW: ALWAYS scan BEGINNING + END of sheet** (+ MIDDLE if large)
 5. Store large results in Vault, don't print to reasoning
-6. All parameters use object format: `{ paramName: value }`
+6. All parameters use object format: \`{ paramName: value }\`
 7. Errors include ?Y'? suggestions and ?Y"? examples
 `;
 
@@ -170,7 +170,7 @@ const ending = sheet.getRowsAsObjects({
   limit: 15,
   charLimit: 50
 });
-console.log(`END (rows ${endOffset}-${summary.rowCount - 1}):`, ending);
+console.log(\`END (rows ${endOffset}-${summary.rowCount - 1}):\`, ending);
 
 // STEP 3: For large datasets (>100 rows), scan MIDDLE too
 if (summary.rowCount > 100) {
@@ -180,7 +180,7 @@ if (summary.rowCount > 100) {
     limit: 20,
     charLimit: 50
   });
-  console.log(`MIDDLE (rows ${middleOffset}-${middleOffset + 19}):`, middle);
+  console.log(\`MIDDLE (rows ${middleOffset}-${middleOffset + 19}):\`, middle);
 }
 
 // NOW you understand:
@@ -200,7 +200,7 @@ if (needsExtraction) {
     charLimit: Infinity  // Full content for real work
   });
   vault.set('complete_dataset', completeData);
-  console.log(`Stored ${completeData.length} rows in vault:complete_dataset`);
+  console.log(\`Stored ${completeData.length} rows in vault:complete_dataset\`);
 }
 \`\`\`
 
