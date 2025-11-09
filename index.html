@@ -29,6 +29,23 @@
             </div>
         </header>
 
+        <!-- Sticky Session Status Bar (shown when running) -->
+        <div id="sessionStatusBar" class="session-status-bar hidden">
+            <div class="status-bar-content">
+                <div class="status-bar-left">
+                    <span class="status-indicator running"></span>
+                    <span class="status-text">RUNNING</span>
+                </div>
+                <div class="status-bar-center">
+                    <span class="status-timer" id="stickySessionTimer">00:00</span>
+                </div>
+                <div class="status-bar-right">
+                    <span class="status-iterations">Iteration <span id="stickyIterationCount">0</span></span>
+                    <button id="stickyStopBtn" class="btn btn-sm btn-danger">Stop</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Layout -->
         <main>
             <div class="container-main">
@@ -136,8 +153,14 @@
                             </div>
 
                             <div class="action-group">
-                                <button id="runQueryBtn" class="btn btn-primary btn-lg">Run Analysis</button>
-                                <span id="sessionStatus" class="pill">IDLE</span>
+                                <button id="runQueryBtn" class="btn btn-primary btn-lg btn-with-timer">
+                                    <span class="btn-text">Run Analysis</span>
+                                    <span id="btnTimer" class="btn-timer hidden">00:00</span>
+                                </button>
+                                <div class="session-info">
+                                    <span id="sessionStatus" class="pill">IDLE</span>
+                                    <span id="sessionIterationDisplay" class="session-meta hidden">Iteration 0</span>
+                                </div>
                             </div>
                         </div>
                     </section>
