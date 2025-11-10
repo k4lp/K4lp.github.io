@@ -43,6 +43,20 @@ export const REASONING_CONTEXT_SECTIONS = [
     includeWhenEmpty: false
   },
   {
+    id: 'externalKnowledge',
+    providerId: 'externalKnowledge',
+    heading: '**External Knowledge:**',
+    fallback: '',
+    includeWhenEmpty: false
+  },
+  {
+    id: 'subAgentTrace',
+    providerId: 'subAgentTrace',
+    heading: '**Sub-Agent Trace:**',
+    fallback: '',
+    includeWhenEmpty: false
+  },
+  {
     id: 'tasks',
     providerId: 'tasks',
     heading: '**Current Tasks:**',

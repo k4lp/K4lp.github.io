@@ -14,6 +14,7 @@ import { qs, nowISO } from '../core/utils.js';
 import { getReasoningServices } from '../reasoning/services.js';
 import { apiAccessTracker } from '../execution/apis/api-access-tracker.js';
 import { silentErrorRecovery } from '../reasoning/tools/silent-error-recovery.js';
+import { invokeSubAgent } from '../subagent/sub-agent-api.js';
 import {
   MAX_ITERATIONS,
   ITERATION_DELAY,
@@ -120,6 +121,7 @@ export const LoopController = {
     Storage.saveLastExecutedCode('');
     Storage.saveFinalOutput('');
     Storage.clearFinalOutputVerification();
+    resetSubAgentState();
 
     console.log(`[${nowISO()}] SESSION INITIALIZED - Storage cleared, starting iteration loop in 1000ms`);
 
@@ -710,6 +712,13 @@ function persistModelSelection(selectEl, source) {
   return Storage.saveSelectedModel(selectEl.value, { label, source });
 }
 
+function resetSubAgentState() {
+  Storage.clearSubAgentLastResult?.();
+  Storage.clearSubAgentTrace?.();
+  Storage.clearSubAgentRuntimeState?.();
+  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, null);
+}
+
 /**
  * Extract previous reasoning steps from reasoning log
  * Used for silent error recovery to provide context
@@ -745,3 +754,4 @@ function extractPreviousReasoningSteps(reasoningLog, currentIteration) {
   console.log(`[${nowISO()}] Extracted ${steps.length} previous reasoning steps for recovery`);
   return steps;
 }
+

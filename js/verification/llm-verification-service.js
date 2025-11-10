@@ -166,6 +166,8 @@ Please verify the following and respond in the specified format:
 4. **Coherence**: Is the output well-structured and coherent?
 5. **Goals Alignment**: Does the output align with the stated goals?
 6. **Quality**: Is the output of production-level quality?
+7. **Placeholder Sweep**: Confirm there are no empty braces (e.g., {{}}), placeholder vault refs, "TBD", or similar unresolved tokens.
+8. **Sub-Agent Usage**: If sub-agent findings were available, were they cited correctly or explicitly dismissed with reasoning?
 
 ## RESPONSE FORMAT
 
@@ -180,7 +182,7 @@ WARNINGS:
 SUMMARY:
 [Brief 2-3 sentence summary of your verification assessment]
 ACTIONS TO TAKE:
-[Explain what has to be done in short but precise and perfect way. Tell it to use tools again to get the required knowledge if required.]
+[Explain what has to be done in short but precise and perfect way. Instruct the agent to re-run tools/sub-agents or add missing vault entries when gaps exist.]
 
 Be strict and thorough. If there are ANY issues that would prevent this from being a high-quality final output, mark as FAIL.`;
   }

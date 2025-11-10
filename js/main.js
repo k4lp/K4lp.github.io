@@ -54,6 +54,8 @@ import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
 import { getModularInitialization } from './core/modular-system-init.js';
 import { ExcelRuntimeStore } from './excel/core/excel-store.js';
+import { SubAgentOrchestrator } from './subagent/sub-agent-orchestrator.js';
+import { SUB_AGENTS } from './subagent/agents-config.js';
 
 /**
  * Self-executing bootstrap with clean module organization
@@ -142,6 +144,8 @@ import { ExcelRuntimeStore } from './excel/core/excel-store.js';
       Renderer,
       bindEvents,
       attachments: ExcelRuntimeStore,
+      SubAgentOrchestrator,
+      SUB_AGENTS,
 
       // Initialization
       boot,

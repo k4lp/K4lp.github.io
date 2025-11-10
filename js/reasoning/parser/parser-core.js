@@ -72,8 +72,18 @@ export const ReasoningParser = {
       vault: (allOps.datavault || []).map(op => {
         // Merge content if it's a block operation
         const attrs = { ...op.attributes };
+        if (!attrs.id && attrs.identifier) {
+          attrs.id = attrs.identifier;
+        }
         if (op.content) {
           attrs.content = op.content;
+        }
+        return attrs;
+      }),
+      subagent: (allOps.subagent || []).map(op => {
+        const attrs = { ...op.attributes };
+        if (!attrs.query && op.content) {
+          attrs.query = op.content.trim();
         }
         return attrs;
       }),

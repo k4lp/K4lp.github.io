@@ -41,3 +41,8 @@ export {
   getTypeColor,
   renderToolActivities
 } from './renderer/renderer-helpers.js';
+
+export {
+  renderSubAgentStatus,
+  renderSubAgentPanel
+} from './renderer/renderer-subagent.js';

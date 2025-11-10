@@ -55,7 +55,34 @@ export const LS_KEYS = {
   MAX_OUTPUT_TOKENS: 'gdrs_max_output_tokens',
 
   /** Pending execution error context (single-use warning for next iteration) */
-  PENDING_EXECUTION_ERROR: 'gdrs_pending_execution_error'
+  PENDING_EXECUTION_ERROR: 'gdrs_pending_execution_error',
+
+  /** Feature toggle - enable sub-agent knowledge search */
+  SETTINGS_ENABLE_SUB_AGENT: 'gdrs_settings_enable_sub_agent',
+
+  /** Feature toggle - enable Excel helper instructions */
+  SETTINGS_ENABLE_EXCEL_HELPERS: 'gdrs_settings_enable_excel_helpers',
+
+  /** Preferred default sub-agent id */
+  SETTINGS_SUB_AGENT_DEFAULT: 'gdrs_settings_sub_agent_default',
+
+  /** Sub-agent request timeout */
+  SETTINGS_SUB_AGENT_TIMEOUT: 'gdrs_settings_sub_agent_timeout',
+
+  /** Sub-agent cache TTL */
+  SETTINGS_SUB_AGENT_CACHE_TTL: 'gdrs_settings_sub_agent_cache_ttl',
+
+  /** Cached sub-agent knowledge payload */
+  SUBAGENT_LAST_RESULT: 'gdrs_subagent_last_result',
+
+  /** Detailed sub-agent trace */
+  SUBAGENT_TRACE: 'gdrs_subagent_trace',
+
+  /** Runtime status snapshot for the sub-agent */
+  SUBAGENT_RUNTIME_STATE: 'gdrs_subagent_runtime_state',
+
+  /** Stored Groq API keys */
+  GROQ_API_KEYS: 'gdrs_groq_api_keys'
 };
 
 /**

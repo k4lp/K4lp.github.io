@@ -1,0 +1,12 @@
+﻿{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Static Site Preview",
+            "type": "pwa-chrome",
+            "request": "launch",
+            "url": "http://localhost:5500",
+            "webRoot": "${workspaceFolder}"
+        }
+    ]
+}

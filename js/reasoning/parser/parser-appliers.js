@@ -21,6 +21,7 @@ function normalizeOperations(operations = {}) {
     memories: toArray(operations.memories),
     tasks: toArray(operations.tasks),
     goals: toArray(operations.goals),
+    subagent: toArray(operations.subagent),
     jsExecute: toArray(operations.jsExecute),
     finalOutput: toArray(operations.finalOutput)
   };
