@@ -179,15 +179,16 @@
 
                             <div class="field subagent-status">
                                 <div class="subagent-status-header">
-                                    <div>
-                                        <label>External Knowledge</label>
-                                        <p class="field-hint">Latest response from the web sub-agent</p>
-                                    </div>
-                                    <span id="subAgentStatusPill" class="pill pill-muted">Disabled</span>
+                                <div>
+                                    <label>External Knowledge</label>
+                                    <p class="field-hint">Latest response from the web sub-agent</p>
                                 </div>
+                                <span id="subAgentStatusPill" class="pill pill-muted">Disabled</span>
+                            </div>
                                 <div id="subAgentStatusBody" class="subagent-status-body">
                                     <p class="field-hint">Enable the sub-agent toggle to fetch web research automatically.</p>
                                 </div>
+                                <button id="subAgentRunBtn" class="btn btn-sm btn-secondary">Run Sub-Agent Now</button>
                             </div>
 
                             <div class="field">
@@ -205,6 +206,66 @@
                                     <span id="sessionIterationDisplay" class="session-meta hidden">Iteration 0</span>
                                 </div>
                             </div>
+                        </div>
+                    </section>
+
+                    <!-- System Instructions -->
+                    <section class="block collapsible">
+                        <header class="block-header">
+                            <div>
+                                <h2>System Instructions</h2>
+                                <p class="block-meta">Core execution pillars</p>
+                            </div>
+                            <button class="collapse-toggle" data-target="systemInstructionsBody">-</button>
+                        </header>
+
+                        <div id="systemInstructionsBody" class="block-body system-instructions">
+                            <p class="system-instructions-intro">Tasks, Goals, Memory, Code Execution, and the Data Vault are the backbone of GDRS—follow these directives every iteration.</p>
+
+                            <article class="system-instruction">
+                                <h3>Tasks</h3>
+                                <p>Tasks are the public plan of record.</p>
+                                <ul>
+                                    <li>Break every query into numbered, action-oriented tasks before running code.</li>
+                                    <li>Update statuses as soon as work finishes so verification and UI stay trustworthy.</li>
+                                </ul>
+                            </article>
+
+                            <article class="system-instruction">
+                                <h3>Goals</h3>
+                                <p>Goals define measurable success criteria.</p>
+                                <ul>
+                                    <li>Capture 2-4 concise goals that describe what “done” looks like for the session.</li>
+                                    <li>Mark a goal achieved only when evidence exists in tasks, memory, or the vault.</li>
+                                </ul>
+                            </article>
+
+                            <article class="system-instruction">
+                                <h3>Memory</h3>
+                                <p>Memory is the durable knowledge base between iterations.</p>
+                                <ul>
+                                    <li>Store only facts, constraints, or decisions that future iterations must honor.</li>
+                                    <li>Give each entry a clear identifier and cite the source or iteration when possible.</li>
+                                </ul>
+                            </article>
+
+                            <article class="system-instruction">
+                                <h3>Code Execution</h3>
+                                <p>The JavaScript executor is the only approved automation surface.</p>
+                                <ul>
+                                    <li>Run code through the execution queue so logs, timers, and snapshots remain consistent.</li>
+                                    <li>Console-log assumptions, inputs, and outputs so the reasoning log can justify every action.</li>
+                                </ul>
+                            </article>
+
+                            <article class="system-instruction">
+                                <h3>Data Vault</h3>
+                                <p>The vault holds bulky or structured artifacts.</p>
+                                <ul>
+                                    <li>Store large tables, API transcripts, and reference material here and cite them with <code>{{&lt;vaultref id="..." /&gt;}}</code>.</li>
+                                    <li>Prefer updating existing entries over new IDs to keep downstream references stable.</li>
+                                </ul>
+                            </article>
                         </div>
                     </section>
 

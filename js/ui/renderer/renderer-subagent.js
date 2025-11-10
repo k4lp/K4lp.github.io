@@ -9,6 +9,8 @@ export function renderSubAgentStatus() {
 
   const settings = Storage.loadSubAgentSettings?.() || {};
   const lastResult = Storage.loadSubAgentLastResult?.();
+  const history = Storage.loadSubAgentTraceHistory?.(1) || [];
+  const latestTrace = history[0] || null;
 
   if (!settings.enableSubAgent) {
     pill.textContent = 'Disabled';
@@ -17,26 +19,40 @@ export function renderSubAgentStatus() {
     return;
   }
 
-  const agentLabel = lastResult?.agentName || lastResult?.agentId || settings.defaultAgent || 'Sub-agent';
-  const timeLabel = lastResult?.timestamp
-    ? new Date(lastResult.timestamp).toLocaleString()
-    : 'Pending';
+  const agentLabel = latestTrace?.agentName || latestTrace?.agentId || lastResult?.agentName || lastResult?.agentId || settings.defaultAgent || 'Sub-agent';
+  const timeLabel = latestTrace?.finishedAt
+    ? new Date(latestTrace.finishedAt).toLocaleString()
+    : lastResult?.timestamp
+      ? new Date(lastResult.timestamp).toLocaleString()
+      : 'Pending';
 
-  if (!lastResult?.content) {
-    pill.textContent = 'Idle';
+  if (!latestTrace && !lastResult?.content) {
+    pill.textContent = 'IDLE';
     pill.className = 'pill pill-warning';
     body.innerHTML = [
-      `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} · Status: waiting for next run</p>`,
-      '<p class="field-hint">The agent will auto-run when a research-heavy query is detected.</p>'
+      `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} - Status: waiting for next run</p>`,
+      '<p class="field-hint">Trigger the sub-agent via the button or the {{<subagent/>}} tool.</p>'
     ].join('');
     return;
   }
 
-  pill.textContent = 'Ready';
-  pill.className = 'pill pill-success';
-  const snippet = escapeHtml(lastResult.content).split('\n').slice(0, 3).join('<br>');
+  const status = latestTrace?.status || (lastResult?.content ? 'ready' : 'idle');
+  const statusClass = status === 'error'
+    ? 'pill pill-danger'
+    : status === 'cached'
+      ? 'pill pill-info'
+      : status === 'running'
+        ? 'pill pill-warning'
+        : 'pill pill-success';
+
+  pill.textContent = status.toUpperCase();
+  pill.className = statusClass;
+
+  const snippetSource = latestTrace?.summary || lastResult?.content || 'No summary available yet.';
+  const snippet = escapeHtml(snippetSource).split('\n').slice(0, 3).join('<br>');
+
   body.innerHTML = [
-    `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} · Updated: ${escapeHtml(timeLabel)}</p>`,
+    `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} - Updated: ${escapeHtml(timeLabel)}</p>`,
     `<div class="status-content">${snippet}</div>`
   ].join('');
 }
@@ -47,17 +63,29 @@ export function renderSubAgentPanel() {
     return;
   }
 
-  const trace = Storage.loadSubAgentTrace?.();
-  if (!trace) {
+  const history = Storage.loadSubAgentTraceHistory?.(5) || [];
+  if (history.length === 0) {
     container.innerHTML = '<p class="field-hint">No sub-agent activity yet. Run a research query to populate this console.</p>';
     return;
   }
 
+  container.innerHTML = history
+    .map((trace, index) => renderTraceEntry(trace, index))
+    .join('\n');
+}
+
+function renderTraceEntry(trace, index) {
   const parts = [];
+  parts.push(`<div class="subagent-trace-entry">
+    <header class="subagent-entry-header">
+      <span class="entry-title">Invocation #${index + 1}</span>
+      <span class="pill ${trace.status === 'error' ? 'pill-danger' : trace.status === 'cached' ? 'pill-info' : 'pill-success'}">${escapeHtml(capitalize(trace.status || 'unknown'))}</span>
+    </header>`);
   parts.push(renderSummary(trace));
   parts.push(renderTools(trace));
   parts.push(renderPrompt(trace));
-  container.innerHTML = parts.join('\n');
+  parts.push('</div>');
+  return parts.join('\n');
 }
 
 function renderSummary(trace) {

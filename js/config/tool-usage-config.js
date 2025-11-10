@@ -38,6 +38,13 @@ export const TOOL_OPERATION_PIPELINE = [
     persistEntities: true
   },
   {
+    id: 'subagent',
+    summaryKey: 'subagent',
+    processorId: 'subagent',
+    operationsKey: 'subagent',
+    persistEntities: false
+  },
+  {
     id: 'executions',
     summaryKey: 'executions',
     processorId: 'jsExecute',
@@ -61,6 +68,7 @@ export const TOOL_SUMMARY_BLUEPRINT = {
   memory: [],
   tasks: [],
   goals: [],
+  subagent: [],
   executions: [],
   finalOutput: [],
   errors: [],

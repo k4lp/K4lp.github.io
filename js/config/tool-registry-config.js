@@ -306,6 +306,7 @@ export const TOOL_DEFINITIONS = {
                 id: {
                     required: true,
                     validate: 'identifier',
+                    alternativeKeys: ['identifier'],
                     description: 'Unique identifier for vault entry',
                 },
                 action: {
@@ -340,6 +341,44 @@ export const TOOL_DEFINITIONS = {
             },
         },
         storage: STORAGE_ENTITIES.VAULT,
+    },
+
+    SUBAGENT: {
+        id: 'subagent',
+        name: 'Sub-Agent Invocation',
+        type: TOOL_TYPES.HYBRID,
+        category: TOOL_CATEGORIES.EXECUTION,
+        patterns: {
+            selfClosing: buildSelfClosingPattern('subagent'),
+            block: buildBlockPattern('subagent'),
+        },
+        schema: {
+            hasContent: true,
+            requiresContent: false,
+            attributes: {
+                query: {
+                    required: false,
+                    type: 'string',
+                    description: 'Query passed to the sub-agent',
+                },
+                agent: {
+                    required: false,
+                    type: 'string',
+                    description: 'Agent identifier (defaults to user setting)',
+                },
+                timeout: {
+                    required: false,
+                    type: 'number',
+                    description: 'Timeout in milliseconds',
+                },
+                cacheTtl: {
+                    required: false,
+                    type: 'number',
+                    description: 'Cache TTL for this invocation',
+                }
+            },
+        },
+        storage: null,
     },
 
     // ========================================================================

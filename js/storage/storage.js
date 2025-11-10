@@ -15,6 +15,7 @@ const TRANSIENT_REASONING_PATTERNS = [
 const DEFAULT_SUB_AGENT_AGENT_ID = 'webKnowledge';
 const DEFAULT_SUB_AGENT_TIMEOUT = 30000;
 const DEFAULT_SUB_AGENT_CACHE_TTL = 3600000;
+const MAX_SUB_AGENT_TRACE_ENTRIES = 5;
 
 export const Storage = {
   // === KEYPOOL MANAGEMENT ===
@@ -161,6 +162,47 @@ export const Storage = {
   saveGoals(goals) {
     localStorage.setItem(LS_KEYS.GOALS, JSON.stringify(goals));
     eventBus.emit(Events.GOALS_UPDATED, goals);
+    return goals;
+  },
+
+  getAllGoals() {
+    return this.loadGoals();
+  },
+
+  getGoal(identifier) {
+    const id = normalizeIdentifier(identifier);
+    if (!id) return null;
+    return this.loadGoals().find(goal => goal.identifier === id) || null;
+  },
+
+  saveGoal(goalOrIdentifier, payload, metadata = {}) {
+    const goals = this.loadGoals();
+    const { id, data } = normalizeEntityArguments(goalOrIdentifier, payload, metadata);
+    const index = goals.findIndex(goal => goal.identifier === id);
+    const existing = index >= 0 ? goals[index] : null;
+    const entry = buildGoalEntry(id, data, existing);
+
+    if (index >= 0) {
+      goals[index] = entry;
+    } else {
+      goals.push(entry);
+    }
+
+    this.saveGoals(goals);
+    return entry;
+  },
+
+  updateGoal(identifier, updates = {}) {
+    const id = normalizeIdentifier(identifier);
+    if (!id) {
+      throw new Error('Storage.updateGoal requires a valid identifier');
+    }
+
+    if (!this.getGoal(id)) {
+      throw new Error(`Goal not found: ${id}`);
+    }
+
+    return this.saveGoal(id, updates);
   },
 
   loadMemory() {
@@ -169,9 +211,34 @@ export const Storage = {
     );
   },
   
-  saveMemory(memory) {
-    localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memory));
-    eventBus.emit(Events.MEMORY_UPDATED, memory);
+  saveMemory(memoryOrIdentifier, payload, metadata = {}) {
+    if (Array.isArray(memoryOrIdentifier)) {
+      localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(memoryOrIdentifier));
+      eventBus.emit(Events.MEMORY_UPDATED, memoryOrIdentifier);
+      return memoryOrIdentifier;
+    }
+
+    const { id, data } = normalizeEntityArguments(memoryOrIdentifier, payload, metadata);
+    const entries = this.loadMemory();
+    const index = entries.findIndex(entry => entry.identifier === id);
+    const existing = index >= 0 ? entries[index] : null;
+    const entry = buildMemoryEntry(id, data, existing);
+
+    if (index >= 0) {
+      entries[index] = entry;
+    } else {
+      entries.push(entry);
+    }
+
+    localStorage.setItem(LS_KEYS.MEMORY, JSON.stringify(entries));
+    eventBus.emit(Events.MEMORY_UPDATED, entries);
+    return entry;
+  },
+
+  getMemory(identifier) {
+    const id = normalizeIdentifier(identifier);
+    if (!id) return null;
+    return this.loadMemory().find(entry => entry.identifier === id) || null;
   },
 
   loadTasks() {
@@ -183,6 +250,47 @@ export const Storage = {
   saveTasks(tasks) {
     localStorage.setItem(LS_KEYS.TASKS, JSON.stringify(tasks));
     eventBus.emit(Events.TASKS_UPDATED, tasks);
+    return tasks;
+  },
+
+  getAllTasks() {
+    return this.loadTasks();
+  },
+
+  getTask(identifier) {
+    const id = normalizeIdentifier(identifier);
+    if (!id) return null;
+    return this.loadTasks().find(task => task.identifier === id) || null;
+  },
+
+  saveTask(taskOrIdentifier, payload, metadata = {}) {
+    const tasks = this.loadTasks();
+    const { id, data } = normalizeEntityArguments(taskOrIdentifier, payload, metadata);
+    const index = tasks.findIndex(task => task.identifier === id);
+    const existing = index >= 0 ? tasks[index] : null;
+    const entry = buildTaskEntry(id, data, existing);
+
+    if (index >= 0) {
+      tasks[index] = entry;
+    } else {
+      tasks.push(entry);
+    }
+
+    this.saveTasks(tasks);
+    return entry;
+  },
+
+  updateTask(identifier, updates = {}) {
+    const id = normalizeIdentifier(identifier);
+    if (!id) {
+      throw new Error('Storage.updateTask requires a valid identifier');
+    }
+
+    if (!this.getTask(id)) {
+      throw new Error(`Task not found: ${id}`);
+    }
+
+    return this.saveTask(id, updates);
   },
 
   loadVault() {
@@ -192,24 +300,40 @@ export const Storage = {
     return vault.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   },
   
-  saveVault(vault) {
-    const validatedVault = vault.filter(entry => {
-      return entry && 
-             typeof entry === 'object' && 
-             entry.identifier && 
-             entry.type && 
-             entry.content !== undefined;
-    }).map(entry => ({
-      identifier: String(entry.identifier || '').trim(),
-      type: String(entry.type || 'text').toLowerCase(),
-      description: String(entry.description || '').trim(),
-      content: entry.content || '',
-      createdAt: entry.createdAt || nowISO(),
-      updatedAt: nowISO()
-    }));
-    
-    localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(validatedVault));
-    eventBus.emit(Events.VAULT_UPDATED, validatedVault);
+  saveVault(vaultOrIdentifier, payload, metadata = {}) {
+    if (Array.isArray(vaultOrIdentifier)) {
+      const normalized = normalizeVaultArray(vaultOrIdentifier);
+      localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(normalized));
+      eventBus.emit(Events.VAULT_UPDATED, normalized);
+      return normalized;
+    }
+
+    const { id, data } = normalizeEntityArguments(vaultOrIdentifier, payload, metadata);
+    const vaultEntries = this.loadVault();
+    const index = vaultEntries.findIndex(entry => entry.identifier === id);
+    const existing = index >= 0 ? vaultEntries[index] : null;
+    const entry = buildVaultEntry(id, data, existing);
+
+    if (index >= 0) {
+      vaultEntries[index] = entry;
+    } else {
+      vaultEntries.push(entry);
+    }
+
+    const normalized = normalizeVaultArray(vaultEntries);
+    localStorage.setItem(LS_KEYS.VAULT, JSON.stringify(normalized));
+    eventBus.emit(Events.VAULT_UPDATED, normalized);
+    return entry;
+  },
+
+  getVault(identifier) {
+    const id = normalizeIdentifier(identifier);
+    if (!id) return null;
+    return this.loadVault().find(entry => entry.identifier === id) || null;
+  },
+
+  getVaultEntry(identifier) {
+    return this.getVault(identifier);
   },
 
   // === FINAL OUTPUT (streamlined) ===
@@ -533,25 +657,59 @@ export const Storage = {
   },
 
   loadSubAgentTrace() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.SUBAGENT_TRACE), null);
+    const history = this.loadSubAgentTraceHistory(1);
+    return history[0] || null;
+  },
+
+  loadSubAgentTraceHistory(limit = MAX_SUB_AGENT_TRACE_ENTRIES) {
+    const raw = safeJSONParse(localStorage.getItem(LS_KEYS.SUBAGENT_TRACE), null);
+    if (!raw) return [];
+    if (Array.isArray(raw)) {
+      return typeof limit === 'number' && limit > 0 ? raw.slice(0, limit) : raw;
+    }
+    return [raw];
   },
 
   saveSubAgentTrace(trace) {
     if (!trace) {
       this.clearSubAgentTrace();
-      return null;
+      return [];
     }
-    localStorage.setItem(LS_KEYS.SUBAGENT_TRACE, JSON.stringify(trace));
-    return trace;
+    const history = this.loadSubAgentTraceHistory();
+    const nextHistory = [trace, ...history].slice(0, MAX_SUB_AGENT_TRACE_ENTRIES);
+    localStorage.setItem(LS_KEYS.SUBAGENT_TRACE, JSON.stringify(nextHistory));
+    return nextHistory;
   },
 
-  updateSubAgentTrace(update) {
-    const current = this.loadSubAgentTrace() || {};
-    const next = typeof update === 'function'
-      ? update(current)
-      : { ...current, ...update };
-    localStorage.setItem(LS_KEYS.SUBAGENT_TRACE, JSON.stringify(next));
-    return next;
+  updateSubAgentTrace(update, traceId = null) {
+    const history = this.loadSubAgentTraceHistory();
+    if (history.length === 0) return null;
+
+    const targetId = traceId || history[0]?.id;
+    if (!targetId) return null;
+
+    let updatedEntry = null;
+    const nextHistory = history.map((entry) => {
+      if (entry.id !== targetId) {
+        return entry;
+      }
+      const patch = typeof update === 'function'
+        ? update(entry)
+        : { ...entry, ...update };
+      updatedEntry = { ...entry, ...patch };
+      return updatedEntry;
+    });
+
+    if (!updatedEntry) {
+      return null;
+    }
+
+    localStorage.setItem(LS_KEYS.SUBAGENT_TRACE, JSON.stringify(nextHistory));
+    return updatedEntry;
+  },
+
+  appendSubAgentTrace(trace) {
+    return this.saveSubAgentTrace(trace);
   },
 
   clearSubAgentTrace() {
@@ -570,6 +728,274 @@ export const Storage = {
     });
   }
 };
+
+const TASK_STATUS_VALUES = new Set(['pending', 'ongoing', 'finished', 'paused']);
+
+function normalizeEntityArguments(identifierOrEntry, payloadOrContent, metadata = {}) {
+  if (Array.isArray(identifierOrEntry)) {
+    throw new Error('normalizeEntityArguments does not accept arrays');
+  }
+
+  if (isPlainObject(identifierOrEntry)) {
+    const id = normalizeIdentifier(identifierOrEntry.identifier);
+    if (!id) {
+      throw new Error('Entity identifier cannot be empty');
+    }
+
+    const data = { ...identifierOrEntry };
+    delete data.identifier;
+
+    if (isPlainObject(payloadOrContent)) {
+      Object.assign(data, payloadOrContent);
+    } else if (payloadOrContent !== undefined) {
+      data.content = payloadOrContent;
+    }
+
+    if (isPlainObject(metadata) && Object.keys(metadata).length > 0) {
+      Object.assign(data, metadata);
+    }
+
+    return { id, data };
+  }
+
+  const id = normalizeIdentifier(identifierOrEntry);
+  if (!id) {
+    throw new Error('A valid identifier is required');
+  }
+
+  const data = {};
+  if (isPlainObject(payloadOrContent)) {
+    Object.assign(data, payloadOrContent);
+  } else if (payloadOrContent !== undefined) {
+    data.content = payloadOrContent;
+  }
+
+  if (isPlainObject(metadata) && Object.keys(metadata).length > 0) {
+    Object.assign(data, metadata);
+  }
+
+  return { id, data };
+}
+
+function buildGoalEntry(identifier, data = {}, existing = null) {
+  const timestamp = nowISO();
+  const headingValue = pickProvided(data, 'heading', existing?.heading ?? identifier);
+  const contentValue = pickProvided(data, 'content', existing?.content ?? '');
+  const notesValue = pickProvided(data, 'notes', existing?.notes ?? '');
+
+  const entry = {
+    ...(existing || {}),
+    identifier,
+    heading: coerceString(headingValue, identifier).trim() || identifier,
+    content: normalizeContentValue(contentValue, ''),
+    notes: coerceString(notesValue, ''),
+    createdAt: existing?.createdAt || data.createdAt || timestamp,
+    updatedAt: timestamp
+  };
+
+  mergeCustomFields(entry, data, ['identifier', 'heading', 'content', 'notes', 'createdAt', 'updatedAt']);
+  return entry;
+}
+
+function buildTaskEntry(identifier, data = {}, existing = null) {
+  const timestamp = nowISO();
+  const headingValue = pickProvided(data, 'heading', existing?.heading ?? identifier);
+  const contentValue = pickProvided(data, 'content', existing?.content ?? '');
+  const notesValue = pickProvided(data, 'notes', existing?.notes ?? '');
+  const statusValue = pickProvided(data, 'status', existing?.status ?? 'pending');
+
+  const entry = {
+    ...(existing || {}),
+    identifier,
+    heading: coerceString(headingValue, identifier).trim() || identifier,
+    content: normalizeContentValue(contentValue, ''),
+    status: normalizeTaskStatusValue(statusValue),
+    notes: coerceString(notesValue, ''),
+    createdAt: existing?.createdAt || data.createdAt || timestamp,
+    updatedAt: timestamp
+  };
+
+  mergeCustomFields(entry, data, [
+    'identifier',
+    'heading',
+    'content',
+    'status',
+    'notes',
+    'createdAt',
+    'updatedAt'
+  ]);
+
+  return entry;
+}
+
+function buildMemoryEntry(identifier, data = {}, existing = null) {
+  const timestamp = nowISO();
+  const headingValue = pickProvided(data, 'heading', existing?.heading ?? identifier);
+  const contentValue = pickProvided(data, 'content', existing?.content ?? '');
+  const notesValue = pickProvided(data, 'notes', existing?.notes ?? '');
+  const tagsValue = pickProvided(data, 'tags', existing?.tags ?? []);
+
+  const entry = {
+    ...(existing || {}),
+    identifier,
+    heading: coerceString(headingValue, identifier).trim() || identifier,
+    content: normalizeContentValue(contentValue, ''),
+    notes: coerceString(notesValue, ''),
+    tags: normalizeTagList(tagsValue, existing?.tags || []),
+    createdAt: existing?.createdAt || data.createdAt || timestamp,
+    updatedAt: timestamp
+  };
+
+  mergeCustomFields(entry, data, [
+    'identifier',
+    'heading',
+    'content',
+    'notes',
+    'tags',
+    'createdAt',
+    'updatedAt'
+  ]);
+
+  return entry;
+}
+
+function buildVaultEntry(identifier, data = {}, existing = null) {
+  const timestamp = nowISO();
+  const typeValue = pickProvided(
+    data,
+    'type',
+    pickProvided(data, 'kind', pickProvided(data, 'dataType', existing?.type || 'text'))
+  );
+  const descriptionValue = pickProvided(
+    data,
+    'description',
+    pickProvided(data, 'details', existing?.description || '')
+  );
+  const contentValue = pickProvided(data, 'content', existing?.content ?? '');
+
+  const entry = {
+    ...(existing || {}),
+    identifier,
+    type: coerceString(typeValue || 'text', 'text').toLowerCase(),
+    description: coerceString(descriptionValue, ''),
+    content: normalizeVaultContent(contentValue),
+    createdAt: existing?.createdAt || data.createdAt || timestamp,
+    updatedAt: timestamp
+  };
+
+  mergeCustomFields(entry, data, [
+    'identifier',
+    'type',
+    'description',
+    'content',
+    'createdAt',
+    'updatedAt'
+  ]);
+
+  return entry;
+}
+
+function normalizeVaultArray(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  return entries
+    .filter(entry => entry && typeof entry === 'object')
+    .map(entry => {
+      const identifier = normalizeIdentifier(entry.identifier);
+      if (!identifier) return null;
+      return {
+        identifier,
+        type: coerceString(entry.type || 'text', 'text').toLowerCase(),
+        description: coerceString(entry.description, ''),
+        content: normalizeVaultContent(entry.content),
+        createdAt: entry.createdAt || nowISO(),
+        updatedAt: entry.updatedAt || nowISO()
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeIdentifier(value) {
+  if (value === null || value === undefined) return '';
+  const normalized = String(value).trim();
+  return normalized;
+}
+
+function normalizeTaskStatusValue(status) {
+  const normalized = String(status || '').toLowerCase();
+  return TASK_STATUS_VALUES.has(normalized) ? normalized : 'pending';
+}
+
+function normalizeContentValue(value, fallback = '') {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function coerceString(value, fallback = '') {
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+}
+
+function normalizeTagList(value, fallback = []) {
+  if (Array.isArray(value)) {
+    return value
+      .map(tag => coerceString(tag, '').trim())
+      .filter(Boolean);
+  }
+  if (isNonEmptyString(value)) {
+    return [value.trim()];
+  }
+  return Array.isArray(fallback) ? fallback : [];
+}
+
+function normalizeVaultContent(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function pickProvided(source, key, fallback) {
+  if (isPlainObject(source) && Object.prototype.hasOwnProperty.call(source, key)) {
+    return source[key];
+  }
+  return fallback;
+}
+
+function mergeCustomFields(target, source, excludedKeys = []) {
+  if (!isPlainObject(source)) {
+    return target;
+  }
+
+  Object.keys(source).forEach(key => {
+    if (key === 'identifier') return;
+    if (excludedKeys.includes(key)) return;
+    target[key] = source[key];
+  });
+
+  return target;
+}
+
+function isPlainObject(value) {
+  if (value === null || typeof value !== 'object') return false;
+  return Object.getPrototypeOf(value) === Object.prototype;
+}
 
 function normalizeModelId(modelId) {
   if (!isNonEmptyString(modelId)) return '';

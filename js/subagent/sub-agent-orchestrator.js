@@ -11,18 +11,18 @@ function saveTrace(trace) {
   if (!Storage.saveSubAgentTrace) {
     return trace;
   }
-  const stored = Storage.saveSubAgentTrace(trace);
-  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, stored);
-  return stored;
+  const history = Storage.saveSubAgentTrace(trace);
+  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, history);
+  return trace;
 }
 
-function updateTrace(update) {
+function updateTrace(update, traceId) {
   if (!Storage.updateSubAgentTrace) {
     return null;
   }
-  const stored = Storage.updateSubAgentTrace(update);
-  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, stored);
-  return stored;
+  const updated = Storage.updateSubAgentTrace(update, traceId);
+  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, Storage.loadSubAgentTraceHistory?.());
+  return updated;
 }
 
 export class SubAgentOrchestrator {
@@ -88,10 +88,10 @@ export class SubAgentOrchestrator {
       updateTrace((current) => ({
         ...current,
         toolResults: [...(current.toolResults || []), entry]
-      }));
+      }), traceId);
     });
     const prompt = this._buildPrompt(agent, query, toolResults);
-    updateTrace({ prompt });
+    updateTrace({ prompt }, traceId);
     const modelId = Storage.loadSelectedModel?.() || FALLBACK_MODEL;
 
     let response;
@@ -103,7 +103,7 @@ export class SubAgentOrchestrator {
         status: 'error',
         finishedAt: nowISO(),
         error: error.message || 'Gemini request failed'
-      });
+      }, traceId);
       throw error;
     }
 
@@ -125,7 +125,7 @@ export class SubAgentOrchestrator {
       summary: result.content,
       toolResults,
       responseId: traceId
-    });
+    }, traceId);
 
     Storage.saveSubAgentLastResult?.(result);
     return result;

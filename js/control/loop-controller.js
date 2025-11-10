@@ -123,8 +123,6 @@ export const LoopController = {
     Storage.clearFinalOutputVerification();
     resetSubAgentState();
 
-    await maybeFetchExternalKnowledge(rawQuery);
-
     console.log(`[${nowISO()}] SESSION INITIALIZED - Storage cleared, starting iteration loop in 1000ms`);
 
     // Emit session start event
@@ -714,6 +712,12 @@ function persistModelSelection(selectEl, source) {
   return Storage.saveSelectedModel(selectEl.value, { label, source });
 }
 
+function resetSubAgentState() {
+  Storage.clearSubAgentLastResult?.();
+  Storage.clearSubAgentTrace?.();
+  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, null);
+}
+
 /**
  * Extract previous reasoning steps from reasoning log
  * Used for silent error recovery to provide context
@@ -750,94 +754,3 @@ function extractPreviousReasoningSteps(reasoningLog, currentIteration) {
   return steps;
 }
 
-async function maybeFetchExternalKnowledge(query) {
-  const settings = Storage.loadSubAgentSettings?.();
-  if (!settings?.enableSubAgent) {
-    console.log(`[${nowISO()}] Sub-agent auto-run skipped: feature disabled.`);
-    resetSubAgentState();
-    return null;
-  }
-
-  if (!shouldTriggerSubAgent(query)) {
-    console.log(`[${nowISO()}] Sub-agent auto-run skipped: query does not meet trigger heuristics.`);
-    resetSubAgentState();
-    return null;
-  }
-
-  try {
-    console.log(`[${nowISO()}] Sub-agent auto-run triggered for query: "${query}"`);
-    logSubAgentInvocationStart(query);
-    const result = await invokeSubAgent(query, {
-      agentId: settings.defaultAgent,
-      cacheTtlMs: settings.cacheTtlMs,
-      timeoutMs: settings.timeoutMs
-    });
-    logSubAgentInvocationFinish();
-    return result;
-  } catch (error) {
-    console.warn('[LoopController] Sub-agent run failed', error);
-    logSubAgentInvocationFinish(error);
-    return null;
-  }
-}
-
-function shouldTriggerSubAgent(query = '') {
-  if (typeof query !== 'string') return false;
-  const normalized = query.toLowerCase().trim();
-  if (normalized.length < 15) return false;
-
-  const topicalKeywords = [
-    'news',
-    'latest',
-    'current',
-    'update',
-    'today',
-    'report',
-    'status',
-    'situation',
-    'happening',
-    'trend',
-    'outlook',
-    'forecast',
-    'population',
-    'statistics',
-    'data'
-  ];
-
-  const questionTriggers = ['what', 'where', 'when', 'who', 'why', 'how', '?'];
-
-  const hasTopic = topicalKeywords.some((word) => normalized.includes(word));
-  if (!hasTopic) {
-    return false;
-  }
-
-  return questionTriggers.some((word) => normalized.includes(word));
-}
-
-function resetSubAgentState() {
-  Storage.clearSubAgentLastResult?.();
-  Storage.clearSubAgentTrace?.();
-  eventBus.emit(Events.SUBAGENT_STATE_CHANGED, null);
-}
-
-function logSubAgentInvocationStart(query) {
-  const log = Storage.loadReasoningLog();
-  log.push([
-    '=== SUB-AGENT INVOCATION START ===',
-    `Timestamp: ${nowISO()}`,
-    `Handoff query: ${query}`
-  ].join('\n'));
-  Storage.saveReasoningLog(log);
-  Renderer.renderReasoningLog();
-}
-
-function logSubAgentInvocationFinish(error) {
-  const log = Storage.loadReasoningLog();
-  log.push([
-    '=== SUB-AGENT INVOCATION END ===',
-    `Timestamp: ${nowISO()}`,
-    error ? `Status: ERROR (${error.message || error})` : 'Status: SUCCESS'
-  ].join('\n'));
-  Storage.saveReasoningLog(log);
-  Renderer.renderReasoningLog();
-}

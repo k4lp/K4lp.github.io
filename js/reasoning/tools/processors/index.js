@@ -4,12 +4,14 @@ import { tasksProcessor } from './tasks-processor.js';
 import { goalsProcessor } from './goals-processor.js';
 import { jsExecuteProcessor } from './js-execute-processor.js';
 import { finalOutputProcessorV2 as finalOutputProcessor } from './final-output-processor-v2.js';
+import { subagentProcessor } from './subagent-processor.js';
 
 const processorList = [
   vaultProcessor,
   memoryProcessor,
   tasksProcessor,
   goalsProcessor,
+  subagentProcessor,
   jsExecuteProcessor,
   finalOutputProcessor
 ];
@@ -29,6 +31,7 @@ export {
   memoryProcessor,
   tasksProcessor,
   goalsProcessor,
+  subagentProcessor,
   jsExecuteProcessor,
   finalOutputProcessor
 };
