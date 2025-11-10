@@ -328,6 +328,116 @@ test('Isolation: Result structure is consistent', async () => {
 });
 
 // ============================================================================
+// Barebone Mode Tests
+// ============================================================================
+
+test('Barebone: Execute without base APIs', async () => {
+  const sandbox = new SandboxExecutor({ barebone: true });
+  const result = await sandbox.execute('return 42;');
+
+  if (!result.success) throw new Error('Expected success');
+  if (result.result !== 42) throw new Error('Expected 42');
+});
+
+test('Barebone: No vault/memory/tasks/goals available', async () => {
+  const sandbox = new SandboxExecutor({ barebone: true });
+  const result = await sandbox.execute(`
+    return {
+      hasVault: typeof vault !== 'undefined',
+      hasMemory: typeof memory !== 'undefined',
+      hasTasks: typeof tasks !== 'undefined',
+      hasGoals: typeof goals !== 'undefined'
+    };
+  `);
+
+  if (!result.success) throw new Error('Expected success');
+  if (result.result.hasVault) throw new Error('Expected no vault in barebone mode');
+  if (result.result.hasMemory) throw new Error('Expected no memory in barebone mode');
+  if (result.result.hasTasks) throw new Error('Expected no tasks in barebone mode');
+  if (result.result.hasGoals) throw new Error('Expected no goals in barebone mode');
+});
+
+test('Barebone: Only custom context available', async () => {
+  const customFetch = async (url) => ({ url, data: 'mocked' });
+
+  const sandbox = new SandboxExecutor({
+    barebone: true,
+    isolatedContext: { fetch: customFetch }
+  });
+
+  const result = await sandbox.execute(`
+    const response = await fetch('https://example.com');
+    return response;
+  `);
+
+  if (!result.success) throw new Error('Expected success');
+  if (result.result.url !== 'https://example.com') {
+    throw new Error('Expected custom fetch to work');
+  }
+});
+
+// ============================================================================
+// Unsandboxed Mode Tests
+// ============================================================================
+
+test('Unsandboxed: Execute with direct eval', async () => {
+  const sandbox = new SandboxExecutor({ unsandboxed: true });
+  const result = await sandbox.execute('return 21 + 21;');
+
+  if (!result.success) throw new Error('Expected success');
+  if (result.result !== 42) throw new Error('Expected 42');
+});
+
+test('Unsandboxed: Context injection works', async () => {
+  const sandbox = new SandboxExecutor({
+    unsandboxed: true,
+    isolatedContext: { customValue: 123 }
+  });
+
+  const result = await sandbox.execute('return customValue * 2;');
+
+  if (!result.success) throw new Error('Expected success');
+  if (result.result !== 246) throw new Error('Expected 246');
+});
+
+test('Unsandboxed: Global cleanup after execution', async () => {
+  const testKey = `test_${Date.now()}`;
+  const sandbox = new SandboxExecutor({
+    unsandboxed: true,
+    isolatedContext: { [testKey]: 'temporary' }
+  });
+
+  await sandbox.execute(`return ${testKey};`);
+
+  // Check that the temporary global was cleaned up
+  if (typeof globalThis[testKey] !== 'undefined') {
+    throw new Error('Expected global cleanup after unsandboxed execution');
+  }
+});
+
+// ============================================================================
+// Combined Mode Tests
+// ============================================================================
+
+test('Combined: Barebone + Unsandboxed', async () => {
+  const customAPI = { getValue: () => 99 };
+
+  const sandbox = new SandboxExecutor({
+    barebone: true,
+    unsandboxed: true,
+    isolatedContext: { API: customAPI }
+  });
+
+  const result = await sandbox.execute(`
+    const value = API.getValue();
+    return value + 1;
+  `);
+
+  if (!result.success) throw new Error('Expected success');
+  if (result.result !== 100) throw new Error('Expected 100');
+});
+
+// ============================================================================
 // Integration Tests
 // ============================================================================
 

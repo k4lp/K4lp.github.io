@@ -31,6 +31,8 @@ export class SandboxExecutor {
    * @param {Object} options.isolatedContext - Additional context to inject (e.g., WebTools)
    * @param {number} options.timeoutMs - Execution timeout in milliseconds
    * @param {boolean} options.instrumented - Whether to track execution in main session (default: false)
+   * @param {boolean} options.barebone - Execute without any context APIs (default: false)
+   * @param {boolean} options.unsandboxed - Use direct eval instead of Function constructor (default: false)
    */
   constructor(options = {}) {
     this.isolatedContext = options.isolatedContext || {};
@@ -40,6 +42,8 @@ export class SandboxExecutor {
     this.instrumented = options.instrumented !== undefined
       ? options.instrumented
       : false; // Default: no main session tracking
+    this.barebone = options.barebone || false; // Default: inject full context
+    this.unsandboxed = options.unsandboxed || false; // Default: use Function constructor
     this.consoleCapture = null;
   }
 
@@ -66,17 +70,25 @@ export class SandboxExecutor {
     const startedAt = Date.now();
     const analysis = this._analyzeCode(code);
 
-    // Create isolated execution context
-    // instrumented: false means no tracking in main session storage
-    const baseContext = buildExecutionContext({
-      instrumented: this.instrumented
-    });
+    // Build execution context based on options
+    let executionContext = {};
 
-    // Merge base context with isolated context (e.g., WebTools)
-    const executionContext = {
-      ...baseContext,
-      ...this.isolatedContext
-    };
+    if (!this.barebone) {
+      // Create isolated execution context with full APIs
+      // instrumented: false means no tracking in main session storage
+      const baseContext = buildExecutionContext({
+        instrumented: this.instrumented
+      });
+
+      // Merge base context with isolated context (e.g., WebTools)
+      executionContext = {
+        ...baseContext,
+        ...this.isolatedContext
+      };
+    } else {
+      // Barebone mode: only isolated context (no base APIs)
+      executionContext = { ...this.isolatedContext };
+    }
 
     // Start console capture
     this.consoleCapture = new ConsoleCapture();
@@ -148,27 +160,63 @@ export class SandboxExecutor {
                   '})()';
     }
 
-    // Build parameter lists for Function constructor
-    const contextKeys = Object.keys(context);
-    const contextValues = contextKeys.map(key => context[key]);
+    let promise;
 
-    let runner;
-    try {
-      // Create function with injected context parameters
-      runner = new Function(
-        ...contextKeys,
-        '"use strict";\n' +
-        'return (async () => {\n' +
-        `  return await ${codeToRun};\n` +
-        '})();'
-      );
-    } catch (error) {
-      error.message = `Compilation failed: ${error.message}`;
-      throw error;
+    if (this.unsandboxed) {
+      // Unsandboxed mode: Use direct eval with context injection
+      // WARNING: Less isolated, but more flexible for certain use cases
+      try {
+        // Inject context into global scope temporarily
+        const originalValues = {};
+        const contextKeys = Object.keys(context);
+
+        contextKeys.forEach(key => {
+          originalValues[key] = globalThis[key];
+          globalThis[key] = context[key];
+        });
+
+        try {
+          // Execute with eval
+          const code = `(async () => { return await ${codeToRun}; })()`;
+          promise = eval(code);
+        } finally {
+          // Restore original global values
+          contextKeys.forEach(key => {
+            if (originalValues[key] === undefined) {
+              delete globalThis[key];
+            } else {
+              globalThis[key] = originalValues[key];
+            }
+          });
+        }
+      } catch (error) {
+        error.message = `Execution failed: ${error.message}`;
+        throw error;
+      }
+    } else {
+      // Sandboxed mode: Use Function constructor (default)
+      // Build parameter lists for Function constructor
+      const contextKeys = Object.keys(context);
+      const contextValues = contextKeys.map(key => context[key]);
+
+      let runner;
+      try {
+        // Create function with injected context parameters
+        runner = new Function(
+          ...contextKeys,
+          '"use strict";\n' +
+          'return (async () => {\n' +
+          `  return await ${codeToRun};\n` +
+          '})();'
+        );
+      } catch (error) {
+        error.message = `Compilation failed: ${error.message}`;
+        throw error;
+      }
+
+      // Execute with context APIs injected
+      promise = runner(...contextValues);
     }
-
-    // Execute with context APIs injected
-    const promise = runner(...contextValues);
 
     // Apply timeout if configured
     return this.timeoutMs
@@ -256,9 +304,23 @@ export class SandboxExecutor {
  * @returns {Promise<Object>} Execution result
  *
  * @example
+ * // Default: Full context with Function constructor sandboxing
  * const result = await executeSandboxed('console.log("Hello"); return 42;', {
  *   isolatedContext: { WebTools: webToolsAPI },
  *   timeoutMs: 5000
+ * });
+ *
+ * @example
+ * // Barebone: No base APIs, only custom context
+ * const result = await executeSandboxed('return fetch("https://api.example.com")', {
+ *   barebone: true,
+ *   isolatedContext: { fetch }
+ * });
+ *
+ * @example
+ * // Unsandboxed: Direct eval execution (more flexible, less isolated)
+ * const result = await executeSandboxed('return myGlobalVar;', {
+ *   unsandboxed: true
  * });
  */
 export async function executeSandboxed(code, options = {}) {
