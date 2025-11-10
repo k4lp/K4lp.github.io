@@ -7,6 +7,8 @@ import { recentExecutionsProvider } from './recent-executions-provider.js';
 import { recentReasoningProvider } from './recent-reasoning-provider.js';
 import { pendingErrorProvider } from './pending-error-provider.js';
 import { attachmentsProvider } from './attachments-provider.js';
+import { externalKnowledgeProvider } from './external-knowledge-provider.js';
+import { subAgentTraceProvider } from './sub-agent-trace-provider.js';
 
 export class ContextProviderRegistry {
   constructor(providers = []) {
@@ -38,6 +40,8 @@ export const defaultContextProviderRegistry = new ContextProviderRegistry([
   pendingErrorProvider,
   userQueryProvider,
   attachmentsProvider,
+  externalKnowledgeProvider,
+  subAgentTraceProvider,
   tasksProvider,
   goalsProvider,
   memoryProvider,
@@ -59,7 +63,9 @@ export {
   recentExecutionsProvider,
   recentReasoningProvider,
   pendingErrorProvider,
-  attachmentsProvider
+  attachmentsProvider,
+  externalKnowledgeProvider,
+  subAgentTraceProvider
 };
 
 export default defaultContextProviderRegistry;

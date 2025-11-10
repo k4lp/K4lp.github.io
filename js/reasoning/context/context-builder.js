@@ -42,12 +42,19 @@ export class ReasoningContextBuilder {
       snapshot
     };
 
-    const sectionBlocks = [];
-
-    for (const sectionConfig of this.sections) {
+    const sectionJobs = this.sections.map((sectionConfig) => {
+      const includeWhenEmpty = sectionConfig.includeWhenEmpty !== false;
       const provider = this.providers.get(sectionConfig.providerId);
+
       if (!provider) {
-        continue;
+        console.warn(
+          `[ReasoningContextBuilder] Provider "${sectionConfig.providerId}" missing for section "${sectionConfig.id}".`
+        );
+        const fallbackContent = formatSectionContent(undefined, sectionConfig.fallback, includeWhenEmpty);
+        return Promise.resolve({
+          id: sectionConfig.id,
+          content: composeSectionBlock(sectionConfig, fallbackContent)
+        });
       }
 
       const providerContext = {
@@ -57,33 +64,49 @@ export class ReasoningContextBuilder {
 
       const collected = provider.collect
         ? provider.collect(providerContext)
-        : undefined;
+        : provider.build
+          ? provider.build(providerContext)
+          : undefined;
 
       const sectionPromise = Promise.resolve(collected)
-        .then((resolved) => {
-          const formattedResult = provider.format
-            ? provider.format(resolved, providerContext)
-            : resolved;
-
-          return Promise.resolve(formattedResult);
-        })
+        .then((resolved) => (provider.format ? provider.format(resolved, providerContext) : resolved))
         .then((formatted) => {
-          const includeWhenEmpty = sectionConfig.includeWhenEmpty !== false;
           const content = formatSectionContent(formatted, sectionConfig.fallback, includeWhenEmpty);
-
-          if (!content) {
-            return null;
-          }
-
-          const heading = sectionConfig.heading ? `${sectionConfig.heading}\n` : '';
-          return `${heading}${content}`;
+          return {
+            id: sectionConfig.id,
+            content: composeSectionBlock(sectionConfig, content)
+          };
+        })
+        .catch((error) => {
+          console.error(
+            `[ReasoningContextBuilder] Provider "${sectionConfig.providerId}" failed for section "${sectionConfig.id}":`,
+            error
+          );
+          const fallbackContent = formatSectionContent(null, sectionConfig.fallback, includeWhenEmpty);
+          return {
+            id: sectionConfig.id,
+            content: composeSectionBlock(sectionConfig, fallbackContent)
+          };
         });
 
-      sectionBlocks.push(sectionPromise);
+      return sectionPromise;
+    });
+
+    const sectionResults = await Promise.all(sectionJobs);
+    const filteredBlocks = sectionResults.map((result) => result.content).filter(Boolean);
+
+    const includedSections = sectionResults.filter((result) => Boolean(result.content)).map((result) => result.id);
+    const omittedSections = sectionResults.filter((result) => !result.content).map((result) => result.id);
+
+    if (includedSections.length) {
+      console.debug(`[ReasoningContextBuilder] Sections included: ${includedSections.join(', ')}`);
+    } else {
+      console.warn('[ReasoningContextBuilder] No reasoning context sections produced content.');
     }
 
-    const blocks = await Promise.all(sectionBlocks);
-    const filteredBlocks = blocks.filter(Boolean);
+    if (omittedSections.length) {
+      console.debug(`[ReasoningContextBuilder] Sections omitted or empty: ${omittedSections.join(', ')}`);
+    }
     const sectionsBody = filteredBlocks.join(this.fragments.sectionJoiner || '\n\n');
 
     const iterationLine = (this.fragments.iterationTemplate || '**Iteration:** {iteration}/{maxIterations}')
@@ -127,6 +150,14 @@ function formatSectionContent(content, fallback, includeWhenEmpty) {
   }
 
   return includeWhenEmpty ? (fallback || '') : '';
+}
+
+function composeSectionBlock(sectionConfig, content) {
+  if (!content) {
+    return null;
+  }
+  const heading = sectionConfig.heading ? `${sectionConfig.heading}\n` : '';
+  return `${heading}${content}`;
 }
 
 export default ReasoningContextBuilder;

@@ -1,4 +1,4 @@
-# 🤖 COMPREHENSIVE SUB-AGENT SYSTEM IMPLEMENTATION PLAN
+﻿# 🤖 COMPREHENSIVE SUB-AGENT SYSTEM IMPLEMENTATION PLAN
 ## Modular, Isolated, Extensible Multi-Agent Architecture
 
 **Project:** K4lp.github.io (GDRS - Gemini Deep Research System)
@@ -142,6 +142,7 @@ This section tracks ALL import/export bindings to ensure we don't break existing
 | `js/control/loop-controller.js` | `LoopController` | `main.js` | ⚠️ Add sub-agent trigger logic |
 | `js/reasoning/reasoning-engine.js` | `ReasoningEngine` | `loop-controller.js` | ✅ Will be reused for sub-agents |
 | `js/reasoning/context/context-builder.js` | `ReasoningContextBuilder` | `reasoning-engine.js` | ⚠️ Add ExternalKnowledgeProvider |
+| `js/config/app-config.js` | `SYSTEM_PROMPT`, limits | `core/constants.js`, `reasoning-engine.js` | ⚠️ Split prompt into base + feature modules so Excel/knowledge guidance is toggle-driven |
 
 #### **Execution Layer Files**
 
@@ -157,7 +158,7 @@ This section tracks ALL import/export bindings to ensure we don't break existing
 
 | File | Exports | Imported By | Sub-Agent Impact |
 |------|---------|-------------|------------------|
-| `js/storage/storage.js` | `Storage` | Multiple | ✅ Sub-agents will use in-memory storage |
+| `js/storage/storage.js` | `Storage` | Multiple | ⚠️ Add typed helpers + LS keys for `settings_enable_sub_agent`, `settings_enable_excel_helpers`, cache TTL, and last-result payload |
 | `js/storage/vault-manager.js` | `VaultManager` | `execution-context-api.js` | ✅ Sub-agents can use vault temporarily |
 
 #### **API Layer Files**
@@ -167,12 +168,19 @@ This section tracks ALL import/export bindings to ensure we don't break existing
 | `js/api/gemini-client.js` | `GeminiAPI` | `reasoning-engine.js` | ✅ Sub-agents will call same API |
 | `js/api/key-manager.js` | `KeyManager` | `gemini-client.js` | ✅ No changes needed |
 
+#### **UI Layer Files**
+
+| File | Exports | Imported By | Sub-Agent Impact |
+|------|---------|-------------|------------------|
+| index.html | Settings markup | Browser | ⚠️ Add feature toggles (Enable Sub-Agent, Enable Excel Helpers) with clear descriptions |
+| js/ui/handlers/handler-config.js | indConfigHandlers | ui/events.js | ⚠️ Persist toggle state via new Storage helpers and sync defaults on load |
+
 #### **Reasoning Context Providers**
 
 | File | Exports | Imported By | Sub-Agent Impact |
 |------|---------|-------------|------------------|
 | `js/reasoning/context/providers/index.js` | All providers | `context-builder.js` | ⚠️ Add ExternalKnowledgeProvider export |
-| `js/reasoning/context/providers/attachments-provider.js` | `attachmentsProvider` | `providers/index.js` | ✅ No changes needed |
+| `js/reasoning/context/providers/attachments-provider.js` | `attachmentsProvider` | `providers/index.js` | ⚠️ Must gate Excel guidance behind `ExcelRuntimeStore.hasWorkbook()` and expose attachment flag |
 
 ### New Files to Create
 
@@ -203,6 +211,25 @@ This section tracks ALL import/export bindings to ensure we don't break existing
 - `LoopController` - Manages main session state, create new instance
 - `Storage.saveIterationLog()` - Would pollute main session logs
 - UI Renderers - Sub-agent operations should not render to UI
+
+### Repository Verification Snapshot (2025-11-10)
+
+| Plan Assumption | Repo Evidence | Status / Action |
+|-----------------|---------------|-----------------|
+| `LoopController` already wires the sub-agent import/trigger path | `js/control/loop-controller.js:6-24` imports only existing core modules; there is no `_fetchExternalKnowledge` helper or `SubAgentOrchestrator` reference | **Missing** – add the import plus the trigger method where the controller currently initializes sessions |
+| `ReasoningContext` already exposes an `externalKnowledge` provider | `js/reasoning/context/providers/index.js:1-47` lists the built-in providers (pendingError, userQuery, attachments, tasks, goals, memory, vaultSummary, recentExecutions, recentReasoning) with no external knowledge slot | **Missing** – create the provider file and register it before the context section can exist |
+| Storage already has generic `Storage.save()/load()` entries for sub-agent settings and cache | `js/storage/storage.js:15-212` only exposes typed helpers (e.g., `loadKeypool`, `saveMaxOutputTokens`), and `js/config/storage-config.js:11-58` lists no `gdrs_subagent_*` keys | **Missing** – add dedicated `LS_KEYS.SUB_AGENT_SETTINGS` & `LS_KEYS.SUB_AGENT_RESULT` entries alongside typed helpers (`load/save/clearSubAgent*`) |
+| UI already contains an “Enable Sub-Agent” toggle wired through `handler-config` | `js/ui/handlers/handler-config.js:1-35` currently handles only the `#maxOutputTokens` input, and `index.html` contains no element with `id="enableSubAgent"` | **Missing** – create the toggle markup plus handler logic that persists via the new storage helpers |
+| `main.js` exports `SubAgentOrchestrator` on `window.GDRS` | `js/main.js:9-70` imports/exports the existing modules only | **Missing** – once the orchestrator exists it must be imported and exposed in the bootstrap |
+| `ReasoningEngine` can be reused for sub-agents | `js/reasoning/reasoning-engine.js:1-77` exposes a configurable builder/goal evaluator via `ReasoningEngine.configure` | **Confirmed** – safe to instantiate per agent session as planned |
+
+Additional note: the current `js/` directory only contains `api`, `config`, `control`, `core`, `examples`, `excel`, `execution`, `policy`, `reasoning`, `state`, `storage`, `ui`, `utils`, `validation`, and `verification` (see `Get-ChildItem js`), so every `js/subagent/*` path referenced below is net-new and must be created by this plan.
+
+### Context Pollution Controls (New Requirements)
+
+1. **Excel knowledge gating:** `attachmentsProvider` (`js/reasoning/context/providers/attachments-provider.js:4-310`) injects the full Excel API reference even when `ExcelRuntimeStore.getMetadata()` is `null`. Update the plan so the provider only emits those heavy reference blocks when `ExcelRuntimeStore.hasWorkbook()` is true; otherwise return a single-line reminder to attach a workbook. This keeps Excel guidance out of prompts until it is actionable.
+2. **Toggle-driven instructions:** The monolithic `SYSTEM_PROMPT` (`js/config/app-config.js:32-170`) always embeds Excel workflow instructions (and will soon include sub-agent directions) regardless of user settings, while `js/ui/handlers/handler-config.js` currently lacks any `#enableSubAgent` wiring. Add a dedicated instruction composer that takes feature toggles (e.g., `settings_enable_sub_agent`, future `settings_enable_excel_helpers`) plus runtime state (Excel attachment present) and only appends the relevant fragments when required. Wire this composer into `ReasoningEngine.buildContextPrompt()` so enabling knowledge search or Excel helpers explicitly opts-in to their instruction fragments.
+3. **Storage-backed toggles:** Extend the storage plan with explicit keys/helpers (e.g., `LS_KEYS.SUB_AGENT_SETTINGS`, `Storage.loadSubAgentSettings()`) so UI toggles, context providers, and the instruction composer share one source of truth. Every feature-specific instruction must check both the persisted toggle and the live session state before being added to the prompt, reducing context pollution.
 
 ---
 
@@ -1223,6 +1250,11 @@ async startReasoning(userQuery, options = {}) {
    - Verify section appears in prompt
    - Test with/without sub-agent results
 
+5. ✅ Add Excel context gating
+   - Update `attachmentsProvider` so the detailed Excel API reference and exploration guide emit only when `ExcelRuntimeStore.hasWorkbook()` is true
+   - Return a lightweight “no attachment detected” status otherwise
+   - Expose an `hasExcelAttachment` flag to the instruction composer so Excel-specific guidance is appended only when actionable
+
 **Deliverables:**
 - Context provider implemented
 - Main prompt includes external knowledge
@@ -1251,6 +1283,16 @@ async startReasoning(userQuery, options = {}) {
    - Test full flow with real queries
    - Verify no breaking changes
    - Performance testing
+
+4. ✅ Build instruction composer
+   - Create `js/config/prompt-instruction-modules.js` with `SYSTEM_PROMPT_BASE` plus feature fragments (Excel attachment, sub-agent knowledge search, future modules)
+   - Add `buildSystemInstructions({ hasExcelAttachment, enableKnowledgeSearch })` helper that pulls from Storage + runtime state
+   - Ensure fragments only append when the corresponding toggle/state is true
+
+5. ✅ Update ReasoningEngine
+   - Inject the instruction composer so `ReasoningEngine.buildContextPrompt()` passes dynamic instructions instead of the static `SYSTEM_PROMPT`
+   - Thread the `hasExcelAttachment` flag from `attachmentsProvider` (via storage or context snapshot) and `settings_enable_sub_agent` from Storage into the composer
+   - Add unit tests that verify instructions expand/omit fragments based on toggles
 
 **Deliverables:**
 - Fully integrated sub-agent system
@@ -1390,6 +1432,39 @@ export { nasaAPOD } from './apis/nasa.js';
 #### 13. `js/reasoning/context/providers/external-knowledge-provider.js`
 *(Full implementation in Section 4 above)*
 
+#### 14. `js/config/prompt-instruction-modules.js`
+```javascript
+/**
+ * Dynamic instruction composer
+ * - Export SYSTEM_PROMPT_BASE (no feature-specific guidance)
+ * - Export FEATURE_INSTRUCTION_MODULES keyed by toggle name
+ * - Export buildSystemInstructions(state) that concatenates BASE + enabled fragments
+ */
+export const SYSTEM_PROMPT_BASE = `...core reasoning guarantees...`;
+
+export const FEATURE_INSTRUCTION_MODULES = {
+  excelAttachment: {
+    toggleKey: 'settings_enable_excel_helpers',
+    requiresAttachment: true,
+    instructions: `### Excel Attachment Protocol\n...`
+  },
+  subAgentKnowledge: {
+    toggleKey: 'settings_enable_sub_agent',
+    instructions: `### External Knowledge Retrieval\n...`
+  }
+};
+
+export function buildSystemInstructions(state) {
+  const segments = [SYSTEM_PROMPT_BASE.trim()];
+  for (const module of Object.values(FEATURE_INSTRUCTION_MODULES)) {
+    if (state[module.toggleKey] !== true) continue;
+    if (module.requiresAttachment && !state.hasExcelAttachment) continue;
+    segments.push(module.instructions.trim());
+  }
+  return segments.join('\n\n');
+}
+```
+
 ---
 
 ### Files to Modify
@@ -1511,11 +1586,15 @@ const CONTEXT_SECTIONS = [
 
 ### 2. Storage Keys
 
-**New storage keys used:**
-- `settings_enable_sub_agent` - Boolean, enable/disable feature
-- `subagent_last_result` - Object, cached sub-agent result
+**New storage keys required (none exist today per `js/storage/storage.js` + `js/config/storage-config.js`):**
+- `settings_enable_sub_agent` - Boolean toggle for external knowledge
+- `settings_enable_excel_helpers` - Boolean toggle for Excel-specific instruction blocks
+- `settings_sub_agent_default` - Default agent id
+- `settings_sub_agent_timeout` - Timeout in ms
+- `settings_sub_agent_cache_ttl` - Cache TTL in ms
+- `subagent_last_result` - Cached sub-agent payload (content, format, iterations)
 
-**No conflicts** with existing keys (verified in codebase scan)
+Add typed `Storage.load/save/clear*` helpers for each key so UI, orchestrator, and context providers share consistent behavior.
 
 ---
 

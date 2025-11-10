@@ -152,7 +152,42 @@
                                     <input id="maxOutputTokens" type="number" value="4096" min="512" max="65536" step="256">
                                     <span class="suffix">tokens</span>
                                 </div>
-                                <p class="field-hint">512 – 65,536</p>
+                                <p class="field-hint">512 - 65,536</p>
+                            </div>
+
+                            <div class="field checkbox-field">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableSubAgent">
+                                    <span>Enable External Knowledge Sub-Agent</span>
+                                </label>
+                                <p class="field-hint">Allow GDRS to call a lightweight web-research assistant when queries need fresh knowledge.</p>
+                            </div>
+
+                            <div class="field checkbox-field">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableExcelHelpers" checked>
+                                    <span>Enable Excel Helper Instructions</span>
+                                </label>
+                                <p class="field-hint">Only include Excel attachment guidance in prompts when this is enabled.</p>
+                            </div>
+
+                            <div class="field">
+                                <label for="groqApiKeys">Groq API Keys</label>
+                                <textarea id="groqApiKeys" rows="3" placeholder="Enter one key per line. Keys are stored locally and used only for Groq requests."></textarea>
+                                <p class="field-hint">Needed for live web intelligence requests. Provide multiple keys to allow automatic rotation.</p>
+                            </div>
+
+                            <div class="field subagent-status">
+                                <div class="subagent-status-header">
+                                    <div>
+                                        <label>External Knowledge</label>
+                                        <p class="field-hint">Latest response from the web sub-agent</p>
+                                    </div>
+                                    <span id="subAgentStatusPill" class="pill pill-muted">Disabled</span>
+                                </div>
+                                <div id="subAgentStatusBody" class="subagent-status-body">
+                                    <p class="field-hint">Enable the sub-agent toggle to fetch web research automatically.</p>
+                                </div>
                             </div>
 
                             <div class="field">
@@ -191,6 +226,23 @@
                         <div id="reasoningLogBody" class="block-body">
                             <div id="iterationLog" class="log">
                                 <div class="log-placeholder">Intelligent reasoning iterations will appear here</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Sub-Agent Console -->
+                    <section class="block collapsible" id="subAgentConsoleSection">
+                        <header class="block-header">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
+                                <h2>Sub-Agent Console</h2>
+                                <p class="block-meta">Live traces & tools</p>
+                            </div>
+                            <button class="collapse-toggle" data-target="subAgentConsoleBody">�^'</button>
+                        </header>
+
+                        <div id="subAgentConsoleBody" class="block-body">
+                            <div id="subAgentTraceBody" class="subagent-trace">
+                                <div class="log-placeholder">No sub-agent trace available yet.</div>
                             </div>
                         </div>
                     </section>

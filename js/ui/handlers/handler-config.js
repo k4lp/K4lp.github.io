@@ -5,6 +5,7 @@
 
 import { Storage } from '../../storage/storage.js';
 import { qs } from '../../core/utils.js';
+import { renderSubAgentStatus, renderSubAgentPanel } from '../renderer/renderer-subagent.js';
 
 /**
  * Bind max output tokens input handlers
@@ -37,4 +38,39 @@ export function bindConfigHandlers() {
       maxTokensInput.style.borderColor = '';
     }
   });
+
+  const subAgentToggle = qs('#enableSubAgent');
+  const excelHelpersToggle = qs('#enableExcelHelpers');
+  const groqKeysInput = qs('#groqApiKeys');
+  const subAgentSettings = Storage.loadSubAgentSettings();
+
+  if (subAgentToggle) {
+    subAgentToggle.checked = !!subAgentSettings.enableSubAgent;
+    subAgentToggle.addEventListener('change', () => {
+      Storage.saveSubAgentSettings({ enableSubAgent: subAgentToggle.checked });
+      if (!subAgentToggle.checked) {
+        Storage.clearSubAgentLastResult();
+      }
+      renderSubAgentStatus();
+    });
+  }
+
+  if (excelHelpersToggle) {
+    excelHelpersToggle.checked = !!subAgentSettings.enableExcelHelpers;
+    excelHelpersToggle.addEventListener('change', () => {
+      Storage.saveSubAgentSettings({ enableExcelHelpers: excelHelpersToggle.checked });
+      renderSubAgentStatus();
+      renderSubAgentPanel();
+    });
+  }
+
+  if (groqKeysInput) {
+    groqKeysInput.value = (Storage.loadGroqApiKeys?.() || []).join('\n');
+    groqKeysInput.addEventListener('change', () => {
+      Storage.saveGroqApiKeys(groqKeysInput.value || '');
+    });
+  }
+
+  renderSubAgentStatus();
+  renderSubAgentPanel();
 }

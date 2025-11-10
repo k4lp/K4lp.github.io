@@ -12,6 +12,10 @@ const TRANSIENT_REASONING_PATTERNS = [
   /^=== FINAL OUTPUT VERIFICATION FAILED ===/
 ];
 
+const DEFAULT_SUB_AGENT_AGENT_ID = 'webKnowledge';
+const DEFAULT_SUB_AGENT_TIMEOUT = 30000;
+const DEFAULT_SUB_AGENT_CACHE_TTL = 3600000;
+
 export const Storage = {
   // === KEYPOOL MANAGEMENT ===
   loadKeypool() {
@@ -149,7 +153,9 @@ export const Storage = {
 
   // === CORE ENTITIES (with event-driven UI updates) ===
   loadGoals() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), []);
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.GOALS), [])
+    );
   },
   
   saveGoals(goals) {
@@ -158,7 +164,9 @@ export const Storage = {
   },
 
   loadMemory() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.MEMORY), []);
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.MEMORY), [])
+    );
   },
   
   saveMemory(memory) {
@@ -167,7 +175,9 @@ export const Storage = {
   },
 
   loadTasks() {
-    return safeJSONParse(localStorage.getItem(LS_KEYS.TASKS), []);
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.TASKS), [])
+    );
   },
   
   saveTasks(tasks) {
@@ -176,7 +186,9 @@ export const Storage = {
   },
 
   loadVault() {
-    const vault = safeJSONParse(localStorage.getItem(LS_KEYS.VAULT), []);
+    const vault = normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.VAULT), [])
+    );
     return vault.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   },
   
@@ -443,6 +455,109 @@ export const Storage = {
     this.saveToolActivityLog(log);
   },
 
+  // === SUB-AGENT SETTINGS & CACHE ===
+  loadSubAgentSettings() {
+    return {
+      enableSubAgent: readBoolean(LS_KEYS.SETTINGS_ENABLE_SUB_AGENT, false),
+      enableExcelHelpers: readBoolean(LS_KEYS.SETTINGS_ENABLE_EXCEL_HELPERS, true),
+      defaultAgent: localStorage.getItem(LS_KEYS.SETTINGS_SUB_AGENT_DEFAULT) || DEFAULT_SUB_AGENT_AGENT_ID,
+      timeoutMs: parseInt(localStorage.getItem(LS_KEYS.SETTINGS_SUB_AGENT_TIMEOUT), 10) || DEFAULT_SUB_AGENT_TIMEOUT,
+      cacheTtlMs: parseInt(localStorage.getItem(LS_KEYS.SETTINGS_SUB_AGENT_CACHE_TTL), 10) || DEFAULT_SUB_AGENT_CACHE_TTL
+    };
+  },
+
+  saveSubAgentSettings(settings = {}) {
+    if (typeof settings.enableSubAgent === 'boolean') {
+      writeBoolean(LS_KEYS.SETTINGS_ENABLE_SUB_AGENT, settings.enableSubAgent);
+    }
+    if (typeof settings.enableExcelHelpers === 'boolean') {
+      writeBoolean(LS_KEYS.SETTINGS_ENABLE_EXCEL_HELPERS, settings.enableExcelHelpers);
+    }
+    if (typeof settings.defaultAgent === 'string') {
+      localStorage.setItem(
+        LS_KEYS.SETTINGS_SUB_AGENT_DEFAULT,
+        settings.defaultAgent || DEFAULT_SUB_AGENT_AGENT_ID
+      );
+    }
+    if (settings.timeoutMs !== undefined) {
+      const timeout = parseInt(settings.timeoutMs, 10);
+      if (Number.isFinite(timeout) && timeout > 0) {
+        localStorage.setItem(LS_KEYS.SETTINGS_SUB_AGENT_TIMEOUT, String(timeout));
+      }
+    }
+    if (settings.cacheTtlMs !== undefined) {
+      const ttl = parseInt(settings.cacheTtlMs, 10);
+      if (Number.isFinite(ttl) && ttl > 0) {
+        localStorage.setItem(LS_KEYS.SETTINGS_SUB_AGENT_CACHE_TTL, String(ttl));
+      }
+    }
+    return this.loadSubAgentSettings();
+  },
+
+  loadSubAgentLastResult() {
+    const payload = safeJSONParse(localStorage.getItem(LS_KEYS.SUBAGENT_LAST_RESULT), null);
+    return payload;
+  },
+
+  saveSubAgentLastResult(result) {
+    if (!result) {
+      this.clearSubAgentLastResult();
+      return null;
+    }
+    const payload = {
+      ...result,
+      timestamp: result.timestamp || Date.now()
+    };
+    localStorage.setItem(LS_KEYS.SUBAGENT_LAST_RESULT, JSON.stringify(payload));
+    return payload;
+  },
+
+  clearSubAgentLastResult() {
+    localStorage.removeItem(LS_KEYS.SUBAGENT_LAST_RESULT);
+  },
+
+  loadGroqApiKeys() {
+    const raw = localStorage.getItem(LS_KEYS.GROQ_API_KEYS) || '';
+    return raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+  },
+
+  saveGroqApiKeys(text = '') {
+    if (typeof text !== 'string') {
+      return this.loadGroqApiKeys();
+    }
+    localStorage.setItem(LS_KEYS.GROQ_API_KEYS, text);
+    return this.loadGroqApiKeys();
+  },
+
+  loadSubAgentTrace() {
+    return safeJSONParse(localStorage.getItem(LS_KEYS.SUBAGENT_TRACE), null);
+  },
+
+  saveSubAgentTrace(trace) {
+    if (!trace) {
+      this.clearSubAgentTrace();
+      return null;
+    }
+    localStorage.setItem(LS_KEYS.SUBAGENT_TRACE, JSON.stringify(trace));
+    return trace;
+  },
+
+  updateSubAgentTrace(update) {
+    const current = this.loadSubAgentTrace() || {};
+    const next = typeof update === 'function'
+      ? update(current)
+      : { ...current, ...update };
+    localStorage.setItem(LS_KEYS.SUBAGENT_TRACE, JSON.stringify(next));
+    return next;
+  },
+
+  clearSubAgentTrace() {
+    localStorage.removeItem(LS_KEYS.SUBAGENT_TRACE);
+  },
+
   /**
    * Clear all persisted data except the provided LS keys.
    */
@@ -511,6 +626,22 @@ function normalizeArray(value) {
   }
 
   return [];
+}
+
+function readBoolean(key, fallback = false) {
+  if (!key) return fallback;
+  const raw = localStorage.getItem(key);
+  if (raw === null || raw === undefined) {
+    return fallback;
+  }
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return fallback;
+}
+
+function writeBoolean(key, value) {
+  if (!key || typeof value !== 'boolean') return;
+  localStorage.setItem(key, value ? 'true' : 'false');
 }
 
 // Expose storage helper to legacy global scripts while preserving ES module exports

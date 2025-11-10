@@ -12,6 +12,7 @@ import { renderVault } from './renderer-vault.js';
 import { renderReasoningLog } from './renderer-reasoning.js';
 import { renderFinalOutput } from './renderer-output.js';
 import { renderAttachmentPanel } from './renderer-attachments.js';
+import { renderSubAgentStatus, renderSubAgentPanel } from './renderer-subagent.js';
 
 /**
  * Renderer Core object
@@ -51,6 +52,7 @@ export const RendererCore = {
     eventBus.removeAllListeners(Events.FINAL_OUTPUT_UPDATED);
     eventBus.removeAllListeners(Events.UI_REFRESH_REQUEST);
     eventBus.removeAllListeners(Events.EXCEL_ATTACHMENT_UPDATED);
+    eventBus.removeAllListeners(Events.SUBAGENT_STATE_CHANGED);
     
     // Bind with debugging
     eventBus.on(Events.MEMORY_UPDATED, (data) => {
@@ -102,6 +104,14 @@ export const RendererCore = {
       renderAttachmentPanel();
     });
 
+    eventBus.on(Events.SUBAGENT_STATE_CHANGED, () => {
+      if (window.GDRS_DEBUG_EVENTS) {
+        console.log('🔎 [Event] SUBAGENT_STATE_CHANGED received, rendering sub-agent UI...');
+      }
+      renderSubAgentStatus();
+      renderSubAgentPanel();
+    });
+
     console.log('✅ Event listeners bound successfully');
   },
 
@@ -120,6 +130,8 @@ export const RendererCore = {
     renderVault();
     renderReasoningLog();
     renderFinalOutput();
+    renderSubAgentStatus();
+    renderSubAgentPanel();
     renderAttachmentPanel();
     CodeExecutor.restoreLastExecutedCode();
     
@@ -141,5 +153,7 @@ export const RendererCore = {
   renderGoals,
   renderVault,
   renderReasoningLog,
-  renderFinalOutput
+  renderFinalOutput,
+  renderSubAgentStatus,
+  renderSubAgentPanel
 };

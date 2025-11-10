@@ -9,8 +9,11 @@ import {
   SYSTEM_PROMPT,
   REASONING_STRATEGIC_INSTRUCTION
 } from '../core/constants.js';
+import { buildSystemInstructions } from '../config/prompt-instruction-modules.js';
 import { ReasoningContextBuilder } from './context/context-builder.js';
 import { goalCompletionEvaluator as defaultGoalEvaluator } from './goal-completion-evaluator.js';
+import { Storage } from '../storage/storage.js';
+import { ExcelRuntimeStore } from '../excel/core/excel-store.js';
 import { nowISO } from '../core/utils.js';
 
 let contextBuilder = new ReasoningContextBuilder();
@@ -43,11 +46,20 @@ export const ReasoningEngine = {
     console.log(`[${buildStartTime}] ReasoningEngine.buildContextPrompt() called`);
     console.log(`[${buildStartTime}] Parameters: query length=${query?.length || 0}, iteration=${iteration}, maxIterations=${MAX_ITERATIONS}`);
 
+    const subAgentSettings = Storage.loadSubAgentSettings ? Storage.loadSubAgentSettings() : {};
+    const dynamicSystemPrompt = buildSystemInstructions({
+      enableSubAgent: !!subAgentSettings.enableSubAgent,
+      enableExcelHelpers: subAgentSettings.enableExcelHelpers !== false,
+      hasExcelAttachment: typeof ExcelRuntimeStore?.hasWorkbook === 'function'
+        ? ExcelRuntimeStore.hasWorkbook()
+        : false
+    });
+
     const prompt = await contextBuilder.buildPrompt({
       query,
       iteration,
       maxIterations: MAX_ITERATIONS,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: dynamicSystemPrompt || SYSTEM_PROMPT,
       instructions: REASONING_STRATEGIC_INSTRUCTION
     });
 

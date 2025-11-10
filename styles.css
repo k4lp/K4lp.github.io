@@ -660,6 +660,134 @@ select {
   flex-wrap: wrap;
 }
 
+.subagent-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.subagent-status-body {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  border: var(--border-width) solid var(--gray-200);
+  background: var(--gray-50);
+}
+
+.subagent-status-body .status-meta {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  margin-bottom: var(--space-xs);
+}
+
+.subagent-status-body .status-content {
+  font-size: 0.95rem;
+  color: var(--gray-800);
+  line-height: 1.4;
+}
+
+.subagent-trace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.subagent-section h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.subagent-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.subagent-meta div {
+  border: var(--border-width) solid var(--gray-200);
+  padding: var(--space-sm);
+}
+
+.subagent-meta dt {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.subagent-meta dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--gray-900);
+}
+
+.subagent-tool {
+  border: var(--border-width) solid var(--gray-200);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.subagent-tool header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.subagent-tool-log {
+  background: var(--gray-50);
+  border: var(--border-width) solid var(--gray-200);
+  padding: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.subagent-tool-item {
+  margin-bottom: var(--space-sm);
+}
+
+.tool-item-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.tool-item-link {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.subagent-prompt {
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--gray-50);
+  border: var(--border-width) solid var(--gray-200);
+  padding: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.pill-muted {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+
+.pill-success {
+  background: var(--success-text);
+  color: var(--white);
+}
+
+.pill-warning {
+  background: var(--warning-text);
+  color: var(--white);
+}
+
 .session-meta {
   font-family: var(--font-mono);
   font-size: 0.625rem;

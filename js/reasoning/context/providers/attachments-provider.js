@@ -251,29 +251,32 @@ const descriptions = sheet.getColumnData({
 export const attachmentsProvider = {
   id: 'attachments',
   description: 'Provides Excel API reference and current workbook state.',
-  async build() {
-    const metadata = ExcelRuntimeStore.getMetadata();
+  async collect() {
+    const hasWorkbook = ExcelRuntimeStore.hasWorkbook?.() || false;
+    const metadata = hasWorkbook ? ExcelRuntimeStore.getMetadata?.() : null;
 
-    // ALWAYS include API reference, even when no workbook is loaded
     if (!metadata) {
       return [
         '**Excel Attachment Status:** NO WORKBOOK LOADED',
         '',
-        'Upload an Excel file (.xlsx/.xls/.csv) to use these APIs:',
+        'Upload an Excel file (.xlsx/.xls/.csv) to unlock the Excel helper APIs.',
         '',
         EXCEL_API_QUICK_REFERENCE
       ].join('\n');
     }
 
     // Workbook is loaded - include status + API reference
-    const mutationLog = ExcelRuntimeStore.getMutationLog();
-    const working = ExcelRuntimeStore.getWorkingCopy();
-    const diffIndex = ExcelRuntimeStore.getDiffIndex();
-    const sheetOrder = metadata.sheetOrder || Object.keys(working || {});
+    const mutationLog = ExcelRuntimeStore.getMutationLog?.() || [];
+    const working = ExcelRuntimeStore.getWorkingCopy?.() || {};
+    const diffIndex = ExcelRuntimeStore.getDiffIndex?.() || {};
+    const sheetOrder = Array.isArray(metadata.sheetOrder) && metadata.sheetOrder.length
+      ? metadata.sheetOrder
+      : Object.keys(working || {});
 
     const sheetSummaries = sheetOrder.map((sheetName) => {
-      const rows = working?.[sheetName]?.rows?.length || 0;
-      const cols = working?.[sheetName]?.headers?.length || 0;
+      const sheet = working?.[sheetName];
+      const rows = sheet?.rows?.length || 0;
+      const cols = sheet?.headers?.length || 0;
       const diff = diffIndex[sheetName] || { changedCells: 0, addedRows: 0, deletedRows: 0 };
       const mutated = mutationLog.some((entry) => entry.sheet === sheetName);
 
@@ -289,15 +292,21 @@ export const attachmentsProvider = {
     }).join('\n');
 
     const totalChanges = Object.values(diffIndex).reduce(
-      (sum, diff) => sum + diff.changedCells + diff.addedRows + diff.deletedRows,
+      (sum, diff) =>
+        sum +
+        (diff.changedCells || 0) +
+        (diff.addedRows || 0) +
+        (diff.deletedRows || 0),
       0
     );
 
+    const fileSizeKb = metadata.sizeBytes ? (metadata.sizeBytes / 1024).toFixed(2) : '0.00';
+
     return [
-      `**Excel Attachment Status:** ACTIVE`,
-      `File: **${metadata.name}** (${(metadata.sizeBytes / 1024).toFixed(2)} KB)`,
+      '**Excel Attachment Status:** ACTIVE',
+      `File: **${metadata.name || 'Unknown'}** (${fileSizeKb} KB)`,
       `Sheets: ${sheetOrder.length} | Total Rows: ${metadata.totals?.rows || 0} | Changes: ${totalChanges}`,
-      `Imported: ${new Date(metadata.importedAt).toLocaleString()}`,
+      `Imported: ${metadata.importedAt ? new Date(metadata.importedAt).toLocaleString() : 'n/a'}`,
       '',
       '**Current Sheets:**',
       sheetSummaries || '- No sheets detected.',
@@ -306,5 +315,11 @@ export const attachmentsProvider = {
       '',
       EXCEL_EXPLORATION_GUIDE
     ].join('\n');
+  },
+  format(payload) {
+    if (!payload) {
+      return null;
+    }
+    return typeof payload === 'string' ? payload.trim() : String(payload);
   }
 };

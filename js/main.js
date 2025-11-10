@@ -54,6 +54,9 @@ import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
 import { getModularInitialization } from './core/modular-system-init.js';
 import { ExcelRuntimeStore } from './excel/core/excel-store.js';
+import { SubAgentOrchestrator } from './subagent/sub-agent-orchestrator.js';
+import { SUB_AGENTS } from './subagent/agents-config.js';
+import { attachSubAgentAPI } from './subagent/sub-agent-api.js';
 
 /**
  * Self-executing bootstrap with clean module organization
@@ -142,6 +145,8 @@ import { ExcelRuntimeStore } from './excel/core/excel-store.js';
       Renderer,
       bindEvents,
       attachments: ExcelRuntimeStore,
+      SubAgentOrchestrator,
+      SUB_AGENTS,
 
       // Initialization
       boot,
@@ -149,6 +154,9 @@ import { ExcelRuntimeStore } from './excel/core/excel-store.js';
       // Runtime state
       currentIteration: 0
     };
+
+    const subAgentAPI = attachSubAgentAPI(window);
+    window.GDRS.SubAgent = subAgentAPI;
 
     // ==========================================
     // PHASE 4: Initialize UI and Boot
