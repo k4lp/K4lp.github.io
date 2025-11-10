@@ -95,7 +95,6 @@ export class SubAgentOrchestrator {
         { role: 'user', content: initialPrompt }
       ];
       let finalResult = null;
-      let iterationData = []; // Track iteration details for UI
 
       while (iteration < maxIterations) {
         iteration++;

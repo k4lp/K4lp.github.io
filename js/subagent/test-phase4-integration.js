@@ -161,7 +161,7 @@ test('Events: All sub-agent events defined', () => {
   });
 });
 
-test('Events: SUBAGENT_RESULT_UPDATED emitted on save', (done) => {
+test('Events: SUBAGENT_RESULT_UPDATED emitted on save', () => {
   const testResult = { success: true, content: 'Test' };
 
   const handler = (data) => {
@@ -178,7 +178,7 @@ test('Events: SUBAGENT_RESULT_UPDATED emitted on save', (done) => {
   eventBus.off(Events.SUBAGENT_RESULT_UPDATED, handler);
 });
 
-test('Events: SUBAGENT_RESULT_CLEARED emitted on clear', (done) => {
+test('Events: SUBAGENT_RESULT_CLEARED emitted on clear', () => {
   const handler = () => {
     eventBus.off(Events.SUBAGENT_RESULT_CLEARED, handler);
     // Test passes
