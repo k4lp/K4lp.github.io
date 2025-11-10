@@ -1767,37 +1767,66 @@ const CONTEXT_SECTIONS = [
 
 ### 3. Context Pollution Prevention **⭐ CRITICAL PATTERN**
 
-**IMPORTANT OPTIMIZATION:** All context providers must implement **conditional inclusion** to prevent context pollution.
+**IMPORTANT ARCHITECTURAL DISTINCTION:**
 
-**Pattern for All Context Providers:**
+The GDRS system has **TWO layers** for providing context to the LLM:
 
+#### Layer 1: SYSTEM_PROMPT (ALWAYS Included)
+**File:** `js/config/app-config.js` → `SYSTEM_PROMPT` constant
+
+This is **ALWAYS included** in every LLM call and contains:
+- ✅ Memory API documentation (memory.set, memory.get, etc.)
+- ✅ Tasks API documentation (tasks.set, tasks.get, etc.)
+- ✅ Goals API documentation (goals.set, goals.get, etc.)
+- ✅ Vault API documentation (vault.set, vault.get, etc.)
+- ✅ Excel API quick reference (core methods)
+- ✅ Core instructions and protocols
+
+**These instructions are ESSENTIAL and NEVER removed.**
+
+#### Layer 2: Context Providers (CONDITIONAL Data Sections)
+**Directory:** `js/reasoning/context/providers/`
+
+These are **CONDITIONALLY included** and provide current DATA state:
+
+**Pattern 1 - OPTIONAL FEATURES** (only if enabled AND has data):
 ```javascript
-export const someProvider = {
-  id: 'someProvider',
-  priority: 50,
-
+export const externalKnowledgeProvider = {
+  id: 'externalKnowledge',
   collect() {
-    // Step 1: Check if this provider should run
-    const isEnabled = Storage.loadSomeFeatureEnabled();
-    if (!isEnabled) {
-      return null; // Feature disabled, skip entirely
-    }
+    // Step 1: Check if feature is enabled
+    const isEnabled = Storage.loadSubAgentEnabled();
+    if (!isEnabled) return null; // Feature disabled
 
-    // Step 2: Check if there's actual data
-    const data = getSomeData();
-    if (!data || data.length === 0) {
-      return null; // No data, skip
-    }
+    // Step 2: Check if has data
+    const result = Storage.loadSubAgentResult();
+    if (!result) return null; // No data
 
-    // Step 3: Return only if both conditions met
-    return { data, enabled: isEnabled };
+    // Return data only if BOTH conditions met
+    return { data: result };
   },
-
   build(data) {
-    // Only build if data exists
-    if (!data) return '';
+    if (!data) return ''; // No section if no data
+    return `## EXTERNAL KNOWLEDGE\n${data.content}`;
+  }
+};
+```
 
-    return `## SECTION\n${formatData(data)}`;
+**Pattern 2 - CORE FEATURES** (always have API docs, only show data if exists):
+```javascript
+export const memoryProvider = {
+  id: 'memory',
+  collect({ snapshot }) {
+    return snapshot.memory; // Get current memory data
+  },
+  format(memory) {
+    // Return empty string if no data (API docs already in SYSTEM_PROMPT)
+    if (!Array.isArray(memory) || memory.length === 0) {
+      return ''; // No data section, but API docs still available
+    }
+
+    // Format and return data
+    return memory.map(item => `- [${item.identifier}] ${item.heading}: ${item.content}`).join('\n');
   }
 };
 ```
@@ -1805,28 +1834,45 @@ export const someProvider = {
 **Examples of Conditional Inclusion:**
 
 1. **Excel/Attachments Context:**
-   - Only include if `ExcelRuntimeStore.hasWorkbook()` returns true
-   - Don't pollute context with Excel instructions if no file uploaded
+   ```javascript
+   // API docs ALWAYS in SYSTEM_PROMPT
+   // Provider only adds STATUS + exploration guide if workbook loaded
+   if (!ExcelRuntimeStore.hasWorkbook()) {
+     return 'NO WORKBOOK LOADED'; // Brief status only
+   }
+   // Full status + exploration guide if loaded
+   ```
 
-2. **External Knowledge Context:**
-   - Only include if `Storage.loadSubAgentEnabled()` is true
-   - Only include if `Storage.loadSubAgentResult()` has data
-   - Don't add sub-agent instructions if feature disabled
+2. **External Knowledge Context (Sub-Agent):**
+   ```javascript
+   // Only include if BOTH enabled AND has results
+   const isEnabled = Storage.loadSubAgentEnabled();
+   if (!isEnabled) return null; // Completely skip
 
-3. **Memory Context:**
-   - Only include if memory array has items
-   - Don't add empty "## MEMORY" sections
+   const result = Storage.loadSubAgentResult();
+   if (!result) return null; // Skip if no data
+   ```
 
-4. **Vault Context:**
-   - Only include if vault has entries
-   - Don't add vault instructions if vault is empty
+3. **Memory/Tasks/Goals/Vault:**
+   ```javascript
+   // API docs ALWAYS in SYSTEM_PROMPT
+   // Provider only adds current data if exists
+   if (!data || data.length === 0) return ''; // Empty = no data section
+   ```
 
 **Benefits:**
-- ✅ Reduces token usage significantly
+- ✅ LLM ALWAYS knows how to use core tools (memory, tasks, goals, vault, Excel)
+- ✅ No empty data sections cluttering context
+- ✅ Optional features only included when enabled
+- ✅ Reduces token usage by 20-50%
 - ✅ Cleaner, more focused prompts
-- ✅ Faster LLM response times
 - ✅ Better reasoning quality (less noise)
-- ✅ Lower API costs
+
+**CRITICAL RULES:**
+1. **NEVER remove core API documentation from SYSTEM_PROMPT**
+2. **Context providers only add DATA sections, not API docs**
+3. **Optional features (sub-agent, future features) can be completely excluded**
+4. **Core features (memory, tasks, goals, vault) always have API docs available**
 
 ---
 
