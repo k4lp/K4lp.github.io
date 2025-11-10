@@ -59,6 +59,11 @@
 **Reality:** Uses ContextProviderRegistry pattern.
 **Fix Applied:** Added detailed registration instructions.
 
+#### ⭐ Issue #6: Context Pollution Risk (HIGH PRIORITY) **NEW**
+**Problem:** Context providers include sections even when not needed.
+**Reality:** Should only include sections when feature is enabled AND has data.
+**Fix Applied:** Implemented conditional inclusion pattern for all providers to reduce token usage.
+
 ### Files Verified to Exist ✅
 - `js/main.js` (window.GDRS namespace)
 - `js/core/boot.js` (boot function)
@@ -108,6 +113,8 @@ Create a **modular sub-agent system** that allows the main LLM to delegate speci
 - **Knowledge augmentation**: Access to Wikipedia, arXiv, Wikidata, etc.
 - **Maintainability**: Centralized tool functions, config-driven agents
 - **Scalability**: Add new agents/tools without touching core logic
+- **Context efficiency**: Conditional inclusion prevents pollution, reduces token usage
+- **Cost optimization**: Only include instructions when features are actually used
 
 ---
 
@@ -1104,6 +1111,12 @@ export const externalKnowledgeProvider = {
   priority: 50, // After attachments, before tasks
 
   collect() {
+    // OPTIMIZATION: Only collect if feature is enabled (reduce context pollution)
+    const isEnabled = Storage.loadSubAgentEnabled();
+    if (!isEnabled) {
+      return null; // Feature disabled, don't add to context
+    }
+
     // Retrieve cached sub-agent results
     // CORRECTED: Use specific Storage method instead of generic load()
     const result = Storage.loadSubAgentResult();
@@ -1115,12 +1128,14 @@ export const externalKnowledgeProvider = {
     return {
       source: result.source,
       content: result.content,
-      iterations: result.iterations
+      iterations: result.iterations,
+      enabled: isEnabled
     };
   },
 
   build(data) {
-    if (!data) return '';
+    // OPTIMIZATION: Only build section if data exists (conditional context)
+    if (!data || !data.content) return '';
 
     return `## EXTERNAL KNOWLEDGE
 
@@ -1589,8 +1604,8 @@ export { externalKnowledgeProvider } from './external-knowledge-provider.js'; //
 export const defaultContextProviderRegistry = new ContextProviderRegistry([
   pendingErrorProvider,
   userQueryProvider,
-  attachmentsProvider,
-  externalKnowledgeProvider, // NEW - Add here
+  attachmentsProvider,        // Only includes if attachments exist
+  externalKnowledgeProvider,  // NEW - Only includes if enabled AND has data
   tasksProvider,
   goalsProvider,
   memoryProvider,
@@ -1599,6 +1614,14 @@ export const defaultContextProviderRegistry = new ContextProviderRegistry([
   recentReasoningProvider
 ]);
 ```
+
+**IMPORTANT - Context Pollution Prevention:**
+All context providers should implement the **conditional inclusion pattern**:
+1. Check if feature is enabled/relevant in `collect()`
+2. Return `null` if not needed
+3. Only build section if data exists in `build()`
+
+This ensures context only includes what's actually needed for the current query.
 
 ---
 
@@ -1742,7 +1765,72 @@ const CONTEXT_SECTIONS = [
 
 ---
 
-### 3. Event Bus Integration **⭐ REQUIRED**
+### 3. Context Pollution Prevention **⭐ CRITICAL PATTERN**
+
+**IMPORTANT OPTIMIZATION:** All context providers must implement **conditional inclusion** to prevent context pollution.
+
+**Pattern for All Context Providers:**
+
+```javascript
+export const someProvider = {
+  id: 'someProvider',
+  priority: 50,
+
+  collect() {
+    // Step 1: Check if this provider should run
+    const isEnabled = Storage.loadSomeFeatureEnabled();
+    if (!isEnabled) {
+      return null; // Feature disabled, skip entirely
+    }
+
+    // Step 2: Check if there's actual data
+    const data = getSomeData();
+    if (!data || data.length === 0) {
+      return null; // No data, skip
+    }
+
+    // Step 3: Return only if both conditions met
+    return { data, enabled: isEnabled };
+  },
+
+  build(data) {
+    // Only build if data exists
+    if (!data) return '';
+
+    return `## SECTION\n${formatData(data)}`;
+  }
+};
+```
+
+**Examples of Conditional Inclusion:**
+
+1. **Excel/Attachments Context:**
+   - Only include if `ExcelRuntimeStore.hasWorkbook()` returns true
+   - Don't pollute context with Excel instructions if no file uploaded
+
+2. **External Knowledge Context:**
+   - Only include if `Storage.loadSubAgentEnabled()` is true
+   - Only include if `Storage.loadSubAgentResult()` has data
+   - Don't add sub-agent instructions if feature disabled
+
+3. **Memory Context:**
+   - Only include if memory array has items
+   - Don't add empty "## MEMORY" sections
+
+4. **Vault Context:**
+   - Only include if vault has entries
+   - Don't add vault instructions if vault is empty
+
+**Benefits:**
+- ✅ Reduces token usage significantly
+- ✅ Cleaner, more focused prompts
+- ✅ Faster LLM response times
+- ✅ Better reasoning quality (less noise)
+- ✅ Lower API costs
+
+---
+
+### 4. Event Bus Integration **⭐ REQUIRED**
 
 **File:** `js/core/event-bus.js`
 
@@ -1771,7 +1859,7 @@ eventBus.emit(Events.SUBAGENT_ERROR, { agentId, error: error.message, iteration 
 
 ---
 
-### 4. UI Rendering (Optional Enhancement)
+### 5. UI Rendering (Optional Enhancement)
 
 **File:** `js/ui/renderer/renderer-reasoning.js`
 
@@ -2495,6 +2583,13 @@ This plan has been verified against the actual codebase and the following critic
    - All file paths verified to exist
    - All import statements checked against actual exports
    - No namespace collisions detected
+
+8. **✅ Context Pollution Prevention Added** ⭐ NEW
+   - Implemented conditional inclusion pattern for all context providers
+   - Excel context only included if workbook present
+   - Sub-agent context only included if enabled AND has results
+   - General pattern documented for all providers
+   - Significant token savings and better prompt quality
 
 ### Implementation Readiness
 
