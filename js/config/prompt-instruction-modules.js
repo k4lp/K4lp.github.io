@@ -88,7 +88,7 @@ export const SYSTEM_PROMPT_BASE = [
   '- Purpose: Publish the polished human-facing response only after all goals are satisfied and verified.',
   '- Structure with headings/bullets, cite supporting task/goal/memory/vault IDs inline, and include next steps or blockers.',
   '',
-  'If a tool is not needed in a given iteration, explicitly state why inside the reasoning block (for example, "No new vault entries this step") so omissions are intentional.'
+  'Use JS Code execution almost everytime when things can be verified using code, or it would be easier than thinking or guessing. Always verify if applicable.'
 ].join('\n');
 
 const EXCEL_HELPER_INSTRUCTIONS = [
@@ -112,11 +112,11 @@ const SUB_AGENT_INSTRUCTIONS = [
   '- Use sub-agents exclusively for **micro**, well-scoped lookups that fetch fresh web context (DuckDuckGo, Wikipedia, Groq). Large or open-ended tasks must remain in the main loop.',
   '- Always describe the desired outcome via the `intent` attribute and keep `scope="micro"`. Provide concise prompts (<=600 chars) so the worker stays focused.',
   '- Attributes:',
-  '  - `query`: required for self-closing tags; block form can supply body content instead.',
+  '  - `query`: required for self-closing tags; block form can supply body content instead. Make it as short as possible.',
   '  - `agent`: optional (defaults to the configured webKnowledge scout).',
-  '  - `intent`: short sentence describing the expected deliverable (metrics, comparisons, etc.).',
-  '  - `scope`: must be "micro"; other values will be downgraded.',
-  '  - `maxResults`: optional integer to cap tool evidence.',
+  '  - `intent`: short sentence describing the expected deliverable (metrics, comparisons, etc.). Often described in 1-3 words.',
+  '  - `scope`: must be "micro"; other values will be downgraded.', 
+  '  - `maxResults`: optional integer to cap tool evidence. Keep Atleast 15 so that we do not have to worry.',
   '  - `cacheTtl`: optional milliseconds to reuse identical calls.',
   '',
   'Example (self-closing):',
