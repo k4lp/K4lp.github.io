@@ -19,6 +19,8 @@ import { SUB_AGENTS, DEFAULT_AGENT, getAgent } from './agents-config.js';
 import { ReasoningParser } from '../reasoning/parser/parser-core.js';
 import { GeminiAPI } from '../api/gemini-client.js';
 import { SandboxExecutor } from '../execution/sandbox-executor.js';
+import { Storage } from '../storage/storage.js';
+import { eventBus, Events } from '../core/event-bus.js';
 import WebTools from './tools/web-tools.js';
 import { nowISO } from '../core/utils.js';
 
@@ -73,6 +75,16 @@ export class SubAgentOrchestrator {
       console.log(`🔄 [SubAgent] Max iterations: ${maxIterations}`);
     }
 
+    // Emit start event
+    eventBus.emit(Events.SUBAGENT_START, {
+      agentId,
+      agentName: agent.name,
+      query,
+      modelId,
+      maxIterations,
+      timestamp: nowISO()
+    });
+
     try {
       // Build initial prompt
       const initialPrompt = this._buildInitialPrompt(agent, query);
@@ -83,12 +95,23 @@ export class SubAgentOrchestrator {
         { role: 'user', content: initialPrompt }
       ];
       let finalResult = null;
+      let iterationData = []; // Track iteration details for UI
 
       while (iteration < maxIterations) {
         iteration++;
+        const iterationStartTime = Date.now();
+
         if (verbose) {
           console.log(`🔄 [SubAgent] Iteration ${iteration}/${maxIterations}`);
         }
+
+        // Emit iteration event
+        eventBus.emit(Events.SUBAGENT_ITERATION, {
+          agentId,
+          iteration,
+          maxIterations,
+          timestamp: nowISO()
+        });
 
         // Call LLM
         const llmStartTime = Date.now();
@@ -146,6 +169,17 @@ export class SubAgentOrchestrator {
             if (verbose) {
               console.log(`   ${result.success ? '✅' : '❌'} Execution ${result.success ? 'succeeded' : 'failed'} (${execDuration}ms)`);
             }
+
+            // Emit execution event
+            eventBus.emit(Events.SUBAGENT_EXECUTION, {
+              agentId,
+              iteration,
+              blockNumber: i + 1,
+              code,
+              result,
+              executionTime: execDuration,
+              timestamp: nowISO()
+            });
 
             executionOutput += this._formatExecutionResult(result, i + 1);
           }
@@ -208,11 +242,32 @@ export class SubAgentOrchestrator {
         console.log(`🏁 [SubAgent] Completed in ${iteration} iteration(s), ${finalResult.executionTime}ms total`);
       }
 
+      // Add metadata to result
+      finalResult.agentId = agentId;
+      finalResult.query = query;
+      finalResult.timestamp = nowISO();
+
+      // Save result to storage
+      Storage.saveSubAgentResult(finalResult);
+
+      // Append to execution history
+      Storage.appendSubAgentExecution({
+        agentId,
+        agentName: agent.name,
+        query,
+        modelId,
+        result: finalResult
+      });
+
+      // Emit completion event
+      eventBus.emit(Events.SUBAGENT_COMPLETE, finalResult);
+
       return finalResult;
 
     } catch (error) {
       console.error(`❌ [SubAgent] Fatal error:`, error);
-      return {
+
+      const errorResult = {
         success: false,
         content: `Sub-agent encountered an error: ${error.message}`,
         format: 'error',
@@ -220,8 +275,33 @@ export class SubAgentOrchestrator {
         iterations: 0,
         executionTime: Date.now() - startTime,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
+        agentId,
+        query,
+        timestamp: nowISO()
       };
+
+      // Save error result to storage
+      Storage.saveSubAgentResult(errorResult);
+
+      // Append error to history
+      Storage.appendSubAgentExecution({
+        agentId,
+        agentName: agent.name,
+        query,
+        modelId,
+        result: errorResult
+      });
+
+      // Emit error event
+      eventBus.emit(Events.SUBAGENT_ERROR, {
+        agentId,
+        error: error.message,
+        stack: error.stack,
+        timestamp: nowISO()
+      });
+
+      return errorResult;
     }
   }
 
