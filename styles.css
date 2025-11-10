@@ -840,7 +840,10 @@ select {
   background: var(--white);
   border: var(--border-width) solid var(--gray-900);
   border-radius: var(--border-radius);
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .status-bar {
@@ -907,6 +910,8 @@ select {
   gap: var(--space-md);
   transition: all var(--transition-fast);
   cursor: pointer;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .li:hover {
@@ -925,11 +930,15 @@ select {
 .li .mono {
   font-weight: 500;
   color: var(--gray-900);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .li .pm {
   font-size: 0.6875rem;
   line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Clickable vault items */
@@ -1033,6 +1042,8 @@ select {
   font-size: 0.75rem;
   line-height: 1.6;
   color: var(--gray-800);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Tool activities */
@@ -1070,6 +1081,8 @@ select {
   border: 2px solid var(--gray-300);
   border-left: var(--border-emphasis) solid var(--gray-900);
   transition: all var(--transition-fast);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .reasoning-block.even {
@@ -2174,4 +2187,23 @@ select {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.6;
+}
+
+/* Prevent text overflow in all text containers */
+.block-body,
+.modal-body,
+.output,
+.log,
+.console pre,
+.markdown-body {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure monospace content wraps properly */
+.mono,
+code:not(pre code) {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
