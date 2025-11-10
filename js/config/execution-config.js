@@ -9,7 +9,7 @@
  * Default timeout (ms) applied when no explicit value is provided.
  * Used by: execution/execution-runner.js
  */
-export const EXECUTION_DEFAULT_TIMEOUT_MS = 45000;
+export const EXECUTION_DEFAULT_TIMEOUT_MS = 150000;
 
 /**
  * Source label used when callers omit one.

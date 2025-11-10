@@ -25,7 +25,7 @@ export class ExecutionPolicyManager {
     return {
       default: {
         strategy: 'retry',
-        timeoutMs: 15000,
+        timeoutMs: 150000,
         enableRetry: true,
         maxRetries: 3,
         cleanContextOnRetry: true,

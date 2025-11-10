@@ -30,7 +30,7 @@ export class ExecutionStrategyBase {
       maxAttempts: 1,
       enableRetry: false,
       cleanContext: false,
-      timeoutMs: 15000,
+      timeoutMs: 150000,
       logAllAttempts: false,
       ...config
     };
