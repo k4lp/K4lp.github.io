@@ -54,6 +54,13 @@ import { Renderer } from './ui/renderer.js';
 import { bindEvents } from './ui/events.js';
 import { getModularInitialization } from './core/modular-system-init.js';
 import { ExcelRuntimeStore } from './excel/core/excel-store.js';
+import { SubAgentUI } from './ui/subagent-ui.js';
+
+// ==========================================
+// SUB-AGENT SYSTEM
+// ==========================================
+import { SubAgentOrchestrator } from './subagent/sub-agent-orchestrator.js';
+import WebTools from './subagent/tools/web-tools.js';
 
 /**
  * Self-executing bootstrap with clean module organization
@@ -143,6 +150,10 @@ import { ExcelRuntimeStore } from './excel/core/excel-store.js';
       bindEvents,
       attachments: ExcelRuntimeStore,
 
+      // Sub-agent system
+      SubAgentOrchestrator,
+      WebTools,
+
       // Initialization
       boot,
 
@@ -156,6 +167,12 @@ import { ExcelRuntimeStore } from './excel/core/excel-store.js';
     // Initialize renderer with event bus
     Renderer.init();
     bindEvents();
+
+    // Initialize Sub-Agent UI
+    console.log('%cInitializing Sub-Agent System...', 'color: #00aaff;');
+    const subAgentUI = new SubAgentUI();
+    window.GDRS.SubAgentUI = subAgentUI;
+    console.log('%cSub-Agent UI initialized', 'color: #00aa00;');
 
     // Run boot sequence
     boot();
@@ -198,6 +215,29 @@ import { ExcelRuntimeStore } from './excel/core/excel-store.js';
       disableProviderDebug: () => {
         ProviderRegistry.disableDebug();
         ProviderLoader.disableDebug();
+      },
+      // Sub-agent debugging tools
+      runSubAgent: async (agentId, query, options) => {
+        console.log(`Running sub-agent: ${agentId}`);
+        const result = await SubAgentOrchestrator.runSubAgent(agentId, query, options);
+        console.log('Sub-agent result:', result);
+        return result;
+      },
+      listSubAgents: () => {
+        return SubAgentOrchestrator.getAvailableAgents();
+      },
+      toggleSubAgentUI: () => {
+        if (window.GDRS.SubAgentUI) {
+          window.GDRS.SubAgentUI.toggle();
+        }
+      },
+      enableSubAgents: () => {
+        Storage.saveSubAgentEnabled(true);
+        console.log('Sub-agents enabled');
+      },
+      disableSubAgents: () => {
+        Storage.saveSubAgentEnabled(false);
+        console.log('Sub-agents disabled');
       }
     };
   }
