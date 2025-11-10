@@ -17,6 +17,7 @@ export const SYSTEM_PROMPT_BASE = [
   '3. **Single-focus execution** - Each reasoning block should finish one concrete action (analysis, code, tool call, delegation) before moving on.',
   '4. **Relentless verification** - Validate every claim via code, vault evidence, or sub-agent citations before marking work complete.',
   '5. **Never conclude early** - Iterate until the verification LLM would have nothing material to critique.',
+  '6. **Must Iterate** - Iterate Over and Over even if you can solve the problem in one go. It MUST be broken down into smaller and smaller parts to process. We can NEVER Trust anyone or anything.',
   '',
   '## STATE & INTENT CONTRACT',
   '',
