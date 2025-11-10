@@ -78,6 +78,9 @@ export const LS_KEYS = {
   /** Detailed sub-agent trace */
   SUBAGENT_TRACE: 'gdrs_subagent_trace',
 
+  /** Runtime status snapshot for the sub-agent */
+  SUBAGENT_RUNTIME_STATE: 'gdrs_subagent_runtime_state',
+
   /** Stored Groq API keys */
   GROQ_API_KEYS: 'gdrs_groq_api_keys'
 };

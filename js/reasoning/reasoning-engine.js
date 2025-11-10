@@ -47,12 +47,15 @@ export const ReasoningEngine = {
     console.log(`[${buildStartTime}] Parameters: query length=${query?.length || 0}, iteration=${iteration}, maxIterations=${MAX_ITERATIONS}`);
 
     const subAgentSettings = Storage.loadSubAgentSettings ? Storage.loadSubAgentSettings() : {};
+    const hasExcelAttachment = typeof ExcelRuntimeStore?.hasWorkbook === 'function'
+      ? ExcelRuntimeStore.hasWorkbook()
+      : false;
+    const excelHelpersEnabled = Boolean(subAgentSettings.enableExcelHelpers && hasExcelAttachment);
+
     const dynamicSystemPrompt = buildSystemInstructions({
       enableSubAgent: !!subAgentSettings.enableSubAgent,
-      enableExcelHelpers: subAgentSettings.enableExcelHelpers !== false,
-      hasExcelAttachment: typeof ExcelRuntimeStore?.hasWorkbook === 'function'
-        ? ExcelRuntimeStore.hasWorkbook()
-        : false
+      enableExcelHelpers: excelHelpersEnabled,
+      hasExcelAttachment
     });
 
     const prompt = await contextBuilder.buildPrompt({

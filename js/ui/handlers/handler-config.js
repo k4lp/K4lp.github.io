@@ -6,6 +6,8 @@
 import { Storage } from '../../storage/storage.js';
 import { qs } from '../../core/utils.js';
 import { renderSubAgentStatus, renderSubAgentPanel } from '../renderer/renderer-subagent.js';
+import { ExcelRuntimeStore } from '../../excel/core/excel-store.js';
+import { eventBus, Events } from '../../core/event-bus.js';
 
 /**
  * Bind max output tokens input handlers
@@ -56,12 +58,19 @@ export function bindConfigHandlers() {
   }
 
   if (excelHelpersToggle) {
-    excelHelpersToggle.checked = !!subAgentSettings.enableExcelHelpers;
-    excelHelpersToggle.addEventListener('change', () => {
-      Storage.saveSubAgentSettings({ enableExcelHelpers: excelHelpersToggle.checked });
+    const syncToggleState = () => {
+      const hasWorkbook = typeof ExcelRuntimeStore?.hasWorkbook === 'function' && ExcelRuntimeStore.hasWorkbook();
+      const nextValue = hasWorkbook ? true : false;
+      excelHelpersToggle.checked = nextValue;
+      excelHelpersToggle.disabled = true;
+      excelHelpersToggle.title = 'Excel helper instructions are auto-managed';
+      Storage.saveSubAgentSettings({ enableExcelHelpers: nextValue });
       renderSubAgentStatus();
       renderSubAgentPanel();
-    });
+    };
+
+    syncToggleState();
+    eventBus.on(Events.EXCEL_ATTACHMENT_UPDATED, syncToggleState);
   }
 
   if (groqKeysInput) {

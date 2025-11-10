@@ -16,7 +16,6 @@ import { bindModalHandlers } from './handlers/handler-modal.js';
 import { bindStorageHandlers } from './handlers/handler-storage.js';
 import { bindAttachmentHandlers } from './handlers/handler-attachments.js';
 import { bindGlobalHandlers } from './handlers/handler-global.js';
-import { bindSubAgentHandlers } from './handlers/handler-subagent.js';
 
 /**
  * Bind all application event handlers
@@ -50,7 +49,4 @@ export function bindEvents() {
 
   // Global keyboard shortcuts
   bindGlobalHandlers();
-
-  // Sub-agent controls
-  bindSubAgentHandlers();
 }

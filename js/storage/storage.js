@@ -716,6 +716,27 @@ export const Storage = {
     localStorage.removeItem(LS_KEYS.SUBAGENT_TRACE);
   },
 
+  loadSubAgentRuntimeState() {
+    return safeJSONParse(
+      localStorage.getItem(LS_KEYS.SUBAGENT_RUNTIME_STATE),
+      { status: 'idle', updatedAt: nowISO() }
+    );
+  },
+
+  saveSubAgentRuntimeState(state = {}) {
+    const payload = {
+      status: state.status || 'idle',
+      updatedAt: state.updatedAt || nowISO(),
+      ...state
+    };
+    localStorage.setItem(LS_KEYS.SUBAGENT_RUNTIME_STATE, JSON.stringify(payload));
+    return payload;
+  },
+
+  clearSubAgentRuntimeState() {
+    localStorage.removeItem(LS_KEYS.SUBAGENT_RUNTIME_STATE);
+  },
+
   /**
    * Clear all persisted data except the provided LS keys.
    */

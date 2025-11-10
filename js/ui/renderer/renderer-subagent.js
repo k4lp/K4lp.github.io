@@ -11,11 +11,12 @@ export function renderSubAgentStatus() {
   const lastResult = Storage.loadSubAgentLastResult?.();
   const history = Storage.loadSubAgentTraceHistory?.(1) || [];
   const latestTrace = history[0] || null;
+  const runtime = Storage.loadSubAgentRuntimeState?.() || { status: 'idle' };
 
   if (!settings.enableSubAgent) {
     pill.textContent = 'Disabled';
     pill.className = 'pill pill-muted';
-    body.innerHTML = '<p class="field-hint">Enable the sub-agent toggle to fetch external knowledge automatically.</p>';
+    body.innerHTML = '<p class="field-hint">External knowledge is disabled. Enable the toggle to allow the main loop to auto-delegate web lookups.</p>';
     return;
   }
 
@@ -25,13 +26,25 @@ export function renderSubAgentStatus() {
     : lastResult?.timestamp
       ? new Date(lastResult.timestamp).toLocaleString()
       : 'Pending';
+  const intentLabel = runtime.intent || latestTrace?.intent || '';
+
+  if (runtime.status === 'running') {
+    pill.textContent = 'RUNNING';
+    pill.className = 'pill pill-warning';
+    body.innerHTML = [
+      `<p class="status-meta">Main loop paused while <strong>${escapeHtml(agentLabel)}</strong> resolves:</p>`,
+      `<div class="status-content">"${escapeHtml(intentLabel || runtime.query || 'Loading fresh evidence')}"</div>`,
+      '<p class="field-hint">This sub-agent call was issued automatically from the reasoning loop; it will release once tool evidence is captured.</p>'
+    ].join('');
+    return;
+  }
 
   if (!latestTrace && !lastResult?.content) {
     pill.textContent = 'IDLE';
     pill.className = 'pill pill-warning';
     body.innerHTML = [
-      `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} - Status: waiting for next run</p>`,
-      '<p class="field-hint">Trigger the sub-agent via the button or the {{<subagent/>}} tool.</p>'
+      `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} - awaiting the first delegated lookup.</p>`,
+      '<p class="field-hint">Include {{<subagent .../>}} operations inside reasoning blocks to pull live web evidence.</p>'
     ].join('');
     return;
   }
@@ -52,8 +65,10 @@ export function renderSubAgentStatus() {
   const snippet = escapeHtml(snippetSource).split('\n').slice(0, 3).join('<br>');
 
   body.innerHTML = [
-    `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} - Updated: ${escapeHtml(timeLabel)}</p>`,
-    `<div class="status-content">${snippet}</div>`
+    `<p class="status-meta">Agent: ${escapeHtml(agentLabel)} • Updated: ${escapeHtml(timeLabel)}</p>`,
+    intentLabel ? `<p class="status-meta">Intent: ${escapeHtml(intentLabel)}</p>` : '',
+    `<div class="status-content">${snippet}</div>`,
+    '<p class="field-hint">Sub-agents run in isolation and share their findings here for the main thread to reuse.</p>'
   ].join('');
 }
 
@@ -65,7 +80,7 @@ export function renderSubAgentPanel() {
 
   const history = Storage.loadSubAgentTraceHistory?.(5) || [];
   if (history.length === 0) {
-    container.innerHTML = '<p class="field-hint">No sub-agent activity yet. Run a research query to populate this console.</p>';
+    container.innerHTML = '<p class="field-hint">No sub-agent delegations yet. Use {{<subagent .../>}} inside reasoning blocks to pull live web context.</p>';
     return;
   }
 
@@ -93,6 +108,8 @@ function renderSummary(trace) {
     ['Status', capitalize(trace.status || 'unknown')],
     ['Agent', trace.agentName || trace.agentId || 'N/A'],
     ['Query', trace.query || 'N/A'],
+    ['Intent', trace.intent || 'N/A'],
+    ['Scope', trace.scope || 'micro'],
     ['Started', trace.startedAt ? new Date(trace.startedAt).toLocaleString() : 'N/A'],
     ['Finished', trace.finishedAt ? new Date(trace.finishedAt).toLocaleString() : '—'],
     ['Error', trace.error || '—']
@@ -132,9 +149,20 @@ function renderTools(trace) {
       `;
     }
 
-    const payload = Array.isArray(tool.items)
-      ? tool.items.map(renderToolItem).join('')
-      : `<pre class="subagent-tool-log">${escapeHtml(JSON.stringify(tool.items, null, 2))}</pre>`;
+    if (!Array.isArray(tool.items) || tool.items.length === 0) {
+      return `
+        <div class="subagent-tool">
+          <header>
+            <strong>${escapeHtml(tool.name || tool.id || `Tool ${index + 1}`)}</strong>
+            <span class="pill pill-neutral">No data</span>
+          </header>
+          <p class="field-hint">Tool completed but did not return rows.</p>
+        </div>
+      `;
+    }
+
+    const payload = tool.items.map(renderToolItem).join('');
+    const timestamp = tool.retrievedAt ? new Date(tool.retrievedAt).toLocaleString() : '';
 
     return `
       <div class="subagent-tool">
@@ -142,6 +170,7 @@ function renderTools(trace) {
           <strong>${escapeHtml(tool.name || tool.id || `Tool ${index + 1}`)}</strong>
           <span class="pill pill-success">Success</span>
         </header>
+        ${timestamp ? `<p class="tool-meta">Captured: ${escapeHtml(timestamp)}</p>` : ''}
         ${payload}
       </div>
     `;
@@ -177,9 +206,14 @@ function renderToolItem(item) {
     const title = item.title || item.label || 'Result';
     const url = item.url ? `<a href="${escapeAttribute(item.url)}" target="_blank">${escapeHtml(item.url)}</a>` : '';
     const summary = item.summary || item.snippet || item.extract || JSON.stringify(item, null, 2);
+    const source = item.source ? `<span class="tool-item-source">${escapeHtml(item.source)}</span>` : '';
+    const retrieved = item.retrievedAt
+      ? `<span class="tool-item-source">${escapeHtml(new Date(item.retrievedAt).toLocaleString())}</span>`
+      : '';
     return `
       <div class="subagent-tool-item">
         <p class="tool-item-title">${escapeHtml(title)}</p>
+        ${(source || retrieved) ? `<p class="tool-item-meta">${source}${source && retrieved ? ' • ' : ''}${retrieved}</p>` : ''}
         ${url ? `<p class="tool-item-link">${url}</p>` : ''}
         <pre class="subagent-tool-log">${escapeHtml(summary)}</pre>
       </div>

@@ -1,4 +1,5 @@
 import GroqClient from '../../api/groq-client.js';
+import { nowISO } from '../../core/utils.js';
 
 const SYSTEM_PROMPT = `You are a live-intelligence researcher with access to high-frequency web reports.
 - Produce concise, evidence-backed summaries that focus strictly on the user's query.
@@ -36,7 +37,9 @@ export async function groqCompoundSearch(query) {
     items: [
       {
         title: `Groq Compound Summary for "${query.trim()}"`,
-        summary: content
+        summary: content,
+        source: 'Groq Compound Search',
+        retrievedAt: nowISO()
       }
     ]
   };

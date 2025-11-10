@@ -375,6 +375,21 @@ export const TOOL_DEFINITIONS = {
                     required: false,
                     type: 'number',
                     description: 'Cache TTL for this invocation',
+                },
+                intent: {
+                    required: false,
+                    type: 'string',
+                    description: 'Short sentence describing the specific micro-task delegated to the sub-agent',
+                },
+                scope: {
+                    required: false,
+                    type: 'string',
+                    description: 'Execution scope; must be "micro" for web sub-agents',
+                },
+                maxResults: {
+                    required: false,
+                    type: 'number',
+                    description: 'Maximum number of tool results to capture for this invocation',
                 }
             },
         },

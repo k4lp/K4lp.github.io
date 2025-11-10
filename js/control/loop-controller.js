@@ -715,6 +715,7 @@ function persistModelSelection(selectEl, source) {
 function resetSubAgentState() {
   Storage.clearSubAgentLastResult?.();
   Storage.clearSubAgentTrace?.();
+  Storage.clearSubAgentRuntimeState?.();
   eventBus.emit(Events.SUBAGENT_STATE_CHANGED, null);
 }
 

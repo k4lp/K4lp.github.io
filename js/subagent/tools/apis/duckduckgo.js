@@ -1,3 +1,5 @@
+import { nowISO } from '../../../core/utils.js';
+
 const API_ENDPOINT = 'https://api.duckduckgo.com/';
 
 export async function duckDuckGoInstant(query) {
@@ -28,16 +30,31 @@ export async function duckDuckGoInstant(query) {
 
   const answers = flattened.slice(0, 5).map((topic) => ({
     title: topic.Text || topic.Result || 'Related topic',
-    url: topic.FirstURL || topic.Icon?.URL || ''
+    summary: sanitizeText(topic.Text || topic.Result || ''),
+    url: topic.FirstURL || topic.Icon?.URL || '',
+    source: 'DuckDuckGo Instant Answer',
+    retrievedAt: nowISO()
   }));
 
   if (data.Answer || data.AbstractText) {
     answers.unshift({
       title: data.Answer || data.Heading || query,
       url: data.AbstractURL || '',
-      summary: data.AbstractText || data.Answer
+      summary: data.AbstractText || data.Answer || '',
+      source: 'DuckDuckGo Instant Answer',
+      retrievedAt: nowISO()
     });
   }
 
   return answers;
+}
+
+function sanitizeText(text = '') {
+  if (!text) {
+    return '';
+  }
+  return text
+    .replace(/<\/?[^>]+(>|$)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

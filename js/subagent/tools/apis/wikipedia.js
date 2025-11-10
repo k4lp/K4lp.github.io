@@ -1,3 +1,5 @@
+import { nowISO } from '../../../core/utils.js';
+
 const SEARCH_ENDPOINT = 'https://en.wikipedia.org/w/api.php';
 const SUMMARY_ENDPOINT = 'https://en.wikipedia.org/api/rest_v1/page/summary/';
 
@@ -23,8 +25,10 @@ export async function wikipediaSearch(query, { limit = 5 } = {}) {
   return results.map((item) => ({
     id: item.pageid,
     title: item.title,
-    snippet: sanitizeSnippet(item.snippet),
-    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`
+    summary: sanitizeSnippet(item.snippet),
+    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
+    source: 'Wikipedia',
+    retrievedAt: nowISO()
   }));
 }
 
@@ -37,8 +41,10 @@ export async function wikipediaSummary(title) {
   const data = await response.json();
   return {
     title: data.title,
-    extract: data.extract,
-    url: data.content_urls?.desktop?.page
+    summary: data.extract,
+    url: data.content_urls?.desktop?.page,
+    source: 'Wikipedia',
+    retrievedAt: nowISO()
   };
 }
 

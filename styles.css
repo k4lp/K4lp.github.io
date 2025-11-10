@@ -773,8 +773,20 @@ select {
 }
 
 .tool-item-link {
-  font-size: 0.85rem;
-  margin-bottom: 4px;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+
+.tool-item-meta,
+.tool-meta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.tool-item-source {
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
 .subagent-prompt {
@@ -1916,47 +1928,7 @@ select {
    SYSTEM INSTRUCTIONS
    ============================================ */
 
-.system-instructions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
 
-.system-instructions-intro {
-  font-size: 0.75rem;
-  color: var(--gray-600);
-  line-height: 1.6;
-  margin-bottom: var(--space-sm);
-}
-
-.system-instruction {
-  border-left: 2px solid var(--gray-200);
-  padding-left: var(--space-md);
-}
-
-.system-instruction h3 {
-  font-size: 0.8125rem;
-  margin-bottom: var(--space-xs);
-  color: var(--gray-800);
-}
-
-.system-instruction p {
-  font-size: 0.75rem;
-  color: var(--gray-700);
-  margin-bottom: var(--space-xs);
-}
-
-.system-instruction ul {
-  margin: 0;
-  padding-left: 1.25rem;
-  font-size: 0.75rem;
-  color: var(--gray-700);
-  line-height: 1.5;
-}
-
-.system-instruction li + li {
-  margin-top: var(--space-xs);
-}
 
 /* ============================================
    SCROLLBARS
@@ -2195,3 +2167,4 @@ select {
 .hidden {
   display: none !important;
 }
+
