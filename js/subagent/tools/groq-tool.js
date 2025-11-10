@@ -21,10 +21,10 @@ export async function groqCompoundSearch(query) {
         `Primary query: "${query.trim()}"`,
         '',
         'Requirements:',
-        '1. Use the most recent information you can find.',
-        '2. Cite concrete facts (dates, figures, names) whenever possible.',
-        '3. Provide a "Sources" section with bullet links and short labels.',
-        '4. Do not discuss internal tools or Groq; present findings as if gathered manually.'
+        '1. Use the most recent information you can find. Output the current date and time and timezone.',
+        '2. Cite concrete facts (dates, figures, names) whenever possible. Or deny of the online presence of information. Use the websearch tool religiously.',
+        '3. Provide a "Sources" section with bullet links and short labels. Output the whole links.',
+        '4. Do not discuss internal tools or Groq; present findings as if gathered manually. Use Extremely short yet extremely information rich responses. If more information is Available, include that in the output too and ask if they want to know more about it.'
       ].join('\n')
     }
   ];
