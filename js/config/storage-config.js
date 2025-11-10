@@ -55,7 +55,16 @@ export const LS_KEYS = {
   MAX_OUTPUT_TOKENS: 'gdrs_max_output_tokens',
 
   /** Pending execution error context (single-use warning for next iteration) */
-  PENDING_EXECUTION_ERROR: 'gdrs_pending_execution_error'
+  PENDING_EXECUTION_ERROR: 'gdrs_pending_execution_error',
+
+  /** Sub-agent execution result */
+  SUBAGENT_RESULT: 'gdrs_subagent_result',
+
+  /** Sub-agent execution history */
+  SUBAGENT_HISTORY: 'gdrs_subagent_history',
+
+  /** Sub-agent enabled state */
+  SUBAGENT_ENABLED: 'gdrs_subagent_enabled'
 };
 
 /**

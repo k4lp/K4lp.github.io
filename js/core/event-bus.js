@@ -166,7 +166,17 @@ export const Events = {
   EXCEL_ATTACHMENT_IMPORTED: 'attachment:imported',
   EXCEL_ATTACHMENT_UPDATED: 'attachment:updated',
   EXCEL_ATTACHMENT_RESET: 'attachment:reset',
-  EXCEL_ATTACHMENT_REMOVED: 'attachment:removed'
+  EXCEL_ATTACHMENT_REMOVED: 'attachment:removed',
+
+  // Sub-agent events
+  SUBAGENT_START: 'subagent:start',
+  SUBAGENT_ITERATION: 'subagent:iteration',
+  SUBAGENT_EXECUTION: 'subagent:execution',
+  SUBAGENT_COMPLETE: 'subagent:complete',
+  SUBAGENT_ERROR: 'subagent:error',
+  SUBAGENT_RESULT_UPDATED: 'subagent:result:updated',
+  SUBAGENT_RESULT_CLEARED: 'subagent:result:cleared',
+  SUBAGENT_ENABLED_CHANGED: 'subagent:enabled:changed'
 };
 
 // Bridge module exports to legacy global consumers

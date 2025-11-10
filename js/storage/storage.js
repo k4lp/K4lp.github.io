@@ -443,6 +443,75 @@ export const Storage = {
     this.saveToolActivityLog(log);
   },
 
+  // === SUB-AGENT RESULTS ===
+  loadSubAgentResult() {
+    return safeJSONParse(localStorage.getItem(LS_KEYS.SUBAGENT_RESULT), null);
+  },
+
+  saveSubAgentResult(result) {
+    if (!result) {
+      localStorage.removeItem(LS_KEYS.SUBAGENT_RESULT);
+      eventBus.emit(Events.SUBAGENT_RESULT_CLEARED);
+      return;
+    }
+
+    const normalizedResult = {
+      success: !!result.success,
+      content: String(result.content || ''),
+      format: String(result.format || 'text'),
+      source: String(result.source || 'unknown'),
+      iterations: Number(result.iterations || 0),
+      executionTime: Number(result.executionTime || 0),
+      timestamp: result.timestamp || nowISO(),
+      agentId: String(result.agentId || ''),
+      query: String(result.query || ''),
+      error: result.error || null
+    };
+
+    localStorage.setItem(LS_KEYS.SUBAGENT_RESULT, JSON.stringify(normalizedResult));
+    eventBus.emit(Events.SUBAGENT_RESULT_UPDATED, normalizedResult);
+  },
+
+  clearSubAgentResult() {
+    localStorage.removeItem(LS_KEYS.SUBAGENT_RESULT);
+    eventBus.emit(Events.SUBAGENT_RESULT_CLEARED);
+  },
+
+  loadSubAgentHistory() {
+    return normalizeArray(
+      safeJSONParse(localStorage.getItem(LS_KEYS.SUBAGENT_HISTORY), [])
+    );
+  },
+
+  saveSubAgentHistory(history) {
+    const normalized = Array.isArray(history) ? history : [];
+    localStorage.setItem(LS_KEYS.SUBAGENT_HISTORY, JSON.stringify(normalized));
+  },
+
+  appendSubAgentExecution(execution) {
+    const history = this.loadSubAgentHistory();
+    history.push({
+      timestamp: nowISO(),
+      ...execution
+    });
+    // Keep last 50 executions
+    if (history.length > 50) {
+      history.splice(0, history.length - 50);
+    }
+    this.saveSubAgentHistory(history);
+  },
+
+  loadSubAgentEnabled() {
+    const stored = localStorage.getItem(LS_KEYS.SUBAGENT_ENABLED);
+    if (stored === null) return false; // Default: disabled
+    return stored === 'true';
+  },
+
+  saveSubAgentEnabled(enabled) {
+    localStorage.setItem(LS_KEYS.SUBAGENT_ENABLED, String(!!enabled));
+    eventBus.emit(Events.SUBAGENT_ENABLED_CHANGED, !!enabled);
+  },
+
   /**
    * Clear all persisted data except the provided LS keys.
    */
