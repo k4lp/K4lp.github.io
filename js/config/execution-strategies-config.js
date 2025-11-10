@@ -21,7 +21,7 @@ export const EXECUTION_STRATEGIES_CONFIG = {
         maxAttempts: 1,
         enableRetry: false,
         cleanContext: false,
-        timeoutMs: 15000,
+        timeoutMs: 150000,
         logAllAttempts: true
       }
     },
@@ -33,7 +33,7 @@ export const EXECUTION_STRATEGIES_CONFIG = {
         maxAttempts: 3,
         enableRetry: true,
         cleanContext: true,
-        timeoutMs: 15000,
+        timeoutMs: 150000,
         baseDelay: 1000,
         backoffMultiplier: 2,
         maxDelay: 10000,
