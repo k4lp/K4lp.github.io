@@ -101,5 +101,3 @@ ${result.content}
     }
   }
 };
-
-export default externalKnowledgeProvider;

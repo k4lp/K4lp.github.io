@@ -455,5 +455,3 @@ Begin your analysis now.`;
     return getAgent(agentId);
   }
 }
-
-export default SubAgentOrchestrator;

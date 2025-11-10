@@ -306,11 +306,3 @@ export function selectAgentForQuery(query) {
   // Default to web knowledge for general queries
   return DEFAULT_AGENT;
 }
-
-export default {
-  SUB_AGENTS,
-  DEFAULT_AGENT,
-  getAgent,
-  getAvailableAgents,
-  selectAgentForQuery
-};
