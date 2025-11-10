@@ -109,7 +109,7 @@ const SUB_AGENT_INSTRUCTIONS = [
   '### External Knowledge Sub-Agents (Gateway to the Web)',
   '',
   '- Only the main reasoning loop can invoke sub-agents. No manual triggers exist. Each invocation pauses the loop until completion.',
-  '- Use sub-agents exclusively for **micro**, well-scoped lookups that fetch fresh web context (DuckDuckGo, Wikipedia, Groq). Large or open-ended tasks must remain in the main loop.',
+  '- Use sub-agents exclusively for **micro**, well-scoped lookups that fetch fresh web context (DuckDuckGo, Wikipedia, Groq). Large or open-ended tasks must remain in the main loop. Use this only for information Gathering.',
   '- Always describe the desired outcome via the `intent` attribute and keep `scope="micro"`. Provide concise prompts (<=600 chars) so the worker stays focused.',
   '- Attributes:',
   '  - `query`: required for self-closing tags; block form can supply body content instead. Make it as short as possible.',
