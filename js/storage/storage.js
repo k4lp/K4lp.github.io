@@ -737,6 +737,98 @@ export const Storage = {
     localStorage.removeItem(LS_KEYS.SUBAGENT_RUNTIME_STATE);
   },
 
+  // === COMPACTION SYSTEM ===
+
+  /**
+   * Save compaction archive
+   */
+  saveCompactionArchive(key, data) {
+    if (!key || !data) return;
+    localStorage.setItem(key, JSON.stringify(data));
+  },
+
+  /**
+   * Load compaction archive
+   */
+  loadCompactionArchive(key) {
+    if (!key) return null;
+    const raw = localStorage.getItem(key);
+    return safeJSONParse(raw, null);
+  },
+
+  /**
+   * List all compaction archives
+   */
+  listCompactionArchives() {
+    const archives = [];
+    const prefix = 'gdrs_compaction_archive_';
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        archives.push(key);
+      }
+    }
+
+    // Sort by timestamp (newest first)
+    return archives.sort().reverse();
+  },
+
+  /**
+   * Delete compaction archive
+   */
+  deleteCompactionArchive(key) {
+    if (!key) return;
+    localStorage.removeItem(key);
+  },
+
+  /**
+   * Load compaction metrics
+   */
+  loadCompactionMetrics() {
+    const raw = localStorage.getItem('gdrs_compaction_metrics');
+    return safeJSONParse(raw, {
+      totalCompactions: 0,
+      successfulCompactions: 0,
+      failedCompactions: 0,
+      averageReductionRatio: 0,
+      averageExecutionTime: 0,
+      totalTokensSaved: 0,
+      totalCostSaved: 0
+    });
+  },
+
+  /**
+   * Save compaction metrics
+   */
+  saveCompactionMetrics(metrics) {
+    if (!metrics) return;
+    localStorage.setItem('gdrs_compaction_metrics', JSON.stringify(metrics));
+  },
+
+  /**
+   * Load compaction state
+   */
+  loadCompactionState() {
+    const raw = localStorage.getItem('gdrs_compaction_state');
+    return safeJSONParse(raw, null);
+  },
+
+  /**
+   * Save compaction state
+   */
+  saveCompactionState(state) {
+    if (!state) return;
+    localStorage.setItem('gdrs_compaction_state', JSON.stringify(state));
+  },
+
+  /**
+   * Clear compaction state
+   */
+  clearCompactionState() {
+    localStorage.removeItem('gdrs_compaction_state');
+  },
+
   /**
    * Clear all persisted data except the provided LS keys.
    */
