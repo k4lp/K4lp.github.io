@@ -532,6 +532,28 @@ async function runIteration() {
       return;
     }
 
+    // Check if compaction is needed (every 15 iterations)
+    if (iterationCount > 0 && iterationCount % 15 === 0) {
+      console.log(`[${nowISO()}] Auto-triggering context compaction (iteration ${iterationCount} reached)`);
+
+      try {
+        // Import compaction orchestrator dynamically
+        const { CompactionOrchestrator } = await import('../reasoning/compaction/CompactionOrchestrator.js');
+        const compactionOrchestrator = new CompactionOrchestrator();
+
+        // Run compaction (non-blocking)
+        compactionOrchestrator.compact(iterationCount).then(result => {
+          if (result.success) {
+            console.log(`[${nowISO()}] Auto-compaction complete - Reduced by ${result.reductionPercent}%`);
+          } else {
+            console.warn(`[${nowISO()}] Auto-compaction failed:`, result.error);
+          }
+        });
+      } catch (compactionError) {
+        console.error(`[${nowISO()}] Failed to trigger compaction:`, compactionError);
+      }
+    }
+
     // Schedule next iteration
     const iterationEndTime = nowISO();
     console.log(`[${iterationEndTime}] ========== ITERATION ${iterationCount} END ==========`);
