@@ -4,6 +4,9 @@ import { Storage } from '../storage/storage.js';
 import ToolRegistry, { runTool } from './tools/web-tools.js';
 import { eventBus, Events } from '../core/event-bus.js';
 import { nowISO } from '../core/utils.js';
+import { SubAgentReasoningLoop } from './reasoning/SubAgentReasoningLoop.js';
+import { SubAgentToolRegistry } from './reasoning/SubAgentToolRegistry.js';
+import { executeToolsParallel } from './tools/parallel-executor.js';
 
 const FALLBACK_MODEL = 'models/gemini-1.5-flash';
 const DEFAULT_SCOPE = 'micro';
@@ -156,45 +159,241 @@ export class SubAgentOrchestrator {
     return result;
   }
 
+  /**
+   * Run autonomous sub-agent with multi-iteration reasoning
+   * NEW ARCHITECTURE: SubAgent reasons iteratively until goal is achieved
+   *
+   * @param {string} agentId - Agent identifier
+   * @param {string} query - User query
+   * @param {object} options - Execution options
+   * @param {Function} options.onIteration - Callback for each iteration (for UI updates)
+   * @param {number} options.maxIterations - Maximum reasoning iterations (default: 10)
+   * @returns {Promise<object>} Final result with reasoning trace
+   */
+  static async runAutonomousSubAgent(agentId = DEFAULT_AGENT_ID, query, options = {}) {
+    if (!query || !query.trim()) {
+      throw new Error('Sub-agent requires a non-empty query');
+    }
+
+    const settings = Storage.loadSubAgentSettings?.() || {};
+    const effectiveAgentId = agentId || settings.defaultAgent || DEFAULT_AGENT_ID;
+    const agent = getAgent(effectiveAgentId);
+    if (!agent) {
+      throw new Error(`Unknown sub-agent: ${effectiveAgentId}`);
+    }
+
+    // Create trace for tracking
+    const traceId = `subagent_autonomous_${nowISO()}`;
+    const executionContext = {
+      intent: options.intent || `Resolve: ${query.slice(0, 140)}`,
+      scope: options.scope || DEFAULT_SCOPE,
+      iteration: options.iteration ?? null,
+      sessionContext: options.sessionContext || null
+    };
+
+    // Save initial trace
+    saveTrace({
+      id: traceId,
+      status: 'running',
+      agentId: agent.id,
+      agentName: agent.name,
+      query,
+      scope: executionContext.scope,
+      intent: executionContext.intent,
+      startedAt: nowISO(),
+      mode: 'autonomous',
+      iterations: 0,
+      toolResults: [],
+      prompt: '',
+      summary: '',
+      error: null
+    });
+
+    try {
+      // Get available tools for this agent
+      const availableTools = this._getAvailableToolsForAgent(agent);
+
+      // Create reasoning loop
+      const reasoningLoop = new SubAgentReasoningLoop({
+        maxIterations: options.maxIterations || 10,
+        modelId: Storage.loadSelectedModel?.() || FALLBACK_MODEL,
+        toolRegistry: new SubAgentToolRegistry()
+      });
+
+      // Execute autonomous reasoning
+      const result = await reasoningLoop.execute({
+        agentId: agent.id,
+        query,
+        agentConfig: {
+          systemPrompt: agent.systemPrompt || this._getDefaultSystemPrompt(agent),
+          ...agent
+        },
+        availableTools,
+        onIteration: async (iteration, current, max) => {
+          // Update trace with iteration progress
+          updateTrace((currentTrace) => ({
+            ...currentTrace,
+            iterations: current,
+            lastIteration: {
+              number: iteration.number,
+              timestamp: iteration.timestamp,
+              converged: iteration.converged,
+              toolCount: iteration.toolCalls?.length || 0
+            }
+          }), traceId);
+
+          // Call user's callback for UI updates
+          if (options.onIteration) {
+            await options.onIteration(iteration, current, max);
+          }
+        }
+      });
+
+      // Save final result
+      const finalResult = {
+        id: traceId,
+        agentId: agent.id,
+        agentName: agent.name,
+        query,
+        scope: executionContext.scope,
+        intent: executionContext.intent,
+        content: result.finalResponse,
+        mode: 'autonomous',
+        iterations: result.iterations,
+        reasoningTrace: result.reasoningTrace,
+        success: result.success,
+        createdAt: nowISO(),
+        timestamp: Date.now()
+      };
+
+      updateTrace({
+        status: result.success ? 'completed' : 'incomplete',
+        finishedAt: nowISO(),
+        summary: result.finalResponse,
+        iterations: result.iterations,
+        success: result.success
+      }, traceId);
+
+      Storage.saveSubAgentLastResult?.(finalResult);
+      return finalResult;
+
+    } catch (error) {
+      console.error('[SubAgentOrchestrator] Autonomous execution failed:', error);
+
+      updateTrace({
+        status: 'error',
+        finishedAt: nowISO(),
+        error: error.message || 'Autonomous execution failed'
+      }, traceId);
+
+      throw error;
+    }
+  }
+
+  /**
+   * Get available tools for an agent
+   * @private
+   */
+  static _getAvailableToolsForAgent(agent) {
+    const toolRegistry = new SubAgentToolRegistry();
+    const allTools = toolRegistry.getAvailableTools();
+
+    // If agent has specific allowed tools, filter to those
+    if (agent.allowedTools && agent.allowedTools.length > 0) {
+      return allTools.filter(tool => agent.allowedTools.includes(tool.name));
+    }
+
+    // Otherwise, return all tools
+    return allTools;
+  }
+
+  /**
+   * Get default system prompt for agent
+   * @private
+   */
+  static _getDefaultSystemPrompt(agent) {
+    return agent.systemPrompt || `You are ${agent.name}, an autonomous reasoning agent.
+
+Your mission is to fulfill user requests by:
+1. Breaking down complex questions into steps
+2. Using available tools to gather information
+3. Reasoning through the evidence
+4. Synthesizing a comprehensive answer
+
+Be thorough, methodical, and cite your sources.`;
+  }
+
   static async _executeTools(agent, query, executionContext = {}, onToolResult) {
     const tools = agent.allowedTools || [];
     if (tools.length === 0) return [];
 
     const limit = executionContext.maxToolResults || agent.maxToolResults || DEFAULT_TOOL_RESULT_LIMIT;
-    const outputs = [];
+    const useParallel = executionContext.parallel !== false; // Default to parallel
 
-    for (const toolName of tools) {
+    // Filter valid tools
+    const validTools = tools.filter(toolName => {
       if (!ToolRegistry[toolName]) {
         console.warn(`[SubAgentOrchestrator] Tool "${toolName}" not registered`);
-        continue;
+        return false;
       }
-      try {
-        const data = await runTool(toolName, query, {
-          limit,
-          intent: executionContext.intent,
-          scope: executionContext.scope
-        });
-        const entry = {
-          id: toolName,
-          name: TOOL_LABELS[toolName] || toolName,
-          retrievedAt: nowISO(),
-          items: normalizeToolItems(toolName, data, limit)
-        };
-        outputs.push(entry);
-        onToolResult?.(entry);
-      } catch (error) {
-        console.warn(`[SubAgentOrchestrator] Tool ${toolName} failed`, error);
-        const failureEntry = {
-          id: toolName,
-          name: TOOL_LABELS[toolName] || toolName,
-          error: error.message || 'Tool execution failed',
-          retrievedAt: nowISO()
-        };
-        outputs.push(failureEntry);
-        onToolResult?.(failureEntry);
+      return true;
+    });
+
+    if (validTools.length === 0) return [];
+
+    // Execute in parallel or sequential based on flag
+    if (useParallel && validTools.length > 1) {
+      console.log(`[SubAgentOrchestrator] Executing ${validTools.length} tools in parallel`);
+
+      const results = await executeToolsParallel(validTools, query, {
+        limit,
+        intent: executionContext.intent,
+        scope: executionContext.scope,
+        toolLabels: TOOL_LABELS
+      });
+
+      // Notify callback for each result
+      results.forEach(result => {
+        if (onToolResult) {
+          onToolResult(result);
+        }
+      });
+
+      return results;
+
+    } else {
+      // Sequential execution (original behavior)
+      const outputs = [];
+
+      for (const toolName of validTools) {
+        try {
+          const data = await runTool(toolName, query, {
+            limit,
+            intent: executionContext.intent,
+            scope: executionContext.scope
+          });
+          const entry = {
+            id: toolName,
+            name: TOOL_LABELS[toolName] || toolName,
+            retrievedAt: nowISO(),
+            items: normalizeToolItems(toolName, data, limit)
+          };
+          outputs.push(entry);
+          onToolResult?.(entry);
+        } catch (error) {
+          console.warn(`[SubAgentOrchestrator] Tool ${toolName} failed`, error);
+          const failureEntry = {
+            id: toolName,
+            name: TOOL_LABELS[toolName] || toolName,
+            error: error.message || 'Tool execution failed',
+            retrievedAt: nowISO()
+          };
+          outputs.push(failureEntry);
+          onToolResult?.(failureEntry);
+        }
       }
+      return outputs;
     }
-    return outputs;
   }
 
   static _buildPrompt(agent, query, toolResults, executionContext = {}) {

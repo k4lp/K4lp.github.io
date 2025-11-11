@@ -169,7 +169,16 @@ export const Events = {
   EXCEL_ATTACHMENT_REMOVED: 'attachment:removed',
 
   // Sub-agent events
-  SUBAGENT_STATE_CHANGED: 'subagent:state-changed'
+  SUBAGENT_STATE_CHANGED: 'subagent:state-changed',
+
+  // Compaction events
+  COMPACTION_START: 'compaction:start',
+  COMPACTION_PHASE_CHANGE: 'compaction:phase-change',
+  COMPACTION_PROGRESS: 'compaction:progress',
+  COMPACTION_COMPLETE: 'compaction:complete',
+  COMPACTION_ERROR: 'compaction:error',
+  COMPACTION_ROLLED_BACK: 'compaction:rolled-back',
+  COMPACTION_ARCHIVED: 'compaction:archived'
 };
 
 // Bridge module exports to legacy global consumers
