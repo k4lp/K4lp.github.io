@@ -121,10 +121,9 @@ Be concise but preserve all critical details.`;
       return '[No reasoning entries]';
     }
 
+    // entry.content already contains the iteration marker, just use it directly
     return entries
-      .map(entry => {
-        return `=== ITERATION ${entry.iteration} ===\n${entry.content}`;
-      })
+      .map(entry => entry.content)
       .join('\n\n');
   }
 
