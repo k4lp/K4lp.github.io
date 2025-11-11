@@ -6,6 +6,7 @@
  */
 
 import { GeminiAPI } from '../../api/gemini-client.js';
+import { Storage } from '../../storage/storage.js';
 import { COMPACTION_CONFIG } from '../../config/compaction-config.js';
 
 export class CompactionExecutor {
@@ -19,7 +20,8 @@ export class CompactionExecutor {
     console.log('[CompactionExecutor] Starting compaction...');
 
     try {
-      const modelId = COMPACTION_CONFIG.model;
+      // Use user-selected model, fallback to config default
+      const modelId = Storage.loadSelectedModel() || COMPACTION_CONFIG.model;
 
       console.log(`[CompactionExecutor] Calling Gemini (${modelId})...`);
 
