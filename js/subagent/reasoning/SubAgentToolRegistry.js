@@ -18,7 +18,7 @@
  * - Usage tracking
  */
 
-import { runTool } from '../../tools/web-tools.js';
+import { runTool } from '../tools/web-tools.js';
 
 export class SubAgentToolRegistry {
     constructor(config = {}) {
