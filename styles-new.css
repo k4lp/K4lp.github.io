@@ -1114,7 +1114,7 @@ select {
 
 .li:hover {
   background: var(--bg-primary);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
   transform: translateX(2px);
 }
 
@@ -1462,7 +1462,7 @@ select {
 }
 
 .reasoning-block:hover {
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
 }
 
 .reasoning-block.even {
@@ -1585,7 +1585,7 @@ select {
 
 .tool-activity:hover {
   border-left-color: var(--black);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
 }
 
 /* Activity Header */
@@ -1873,7 +1873,7 @@ select {
 }
 
 .sheet-card:hover {
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
   transform: translateX(2px);
 }
 
@@ -2466,7 +2466,7 @@ select {
   background: var(--white);
 
   /* Left border emphasis (thicker than default) */
-  border-left: 4px solid var(--gray-300);
+  border-left: var(--border-width-accent) solid var(--gray-300);
   border-top: var(--border-width) solid var(--border-tertiary);
   border-right: var(--border-width) solid var(--border-tertiary);
   border-bottom: var(--border-width) solid var(--border-tertiary);
@@ -2612,7 +2612,7 @@ select {
 }
 
 .reasoning-content blockquote {
-  border-left: 4px solid var(--border-primary);
+  border-left: var(--border-width-accent) solid var(--border-primary);
   padding-left: var(--padding-lg);
   margin: var(--margin-lg) 0;
   color: var(--text-secondary);
@@ -2701,7 +2701,7 @@ select {
 #finalOutput.populated {
   /* When content is present */
   background: var(--white);
-  border-left: 4px solid var(--black);
+  border-left: var(--border-width-accent) solid var(--black);
   border-top: var(--border-width) solid var(--border-tertiary);
   border-right: var(--border-width) solid var(--border-tertiary);
   border-bottom: var(--border-width) solid var(--border-tertiary);
@@ -2726,7 +2726,7 @@ select {
 
 .output h1 {
   font-size: var(--text-2xl);
-  border-bottom: 2px solid var(--border-primary);
+  border-bottom: var(--border-width-emphasis) solid var(--border-primary);
   padding-bottom: var(--padding-sm);
 }
 
@@ -2899,7 +2899,7 @@ select {
 
 #iterationLog::-webkit-scrollbar-thumb {
   background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
+  border: var(--border-width) solid var(--border-tertiary);
 }
 
 #iterationLog::-webkit-scrollbar-thumb:hover {
@@ -2917,7 +2917,7 @@ select {
 
 .subagent-trace::-webkit-scrollbar-thumb {
   background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
+  border: var(--border-width) solid var(--border-tertiary);
 }
 
 .subagent-trace::-webkit-scrollbar-thumb:hover {
@@ -2997,7 +2997,7 @@ select {
 
 .sheet-card.selected {
   background: var(--bg-secondary);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
 }
 
 .sheet-card.selected::after {
@@ -3120,7 +3120,7 @@ select {
 
 /* Enhanced Sub-Agent Tool Display */
 .subagent-tool {
-  border-left: 2px solid var(--border-secondary);
+  border-left: var(--border-width-emphasis) solid var(--border-secondary);
   transition: border-color var(--transition-fast);
 }
 
@@ -3282,7 +3282,7 @@ button:disabled:hover {
 
 .li.selected {
   background: var(--bg-primary);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
   border-left-color: var(--black);
   transform: translateX(2px);
 }
@@ -3461,7 +3461,7 @@ code::selection {
 
 *::-webkit-scrollbar-thumb {
   background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
+  border: var(--border-width) solid var(--border-tertiary);
   transition: background var(--transition-fast);
 }
 
