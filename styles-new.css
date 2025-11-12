@@ -1167,8 +1167,8 @@ select {
   background: var(--overlay-modal);
   backdrop-filter: blur(8px);
 
-  /* Layout */
-  display: flex;
+  /* Layout - Hidden by default, shown via JS */
+  display: none;
   align-items: center;
   justify-content: center;
   padding: var(--padding-lg);
@@ -2883,8 +2883,8 @@ select {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(12px);
 
-  /* Layout */
-  display: flex;
+  /* Layout - Hidden by default, shown via JS */
+  display: none;
   align-items: center;
   justify-content: center;
   padding: var(--padding-xl);
