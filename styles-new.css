@@ -3298,3 +3298,653 @@ select {
    END OF PHASE 5
    ========================================================================= */
 
+/* ============================================================================
+   PHASES 6-8: COMPREHENSIVE POLISH
+   (Attachment System, Sub-Agent UI, Overall Refinements)
+   ========================================================================= */
+
+/* ============================================================================
+   PHASE 6: ATTACHMENT SYSTEM POLISH
+   ========================================================================= */
+
+/* Enhanced Attachment Dropzone States */
+.attachment-dropzone {
+  /* Better visual feedback */
+  position: relative;
+  transition: all var(--transition-base);
+}
+
+.attachment-dropzone:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-primary);
+  transform: scale(1.005);
+}
+
+.attachment-dropzone.dragging {
+  background: var(--bg-primary);
+  border-color: var(--black);
+  border-style: solid;
+  border-width: var(--border-width-emphasis);
+  transform: scale(1.01);
+}
+
+.attachment-dropzone::before {
+  content: attr(data-file-count);
+  position: absolute;
+  top: var(--padding-sm);
+  right: var(--padding-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  display: none;
+}
+
+.attachment-dropzone[data-file-count]:not([data-file-count=""]):not([data-file-count="0"])::before {
+  display: block;
+}
+
+/* Enhanced Sheet Card */
+.sheet-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.sheet-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-primary);
+  transition: width var(--transition-fast);
+}
+
+.sheet-card:hover::after {
+  width: 4px;
+  background: var(--black);
+}
+
+.sheet-card.selected {
+  background: var(--bg-secondary);
+  border-left-width: 4px;
+}
+
+.sheet-card.selected::after {
+  width: 4px;
+  background: var(--black);
+}
+
+/* Enhanced Sheet Meta with Icons */
+.sheet-meta::before {
+  content: '📊';
+  margin-right: var(--margin-xs);
+  opacity: 0.6;
+}
+
+/* Enhanced Mutation Type Badges */
+.mutation-type[data-type="add"]::before,
+.mutation-type[data-type="ADD"]::before {
+  content: '+';
+  margin-right: var(--margin-xs);
+}
+
+.mutation-type[data-type="modify"]::before,
+.mutation-type[data-type="MOD"]::before {
+  content: '~';
+  margin-right: var(--margin-xs);
+}
+
+.mutation-type[data-type="delete"]::before,
+.mutation-type[data-type="DEL"]::before {
+  content: '−';
+  margin-right: var(--margin-xs);
+}
+
+/* Enhanced Mutation Details */
+.mutation-details {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.mutation-cell {
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+/* Attachment Panel Transitions */
+.attachment-panel {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Quick Action Button Enhancements */
+.quick-action[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--border-tertiary);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================================
+   PHASE 7: SUB-AGENT UI FINAL TOUCHES
+   ========================================================================= */
+
+/* Enhanced Sub-Agent Trace Entries */
+.subagent-trace-entry {
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+}
+
+.subagent-trace-entry::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gray-500);
+  transition: all var(--transition-base);
+}
+
+.subagent-trace-entry:hover::before {
+  width: 4px;
+  background: var(--black);
+}
+
+.subagent-trace-entry.error::before {
+  background: var(--gray-300);
+}
+
+.subagent-trace-entry.success::before {
+  background: var(--black);
+}
+
+/* Enhanced Entry Type Badges */
+.subagent-entry-type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-xs);
+}
+
+.subagent-entry-type::before {
+  content: '•';
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.subagent-entry-type[data-type="search"]::before {
+  content: '🔍';
+}
+
+.subagent-entry-type[data-type="fetch"]::before {
+  content: '📥';
+}
+
+.subagent-entry-type[data-type="process"]::before {
+  content: '⚙️';
+}
+
+/* Enhanced Sub-Agent Tool Display */
+.subagent-tool {
+  border-left: 2px solid var(--border-secondary);
+  transition: border-color var(--transition-fast);
+}
+
+.subagent-tool:hover {
+  border-left-color: var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.subagent-tool-name {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+}
+
+.subagent-tool-name::before {
+  content: '▸';
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* Enhanced Progress Indicator */
+.subagent-progress {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.subagent-progress-spinner {
+  flex-shrink: 0;
+}
+
+.subagent-progress-text {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Sub-Agent Status Pill */
+#subAgentStatusPill {
+  transition: all var(--transition-base);
+}
+
+#subAgentStatusPill.enabled {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+#subAgentStatusPill.active {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+  animation: runningPulse 2s ease-in-out infinite;
+}
+
+/* ============================================================================
+   PHASE 8: OVERALL POLISH & REFINEMENTS
+   ========================================================================= */
+
+/* Enhanced Global Focus States */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+/* Enhanced Disabled States */
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+button:disabled:hover {
+  transform: none;
+  background: transparent;
+  border-color: var(--border-secondary);
+  color: var(--text-secondary);
+}
+
+/* Enhanced Collapse Toggle */
+.collapse-toggle {
+  /* Better interaction */
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: var(--border-width) solid var(--border-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.collapse-toggle:hover {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+  transform: rotate(180deg);
+}
+
+.collapsed .collapse-toggle {
+  transform: rotate(90deg);
+}
+
+.collapsed .collapse-toggle:hover {
+  transform: rotate(270deg);
+}
+
+/* Enhanced Block Body Collapse Animation */
+.block-body {
+  transition: max-height var(--transition-base), opacity var(--transition-base);
+  overflow: hidden;
+}
+
+.block-body.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Enhanced Pill States */
+.pill {
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.pill.interactive {
+  cursor: pointer;
+}
+
+.pill.interactive:hover {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+  transform: translateY(-1px);
+}
+
+.pill.interactive:active {
+  transform: translateY(0);
+}
+
+/* Enhanced Badge States */
+.badge {
+  transition: all var(--transition-fast);
+}
+
+/* Enhanced List Item (li) States */
+.li {
+  user-select: none;
+}
+
+.li.selected {
+  background: var(--bg-primary);
+  border-left-width: 4px;
+  border-left-color: var(--black);
+  transform: translateX(2px);
+}
+
+.li.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Enhanced Input Groups */
+.field-with-suffix input:focus ~ .suffix {
+  color: var(--text-secondary);
+}
+
+/* Enhanced Checkbox */
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: var(--border-width) solid var(--border-primary);
+  background: var(--white);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.checkbox-label input[type="checkbox"]:hover {
+  border-color: var(--black);
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: var(--black);
+  border-color: var(--black);
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.checkbox-label input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+/* Enhanced Select Dropdown */
+select {
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+select:hover {
+  border-color: var(--border-secondary);
+}
+
+select:focus {
+  border-color: var(--black);
+  border-width: var(--border-width-emphasis);
+}
+
+/* Enhanced Brand Area */
+.brand {
+  transition: all var(--transition-base);
+}
+
+.brand:hover {
+  transform: translateX(2px);
+}
+
+.brand h1 {
+  transition: letter-spacing var(--transition-base);
+}
+
+.brand:hover h1 {
+  letter-spacing: 0.05em;
+}
+
+/* Enhanced Session Status Bar */
+#sessionStatusBar {
+  transition: transform var(--transition-base), opacity var(--transition-base);
+}
+
+#sessionStatusBar.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Enhanced Status Indicator Dot */
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--gray-600);
+  transition: background var(--transition-fast);
+}
+
+.status-indicator.running {
+  background: var(--black);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-indicator.success {
+  background: var(--black);
+}
+
+.status-indicator.error {
+  background: var(--gray-300);
+}
+
+/* Enhanced Action Group */
+.action-group button + button {
+  margin-left: 0;
+}
+
+/* Enhanced Empty States */
+.storage-placeholder,
+.log-placeholder,
+.output-placeholder,
+.subagent-empty {
+  transition: all var(--transition-base);
+}
+
+.storage-placeholder:hover,
+.log-placeholder:hover,
+.output-placeholder:hover {
+  border-color: var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+/* Enhanced Link Styles */
+a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: all var(--transition-fast);
+}
+
+a:hover {
+  color: var(--black);
+  text-decoration-thickness: 2px;
+}
+
+a:active {
+  transform: translateY(1px);
+}
+
+/* Enhanced Code Blocks */
+pre {
+  position: relative;
+}
+
+pre::selection,
+code::selection {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Enhanced Scrollbar for all scrollable areas */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border: 1px solid var(--border-tertiary);
+  transition: background var(--transition-fast);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--bg-tertiary);
+}
+
+/* Enhanced Loading State */
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Enhanced Transitions for Dynamic Content */
+.fade-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all var(--transition-base);
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: all var(--transition-base);
+}
+
+/* Enhanced Selection Highlight */
+::selection {
+  background: var(--black);
+  color: var(--white);
+}
+
+::-moz-selection {
+  background: var(--black);
+  color: var(--white);
+}
+
+/* Enhanced Image Handling (if any) */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border: var(--border-width) solid var(--border-tertiary);
+}
+
+/* Enhanced HR Elements */
+hr {
+  border: none;
+  border-top: var(--border-width) solid var(--border-tertiary);
+  margin: var(--margin-xl) 0;
+}
+
+/* Enhanced Abbreviation */
+abbr[title] {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* Enhanced Mark/Highlight */
+mark {
+  background: var(--gray-900);
+  color: var(--text-primary);
+  padding: var(--padding-xs);
+  border: var(--border-width) solid var(--border-tertiary);
+}
+
+/* Enhanced Keyboard Input Display */
+kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: var(--padding-xs) var(--padding-sm);
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-secondary);
+  box-shadow: 0 1px 0 var(--border-secondary);
+  border-radius: 0;
+}
+
+/* Enhanced Time Elements */
+time {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================================
+   END OF PHASES 6-8
+   ========================================================================= */
+
