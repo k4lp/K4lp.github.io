@@ -86,6 +86,28 @@
   --state-active: rgba(0, 0, 0, 0.08);
   --state-focus: rgba(0, 0, 0, 0.12);
 
+  /* Additional Overlays (for specific use cases) */
+  --overlay-subtle: rgba(0, 0, 0, 0.02);
+  --overlay-light-white: rgba(255, 255, 255, 0.2);
+  --overlay-heavy-white: rgba(255, 255, 255, 0.6);
+
+  /* ====================
+     EFFECTS
+     =================== */
+
+  /* Blur Effects */
+  --blur-sm: blur(2px);
+  --blur-md: blur(12px);
+
+  /* Outline Offset */
+  --outline-offset: 2px;
+
+  /* Transform Offsets (for micro-interactions) */
+  --transform-micro: 1px;      /* Tiny hover effects */
+  --transform-subtle: 2px;     /* Subtle hover effects */
+  --transform-normal: 8px;     /* Standard movement */
+  --transform-large: 32px;     /* Large movement */
+
   /* ====================
      TYPOGRAPHY
      =================== */
@@ -311,32 +333,9 @@ code, pre {
    UTILITY CLASSES
    ========================================================================= */
 
-.hidden {
-  display: none !important;
-}
-
+/* Unique utilities not in comprehensive set below */
 .visible {
   display: block !important;
-}
-
-.flex {
-  display: flex;
-}
-
-.grid {
-  display: grid;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.items-center {
-  align-items: center;
 }
 
 .mono {
@@ -826,7 +825,7 @@ main {
 .btn:hover:not(:disabled) {
   background: var(--black);
   color: var(--white);
-  transform: translateY(-1px);
+  transform: translateY(calc(-1 * var(--transform-micro)));
 }
 
 .btn:active:not(:disabled) {
@@ -848,6 +847,17 @@ main {
 .btn-primary:hover:not(:disabled) {
   background: transparent;
   color: var(--black);
+  border-color: var(--black);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--black);
+  border-color: var(--gray-700);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
   border-color: var(--black);
 }
 
@@ -1005,7 +1015,7 @@ select {
 
 .field-with-suffix input {
   flex: 1;
-  padding-right: 80px;
+  padding-right: var(--space-20);
 }
 
 .suffix {
@@ -1165,7 +1175,7 @@ select {
 .li:hover {
   background: var(--bg-primary);
   border-left-width: var(--border-width-accent);
-  transform: translateX(2px);
+  transform: translateX(var(--transform-subtle));
 }
 
 .li:active {
@@ -1217,7 +1227,7 @@ select {
 
   /* Visual */
   background: var(--overlay-modal);
-  backdrop-filter: blur(12px);
+  backdrop-filter: var(--blur-md);
 
   /* Layout - Hidden by default, shown via JS */
   display: none;
@@ -1253,7 +1263,7 @@ select {
   /* Visual */
   background: var(--white);
   border: var(--border-width-emphasis) solid var(--black);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 32px var(--overlay-heavy);
 
   /* Z-index */
   z-index: 1;
@@ -1264,7 +1274,7 @@ select {
 
 @keyframes modalSlideIn {
   from {
-    transform: translateY(-32px);
+    transform: translateY(calc(-1 * var(--transform-large)));
     opacity: 0;
   }
   to {
@@ -1490,17 +1500,7 @@ select {
    LOG & OUTPUT DISPLAYS
    ========================================================================= */
 
-/* Iteration Log */
-#iterationLog {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-lg);
-  max-height: 600px;
-  overflow-y: auto;
-  padding: var(--padding-lg);
-  background: var(--bg-tertiary);
-  border: var(--border-width) solid var(--border-tertiary);
-}
+/* Iteration Log - See Phase 4 for consolidated definition */
 
 /* Reasoning Blocks */
 .reasoning-block {
@@ -1513,14 +1513,6 @@ select {
 
 .reasoning-block:hover {
   border-left-width: var(--border-width-accent);
-}
-
-.reasoning-block.even {
-  background: var(--bg-secondary);
-}
-
-.reasoning-block.odd {
-  background: var(--bg-primary);
 }
 
 /* Block Header */
@@ -1693,7 +1685,7 @@ select {
 .tool-item:hover {
   background: var(--bg-secondary);
   border-left-color: var(--black);
-  transform: translateX(2px);
+  transform: translateX(var(--transform-subtle));
 }
 
 .tool-item-title {
@@ -1924,7 +1916,7 @@ select {
 
 .sheet-card:hover {
   border-left-width: var(--border-width-accent);
-  transform: translateX(2px);
+  transform: translateX(var(--transform-subtle));
 }
 
 .sheet-name {
@@ -2386,7 +2378,7 @@ select {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--transform-normal));
   }
   to {
     opacity: 1;
@@ -2425,7 +2417,7 @@ select {
 /* Focus Visible (Keyboard Navigation) */
 *:focus-visible {
   outline: var(--border-width-emphasis) solid var(--black);
-  outline-offset: 2px;
+  outline-offset: var(--outline-offset);
 }
 
 /* Remove default focus for mouse/touch */
@@ -2436,7 +2428,7 @@ select {
 /* Skip to Content Link (for screen readers) */
 .skip-to-content {
   position: absolute;
-  top: -100px;
+  top: calc(-1 * var(--space-24));
   left: 0;
   background: var(--black);
   color: var(--white);
@@ -2498,8 +2490,12 @@ select {
 
 /* Enhanced Log Container */
 #iterationLog {
-  /* Override base styles for better scroll behavior */
+  /* Consolidated definition - removed redundant Phase 1 base */
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
   max-height: 800px;
+  overflow-y: auto;
   padding: var(--padding-xl);
   background: var(--bg-primary);
   border: none;
@@ -2522,7 +2518,7 @@ select {
   border-bottom: var(--border-width) solid var(--border-tertiary);
 
   /* Enhanced shadow for depth */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px var(--overlay-subtle);
 
   /* Smooth transitions */
   transition: all var(--transition-base);
@@ -2532,8 +2528,8 @@ select {
   /* Emphasize on hover */
   border-left-width: var(--space-2);
   border-left-color: var(--black);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transform: translateX(2px);
+  box-shadow: 0 2px 8px var(--state-hover);
+  transform: translateX(var(--transform-subtle));
 }
 
 /* Even/Odd alternation - very subtle */
@@ -2755,7 +2751,7 @@ select {
   border-top: var(--border-width) solid var(--border-tertiary);
   border-right: var(--border-width) solid var(--border-tertiary);
   border-bottom: var(--border-width) solid var(--border-tertiary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px var(--state-hover);
 }
 
 /* Output content (similar to reasoning content) */
@@ -3232,7 +3228,7 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--black);
-  outline-offset: 2px;
+  outline-offset: var(--outline-offset);
 }
 
 /* Enhanced Disabled States */
@@ -3313,7 +3309,7 @@ button:disabled:hover {
   background: var(--black);
   border-color: var(--black);
   color: var(--white);
-  transform: translateY(-1px);
+  transform: translateY(calc(-1 * var(--transform-micro)));
 }
 
 .pill.interactive:active {
@@ -3334,7 +3330,7 @@ button:disabled:hover {
   background: var(--bg-primary);
   border-left-width: var(--border-width-accent);
   border-left-color: var(--black);
-  transform: translateX(2px);
+  transform: translateX(var(--transform-subtle));
 }
 
 .li.disabled {
@@ -3384,7 +3380,7 @@ button:disabled:hover {
 
 .checkbox-label input[type="checkbox"]:focus-visible {
   outline: 2px solid var(--black);
-  outline-offset: 2px;
+  outline-offset: var(--outline-offset);
 }
 
 /* Enhanced Select Dropdown */
@@ -3408,7 +3404,7 @@ select:focus {
 }
 
 .brand:hover {
-  transform: translateX(2px);
+  transform: translateX(var(--transform-subtle));
 }
 
 .brand h1 {
@@ -3486,7 +3482,7 @@ a:hover {
 }
 
 a:active {
-  transform: translateY(1px);
+  transform: translateY(var(--transform-micro));
 }
 
 /* Enhanced Code Blocks */
@@ -3496,7 +3492,7 @@ pre {
 
 pre::selection,
 code::selection {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--overlay-light-white);
 }
 
 /* Enhanced Scrollbar for all scrollable areas */
@@ -3534,8 +3530,8 @@ code::selection {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(2px);
+  background: var(--overlay-heavy-white);
+  backdrop-filter: var(--blur-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3544,7 +3540,7 @@ code::selection {
 /* Enhanced Transitions for Dynamic Content */
 .fade-enter {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(var(--transform-normal));
 }
 
 .fade-enter-active {
@@ -3560,7 +3556,7 @@ code::selection {
 
 .fade-exit-active {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(calc(-1 * var(--transform-normal)));
   transition: all var(--transition-base);
 }
 
