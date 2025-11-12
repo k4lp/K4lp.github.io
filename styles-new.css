@@ -94,6 +94,9 @@
   --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
 
+  /* Base Font Size */
+  --font-size-base: 16px;
+
   /* Type Scale - 1.250 (Major Third) */
   --text-xs: 0.64rem;    /* 10.24px */
   --text-sm: 0.8rem;     /* 12.8px */
@@ -111,10 +114,10 @@
   --weight-bold: 700;
 
   /* Line Heights */
-  --leading-tight: 1.25;
+  --leading-tight: 1.2;
   --leading-snug: 1.375;
   --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
+  --leading-relaxed: 1.75;
   --leading-loose: 2;
 
   /* Letter Spacing */
@@ -152,6 +155,7 @@
   --padding-lg: var(--space-6);
   --padding-xl: var(--space-8);
   --padding-2xl: var(--space-12);
+  --padding-3xl: var(--space-16);
 
   --gap-xs: var(--space-1);
   --gap-sm: var(--space-2);
@@ -185,6 +189,7 @@
 
   --border-width: 1px;
   --border-width-emphasis: 2px;
+  --border-width-accent: 4px;
   --border-radius: 0; /* Zero radius - pure rectangles */
 
   /* ====================
@@ -220,7 +225,7 @@
 }
 
 html {
-  font-size: 16px; /* Base font size */
+  font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -492,18 +497,6 @@ body.session-active .session-status-bar {
 
 .status-bar-right {
   justify-content: flex-end;
-}
-
-/* Status Indicator */
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--white);
-}
-
-.status-indicator.running {
-  animation: statusPulse 2s infinite;
 }
 
 .status-text {
@@ -1121,7 +1114,7 @@ select {
 
 .li:hover {
   background: var(--bg-primary);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
   transform: translateX(2px);
 }
 
@@ -1174,13 +1167,21 @@ select {
 
   /* Visual */
   background: var(--overlay-modal);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
 
-  /* Layout */
-  display: flex;
+  /* Layout - Hidden by default, shown via JS */
+  display: none;
   align-items: center;
   justify-content: center;
-  padding: var(--padding-lg);
+  padding: var(--padding-xl);
+
+  /* Animation */
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal-overlay {
@@ -1192,57 +1193,113 @@ select {
 .modal-content {
   /* Layout */
   position: relative;
-  max-width: 720px;
-  max-height: 80vh;
+  max-width: 800px;
+  max-height: 85vh;
   width: 100%;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   /* Visual */
-  background: var(--surface-overlay);
-  border: var(--border-width-emphasis) solid var(--border-primary);
-  padding: var(--padding-2xl);
+  background: var(--white);
+  border: var(--border-width-emphasis) solid var(--black);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+  /* Z-index */
   z-index: 1;
+
+  /* Animation */
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Modal Header */
 .modal-header {
+  /* Layout */
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding-bottom: var(--padding-lg);
-  margin-bottom: var(--padding-xl);
-  border-bottom: var(--border-width) solid var(--border-primary);
+  align-items: center;
+  padding: var(--padding-xl);
+
+  /* Visual */
+  background: var(--bg-secondary);
+  border-bottom: var(--border-width-emphasis) solid var(--border-primary);
+
+  /* Spacing */
+  flex-shrink: 0;
 }
 
-.modal-header h2 {
-  font-size: var(--text-xl);
+.modal-header h2,
+.modal-header h3 {
+  /* Typography */
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  text-transform: none;
+
+  /* Reset */
   margin: 0;
+  padding: 0;
+
+  /* Color */
+  color: var(--text-primary);
 }
 
 .modal-close {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-regular);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
+  /* Reset */
+  font-family: var(--font-sans);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-light);
+  line-height: 1;
+
+  /* Layout */
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--transition-fast);
+  width: var(--space-10);
+  height: var(--space-10);
+  padding: 0;
+
+  /* Visual */
+  background: transparent;
+  border: var(--border-width) solid var(--border-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  /* Transition */
+  transition: all var(--transition-fast);
 }
 
 .modal-close:hover {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
   transform: rotate(90deg);
+}
+
+.modal-close:active {
+  transform: rotate(90deg) scale(0.95);
 }
 
 /* Modal Body */
 .modal-body {
-  padding: var(--padding-lg) 0;
+  /* Layout */
+  padding: var(--padding-xl);
+  overflow-y: auto;
+  flex: 1;
+
+  /* Scroll behavior */
+  scroll-behavior: smooth;
 }
 
 /* Modal Meta */
@@ -1405,7 +1462,7 @@ select {
 }
 
 .reasoning-block:hover {
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
 }
 
 .reasoning-block.even {
@@ -1528,7 +1585,7 @@ select {
 
 .tool-activity:hover {
   border-left-color: var(--black);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
 }
 
 /* Activity Header */
@@ -1816,7 +1873,7 @@ select {
 }
 
 .sheet-card:hover {
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
   transform: translateX(2px);
 }
 
@@ -2010,7 +2067,6 @@ select {
   height: 16px;
   border: var(--border-width-emphasis) solid var(--border-tertiary);
   border-top-color: var(--black);
-  border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
@@ -2308,12 +2364,6 @@ select {
   animation: slideIn var(--transition-base) ease-out;
 }
 
-/* Running Pulse (Fixed - was empty in old styles.css) */
-@keyframes runningPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
 .running-pulse {
   animation: runningPulse 2s ease-in-out infinite;
 }
@@ -2416,7 +2466,7 @@ select {
   background: var(--white);
 
   /* Left border emphasis (thicker than default) */
-  border-left: 4px solid var(--gray-300);
+  border-left: var(--border-width-accent) solid var(--gray-300);
   border-top: var(--border-width) solid var(--border-tertiary);
   border-right: var(--border-width) solid var(--border-tertiary);
   border-bottom: var(--border-width) solid var(--border-tertiary);
@@ -2562,7 +2612,7 @@ select {
 }
 
 .reasoning-content blockquote {
-  border-left: 4px solid var(--border-primary);
+  border-left: var(--border-width-accent) solid var(--border-primary);
   padding-left: var(--padding-lg);
   margin: var(--margin-lg) 0;
   color: var(--text-secondary);
@@ -2651,7 +2701,7 @@ select {
 #finalOutput.populated {
   /* When content is present */
   background: var(--white);
-  border-left: 4px solid var(--black);
+  border-left: var(--border-width-accent) solid var(--black);
   border-top: var(--border-width) solid var(--border-tertiary);
   border-right: var(--border-width) solid var(--border-tertiary);
   border-bottom: var(--border-width) solid var(--border-tertiary);
@@ -2676,7 +2726,7 @@ select {
 
 .output h1 {
   font-size: var(--text-2xl);
-  border-bottom: 2px solid var(--border-primary);
+  border-bottom: var(--border-width-emphasis) solid var(--border-primary);
   padding-bottom: var(--padding-sm);
 }
 
@@ -2758,8 +2808,8 @@ select {
   color: var(--white);
   padding: var(--padding-lg);
   margin-top: var(--margin-lg);
-  border: 2px solid var(--black);
-  min-height: 150px;
+  border: var(--border-width-emphasis) solid var(--black);
+  min-height: 152px;
   max-height: 400px;
   overflow: auto;
 }
@@ -2849,7 +2899,7 @@ select {
 
 #iterationLog::-webkit-scrollbar-thumb {
   background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
+  border: var(--border-width) solid var(--border-tertiary);
 }
 
 #iterationLog::-webkit-scrollbar-thumb:hover {
@@ -2867,7 +2917,7 @@ select {
 
 .subagent-trace::-webkit-scrollbar-thumb {
   background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
+  border: var(--border-width) solid var(--border-tertiary);
 }
 
 .subagent-trace::-webkit-scrollbar-thumb:hover {
@@ -2876,426 +2926,6 @@ select {
 
 /* ============================================================================
    END OF PHASE 4
-   ========================================================================= */
-
-/* ============================================================================
-   PHASE 5: MODAL SYSTEM REFINEMENTS
-   ========================================================================= */
-
-/* Enhanced Modal Container */
-.modal {
-  /* Override base styles */
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-
-  /* Enhanced backdrop */
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-
-  /* Layout */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--padding-xl);
-
-  /* Animation */
-  animation: modalFadeIn 0.25s ease-out;
-}
-
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Enhanced Modal Overlay (click target to close) */
-.modal-overlay {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-}
-
-/* Enhanced Modal Content */
-.modal-content {
-  /* Layout */
-  position: relative;
-  max-width: 800px;
-  max-height: 85vh;
-  width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-
-  /* Visual */
-  background: var(--white);
-  border: 2px solid var(--black);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-
-  /* Z-index */
-  z-index: 1;
-
-  /* Animation */
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    transform: translateY(-32px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* Enhanced Modal Header */
-.modal-header {
-  /* Layout */
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--padding-xl);
-
-  /* Visual */
-  background: var(--bg-secondary);
-  border-bottom: 2px solid var(--border-primary);
-
-  /* Spacing */
-  flex-shrink: 0;
-}
-
-.modal-header h2,
-.modal-header h3 {
-  /* Typography */
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-tight);
-  text-transform: none;
-
-  /* Reset */
-  margin: 0;
-  padding: 0;
-
-  /* Color */
-  color: var(--text-primary);
-}
-
-/* Enhanced Modal Close Button */
-.modal-close {
-  /* Reset */
-  font-family: var(--font-sans);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-light);
-  line-height: 1;
-
-  /* Layout */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-
-  /* Visual */
-  background: transparent;
-  border: var(--border-width) solid var(--border-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-
-  /* Transition */
-  transition: all var(--transition-fast);
-}
-
-.modal-close:hover {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
-  transform: rotate(90deg);
-}
-
-.modal-close:active {
-  transform: rotate(90deg) scale(0.95);
-}
-
-/* Enhanced Modal Body */
-.modal-body {
-  /* Layout */
-  padding: var(--padding-xl);
-  overflow-y: auto;
-  flex: 1;
-
-  /* Scroll behavior */
-  scroll-behavior: smooth;
-}
-
-/* Enhanced scrollbar for modal body */
-.modal-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-  background: var(--bg-tertiary);
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-  background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-  background: var(--border-primary);
-}
-
-/* Enhanced Modal Meta */
-.modal-meta {
-  /* Layout */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--gap-lg);
-
-  /* Visual */
-  padding: var(--padding-lg);
-  background: var(--bg-tertiary);
-  border: var(--border-width) solid var(--border-tertiary);
-
-  /* Spacing */
-  margin-bottom: var(--margin-xl);
-}
-
-.meta-item {
-  /* Layout */
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-xs);
-}
-
-.meta-label {
-  /* Typography */
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-
-  /* Color */
-  color: var(--text-tertiary);
-}
-
-.meta-value {
-  /* Typography */
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-
-  /* Color */
-  color: var(--text-primary);
-
-  /* Overflow handling */
-  word-wrap: break-word;
-  word-break: break-word;
-}
-
-/* Enhanced Modal Sections */
-.modal-section {
-  /* Spacing */
-  margin-bottom: var(--margin-2xl);
-}
-
-.modal-section:last-of-type {
-  margin-bottom: 0;
-}
-
-.modal-section h3,
-.modal-section h4 {
-  /* Typography */
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-
-  /* Visual */
-  color: var(--text-secondary);
-  border-bottom: var(--border-width) solid var(--border-tertiary);
-  padding-bottom: var(--padding-sm);
-
-  /* Spacing */
-  margin-bottom: var(--margin-md);
-}
-
-.modal-section p {
-  /* Typography */
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
-
-  /* Color */
-  color: var(--text-primary);
-
-  /* Spacing */
-  margin: 0;
-}
-
-.modal-section pre {
-  /* Typography */
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  line-height: var(--leading-relaxed);
-
-  /* Layout */
-  padding: var(--padding-md);
-  margin: 0;
-
-  /* Visual */
-  background: var(--bg-tertiary);
-  border: var(--border-width) solid var(--border-tertiary);
-  color: var(--text-primary);
-
-  /* Overflow */
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-x: auto;
-}
-
-.modal-section ul,
-.modal-section ol {
-  /* Spacing */
-  margin: 0;
-  padding-left: var(--padding-xl);
-
-  /* Typography */
-  line-height: var(--leading-relaxed);
-}
-
-.modal-section li {
-  /* Spacing */
-  margin-bottom: var(--margin-xs);
-}
-
-/* Enhanced Modal Actions */
-.modal-actions {
-  /* Layout */
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gap-sm);
-  align-items: center;
-
-  /* Visual */
-  padding-top: var(--padding-lg);
-  margin-top: var(--margin-xl);
-  border-top: var(--border-width) solid var(--border-tertiary);
-
-  /* Spacing */
-  flex-shrink: 0;
-}
-
-/* Modal Specific IDs */
-#taskModal .modal-content,
-#memoryModal .modal-content,
-#goalModal .modal-content,
-#vaultModal .modal-content {
-  /* Consistent sizing */
-  max-width: 800px;
-}
-
-/* Vault Modal Wider for Content */
-#vaultModal .modal-content {
-  max-width: 900px;
-}
-
-/* Small Modal Variant (for confirmations, etc.) */
-.modal.modal-sm .modal-content {
-  max-width: 480px;
-}
-
-/* Large Modal Variant */
-.modal.modal-lg .modal-content {
-  max-width: 1200px;
-}
-
-/* Modal Responsive Breakpoints */
-@media (max-width: 768px) {
-  .modal {
-    padding: var(--padding-md);
-  }
-
-  .modal-content {
-    max-height: 90vh;
-  }
-
-  .modal-header {
-    padding: var(--padding-lg);
-  }
-
-  .modal-body {
-    padding: var(--padding-lg);
-  }
-
-  .modal-meta {
-    grid-template-columns: 1fr;
-    gap: var(--gap-md);
-  }
-}
-
-@media (max-width: 480px) {
-  .modal {
-    padding: var(--padding-sm);
-  }
-
-  .modal-header h2,
-  .modal-header h3 {
-    font-size: var(--text-md);
-  }
-
-  .modal-close {
-    width: 32px;
-    height: 32px;
-    font-size: var(--text-2xl);
-  }
-}
-
-/* Modal State: Hidden */
-.modal.hidden {
-  display: none;
-}
-
-/* Modal Loading State */
-.modal-body.loading {
-  position: relative;
-  min-height: 200px;
-}
-
-.modal-body.loading::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
-
-.modal-body.loading::after {
-  content: 'Loading...';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  z-index: 2;
-}
-
-/* ============================================================================
-   END OF PHASE 5
    ========================================================================= */
 
 /* ============================================================================
@@ -3367,7 +2997,7 @@ select {
 
 .sheet-card.selected {
   background: var(--bg-secondary);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
 }
 
 .sheet-card.selected::after {
@@ -3490,7 +3120,7 @@ select {
 
 /* Enhanced Sub-Agent Tool Display */
 .subagent-tool {
-  border-left: 2px solid var(--border-secondary);
+  border-left: var(--border-width-emphasis) solid var(--border-secondary);
   transition: border-color var(--transition-fast);
 }
 
@@ -3652,7 +3282,7 @@ button:disabled:hover {
 
 .li.selected {
   background: var(--bg-primary);
-  border-left-width: 4px;
+  border-left-width: var(--border-width-accent);
   border-left-color: var(--black);
   transform: translateX(2px);
 }
@@ -3831,7 +3461,7 @@ code::selection {
 
 *::-webkit-scrollbar-thumb {
   background: var(--border-secondary);
-  border: 1px solid var(--border-tertiary);
+  border: var(--border-width) solid var(--border-tertiary);
   transition: background var(--transition-fast);
 }
 
