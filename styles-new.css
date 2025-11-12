@@ -94,6 +94,9 @@
   --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
 
+  /* Base Font Size */
+  --font-size-base: 16px;
+
   /* Type Scale - 1.250 (Major Third) */
   --text-xs: 0.64rem;    /* 10.24px */
   --text-sm: 0.8rem;     /* 12.8px */
@@ -111,10 +114,10 @@
   --weight-bold: 700;
 
   /* Line Heights */
-  --leading-tight: 1.25;
+  --leading-tight: 1.2;
   --leading-snug: 1.375;
   --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
+  --leading-relaxed: 1.75;
   --leading-loose: 2;
 
   /* Letter Spacing */
@@ -220,7 +223,7 @@
 }
 
 html {
-  font-size: 16px; /* Base font size */
+  font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -492,18 +495,6 @@ body.session-active .session-status-bar {
 
 .status-bar-right {
   justify-content: flex-end;
-}
-
-/* Status Indicator */
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--white);
-}
-
-.status-indicator.running {
-  animation: statusPulse 2s infinite;
 }
 
 .status-text {
@@ -2010,7 +2001,6 @@ select {
   height: 16px;
   border: var(--border-width-emphasis) solid var(--border-tertiary);
   border-top-color: var(--black);
-  border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
