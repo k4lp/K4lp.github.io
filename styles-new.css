@@ -722,8 +722,8 @@ main {
   border: none;
   cursor: pointer;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -827,8 +827,8 @@ main {
 
 .btn-icon {
   padding: var(--padding-sm);
-  min-height: 40px;
-  width: 40px;
+  min-height: var(--space-10);
+  width: var(--space-10);
 }
 
 /* Button States */
@@ -981,8 +981,8 @@ select {
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   border: var(--border-width) solid var(--border-primary);
   cursor: pointer;
 }
@@ -2063,8 +2063,8 @@ select {
 }
 
 .subagent-progress-spinner {
-  width: 16px;
-  height: 16px;
+  width: var(--space-4);
+  height: var(--space-4);
   border: var(--border-width-emphasis) solid var(--border-tertiary);
   border-top-color: var(--black);
   animation: spin 1s linear infinite;
@@ -2123,8 +2123,8 @@ select {
 }
 
 .rotation-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   background: var(--black);
   animation: pulse 2s ease-in-out infinite;
 }
@@ -2144,7 +2144,7 @@ select {
 /* Progress Bar */
 .progress-bar {
   width: 100%;
-  height: 4px;
+  height: var(--space-1);
   background: var(--bg-tertiary);
   border: var(--border-width) solid var(--border-tertiary);
   overflow: hidden;
@@ -2480,7 +2480,7 @@ select {
 
 .reasoning-block.reasoning-type:hover {
   /* Emphasize on hover */
-  border-left-width: 6px;
+  border-left-width: var(--space-2);
   border-left-color: var(--black);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transform: translateX(2px);
@@ -2890,7 +2890,7 @@ select {
 
 /* Enhanced Log Scrollbar (Webkit browsers) */
 #iterationLog::-webkit-scrollbar {
-  width: 8px;
+  width: var(--space-2);
 }
 
 #iterationLog::-webkit-scrollbar-track {
@@ -2908,7 +2908,7 @@ select {
 
 /* Enhanced Subagent Trace Scrollbar */
 .subagent-trace::-webkit-scrollbar {
-  width: 8px;
+  width: var(--space-2);
 }
 
 .subagent-trace::-webkit-scrollbar-track {
@@ -2991,7 +2991,7 @@ select {
 }
 
 .sheet-card:hover::after {
-  width: 4px;
+  width: var(--space-1);
   background: var(--black);
 }
 
@@ -3209,8 +3209,8 @@ button:disabled:hover {
   font-size: var(--text-lg);
   font-weight: var(--weight-regular);
   line-height: 1;
-  width: 32px;
-  height: 32px;
+  width: var(--space-8);
+  height: var(--space-8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3302,8 +3302,8 @@ button:disabled:hover {
 .checkbox-label input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   border: var(--border-width) solid var(--border-primary);
   background: var(--white);
   cursor: pointer;
@@ -3383,8 +3383,8 @@ select:focus {
 /* Enhanced Status Indicator Dot */
 .status-indicator {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   background: var(--gray-600);
   transition: background var(--transition-fast);
 }
@@ -3451,8 +3451,8 @@ code::selection {
 
 /* Enhanced Scrollbar for all scrollable areas */
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
 }
 
 *::-webkit-scrollbar-track {
