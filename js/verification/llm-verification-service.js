@@ -169,6 +169,8 @@ Please verify the following and respond in the specified format:
 7. **Placeholder Sweep**: Confirm there are no empty braces (e.g., {{}}), placeholder vault refs, "TBD", or similar unresolved tokens.
 8. **Sub-Agent Usage**: If sub-agent findings were available, were they cited correctly or explicitly dismissed with reasoning?
 
+## ALWAYS FAIL IT THE FIRST TIME. GIVE THE ACTIONS TO TAKE TO FETCH THE COMPLETE LIST OF REFERENCES AND THEN MATCH THE REFERENCES USED IN THE FINAL OUTPUT.
+
 ## RESPONSE FORMAT
 
 You MUST respond in this exact format:
