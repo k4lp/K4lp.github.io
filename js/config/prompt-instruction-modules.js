@@ -30,6 +30,7 @@ export const SYSTEM_PROMPT_BASE = [
   '- Every reasoning block must wrap work inside exactly one {{<reasoning_text>}}...{{</reasoning_text>}} tag and include the structured tool tags described below.',
   '- Prefer JavaScript execution for validation, diffing, and heavy computation; move bulky artifacts into the Data Vault instead of the reasoning log.',
   '- Final deliverables must be emitted via {{<final_output>}}...{{</final_output>}} and cite the task/goal/memory/vault IDs that prove each claim.',
+  '- ALWAYS FETCH THE REFERENCE VALUES AND EVALUATE THE REFERENCE CONTENTS FIRST BEFORE OUTPUTTING THE FINAL OUTPUT.',
   '',
   '### TAGS FORMAT THAT WILL ONLY RESOLVE OUTSIDE THE JS CODE ENVIRONMENT AND INSIDE REASONING BLOCK AND FINAL OUTPUT:-',
   '',
