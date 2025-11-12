@@ -343,6 +343,54 @@ code, pre {
   font-family: var(--font-mono);
 }
 
+/* Additional Component Utilities */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--padding-sm) 0;
+}
+
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.indicator-icon {
+  animation: spin 2s linear infinite;
+}
+
+.indicator-text {
+  letter-spacing: var(--tracking-wider);
+}
+
+.attachment-quick-actions {
+  display: flex;
+  gap: var(--gap-sm);
+  margin-top: var(--margin-md);
+}
+
+.icon-large {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.session-info {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+}
+
+.vault-form {
+  margin-top: var(--margin-lg);
+  padding-top: var(--padding-lg);
+  border-top: var(--border-width) solid var(--border-tertiary);
+}
+
 /* ============================================================================
    ANIMATIONS
    ========================================================================= */
