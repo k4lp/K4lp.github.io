@@ -2392,3 +2392,489 @@ select {
    END OF PHASE 3
    ========================================================================= */
 
+/* ============================================================================
+   PHASE 4: REASONING LOG & OUTPUT REFINEMENTS
+   ========================================================================= */
+
+/* Enhanced Log Container */
+#iterationLog {
+  /* Override base styles for better scroll behavior */
+  max-height: 800px;
+  padding: var(--padding-xl);
+  background: var(--bg-primary);
+  border: none;
+  scroll-behavior: smooth;
+}
+
+/* Reasoning Block Type Specific */
+.reasoning-block.reasoning-type {
+  /* Enhanced spacing for reasoning blocks */
+  padding: var(--padding-xl);
+  margin-bottom: var(--margin-2xl);
+
+  /* Subtle background distinction */
+  background: var(--white);
+
+  /* Left border emphasis (thicker than default) */
+  border-left: 4px solid var(--gray-300);
+  border-top: var(--border-width) solid var(--border-tertiary);
+  border-right: var(--border-width) solid var(--border-tertiary);
+  border-bottom: var(--border-width) solid var(--border-tertiary);
+
+  /* Enhanced shadow for depth */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+
+  /* Smooth transitions */
+  transition: all var(--transition-base);
+}
+
+.reasoning-block.reasoning-type:hover {
+  /* Emphasize on hover */
+  border-left-width: 6px;
+  border-left-color: var(--black);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateX(2px);
+}
+
+/* Even/Odd alternation - very subtle */
+.reasoning-block.even {
+  background: var(--white);
+}
+
+.reasoning-block.odd {
+  background: var(--gray-1000);
+}
+
+/* Block Header for Reasoning */
+.block-header.reasoning {
+  /* No bottom border (cleaner) */
+  border-bottom: none;
+  padding-bottom: var(--padding-md);
+  margin-bottom: var(--padding-lg);
+}
+
+/* Enhanced Iteration Badge */
+.iteration-badge {
+  /* Typography */
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
+
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: var(--padding-xs) var(--padding-md);
+
+  /* Visual */
+  background: var(--black);
+  color: var(--white);
+  border: none;
+
+  /* No border radius (Swiss) */
+  border-radius: 0;
+}
+
+/* Block Meta Compact (word count, etc.) */
+.block-meta-compact {
+  /* Typography */
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-wider);
+
+  /* Visual */
+  color: var(--text-tertiary);
+
+  /* Spacing */
+  margin-left: var(--margin-md);
+}
+
+/* Reasoning Content */
+.reasoning-content {
+  /* Enhanced typography for readability */
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-primary);
+}
+
+.reasoning-content p {
+  margin-bottom: var(--margin-lg);
+}
+
+.reasoning-content p:last-child {
+  margin-bottom: 0;
+}
+
+.reasoning-content ul,
+.reasoning-content ol {
+  margin: var(--margin-md) 0;
+  padding-left: var(--padding-xl);
+}
+
+.reasoning-content li {
+  margin-bottom: var(--margin-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.reasoning-content h1,
+.reasoning-content h2,
+.reasoning-content h3,
+.reasoning-content h4 {
+  margin-top: var(--margin-xl);
+  margin-bottom: var(--margin-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.reasoning-content h1 { font-size: var(--text-2xl); }
+.reasoning-content h2 { font-size: var(--text-xl); }
+.reasoning-content h3 { font-size: var(--text-lg); }
+.reasoning-content h4 { font-size: var(--text-md); }
+
+/* Enhanced code blocks within reasoning */
+.reasoning-content pre {
+  background: var(--black);
+  color: var(--white);
+  padding: var(--padding-lg);
+  margin: var(--margin-lg) 0;
+  overflow-x: auto;
+  border: var(--border-width) solid var(--black);
+}
+
+.reasoning-content pre code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.reasoning-content code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: var(--bg-tertiary);
+  padding: var(--padding-xs) var(--padding-sm);
+  border: var(--border-width) solid var(--border-tertiary);
+}
+
+.reasoning-content blockquote {
+  border-left: 4px solid var(--border-primary);
+  padding-left: var(--padding-lg);
+  margin: var(--margin-lg) 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.reasoning-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--margin-lg) 0;
+}
+
+.reasoning-content th,
+.reasoning-content td {
+  padding: var(--padding-sm) var(--padding-md);
+  border: var(--border-width) solid var(--border-tertiary);
+  text-align: left;
+}
+
+.reasoning-content th {
+  background: var(--bg-tertiary);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+/* Block Meta (in header) */
+.block-meta {
+  /* Typography */
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+
+  /* Visual */
+  color: var(--text-secondary);
+
+  /* Spacing */
+  margin: 0;
+  padding: var(--padding-xs) 0;
+}
+
+.block-meta span {
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+/* Enhanced Placeholders */
+.log-placeholder,
+.output-placeholder {
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--padding-3xl);
+
+  /* Typography */
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  text-align: center;
+  color: var(--text-tertiary);
+
+  /* Visual */
+  background: var(--bg-tertiary);
+  border: var(--border-width) dashed var(--border-secondary);
+}
+
+.log-placeholder p,
+.output-placeholder p {
+  margin: 0;
+  font-style: italic;
+}
+
+/* Enhanced Final Output */
+#finalOutput {
+  /* Override base styles */
+  padding: var(--padding-2xl);
+  background: var(--white);
+  border: none;
+  min-height: 300px;
+}
+
+#finalOutput.populated {
+  /* When content is present */
+  background: var(--white);
+  border-left: 4px solid var(--black);
+  border-top: var(--border-width) solid var(--border-tertiary);
+  border-right: var(--border-width) solid var(--border-tertiary);
+  border-bottom: var(--border-width) solid var(--border-tertiary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Output content (similar to reasoning content) */
+.output {
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--text-primary);
+}
+
+.output h1,
+.output h2,
+.output h3 {
+  margin-top: var(--margin-xl);
+  margin-bottom: var(--margin-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.output h1 {
+  font-size: var(--text-2xl);
+  border-bottom: 2px solid var(--border-primary);
+  padding-bottom: var(--padding-sm);
+}
+
+.output h2 {
+  font-size: var(--text-xl);
+}
+
+.output h3 {
+  font-size: var(--text-lg);
+}
+
+.output p {
+  margin-bottom: var(--margin-lg);
+}
+
+.output ul,
+.output ol {
+  margin: var(--margin-md) 0;
+  padding-left: var(--padding-xl);
+}
+
+.output li {
+  margin-bottom: var(--margin-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.output pre {
+  background: var(--black);
+  color: var(--white);
+  padding: var(--padding-lg);
+  margin: var(--margin-lg) 0;
+  overflow-x: auto;
+  border: var(--border-width) solid var(--black);
+}
+
+.output code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: var(--bg-tertiary);
+  padding: var(--padding-xs) var(--padding-sm);
+  border: var(--border-width) solid var(--border-tertiary);
+}
+
+.output pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Enhanced Code Execution Section */
+#codeExecutionSection .code-editor textarea {
+  /* Better code editing experience */
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  tab-size: 2;
+
+  /* Visual */
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: var(--border-width) solid var(--border-tertiary);
+
+  /* Spacing */
+  padding: var(--padding-lg);
+
+  /* Transition */
+  transition: border-color var(--transition-base);
+}
+
+#codeExecutionSection .code-editor textarea:focus {
+  border-color: var(--border-primary);
+  border-width: var(--border-width-emphasis);
+  outline: none;
+}
+
+#codeExecutionSection .console {
+  /* Enhanced console styling */
+  background: var(--black);
+  color: var(--white);
+  padding: var(--padding-lg);
+  margin-top: var(--margin-lg);
+  border: 2px solid var(--black);
+  min-height: 150px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+#codeExecutionSection .console pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+  color: var(--white);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Sub-Agent Console Refinements */
+#subAgentConsoleSection .subagent-trace {
+  /* Better styling for trace container */
+  background: var(--bg-secondary);
+  border: var(--border-width) solid var(--border-tertiary);
+  padding: var(--padding-lg);
+  max-height: 600px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Compaction Status Pill Positioning */
+#compactionStatus {
+  /* Better visual alignment with button */
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: var(--margin-sm);
+}
+
+/* Action Group Refinement */
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  align-items: center;
+  margin-top: var(--margin-lg);
+}
+
+/* Enhanced Pills in Headers */
+.block-header .pill {
+  /* Better positioning in headers */
+  margin-left: auto;
+}
+
+/* Status Pills Specific Colors (Monochrome) */
+#execStatus.ready,
+#finalStatus.idle {
+  background: transparent;
+  border-color: var(--border-secondary);
+  color: var(--text-secondary);
+}
+
+#execStatus.running,
+#finalStatus.running {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+  animation: runningPulse 2s ease-in-out infinite;
+}
+
+#execStatus.success,
+#finalStatus.complete {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+#execStatus.error,
+#finalStatus.error {
+  border-color: var(--gray-300);
+  color: var(--gray-300);
+}
+
+/* Enhanced Log Scrollbar (Webkit browsers) */
+#iterationLog::-webkit-scrollbar {
+  width: 8px;
+}
+
+#iterationLog::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+#iterationLog::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border: 1px solid var(--border-tertiary);
+}
+
+#iterationLog::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+/* Enhanced Subagent Trace Scrollbar */
+.subagent-trace::-webkit-scrollbar {
+  width: 8px;
+}
+
+.subagent-trace::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+.subagent-trace::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border: 1px solid var(--border-tertiary);
+}
+
+.subagent-trace::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+/* ============================================================================
+   END OF PHASE 4
+   ========================================================================= */
+
