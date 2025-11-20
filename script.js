@@ -82,6 +82,20 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // Networking
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.8")
 }`,
                     analysis: {
                         role: "Build Script",
@@ -142,6 +156,8 @@ dependencies {
         <activity android:name=".ui.auth.RegisterActivity" />
 
         <activity android:name=".ui.main.MainActivity" />
+
+        <!-- WorkManager automatically registers its provider, but services can be listed here -->
     </application>
 
 </manifest>`,
@@ -242,16 +258,19 @@ dependencies {
                                                     content: `package com.example.taskmanagerpro
 
 import android.app.Application
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
+import javax.inject.Inject
 
 /**
  * Base Application class for the Task Manager app.
- *
- * This acts as the entry point for the dependency injection graph.
+ * Acts as the entry point for the dependency injection graph.
  */
 @HiltAndroidApp
-class TaskApplication : Application() {
+class TaskApplication : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
         super.onCreate()
@@ -261,16 +280,22 @@ class TaskApplication : Application() {
             Timber.plant(Timber.DebugTree())
         }
     }
+
+    // Configure WorkManager to use Hilt for dependency injection in Workers
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 }`,
                                                     analysis: {
                                                         role: "Application Class",
-                                                        description: "The base class for maintaining global application state. Annotated with <b>@HiltAndroidApp</b> to trigger Dagger Hilt code generation.",
+                                                        description: "The base class for global application state. Annotated with <b>@HiltAndroidApp</b> to trigger Dagger Hilt code generation.",
                                                         purpose: "Entry point for the app process, before any Activity starts.",
                                                         flow: "1. App process starts -> 2. Application.onCreate() runs -> 3. Hilt initializes -> 4. LoginActivity launches.",
                                                         functions: [
                                                             "Initialize Dependency Injection (Hilt)",
                                                             "Initialize Logging (Timber)",
-                                                            "Global Configuration"
+                                                            "Configure WorkManager"
                                                         ],
                                                         usage: "Use this for library initializations that need to happen once at startup.",
                                                         connections: [
@@ -279,6 +304,87 @@ class TaskApplication : Application() {
                                                         ],
                                                         triggered_by: "Android OS (Process Start)",
                                                         execution_context: "Main Thread (Singleton)"
+                                                    }
+                                                },
+                                                "domain": {
+                                                    name: "domain",
+                                                    type: "package",
+                                                    isOpen: false,
+                                                    analysis: {
+                                                        role: "Domain Layer",
+                                                        description: "Contains the business logic of the application.",
+                                                        purpose: "To encapsulate business rules irrespective of the UI.",
+                                                        flow: "ViewModel -> UseCase -> Repository.",
+                                                        functions: ["Business Rules", "Use Cases"],
+                                                        usage: "Complex logic that involves multiple repositories or validation.",
+                                                        connections: [],
+                                                        standards: "Pure Kotlin (no Android dependencies preferred).",
+                                                        triggered_by: "ViewModel",
+                                                        execution_context: "Business Logic"
+                                                    },
+                                                    children: {
+                                                        "usecase": {
+                                                            name: "usecase",
+                                                            type: "package",
+                                                            isOpen: true,
+                                                            analysis: {
+                                                                role: "Use Cases",
+                                                                description: "Single-responsibility classes representing an action.",
+                                                                purpose: "To make business actions explicit.",
+                                                                flow: "Called by ViewModel.",
+                                                                functions: ["Execute Action"],
+                                                                usage: "GetTasks, LoginUser, SyncData.",
+                                                                connections: [],
+                                                                standards: "Naming: Verb + Noun + UseCase.",
+                                                                triggered_by: "User Action",
+                                                                execution_context: "Domain"
+                                                            },
+                                                            children: {
+                                                                "GetTasksUseCase.kt": {
+                                                                    name: "GetTasksUseCase.kt",
+                                                                    type: "file",
+                                                                    language: "kotlin",
+                                                                    content: `package com.example.taskmanagerpro.domain.usecase
+
+import com.example.taskmanagerpro.data.model.Task
+import com.example.taskmanagerpro.data.repository.TaskRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+
+/**
+ * Use Case to retrieve tasks.
+ * Demonstrates business logic: filtering or sorting could happen here.
+ */
+class GetTasksUseCase @Inject constructor(
+    private val repository: TaskRepository
+) {
+    operator fun invoke(filterCompleted: Boolean = false): Flow<List<Task>> {
+        return repository.allTasks.map { tasks ->
+            if (filterCompleted) {
+                tasks.filter { it.isCompleted }
+            } else {
+                tasks
+            }
+        }
+    }
+}`,
+                                                                    analysis: {
+                                                                        role: "Use Case",
+                                                                        description: "Encapsulates the logic for retrieving tasks.",
+                                                                        purpose: "To separate data retrieval from presentation logic.",
+                                                                        flow: "ViewModel calls invoke() -> UseCase filters data -> Returns Flow.",
+                                                                        functions: ["invoke()"],
+                                                                        usage: "Used by MainViewModel.",
+                                                                        connections: [
+                                                                            { label: "TaskRepository", path: "app/src/main/java/com.example.taskmanagerpro/data/repository/TaskRepository.kt" }
+                                                                        ],
+                                                                        triggered_by: "MainViewModel.init",
+                                                                        execution_context: "Background Stream"
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 },
                                                 "util": {
@@ -348,6 +454,62 @@ sealed class Resource<T>(
                                                         execution_context: "Background Threads (IO)"
                                                     },
                                                     children: {
+                                                        "remote": {
+                                                            name: "remote",
+                                                            type: "package",
+                                                            isOpen: false,
+                                                            analysis: {
+                                                                role: "Remote Data Source",
+                                                                description: "Handles network communication.",
+                                                                purpose: "To fetch data from a backend API.",
+                                                                flow: "Repository -> Retrofit Interface -> HTTP Request.",
+                                                                functions: ["API Definition"],
+                                                                usage: "Syncing data with cloud.",
+                                                                connections: [],
+                                                                standards: "Use Retrofit for type-safe HTTP.",
+                                                                triggered_by: "Repository",
+                                                                execution_context: "IO Thread"
+                                                            },
+                                                            children: {
+                                                                "TaskApi.kt": {
+                                                                    name: "TaskApi.kt",
+                                                                    type: "file",
+                                                                    language: "kotlin",
+                                                                    content: `package com.example.taskmanagerpro.data.remote
+
+import com.example.taskmanagerpro.data.model.Task
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+
+/**
+ * Retrofit interface defining API endpoints.
+ */
+interface TaskApi {
+
+    @GET("tasks")
+    suspend fun getTasks(): List<Task>
+
+    @POST("tasks")
+    suspend fun syncTask(@Body task: Task): Response<Unit>
+}`,
+                                                                    analysis: {
+                                                                        role: "API Interface",
+                                                                        description: "Defines HTTP operations using Retrofit annotations.",
+                                                                        purpose: "To map Kotlin function calls to HTTP requests.",
+                                                                        flow: "Called by Repository -> Retrofit generates code -> Network request sent.",
+                                                                        functions: ["getTasks (GET)", "syncTask (POST)"],
+                                                                        usage: "Syncing data.",
+                                                                        connections: [
+                                                                            { label: "Network Module", path: "app/src/main/java/com.example.taskmanagerpro/di/NetworkModule.kt" }
+                                                                        ],
+                                                                        triggered_by: "SyncDataWorker / Repository",
+                                                                        execution_context: "Network I/O"
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
                                                         "local": {
                                                             name: "local",
                                                             type: "package",
@@ -449,6 +611,49 @@ interface TaskDao {
                                                                         triggered_by: "TaskRepository",
                                                                         execution_context: "IO Dispatcher (Room handles threading)"
                                                                     }
+                                                                },
+                                                                "SettingsDataStore.kt": {
+                                                                    name: "SettingsDataStore.kt",
+                                                                    type: "file",
+                                                                    language: "kotlin",
+                                                                    content: `package com.example.taskmanagerpro.data.local
+
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+
+private val Context.dataStore by preferencesDataStore(name = "settings")
+
+class SettingsDataStore @Inject constructor(private val context: Context) {
+
+    private val THEME_KEY = stringPreferencesKey("theme_mode")
+
+    val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[THEME_KEY] ?: "SYSTEM"
+    }
+
+    suspend fun saveTheme(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[THEME_KEY] = mode
+        }
+    }
+}`,
+                                                                    analysis: {
+                                                                        role: "DataStore (Preferences)",
+                                                                        description: "Modern replacement for SharedPreferences.",
+                                                                        purpose: "To store simple key-value pairs asynchronously.",
+                                                                        flow: "Read/Write operations occur on background thread via Flow/Coroutines.",
+                                                                        functions: ["saveTheme", "themeFlow"],
+                                                                        usage: "Saving user settings like Dark Mode preference.",
+                                                                        connections: [],
+                                                                        standards: "Always prefer DataStore over SharedPreferences.",
+                                                                        triggered_by: "SettingsViewModel",
+                                                                        execution_context: "IO Dispatcher"
+                                                                    }
                                                                 }
                                                             }
                                                         },
@@ -533,6 +738,7 @@ data class Task(
                                                                     content: `package com.example.taskmanagerpro.data.repository
 
 import com.example.taskmanagerpro.data.local.TaskDao
+import com.example.taskmanagerpro.data.remote.TaskApi
 import com.example.taskmanagerpro.data.model.Task
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -542,7 +748,8 @@ import javax.inject.Inject
  * Abstracts the local database from the rest of the app.
  */
 class TaskRepository @Inject constructor(
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    private val taskApi: TaskApi
 ) {
     // Exposes the data stream from the DAO
     val allTasks: Flow<List<Task>> = taskDao.getAllTasks()
@@ -550,8 +757,9 @@ class TaskRepository @Inject constructor(
     suspend fun add(task: Task) {
         try {
             taskDao.insertTask(task)
+            // Attempt sync to server
+            taskApi.syncTask(task)
         } catch (e: Exception) {
-            // Log error or handle it
             e.printStackTrace()
         }
     }
@@ -696,6 +904,114 @@ object AppModule {
                                                                 ],
                                                                 triggered_by: "Dependency Graph Resolution",
                                                                 execution_context: "Singleton Lifecycle"
+                                                            }
+                                                        },
+                                                        "NetworkModule.kt": {
+                                                            name: "NetworkModule.kt",
+                                                            type: "file",
+                                                            language: "kotlin",
+                                                            content: `package com.example.taskmanagerpro.di
+
+import com.example.taskmanagerpro.data.remote.TaskApi
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(): Retrofit = Retrofit.Builder()
+        .baseUrl("https://api.taskmanager.com/v1/")
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideTaskApi(retrofit: Retrofit): TaskApi =
+        retrofit.create(TaskApi::class.java)
+}`,
+                                                            analysis: {
+                                                                role: "Network Module",
+                                                                description: "Hilt Module for Network Dependencies.",
+                                                                purpose: "To provide Retrofit and API Service instances.",
+                                                                flow: "Injected into Repositories.",
+                                                                functions: ["provideRetrofit", "provideTaskApi"],
+                                                                usage: "Configuring API base URL and converters.",
+                                                                connections: [
+                                                                    { label: "TaskApi", path: "app/src/main/java/com.example.taskmanagerpro/data/remote/TaskApi.kt" }
+                                                                ],
+                                                                triggered_by: "Hilt Graph",
+                                                                execution_context: "Singleton"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "worker": {
+                                                    name: "worker",
+                                                    type: "package",
+                                                    isOpen: false,
+                                                    analysis: {
+                                                        role: "Background Workers",
+                                                        description: "Contains WorkManager classes.",
+                                                        purpose: "To run deferrable background tasks.",
+                                                        flow: "Enqueued by App/ViewModel -> WorkManager Scheduler -> doWork().",
+                                                        functions: ["Background Sync"],
+                                                        usage: "Periodic sync, uploading logs.",
+                                                        connections: [],
+                                                        standards: "Use CoroutineWorker for Kotlin.",
+                                                        triggered_by: "System Scheduler",
+                                                        execution_context: "Background Thread"
+                                                    },
+                                                    children: {
+                                                        "SyncDataWorker.kt": {
+                                                            name: "SyncDataWorker.kt",
+                                                            type: "file",
+                                                            language: "kotlin",
+                                                            content: `package com.example.taskmanagerpro.worker
+
+import android.content.Context
+import androidx.hilt.work.HiltWorker
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import com.example.taskmanagerpro.data.repository.TaskRepository
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
+
+@HiltWorker
+class SyncDataWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val repository: TaskRepository
+) : CoroutineWorker(appContext, workerParams) {
+
+    override suspend fun doWork(): Result {
+        return try {
+            // repository.sync()
+            Result.success()
+        } catch (e: Exception) {
+            Result.retry()
+        }
+    }
+}`,
+                                                            analysis: {
+                                                                role: "Coroutine Worker",
+                                                                description: "A background worker for syncing data.",
+                                                                purpose: "To execute long-running tasks reliably.",
+                                                                flow: "WorkManager wakes up app -> doWork() called -> Repository syncs.",
+                                                                functions: ["doWork()"],
+                                                                usage: "Periodic data sync.",
+                                                                connections: [
+                                                                    { label: "TaskRepository", path: "app/src/main/java/com.example.taskmanagerpro/data/repository/TaskRepository.kt" }
+                                                                ],
+                                                                triggered_by: "System JobScheduler/AlarmManager",
+                                                                execution_context: "WorkManager Thread"
                                                             }
                                                         }
                                                     }
@@ -1458,6 +1774,131 @@ class MainViewModel @Inject constructor(
                                                         standards: "Every UI string must be here, not hardcoded.",
                                                         triggered_by: "Resource Loader",
                                                         execution_context: "Runtime Localization"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "test": {
+                            name: "test",
+                            type: "folder",
+                            isOpen: false,
+                            analysis: {
+                                role: "Unit Tests Root",
+                                description: "Contains local unit tests that run on the development machine (JVM).",
+                                purpose: "To verify business logic in isolation.",
+                                flow: "Executed via Gradle test task.",
+                                functions: ["Logic Verification"],
+                                usage: "Testing ViewModels, UseCases, Repositories.",
+                                connections: [],
+                                standards: "Fast execution, no Android dependencies.",
+                                triggered_by: "Developer (Test Runner)",
+                                execution_context: "JVM"
+                            },
+                            children: {
+                                "java": {
+                                    name: "java",
+                                    type: "folder",
+                                    isOpen: false,
+                                    analysis: {
+                                        role: "Java/Kotlin Source",
+                                        description: "Source root for tests.",
+                                        purpose: "To mirror the main source set structure.",
+                                        flow: "Compiled during test build.",
+                                        functions: ["Test Hosting"],
+                                        usage: "Unit tests.",
+                                        connections: [],
+                                        standards: "Package structure must match main.",
+                                        triggered_by: "Gradle",
+                                        execution_context: "JVM"
+                                    },
+                                    children: {
+                                        "com.example.taskmanagerpro": {
+                                            name: "com.example.taskmanagerpro",
+                                            type: "package",
+                                            isOpen: false,
+                                            analysis: {
+                                                role: "Test Package",
+                                                description: "Matches the main package.",
+                                                purpose: "To access internal members if needed.",
+                                                flow: "N/A",
+                                                functions: ["N/A"],
+                                                usage: "N/A",
+                                                connections: [],
+                                                standards: "Same as main.",
+                                                triggered_by: "N/A",
+                                                execution_context: "N/A"
+                                            },
+                                            children: {
+                                                "MainViewModelTest.kt": {
+                                                    name: "MainViewModelTest.kt",
+                                                    type: "file",
+                                                    language: "kotlin",
+                                                    content: `package com.example.taskmanagerpro
+
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.example.taskmanagerpro.data.repository.TaskRepository
+import com.example.taskmanagerpro.ui.main.MainViewModel
+import io.mockk.coVerify
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class MainViewModelTest {
+
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    private lateinit var viewModel: MainViewModel
+    private val repository: TaskRepository = mockk(relaxed = true)
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        viewModel = MainViewModel(repository)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun \`addTask calls repository add\`() {
+        // Given
+        val title = "Test Task"
+        val desc = "Description"
+
+        // When
+        viewModel.addTask(title, desc)
+
+        // Then
+        coVerify { repository.add(any()) }
+    }
+}`,
+                                                    analysis: {
+                                                        role: "Unit Test Class",
+                                                        description: "Tests the business logic of MainViewModel.",
+                                                        purpose: "To ensure ViewModel calls Repository correctly.",
+                                                        flow: "1. Setup Mocks.<br>2. Trigger Action (addTask).<br>3. Verify result (Repository called).",
+                                                        functions: ["setup", "tearDown", "testAddTask"],
+                                                        usage: "Run before committing code.",
+                                                        connections: [
+                                                            { label: "MainViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/MainViewModel.kt" }
+                                                        ],
+                                                        standards: "Given-When-Then pattern.",
+                                                        triggered_by: "JUnit Runner",
+                                                        execution_context: "JVM (Local Machine)"
                                                     }
                                                 }
                                             }
