@@ -1313,42 +1313,84 @@ function syntaxHighlight(code, language) {
     let cleanCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     if (language === 'kotlin') {
-        // Use placeholders to prevent regex overlapping
+        // 1. Hide Strings
         const strings = [];
         cleanCode = cleanCode.replace(/(".*?")/g, (match) => {
             strings.push(match);
             return `___STRING${strings.length - 1}___`;
         });
 
-        // Keywords
+        // 2. Mark Keywords
+        // We use a specific prefix to avoid collision
         const keywords = ["package", "import", "class", "interface", "fun", "val", "var", "return", "if", "else", "for", "while", "true", "false", "null", "this", "super", "object", "companion", "override", "private", "public", "protected", "internal", "lateinit", "constructor", "init", "try", "catch", "finally", "suspend", "data", "sealed", "open", "abstract", "enum"];
+
         keywords.forEach(kw => {
-            // Ensure we don't match inside existing tags (though placeholders prevent this mostly)
             const regex = new RegExp(`\\b${kw}\\b`, 'g');
-            cleanCode = cleanCode.replace(regex, `<span class="hl-keyword">${kw}</span>`);
+            cleanCode = cleanCode.replace(regex, `___KW_${kw}___`);
         });
 
-        // Restore strings
+        // 3. Mark Annotations
+        cleanCode = cleanCode.replace(/(@\w+)/g, '___ANNOTATION_$1___');
+
+        // 4. Mark Numbers
+        cleanCode = cleanCode.replace(/\b(\d+)\b/g, '___NUMBER_$1___');
+
+        // 5. Mark Functions
+        cleanCode = cleanCode.replace(/\b([a-zA-Z]\w*)(?=\()/g, '___FUNCTION_$1___');
+
+        // REPLACE BACK
+        // Order: Annotations, Functions, Keywords, Numbers, Strings
+
+        // Keywords
+        cleanCode = cleanCode.replace(/___KW_(.*?)___/g, '<span class="hl-keyword">$1</span>');
+
+        // Annotations
+        cleanCode = cleanCode.replace(/___ANNOTATION_(@\w+)___/g, '<span class="hl-annotation">$1</span>');
+
+        // Numbers
+        cleanCode = cleanCode.replace(/___NUMBER_(\d+)___/g, '<span class="hl-number">$1</span>');
+
+        // Functions
+        cleanCode = cleanCode.replace(/___FUNCTION_([a-zA-Z]\w*)___/g, '<span class="hl-function">$1</span>');
+
+        // Restore Strings (last to avoid anything matching inside them)
         cleanCode = cleanCode.replace(/___STRING(\d+)___/g, (match, i) => {
             return `<span class="hl-string">${strings[i]}</span>`;
         });
 
-        // Annotations
-        cleanCode = cleanCode.replace(/(@\w+)/g, '<span class="hl-annotation">$1</span>');
-        // Numbers
-        cleanCode = cleanCode.replace(/\b(\d+)\b/g, '<span class="hl-number">$1</span>');
-        // Functions (simplified detection: word followed by parenthesis)
-        cleanCode = cleanCode.replace(/\b(\w+)(?=\()/g, '<span class="hl-function">$1</span>');
-
     } else if (language === 'xml') {
-        // Comments
-        cleanCode = cleanCode.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="hl-comment">$1</span>');
-        // Tags
-        cleanCode = cleanCode.replace(/(&lt;\/?)([\w:.]+)/g, '$1<span class="hl-tag">$2</span>');
-        // Attributes
-        cleanCode = cleanCode.replace(/(\s)([\w:.-]+)(=)/g, '$1<span class="hl-attribute">$2</span>$3');
-        // Attribute Values
-        cleanCode = cleanCode.replace(/(".*?")/g, '<span class="hl-value">$1</span>');
+         // 1. Comments
+         const comments = [];
+         cleanCode = cleanCode.replace(/(&lt;!--[\s\S]*?--&gt;)/g, (match) => {
+             comments.push(match);
+             return `___COMMENT${comments.length-1}___`;
+         });
+
+         // 2. Attribute Values (Strings)
+         const values = [];
+         cleanCode = cleanCode.replace(/(".*?")/g, (match) => {
+             values.push(match);
+             return `___VALUE${values.length-1}___`;
+         });
+
+         // 3. Tags
+         cleanCode = cleanCode.replace(/(&lt;\/?)([\w:.]+)/g, '$1___TAG_$2___');
+
+         // 4. Attributes
+         cleanCode = cleanCode.replace(/(\s)([\w:.-]+)(=)/g, '$1___ATTR_$2___$3');
+
+         // RESTORE
+         // Attributes
+         cleanCode = cleanCode.replace(/___ATTR_([\w:.-]+)___/g, '<span class="hl-attribute">$1</span>');
+
+         // Tags
+         cleanCode = cleanCode.replace(/___TAG_([\w:.]+)___/g, '<span class="hl-tag">$1</span>');
+
+         // Values
+         cleanCode = cleanCode.replace(/___VALUE(\d+)___/g, (match, i) => `<span class="hl-value">${values[i]}</span>`);
+
+         // Comments
+         cleanCode = cleanCode.replace(/___COMMENT(\d+)___/g, (match, i) => `<span class="hl-comment">${comments[i]}</span>`);
     }
 
     return cleanCode;
