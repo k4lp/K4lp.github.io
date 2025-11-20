@@ -149,7 +149,7 @@ dependencies {
                                 role: "App Manifest",
                                 description: "The <b>AndroidManifest.xml</b> is the 'passport' of your app. It tells the Android OS essential information before the app can even run.",
                                 purpose: "To declare app components and required permissions.",
-                                flow: "OS checks this file to know which Activity to launch first (Launcher Intent).",
+                                flow: "1. User taps app icon.<br>2. Android OS reads this file.<br>3. OS finds the Activity with <code>android.intent.action.MAIN</code> and <code>LAUNCHER</code> category (LoginActivity).<br>4. OS launches LoginActivity.",
                                 functions: [
                                     "Permission Declaration (Internet)",
                                     "Component Registration (Activities)",
@@ -157,9 +157,9 @@ dependencies {
                                 ],
                                 usage: "Used whenever you add a new screen (Activity) or need a new system capability.",
                                 connections: [
-                                    { label: "Application Class", path: "app/src/main/java/com/example/taskmanagerpro/TaskApplication.kt" },
-                                    { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" },
-                                    { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
+                                    { label: "Application Class", path: "app/src/main/java/com.example.taskmanagerpro/TaskApplication.kt" },
+                                    { label: "LoginActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/LoginActivity.kt" },
+                                    { label: "RegisterActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/RegisterActivity.kt" }
                                 ],
                                 triggered_by: "App Installation / App Launch",
                                 execution_context: "System Level"
@@ -275,7 +275,7 @@ class TaskApplication : Application() {
                                                         usage: "Use this for library initializations that need to happen once at startup.",
                                                         connections: [
                                                             { label: "Manifest", path: "app/manifests/AndroidManifest.xml" },
-                                                            { label: "DI Module", path: "app/src/main/java/com/example/taskmanagerpro/di/AppModule.kt" }
+                                                            { label: "DI Module", path: "app/src/main/java/com.example.taskmanagerpro/di/AppModule.kt" }
                                                         ],
                                                         triggered_by: "Android OS (Process Start)",
                                                         execution_context: "Main Thread (Singleton)"
@@ -398,8 +398,8 @@ abstract class TaskDatabase : RoomDatabase() {
                                                                         ],
                                                                         usage: "Created once (Singleton) and injected.",
                                                                         connections: [
-                                                                            { label: "Task Entity", path: "app/src/main/java/com/example/taskmanagerpro/data/model/Task.kt" },
-                                                                            { label: "Task DAO", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDao.kt" }
+                                                                            { label: "Task Entity", path: "app/src/main/java/com.example.taskmanagerpro/data/model/Task.kt" },
+                                                                            { label: "Task DAO", path: "app/src/main/java/com.example.taskmanagerpro/data/local/TaskDao.kt" }
                                                                         ],
                                                                         triggered_by: "App Module (Dagger Graph)",
                                                                         execution_context: "Singleton Scope"
@@ -444,7 +444,7 @@ interface TaskDao {
                                                                         ],
                                                                         usage: "Used whenever the app needs to touch the database.",
                                                                         connections: [
-                                                                            { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
+                                                                            { label: "Task Database", path: "app/src/main/java/com.example.taskmanagerpro/data/local/TaskDatabase.kt" }
                                                                         ],
                                                                         triggered_by: "TaskRepository",
                                                                         execution_context: "IO Dispatcher (Room handles threading)"
@@ -501,7 +501,7 @@ data class Task(
                                                                         ],
                                                                         usage: "Passed between Layers (Data -> Domain -> UI).",
                                                                         connections: [
-                                                                            { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
+                                                                            { label: "Task Database", path: "app/src/main/java/com.example.taskmanagerpro/data/local/TaskDatabase.kt" }
                                                                         ],
                                                                         triggered_by: "Database Query / User Input",
                                                                         execution_context: "Data Transfer Object"
@@ -569,8 +569,8 @@ class TaskRepository @Inject constructor(
                                                                         ],
                                                                         usage: "Injected into ViewModels.",
                                                                         connections: [
-                                                                            { label: "Task DAO", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDao.kt" },
-                                                                            { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" }
+                                                                            { label: "Task DAO", path: "app/src/main/java/com.example.taskmanagerpro/data/local/TaskDao.kt" },
+                                                                            { label: "MainViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/MainViewModel.kt" }
                                                                         ],
                                                                         triggered_by: "MainViewModel",
                                                                         execution_context: "Coroutines Scope"
@@ -623,7 +623,7 @@ class AuthRepository @Inject constructor() {
                                                                         ],
                                                                         usage: "Used by Login and Register ViewModels.",
                                                                         connections: [
-                                                                            { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" }
+                                                                            { label: "AuthViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/AuthViewModel.kt" }
                                                                         ],
                                                                         triggered_by: "AuthViewModel",
                                                                         execution_context: "IO Thread (Network)"
@@ -692,7 +692,7 @@ object AppModule {
                                                                 ],
                                                                 usage: "Automatically used by Hilt.",
                                                                 connections: [
-                                                                    { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
+                                                                    { label: "Task Database", path: "app/src/main/java/com.example.taskmanagerpro/data/local/TaskDatabase.kt" }
                                                                 ],
                                                                 triggered_by: "Dependency Graph Resolution",
                                                                 execution_context: "Singleton Lifecycle"
@@ -803,7 +803,7 @@ class LoginActivity : AppCompatActivity() {
                                                                         role: "Login Activity (View)",
                                                                         description: "The visual entry point for authentication.",
                                                                         purpose: "To allow users to sign in.",
-                                                                        flow: "User enters creds -> Click Login -> VM validates -> Navigate to Main.",
+                                                                        flow: "1. Launched by OS.<br>2. <code>onCreate</code> runs.<br>3. UI is inflated.<br>4. User clicks 'Login'.<br>5. <code>viewModel.login()</code> is called.<br>6. Activity observes state changes to show/hide progress bar or navigate.",
                                                                         functions: [
                                                                             "Setup UI (onCreate)",
                                                                             "Handle Click Events",
@@ -811,8 +811,8 @@ class LoginActivity : AppCompatActivity() {
                                                                         ],
                                                                         usage: "First screen launched by the OS.",
                                                                         connections: [
-                                                                            { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" },
-                                                                            { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" },
+                                                                            { label: "AuthViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/AuthViewModel.kt" },
+                                                                            { label: "RegisterActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/RegisterActivity.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_login.xml" }
                                                                         ],
                                                                         triggered_by: "Launcher Intent (OS)",
@@ -874,14 +874,14 @@ class RegisterActivity : AppCompatActivity() {
                                                                         role: "Register Activity (View)",
                                                                         description: "Screen for creating a new account.",
                                                                         purpose: "User acquisition.",
-                                                                        flow: "User fills form -> VM registers -> Success Toast -> Back to Login.",
+                                                                        flow: "1. User clicks 'Register' in LoginActivity.<br>2. This Activity launches.<br>3. User submits form.<br>4. ViewModel handles registration.<br>5. On success, Activity finishes.",
                                                                         functions: [
                                                                             "Collect User Data",
                                                                             "Observe Registration State"
                                                                         ],
                                                                         usage: "Accessed via LoginActivity.",
                                                                         connections: [
-                                                                            { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" },
+                                                                            { label: "AuthViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/AuthViewModel.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_register.xml" }
                                                                         ],
                                                                         triggered_by: "LoginActivity (Intent)",
@@ -936,7 +936,7 @@ class AuthViewModel @Inject constructor(
                                                                         role: "Auth ViewModel",
                                                                         description: "The brain of the Auth feature. Shared between Login and Register activities.",
                                                                         purpose: "To hold state and business logic for authentication.",
-                                                                        flow: "Receives input -> Calls Repository -> Updates LiveData -> UI reacts.",
+                                                                        flow: "1. Activity calls <code>login()</code>.<br>2. VM sets state to Loading.<br>3. VM calls Repository on background thread.<br>4. Repository returns result.<br>5. VM updates LiveData.<br>6. Activity receives update.",
                                                                         functions: [
                                                                             "login()",
                                                                             "register()",
@@ -944,8 +944,8 @@ class AuthViewModel @Inject constructor(
                                                                         ],
                                                                         usage: "Injected into Activities.",
                                                                         connections: [
-                                                                            { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" },
-                                                                            { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
+                                                                            { label: "LoginActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/LoginActivity.kt" },
+                                                                            { label: "RegisterActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/RegisterActivity.kt" }
                                                                         ],
                                                                         triggered_by: "Activity (via ViewModelProvider)",
                                                                         execution_context: "ViewModel Scope"
@@ -1017,7 +1017,7 @@ class MainActivity : AppCompatActivity() {
                                                                         role: "Main Activity",
                                                                         description: "The central hub of the app. Displays the list of tasks.",
                                                                         purpose: "To display the list of tasks and facilitate adding new ones.",
-                                                                        flow: "Observes ViewModel -> Updates Adapter -> RecyclerView draws list.",
+                                                                        flow: "1. Started by LoginActivity on success.<br>2. Observes <code>viewModel.tasks</code>.<br>3. When tasks change (e.g. added from dialog), Adapter updates list.<br>4. RecyclerView re-renders.",
                                                                         functions: [
                                                                             "Initialize RecyclerView",
                                                                             "Observe Task List",
@@ -1025,8 +1025,8 @@ class MainActivity : AppCompatActivity() {
                                                                         ],
                                                                         usage: "Main user interface.",
                                                                         connections: [
-                                                                            { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" },
-                                                                            { label: "Add Task Dialog", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/AddTaskDialogFragment.kt" },
+                                                                            { label: "MainViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/MainViewModel.kt" },
+                                                                            { label: "Add Task Dialog", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/AddTaskDialogFragment.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_main.xml" }
                                                                         ],
                                                                         triggered_by: "LoginActivity (Intent)",
@@ -1073,7 +1073,7 @@ class AddTaskDialogFragment : DialogFragment() {
                                                                         role: "Dialog Fragment",
                                                                         description: "A modal popup to create new tasks.",
                                                                         purpose: "To capture input without leaving the main screen.",
-                                                                        flow: "Input -> ViewModel.addTask() -> Dismiss.",
+                                                                        flow: "1. FAB clicked in MainActivity.<br>2. Dialog appears.<br>3. User types data and clicks 'Add'.<br>4. <code>viewModel.addTask()</code> called.<br>5. DB updates, LiveData updates, MainActivity updates list.",
                                                                         functions: [
                                                                             "Render Dialog UI",
                                                                             "Capture User Input",
@@ -1081,7 +1081,7 @@ class AddTaskDialogFragment : DialogFragment() {
                                                                         ],
                                                                         usage: "Triggered by FAB.",
                                                                         connections: [
-                                                                            { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" },
+                                                                            { label: "MainViewModel", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/MainViewModel.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/dialog_add_task.xml" }
                                                                         ],
                                                                         triggered_by: "MainActivity (FragmentManager)",
@@ -1128,7 +1128,7 @@ class MainViewModel @Inject constructor(
                                                                         role: "Main ViewModel",
                                                                         description: "Bridge between Repository and UI.",
                                                                         purpose: "To manage data for the MainActivity.",
-                                                                        flow: "Repository -> LiveData -> Activity.",
+                                                                        flow: "1. Created by Hilt when MainActivity starts.<br>2. Subscribes to <code>repository.allTasks</code>.<br>3. Forwards data to UI.",
                                                                         functions: [
                                                                             "Expose tasks LiveData",
                                                                             "addTask()",
@@ -1136,8 +1136,8 @@ class MainViewModel @Inject constructor(
                                                                         ],
                                                                         usage: "Injected into MainActivity.",
                                                                         connections: [
-                                                                            { label: "Task Repository", path: "app/src/main/java/com/example/taskmanagerpro/data/repository/TaskRepository.kt" },
-                                                                            { label: "MainActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainActivity.kt" }
+                                                                            { label: "Task Repository", path: "app/src/main/java/com.example.taskmanagerpro/data/repository/TaskRepository.kt" },
+                                                                            { label: "MainActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/MainActivity.kt" }
                                                                         ],
                                                                         triggered_by: "MainActivity",
                                                                         execution_context: "ViewModel Scope"
@@ -1248,7 +1248,7 @@ class MainViewModel @Inject constructor(
                                                         ],
                                                         usage: "Visuals for login.",
                                                         connections: [
-                                                            { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" }
+                                                            { label: "LoginActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/LoginActivity.kt" }
                                                         ],
                                                         triggered_by: "LoginActivity.setContentView()",
                                                         execution_context: "UI Rendering"
@@ -1317,7 +1317,7 @@ class MainViewModel @Inject constructor(
                                                         ],
                                                         usage: "Visuals for registration.",
                                                         connections: [
-                                                            { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
+                                                            { label: "RegisterActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/auth/RegisterActivity.kt" }
                                                         ],
                                                         triggered_by: "RegisterActivity.setContentView()",
                                                         execution_context: "UI Rendering"
@@ -1362,7 +1362,7 @@ class MainViewModel @Inject constructor(
                                                         ],
                                                         usage: "Visuals for main screen.",
                                                         connections: [
-                                                            { label: "MainActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainActivity.kt" }
+                                                            { label: "MainActivity", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/MainActivity.kt" }
                                                         ],
                                                         triggered_by: "MainActivity.setContentView()",
                                                         execution_context: "UI Rendering"
@@ -1414,7 +1414,7 @@ class MainViewModel @Inject constructor(
                                                         ],
                                                         usage: "Visuals for adding a task.",
                                                         connections: [
-                                                            { label: "AddTaskDialogFragment", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/AddTaskDialogFragment.kt" }
+                                                            { label: "AddTaskDialogFragment", path: "app/src/main/java/com.example.taskmanagerpro/ui/main/AddTaskDialogFragment.kt" }
                                                         ],
                                                         triggered_by: "DialogFragment.onCreateDialog()",
                                                         execution_context: "UI Rendering"
