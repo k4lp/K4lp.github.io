@@ -3,548 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDRS — Gemini Deep Research System</title>
-    <meta name="description" content="Browser-based research assistant with iterative reasoning and unlimited code execution">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
-    <!-- OLD STYLES DISABLED - BROKEN CIRCULAR REFERENCE -->
-    <!-- <link rel="stylesheet" href="styles.css"> -->
-    <!-- Swiss Minimalist Design System (standalone) -->
-    <link rel="stylesheet" href="styles-new.css">
+    <title>Android Studio Simulation</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent body scroll */
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2b2d30;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4e5157;
+            border-radius: 4px;
+            border: 2px solid #2b2d30;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5e6168;
+        }
+
+        /* Syntax Highlighting Classes */
+        .hl-keyword { color: #cc7832; font-weight: bold; }
+        .hl-string { color: #6a8759; }
+        .hl-annotation { color: #bbb529; }
+        .hl-tag { color: #e8bf6a; }
+        .hl-attribute { color: #bababa; }
+        .hl-value { color: #a5c261; }
+        .hl-comment { color: #808080; font-style: italic; }
+        .hl-number { color: #6897bb; }
+        .hl-function { color: #ffc66d; }
+        .hl-class { color: #a9b7c6; }
+
+        .tree-item:hover {
+            background-color: #2d2f33;
+            cursor: pointer;
+        }
+        .tree-item.selected {
+            background-color: #2d2f33; /* Selection color same as hover for simplicity or slightly different */
+            background-color: #4b6eaf; /* Selection color */
+            color: white;
+        }
+
+        /* Resizable panes (simplified with flex for now) */
+    </style>
 </head>
-<body>
+<body class="bg-[#1e1f22] text-[#a9b7c6] h-screen flex flex-col select-none">
 
-    <div id="app">
-
-        <!-- Header -->
-        <header>
-            <div class="container-header">
-                <div class="brand">
-                    <h1>GDRS</h1>
-                    <p class="brand-desc">Gemini Deep Research System</p>
-                </div>
-                <div class="meta">
-                    <span class="version">v1.1.4</span>
-                    <span class="divider">|</span>
-                    <span class="author">Kalp Pariya</span>
-                </div>
-            </div>
-        </header>
-
-        <!-- Sticky Session Status Bar (shown when running) -->
-        <div id="sessionStatusBar" class="session-status-bar hidden">
-            <div class="status-bar-content">
-                <div class="status-bar-left">
-                    <span class="status-indicator running"></span>
-                    <span class="status-text">RUNNING</span>
-                </div>
-                <div class="status-bar-center">
-                    <span class="status-timer" id="stickySessionTimer">00:00</span>
-                </div>
-                <div class="status-bar-right">
-                    <span class="status-iterations">Iteration <span id="stickyIterationCount">0</span></span>
-                    <button id="stickyStopBtn" class="btn btn-sm btn-danger">Stop</button>
-                </div>
-            </div>
+    <!-- Top Bar -->
+    <header class="h-10 bg-[#2b2d30] flex items-center px-4 border-b border-[#1e1f22] space-x-4">
+        <div class="flex items-center space-x-2">
+            <span class="material-symbols-rounded text-green-500 text-xl">android</span>
+            <span class="font-bold text-sm text-gray-300">Android Studio Simulation</span>
         </div>
+        <div class="flex-1"></div>
+        <div class="flex space-x-3 text-gray-400 text-xs">
+            <span class="material-symbols-rounded text-sm cursor-pointer hover:text-white">play_arrow</span>
+            <span class="material-symbols-rounded text-sm cursor-pointer hover:text-white">bug_report</span>
+            <span class="material-symbols-rounded text-sm cursor-pointer hover:text-white">settings</span>
+        </div>
+    </header>
 
-        <!-- Main Layout -->
-        <main>
-            <div class="container-main">
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden">
 
-                <!-- Configuration Panel -->
-                <aside class="panel panel-config">
+        <!-- Left Pane: Project Tree -->
+        <aside class="w-72 bg-[#2b2d30] flex flex-col border-r border-[#1e1f22]">
+            <div class="h-8 flex items-center px-3 border-b border-[#1e1f22]">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Project</span>
+            </div>
+            <div id="project-tree" class="flex-1 overflow-y-auto text-sm py-2">
+                <!-- Tree content injected by JS -->
+            </div>
+        </aside>
 
-                    <!-- API Keys -->
-                    <section class="block collapsible">
-                        <header class="block-header">
-                            <h2>API Keys</h2>
-                            <p class="block-meta">Unlimited • Auto-rotation • Local storage</p>
-                            <button class="collapse-toggle" data-target="apiKeysBody">−</button>
-                        </header>
+        <!-- Middle Pane: Editor -->
+        <main class="flex-1 flex flex-col bg-[#1e1f22] min-w-0">
+            <!-- Tabs / Breadcrumbs -->
+            <div class="h-8 bg-[#2b2d30] flex items-center px-4 border-b border-[#1e1f22] overflow-x-auto">
+                <div id="breadcrumbs" class="flex items-center space-x-2 text-xs text-gray-400 whitespace-nowrap">
+                    <span class="material-symbols-rounded text-sm">home</span>
+                    <span>/</span>
+                    <span>Select a file...</span>
+                </div>
+            </div>
 
-                        <div id="apiKeysBody" class="block-body">
-
-                            <div id="keysContainer"></div>
-
-                            <div class="action-group">
-                                <button id="validateKeys" class="btn btn-primary">Validate All</button>
-                                <button id="clearKeys" class="btn">Clear All</button>
-                            </div>
-
-                            <div class="status-bar">
-                                <span id="keyRotationPill" class="pill">NO KEY</span>
-                                <div id="keyRotationIndicator" class="indicator hidden">
-                                    <span class="indicator-icon">↻</span>
-                                    <span class="indicator-text">Rotated to #<span id="rotatedKeySlot">0</span></span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Data Attachment Section -->
-                    <section class="block collapsible collapsed">
-                        <header class="block-header">
-                            <div>
-                                <h2>Data Attachment</h2>
-                                <p class="block-meta">Excel • Runtime only</p>
-                            </div>
-                            <button class="collapse-toggle" data-target="attachmentBody">+</button>
-                        </header>
-
-                        <div id="attachmentBody" class="block-body">
-                            <div class="action-group attachment-actions">
-                                <span id="attachmentStatusPill" class="pill">NONE</span>
-                                <button id="attachmentDownloadOriginal" class="btn btn-sm btn-icon" title="Download original file" disabled>
-                                    <span class="icon-large">&#x1f4e5;</span>
-                                </button>
-                                <button id="attachmentDownloadWorking" class="btn btn-sm btn-icon" title="Save current changes" disabled>
-                                    <span class="icon-large">&#x1f4be;</span>
-                                </button>
-                                <button id="attachmentReset" class="btn btn-sm btn-icon" title="Reset to original" disabled>
-                                    <span class="icon-large">&#x21ba;</span>
-                                </button>
-                                <button id="attachmentRemove" class="btn btn-sm btn-icon" title="Remove attachment" disabled>
-                                    <span class="icon-large">&#x1f5d1;</span>
-                                </button>
-                            </div>
-                            <div class="attachment-dropzone" id="attachmentDropzone">
-                                <p>Drop .xlsx/.xls/.csv or click</p>
-                                <input type="file" id="attachmentInput" accept=".xlsx,.xls,.csv" hidden>
-                            </div>
-
-                            <div class="attachment-tabs">
-                                <button class="attachment-tab active" data-panel="summary">Summary</button>
-                                <button class="attachment-tab" data-panel="sheets">Sheets</button>
-                                <button class="attachment-tab" data-panel="mutations">Mutations</button>
-                            </div>
-
-                            <div class="attachment-panels">
-                                <div class="attachment-panel active" id="attachmentSummaryPanel"></div>
-                                <div class="attachment-panel" id="attachmentSheetsPanel"></div>
-                                <div class="attachment-panel" id="attachmentMutationsPanel"></div>
-                            </div>
-
-                            <div class="attachment-quick-actions" id="attachmentQuickActions">
-                                <button class="btn btn-sm" data-action="previewRows" disabled>Preview</button>
-                                <button class="btn btn-sm" data-action="logSummary" disabled>Summary</button>
-                                <button class="btn btn-sm" data-action="openGuide">Guide</button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Session Configuration -->
-                    <section class="block collapsible">
-                        <header class="block-header">
-                            <h2>Session</h2>
-                            <button class="collapse-toggle" data-target="sessionBody">−</button>
-                        </header>
-
-                        <div id="sessionBody" class="block-body">
-                            <div class="field">
-                                <label for="modelSelect">Model</label>
-                                <select id="modelSelect">
-                                    <option value="">— select model —</option>
-                                </select>
-                            </div>
-
-                            <div class="field">
-                                <label for="maxOutputTokens">Max Output Tokens</label>
-                                <div class="field-with-suffix">
-                                    <input id="maxOutputTokens" type="number" value="4096" min="512" max="65536" step="256">
-                                    <span class="suffix">tokens</span>
-                                </div>
-                                <p class="field-hint">512 - 65,536</p>
-                            </div>
-
-                            <div class="field checkbox-field">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableSubAgent">
-                                    <span>Enable External Knowledge Sub-Agent</span>
-                                </label>
-                                <p class="field-hint">Allow GDRS to call a lightweight web-research assistant when queries need fresh knowledge.</p>
-                            </div>
-
-                            <div class="field checkbox-field">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableExcelHelpers" checked>
-                                    <span>Enable Excel Helper Instructions</span>
-                                </label>
-                                <p class="field-hint">Auto-managed: checked whenever an Excel file is attached, unchecked when no workbook is present.</p>
-                            </div>
-
-                            <div class="field">
-                                <label for="groqApiKeys">Groq API Keys</label>
-                                <textarea id="groqApiKeys" rows="3" placeholder="Enter one key per line. Keys are stored locally and used only for Groq requests."></textarea>
-                                <p class="field-hint">Needed for live web intelligence requests. Provide multiple keys to allow automatic rotation.</p>
-                            </div>
-
-                            <div class="field subagent-status">
-                                <div class="subagent-status-header">
-                                <div>
-                                    <label>External Knowledge</label>
-                                    <p class="field-hint">Latest response from the web sub-agent</p>
-                                </div>
-                                <span id="subAgentStatusPill" class="pill pill-muted">Disabled</span>
-                            </div>
-                                <div id="subAgentStatusBody" class="subagent-status-body">
-                                    <p class="field-hint">Sub-agents are invoked automatically when the reasoning loop emits {{<subagent .../>}} operations.</p>
-                                </div>
-                            </div>
-
-                            <div class="field">
-                                <label for="userQuery">Research Query</label>
-                                <textarea id="userQuery" rows="4" placeholder="Enter your research question or task..."></textarea>
-                            </div>
-
-                            <div class="action-group">
-                                <button id="runQueryBtn" class="btn btn-primary btn-lg btn-with-timer">
-                                    <span class="btn-text">Run Analysis</span>
-                                    <span id="btnTimer" class="btn-timer hidden">00:00</span>
-                                </button>
-                                <div class="session-info">
-                                    <span id="sessionStatus" class="pill">IDLE</span>
-                                    <span id="sessionIterationDisplay" class="session-meta hidden">Iteration 0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-</aside>
-
-                <!-- Processing Panel -->
-                <div class="panel panel-process">
-
-                    <!-- Reasoning Log -->
-                    <section class="block collapsible" id="reasoningLogSection">
-                        <header class="block-header">
-                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
-                                <h2>Reasoning Log</h2>
-                                <p class="block-meta">Iteration <span id="iterationCount">0</span></p>
-                            </div>
-                            <button class="collapse-toggle" data-target="reasoningLogBody">−</button>
-                        </header>
-
-                        <div id="reasoningLogBody" class="block-body">
-                            <div id="iterationLog" class="log">
-                                <div class="log-placeholder">Intelligent reasoning iterations will appear here</div>
-                            </div>
-
-                            <div class="action-group" style="margin-top: var(--space-md);">
-                                <button id="compactContextBtn" class="btn">Compact Context</button>
-                                <span id="compactionStatus" class="pill pill-muted hidden">IDLE</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Sub-Agent Console -->
-                    <section class="block collapsible" id="subAgentConsoleSection">
-                        <header class="block-header">
-                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
-                                <h2>Sub-Agent Console</h2>
-                                <p class="block-meta">Live traces & tools</p>
-                            </div>
-                            <button class="collapse-toggle" data-target="subAgentConsoleBody">�^'</button>
-                        </header>
-
-                        <div id="subAgentConsoleBody" class="block-body">
-                            <div id="subAgentTraceBody" class="subagent-trace">
-                                <div class="log-placeholder">No sub-agent trace available yet.</div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Code Execution -->
-                    <section class="block collapsible" id="codeExecutionSection">
-                        <header class="block-header">
-                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
-                                <h2>Code Execution</h2>
-                                <span id="execStatus" class="pill">READY</span>
-                            </div>
-                            <button class="collapse-toggle" data-target="codeExecutionBody">−</button>
-                        </header>
-
-                        <div id="codeExecutionBody" class="block-body">
-                            <div class="code-editor">
-                                <textarea id="codeInput" rows="8" spellcheck="false" placeholder="// JavaScript execution environment
-console.log('Hello GDRS');
-return { status: 'ready', timestamp: new Date() };"></textarea>
-                            </div>
-
-                            <div class="action-group">
-                                <button id="execBtn" class="btn btn-primary">Execute</button>
-                                <button id="clearExec" class="btn">Clear</button>
-                            </div>
-
-                            <div class="console">
-                                <h3 class="console-label">Console</h3>
-                                <pre id="execOutput">Execution output will appear here</pre>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Final Output -->
-                    <section class="block">
-                        <header class="block-header">
-                            <h2>Final Output</h2>
-                            <span id="finalStatus" class="pill">IDLE</span>
-                        </header>
-
-                        <div class="block-body">
-                            <div id="finalOutput" class="output">
-                                <div class="output-placeholder">
-                                    <p>Research report will render here</p>
-                                </div>
-                            </div>
-
-                            <div class="action-group">
-                                <button id="exportTxt" class="btn">Export Markdown</button>
-                            </div>
-                        </div>
-                    </section>
+            <!-- Code Area -->
+            <div class="flex-1 flex overflow-hidden relative">
+                <!-- Line Numbers -->
+                <div id="line-numbers" class="w-12 bg-[#2b2d30] text-right pr-2 py-2 text-gray-500 text-xs code-font leading-6 border-r border-[#323232] select-none overflow-hidden">
 
                 </div>
 
-                <!-- Storage Panel -->
-                <aside class="panel panel-storage">
+                <!-- Code Content -->
+                <div class="flex-1 overflow-auto">
+                    <pre id="code-editor" class="p-2 text-sm code-font leading-6 tab-4 outline-none min-h-full text-[#a9b7c6]">
+                        <!-- Code injected by JS -->
+                    </pre>
+                </div>
 
-                    <!-- Tasks -->
-                    <section class="block collapsible">
-                        <header class="block-header">
-                            <h2>Tasks</h2>
-                            <button class="collapse-toggle" data-target="tasksBody">−</button>
-                        </header>
-
-                        <div id="tasksBody" class="block-body">
-                            <div id="tasksList" class="list">
-                                <div class="storage-placeholder">No tasks yet</div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Memory -->
-                    <section class="block collapsible">
-                        <header class="block-header">
-                            <h2>Memory</h2>
-                            <button class="collapse-toggle" data-target="memoryBody">−</button>
-                        </header>
-
-                        <div id="memoryBody" class="block-body">
-                            <div id="memoryList" class="list">
-                                <div class="storage-placeholder">No memories yet</div>
-                            </div>
-                            <div class="action-group">
-                                <button id="clearMemory" class="btn btn-sm">Clear All</button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Goals -->
-                    <section class="block collapsible">
-                        <header class="block-header">
-                            <h2>Goals</h2>
-                            <button class="collapse-toggle" data-target="goalsBody">−</button>
-                        </header>
-
-                        <div id="goalsBody" class="block-body">
-                            <div id="goalsList" class="list">
-                                <div class="storage-placeholder">No goals yet</div>
-                            </div>
-                            <div class="action-group">
-                                <button id="clearGoals" class="btn btn-sm">Clear All</button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Data Vault -->
-                    <section class="block collapsible">
-                        <header class="block-header">
-                            <h2>Data Vault</h2>
-                            <button class="collapse-toggle" data-target="vaultBody">−</button>
-                        </header>
-
-                        <div id="vaultBody" class="block-body">
-                            <div id="vaultList" class="list">
-                                <div class="storage-placeholder">No vault entries yet</div>
-                            </div>
-
-                            <div class="action-group">
-                                <button id="clearVault" class="btn btn-sm">Clear All</button>
-                            </div>
-
-                            <div class="vault-form">
-                                <div class="field">
-                                    <label for="vaultType">Type</label>
-                                    <select id="vaultType">
-                                        <option value="text">Text</option>
-                                        <option value="code">Code</option>
-                                        <option value="data">Data</option>
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label for="vaultDesc">Description</label>
-                                    <input id="vaultDesc" type="text" placeholder="Brief description">
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                </aside>
-
+                <!-- Placeholder if empty -->
+                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
+                    <span class="material-symbols-rounded text-6xl opacity-20 mb-4">code_off</span>
+                    <p class="text-sm opacity-50">Select a file from the Project Tree to view source</p>
+                </div>
             </div>
         </main>
 
-    </div>
-
-    <!-- Task Modal -->
-    <div id="taskModal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <header class="modal-header">
-                <h3>Task Details</h3>
-                <button id="taskModalClose" class="modal-close">×</button>
-            </header>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <div class="meta-item">
-                        <span class="meta-label">ID</span>
-                        <span id="taskModalId" class="meta-value"></span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">Status</span>
-                        <span id="taskModalStatus" class="meta-value"></span>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <h4>Heading</h4>
-                    <p id="taskModalHeading"></p>
-                </div>
-                <div class="modal-section">
-                    <h4>Content</h4>
-                    <pre id="taskModalContent"></pre>
-                </div>
-                <div id="taskModalNotesSection" class="modal-section">
-                    <h4>Notes</h4>
-                    <pre id="taskModalNotes"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="taskModalExport" class="btn btn-sm">Export</button>
+        <!-- Right Pane: Inspector -->
+        <aside class="w-80 bg-[#2b2d30] flex flex-col border-l border-[#1e1f22]">
+            <div class="h-8 flex items-center px-3 border-b border-[#1e1f22]">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Architecture Inspector</span>
+            </div>
+            <div id="inspector-panel" class="flex-1 overflow-y-auto p-4 text-sm">
+                <div class="text-center text-gray-500 mt-10">
+                    <span class="material-symbols-rounded text-4xl opacity-30 block mb-2">analytics</span>
+                    Select a component to see Architecture Analysis
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 
-    <!-- Memory Modal -->
-    <div id="memoryModal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <header class="modal-header">
-                <h3>Memory Details</h3>
-                <button id="memoryModalClose" class="modal-close">×</button>
-            </header>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <div class="meta-item">
-                        <span class="meta-label">ID</span>
-                        <span id="memoryModalId" class="meta-value"></span>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <h4>Heading</h4>
-                    <p id="memoryModalHeading"></p>
-                </div>
-                <div class="modal-section">
-                    <h4>Content</h4>
-                    <pre id="memoryModalContent"></pre>
-                </div>
-                <div id="memoryModalNotesSection" class="modal-section">
-                    <h4>Notes</h4>
-                    <pre id="memoryModalNotes"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="memoryModalExport" class="btn btn-sm">Export</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Status Bar -->
+    <footer class="h-6 bg-[#2b2d30] flex items-center px-3 border-t border-[#1e1f22] text-[10px] text-gray-400">
+        <span>master</span>
+        <div class="flex-1"></div>
+        <span class="mr-2">UTF-8</span>
+        <span>Kotlin</span>
+    </footer>
 
-    <!-- Goal Modal -->
-    <div id="goalModal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <header class="modal-header">
-                <h3>Goal Details</h3>
-                <button id="goalModalClose" class="modal-close">×</button>
-            </header>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <div class="meta-item">
-                        <span class="meta-label">ID</span>
-                        <span id="goalModalId" class="meta-value"></span>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <h4>Heading</h4>
-                    <p id="goalModalHeading"></p>
-                </div>
-                <div class="modal-section">
-                    <h4>Content</h4>
-                    <pre id="goalModalContent"></pre>
-                </div>
-                <div id="goalModalNotesSection" class="modal-section">
-                    <h4>Notes</h4>
-                    <pre id="goalModalNotes"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="goalModalExport" class="btn btn-sm">Export</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Vault Modal -->
-    <div id="vaultModal" class="modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <header class="modal-header">
-                <h3>Vault Entry</h3>
-                <button id="vaultModalClose" class="modal-close">×</button>
-            </header>
-            <div class="modal-body">
-                <div class="modal-meta">
-                    <div class="meta-item">
-                        <span class="meta-label">ID</span>
-                        <span id="vaultModalId" class="meta-value"></span>
-                    </div>
-                    <div class="meta-item">
-                        <span class="meta-label">Type</span>
-                        <span id="vaultModalType" class="meta-value"></span>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <h4>Description</h4>
-                    <p id="vaultModalDesc"></p>
-                </div>
-                <div class="modal-section">
-                    <h4>Content</h4>
-                    <pre id="vaultModalContent"></pre>
-                </div>
-                <div class="modal-actions">
-                    <button id="vaultModalExport" class="btn btn-sm">Export</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Markdown Parser -->
-    <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
-
-    <!-- SheetJS for Excel attachment functionality -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-
-    <!-- Scripts -->
-    <script src="js/main.js" type="module"></script>
-
+    <script src="script.js"></script>
 </body>
 </html>
-
