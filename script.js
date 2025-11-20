@@ -7,16 +7,46 @@ const fileSystem = {
     name: "TaskManagerPro",
     type: "folder",
     isOpen: true,
+    analysis: {
+        role: "Project Root",
+        description: "The root directory of the Android project.",
+        purpose: "Container for all modules and project-level configuration.",
+        flow: "Build starts here with settings.gradle (not shown) and moves into the 'app' module.",
+        functions: ["Project Organization", "Version Control Root"],
+        usage: "Maintains the overall project structure.",
+        connections: [],
+        standards: "Standard Android project structure follows Gradle conventions."
+    },
     children: {
         "app": {
             name: "app",
             type: "folder",
             isOpen: true,
+            analysis: {
+                role: "App Module",
+                description: "The main module where your application code lives.",
+                purpose: "Contains source code, resource files, and module-level build configurations.",
+                flow: "The build system compiles this module into the final APK/AAB.",
+                functions: ["Source Code Hosting", "Resource Management"],
+                usage: "Where 99% of development happens.",
+                connections: [],
+                standards: "Separation of concerns: manifests, java (code), res (resources)."
+            },
             children: {
                 "manifests": {
                     name: "manifests",
                     type: "folder",
                     isOpen: false,
+                    analysis: {
+                        role: "Manifests Folder",
+                        description: "Contains the AndroidManifest.xml file.",
+                        purpose: "To hold the essential metadata file for the Android OS.",
+                        flow: "Read by the OS upon installation and app launch.",
+                        functions: ["Metadata Storage"],
+                        usage: "Defining permissions, activities, and services.",
+                        connections: [],
+                        standards: "Every Android module must have a manifest."
+                    },
                     children: {
                         "AndroidManifest.xml": {
                             name: "AndroidManifest.xml",
@@ -44,16 +74,27 @@ const fileSystem = {
             </intent-filter>
         </activity>
 
+        <activity android:name=".ui.auth.RegisterActivity" />
+
         <activity android:name=".ui.main.MainActivity" />
     </application>
 
 </manifest>`,
                             analysis: {
                                 role: "App Manifest",
-                                description: "The <b>AndroidManifest.xml</b> is the 'passport' of your app. It tells the Android OS essential information before the app can even run. <br><br>Key concepts here:<br>• <b>Permissions:</b> Requests access to Internet.<br>• <b>Application:</b> Declares the custom Application class.<br>• <b>Activities:</b> Registers every screen. Note the <code>intent-filter</code> on LoginActivity, making it the starting point.",
+                                description: "The <b>AndroidManifest.xml</b> is the 'passport' of your app. It tells the Android OS essential information before the app can even run.",
+                                purpose: "To declare app components and required permissions.",
+                                flow: "OS checks this file to know which Activity to launch first (Launcher Intent).",
+                                functions: [
+                                    "Permission Declaration (Internet)",
+                                    "Component Registration (Activities)",
+                                    "Hardware/Software Feature Requirements"
+                                ],
+                                usage: "Used whenever you add a new screen (Activity) or need a new system capability.",
                                 connections: [
                                     { label: "Application Class", path: "app/src/main/java/com/example/taskmanagerpro/TaskApplication.kt" },
-                                    { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" }
+                                    { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" },
+                                    { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
                                 ]
                             }
                         }
@@ -63,21 +104,61 @@ const fileSystem = {
                     name: "src",
                     type: "folder",
                     isOpen: true,
+                    analysis: {
+                        role: "Source Root",
+                        description: "Root folder for all source sets (main, test, androidTest).",
+                        purpose: "To separate production code from tests.",
+                        flow: "Gradle looks here for 'main' code and 'test' code.",
+                        functions: ["Source Set Organization"],
+                        usage: "Standard Gradle structure.",
+                        connections: [],
+                        standards: "Always keep unit tests (test) and instrumentation tests (androidTest) parallel to main."
+                    },
                     children: {
                         "main": {
                             name: "main",
                             type: "folder",
                             isOpen: true,
+                            analysis: {
+                                role: "Main Source Set",
+                                description: "Contains the production code and resources.",
+                                purpose: "Everything inside here ends up in the final app.",
+                                flow: "Compiled into DEX files and merged resources.",
+                                functions: ["Production Code Hosting"],
+                                usage: "Primary development location.",
+                                connections: [],
+                                standards: "Follows 'java' (Kotlin) and 'res' (Resources) split."
+                            },
                             children: {
                                 "java": {
                                     name: "java",
                                     type: "folder",
                                     isOpen: true,
+                                    analysis: {
+                                        role: "Kotlin/Java Source",
+                                        description: "Contains all Kotlin and Java source files.",
+                                        purpose: "Business logic, UI logic, and data handling.",
+                                        flow: "Compiled to bytecode for the Android Runtime (ART).",
+                                        functions: ["Logic Implementation"],
+                                        usage: "Where you write the code that makes the app work.",
+                                        connections: [],
+                                        standards: "Organized by package name (com.example...)."
+                                    },
                                     children: {
                                         "com.example.taskmanagerpro": {
                                             name: "com.example.taskmanagerpro",
                                             type: "package",
                                             isOpen: true,
+                                            analysis: {
+                                                role: "Root Package",
+                                                description: "The unique identifier for your app's code classes.",
+                                                purpose: "Namespace to prevent class name collisions.",
+                                                flow: "Base for all imports.",
+                                                functions: ["Namespacing"],
+                                                usage: "Should match the package ID in build.gradle.",
+                                                connections: [],
+                                                standards: "Reverse domain name notation."
+                                            },
                                             children: {
                                                 "TaskApplication.kt": {
                                                     name: "TaskApplication.kt",
@@ -100,7 +181,15 @@ class TaskApplication : Application() {
 }`,
                                                     analysis: {
                                                         role: "Application Class",
-                                                        description: "This class runs before any Activity. <br><br>• <b>@HiltAndroidApp:</b> This annotation is crucial for Dependency Injection (DI). It triggers Hilt's code generation, allowing you to inject dependencies throughout the app.<br>• <b>Global Init:</b> It's the perfect place to initialize global libraries like logging (Timber).",
+                                                        description: "The base class for maintaining global application state. Annotated with <b>@HiltAndroidApp</b> to trigger Dagger Hilt code generation.",
+                                                        purpose: "Entry point for the app process, before any Activity starts.",
+                                                        flow: "1. App process starts -> 2. Application.onCreate() runs -> 3. Hilt initializes -> 4. LoginActivity launches.",
+                                                        functions: [
+                                                            "Initialize Dependency Injection (Hilt)",
+                                                            "Initialize Logging (Timber)",
+                                                            "Global Configuration"
+                                                        ],
+                                                        usage: "Use this for library initializations that need to happen once at startup.",
                                                         connections: [
                                                             { label: "Manifest", path: "app/manifests/AndroidManifest.xml" },
                                                             { label: "DI Module", path: "app/src/main/java/com/example/taskmanagerpro/di/AppModule.kt" }
@@ -111,11 +200,31 @@ class TaskApplication : Application() {
                                                     name: "data",
                                                     type: "package",
                                                     isOpen: false,
+                                                    analysis: {
+                                                        role: "Data Layer",
+                                                        description: "Contains all data-related logic: Databases, API clients, and Repositories.",
+                                                        purpose: "To abstract the source of data from the UI.",
+                                                        flow: "UI -> ViewModel -> Repository -> Data Source (DB/Network).",
+                                                        functions: ["Data Persistence", "Network Communication", "Data Mapping"],
+                                                        usage: "Any file handling raw data goes here.",
+                                                        connections: [],
+                                                        standards: "Clean Architecture: The 'Data' layer should not know about the 'UI' layer."
+                                                    },
                                                     children: {
                                                         "local": {
                                                             name: "local",
                                                             type: "package",
                                                             isOpen: false,
+                                                            analysis: {
+                                                                role: "Local Data Source",
+                                                                description: "Handles device-local storage, typically a Room database.",
+                                                                purpose: "Offline data persistence.",
+                                                                flow: "Repository requests data -> DAO queries SQLite -> Objects returned.",
+                                                                functions: ["Database Definition", "SQL Queries"],
+                                                                usage: "Storing tasks so they appear without internet.",
+                                                                connections: [],
+                                                                standards: "Use Room library for type-safe SQL."
+                                                            },
                                                             children: {
                                                                 "TaskDatabase.kt": {
                                                                     name: "TaskDatabase.kt",
@@ -133,7 +242,15 @@ abstract class TaskDatabase : RoomDatabase() {
 }`,
                                                                     analysis: {
                                                                         role: "Room Database",
-                                                                        description: "Defines the local database configuration using the Room library.<br><br>• <b>Entities:</b> Lists the tables (Task).<br>• <b>DAOs:</b> Exposes the Data Access Objects used to read/write data.<br>This abstraction saves you from writing raw SQLite code.",
+                                                                        description: "Defines the local database configuration using the Room library.",
+                                                                        purpose: "To serve as the main access point to the persisted data.",
+                                                                        flow: "Provided by Hilt to the Repository.",
+                                                                        functions: [
+                                                                            "Define Entities (Tables)",
+                                                                            "Expose DAOs",
+                                                                            "Manage Database Versioning"
+                                                                        ],
+                                                                        usage: "Created once (Singleton) and injected.",
                                                                         connections: [
                                                                             { label: "Task Entity", path: "app/src/main/java/com/example/taskmanagerpro/data/model/Task.kt" },
                                                                             { label: "Task DAO", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDao.kt" }
@@ -163,7 +280,15 @@ interface TaskDao {
 }`,
                                                                     analysis: {
                                                                         role: "Data Access Object (DAO)",
-                                                                        description: "The interface between your Kotlin code and the SQL database.<br><br>• <b>@Query:</b> Write SQL queries here.<br>• <b>Flow:</b> Returns a stream of data. When the DB changes, the UI updates automatically.<br>• <b>suspend:</b> Indicates these functions run asynchronously (off the main thread).",
+                                                                        description: "The interface between your Kotlin code and the SQL database.",
+                                                                        purpose: "To abstract SQL queries into method calls.",
+                                                                        flow: "Called by Repository to fetch/save data.",
+                                                                        functions: [
+                                                                            "getAllTasks (Read)",
+                                                                            "insertTask (Write)",
+                                                                            "deleteTask (Delete)"
+                                                                        ],
+                                                                        usage: "Used whenever the app needs to touch the database.",
                                                                         connections: [
                                                                             { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
                                                                         ]
@@ -175,6 +300,16 @@ interface TaskDao {
                                                             name: "model",
                                                             type: "package",
                                                             isOpen: false,
+                                                            analysis: {
+                                                                role: "Data Models",
+                                                                description: "Contains POJOs (Plain Old Java Objects) or Data Classes.",
+                                                                purpose: "To define the shape of data.",
+                                                                flow: "Used throughout the app to pass data around.",
+                                                                functions: ["Data Definition"],
+                                                                usage: "Defining what a 'Task' looks like.",
+                                                                connections: [],
+                                                                standards: "Keep these simple. No business logic in models."
+                                                            },
                                                             children: {
                                                                 "Task.kt": {
                                                                     name: "Task.kt",
@@ -196,7 +331,14 @@ data class Task(
 )`,
                                                                     analysis: {
                                                                         role: "Data Entity",
-                                                                        description: "A simple data class representing a single Task.<br><br>• <b>@Entity:</b> Tells Room to create a table named 'tasks' with these columns.<br>• <b>@PrimaryKey:</b> Defines the unique ID for each row.",
+                                                                        description: "A simple data class representing a single Task.",
+                                                                        purpose: "To map a Kotlin object to a database row.",
+                                                                        flow: "Retrieved from DB -> Converted to Task Object -> Displayed in UI.",
+                                                                        functions: [
+                                                                            "Holds Data (title, desc)",
+                                                                            "Implements Room Entity Mapping"
+                                                                        ],
+                                                                        usage: "Passed between Layers (Data -> Domain -> UI).",
                                                                         connections: [
                                                                             { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
                                                                         ]
@@ -208,6 +350,16 @@ data class Task(
                                                             name: "repository",
                                                             type: "package",
                                                             isOpen: false,
+                                                            analysis: {
+                                                                role: "Repository Layer",
+                                                                description: "The mediator between Data Sources and ViewModels.",
+                                                                purpose: "Single Source of Truth. Decides whether to fetch from Local DB or Network.",
+                                                                flow: "ViewModel asks Repository for data -> Repository decides where to get it.",
+                                                                functions: ["Data Arbitration", "API Abstraction"],
+                                                                usage: "The only class that ViewModels should talk to for data.",
+                                                                connections: [],
+                                                                standards: "Repository Pattern is a core Android Architectural component."
+                                                            },
                                                             children: {
                                                                 "TaskRepository.kt": {
                                                                     name: "TaskRepository.kt",
@@ -230,7 +382,14 @@ class TaskRepository @Inject constructor(
 }`,
                                                                     analysis: {
                                                                         role: "Repository",
-                                                                        description: "The 'Source of Truth' for data. It hides the complexity of <i>where</i> data comes from (Local DB, Cloud, Cache) from the UI.<br><br>• <b>@Inject:</b> Requests Hilt to provide the 'TaskDao'.",
+                                                                        description: "The 'Source of Truth' for data. It hides the complexity of <i>where</i> data comes from (Local DB, Cloud, Cache) from the UI.",
+                                                                        purpose: "To provide a clean API for the ViewModel.",
+                                                                        flow: "MainViewModel calls add() -> Repository calls Dao.insert().",
+                                                                        functions: [
+                                                                            "Expose Data Stream (allTasks)",
+                                                                            "Perform Async Operations (add, remove)"
+                                                                        ],
+                                                                        usage: "Injected into ViewModels.",
                                                                         connections: [
                                                                             { label: "Task DAO", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDao.kt" },
                                                                             { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" }
@@ -253,10 +412,22 @@ class AuthRepository @Inject constructor() {
         delay(1000) // Mock latency
         return email.isNotEmpty() && pass.length >= 6
     }
+
+    suspend fun register(name: String, email: String, pass: String): Boolean {
+        delay(1500) // Mock latency
+        return name.isNotEmpty() && email.isNotEmpty() && pass.length >= 6
+    }
 }`,
                                                                     analysis: {
                                                                         role: "Auth Repository",
-                                                                        description: "Handles user authentication logic.<br><br>In a real app, this would call a remote API (like Firebase or a REST server). Here, it simulates a network delay and checks basic validation.",
+                                                                        description: "Handles user authentication logic.",
+                                                                        purpose: "To communicate with the backend for login/register.",
+                                                                        flow: "AuthViewModel -> AuthRepository -> (Network Call).",
+                                                                        functions: [
+                                                                            "authenticate(email, pass)",
+                                                                            "register(name, email, pass)"
+                                                                        ],
+                                                                        usage: "Used by Login and Register ViewModels.",
                                                                         connections: [
                                                                             { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" }
                                                                         ]
@@ -270,6 +441,16 @@ class AuthRepository @Inject constructor() {
                                                     name: "di",
                                                     type: "package",
                                                     isOpen: false,
+                                                    analysis: {
+                                                        role: "Dependency Injection",
+                                                        description: "Contains Hilt Modules.",
+                                                        purpose: "To teach Hilt how to create dependencies.",
+                                                        flow: "Generated code uses these modules to fulfill @Inject requests.",
+                                                        functions: ["Dependency Provision"],
+                                                        usage: "Configuration only.",
+                                                        connections: [],
+                                                        standards: "Keeps object creation logic out of business logic classes."
+                                                    },
                                                     children: {
                                                         "AppModule.kt": {
                                                             name: "AppModule.kt",
@@ -302,7 +483,14 @@ object AppModule {
 }`,
                                                             analysis: {
                                                                 role: "Hilt DI Module",
-                                                                description: "Instructions for how to create dependencies that we don't own (like the Room Database).<br><br>• <b>@Provides:</b> Tells Hilt 'Here is how you create an instance of X'.<br>• <b>Singleton:</b> Ensures only one database instance exists for the whole app lifecycle.",
+                                                                description: "Instructions for how to create dependencies that we don't own (like the Room Database).",
+                                                                purpose: "To provide instances of classes that are not constructor-injected.",
+                                                                flow: "Hilt calls provideDatabase() when a Repository needs a DB.",
+                                                                functions: [
+                                                                    "provideDatabase (Singleton)",
+                                                                    "provideDao"
+                                                                ],
+                                                                usage: "Automatically used by Hilt.",
                                                                 connections: [
                                                                     { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
                                                                 ]
@@ -314,11 +502,31 @@ object AppModule {
                                                     name: "ui",
                                                     type: "package",
                                                     isOpen: true,
+                                                    analysis: {
+                                                        role: "User Interface Layer",
+                                                        description: "Contains Activities, Fragments, ViewModels, and Adapters.",
+                                                        purpose: "To present data to the user and capture interactions.",
+                                                        flow: "Observes Data Layer -> Renders UI.",
+                                                        functions: ["Screen Rendering", "User Input Handling"],
+                                                        usage: "Everything the user sees.",
+                                                        connections: [],
+                                                        standards: "MVVM (Model-View-ViewModel) is the standard pattern here."
+                                                    },
                                                     children: {
                                                         "auth": {
                                                             name: "auth",
                                                             type: "package",
                                                             isOpen: false,
+                                                            analysis: {
+                                                                role: "Feature Package (Auth)",
+                                                                description: "Encapsulates login and registration screens.",
+                                                                purpose: "Grouping by feature makes large apps manageable.",
+                                                                flow: "User starts here.",
+                                                                functions: ["Feature Organization"],
+                                                                usage: "Modular code organization.",
+                                                                connections: [],
+                                                                standards: "Package-by-feature is preferred over package-by-layer."
+                                                            },
                                                             children: {
                                                                 "LoginActivity.kt": {
                                                                     name: "LoginActivity.kt",
@@ -351,6 +559,10 @@ class LoginActivity : AppCompatActivity() {
             )
         }
 
+        binding.btnRegister.setOnClickListener {
+            startActivity(Intent(this, RegisterActivity::class.java))
+        }
+
         viewModel.loginState.observe(this) { success ->
             if (success) {
                 startActivity(Intent(this, MainActivity::class.java))
@@ -361,10 +573,74 @@ class LoginActivity : AppCompatActivity() {
 }`,
                                                                     analysis: {
                                                                         role: "Login Activity (View)",
-                                                                        description: "The visual entry point for authentication.<br><br>• <b>@AndroidEntryPoint:</b> Required for Hilt to inject the ViewModel.<br>• <b>Binding:</b> Uses ViewBinding to access UI elements safely.<br>• <b>Observation:</b> Listens to 'loginState' from the ViewModel to decide when to navigate.",
+                                                                        description: "The visual entry point for authentication.",
+                                                                        purpose: "To allow users to sign in.",
+                                                                        flow: "User enters creds -> Click Login -> VM validates -> Navigate to Main.",
+                                                                        functions: [
+                                                                            "Setup UI (onCreate)",
+                                                                            "Handle Click Events",
+                                                                            "Navigate to RegisterActivity"
+                                                                        ],
+                                                                        usage: "First screen launched by the OS.",
                                                                         connections: [
                                                                             { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" },
+                                                                            { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_login.xml" }
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "RegisterActivity.kt": {
+                                                                    name: "RegisterActivity.kt",
+                                                                    type: "file",
+                                                                    language: "kotlin",
+                                                                    content: `package com.example.taskmanagerpro.ui.auth
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import com.example.taskmanagerpro.databinding.ActivityRegisterBinding
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
+class RegisterActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityRegisterBinding
+    private val viewModel: AuthViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityRegisterBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        binding.btnRegister.setOnClickListener {
+            viewModel.register(
+                binding.etName.text.toString(),
+                binding.etEmail.text.toString(),
+                binding.etPassword.text.toString()
+            )
+        }
+
+        viewModel.registerState.observe(this) { success ->
+            if (success) {
+                Toast.makeText(this, "Registration Success!", Toast.LENGTH_SHORT).show()
+                finish() // Go back to Login
+            }
+        }
+    }
+}`,
+                                                                    analysis: {
+                                                                        role: "Register Activity (View)",
+                                                                        description: "Screen for creating a new account.",
+                                                                        purpose: "User acquisition.",
+                                                                        flow: "User fills form -> VM registers -> Success Toast -> Back to Login.",
+                                                                        functions: [
+                                                                            "Collect User Data",
+                                                                            "Observe Registration State"
+                                                                        ],
+                                                                        usage: "Accessed via LoginActivity.",
+                                                                        connections: [
+                                                                            { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" },
+                                                                            { label: "XML Layout", path: "app/src/main/res/layout/activity_register.xml" }
                                                                         ]
                                                                     }
                                                                 },
@@ -391,19 +667,37 @@ class AuthViewModel @Inject constructor(
     private val _loginState = MutableLiveData<Boolean>()
     val loginState: LiveData<Boolean> = _loginState
 
+    private val _registerState = MutableLiveData<Boolean>()
+    val registerState: LiveData<Boolean> = _registerState
+
     fun login(email: String, pass: String) {
         viewModelScope.launch {
             val result = repository.authenticate(email, pass)
             _loginState.value = result
         }
     }
+
+    fun register(name: String, email: String, pass: String) {
+        viewModelScope.launch {
+            val result = repository.register(name, email, pass)
+            _registerState.value = result
+        }
+    }
 }`,
                                                                     analysis: {
                                                                         role: "Auth ViewModel",
-                                                                        description: "The brain of the Login screen. It holds state (login success/fail) and handles business logic.<br><br>It does NOT know about the View (Activity), making it testable and independent of UI lifecycle.",
+                                                                        description: "The brain of the Auth feature. Shared between Login and Register activities.",
+                                                                        purpose: "To hold state and business logic for authentication.",
+                                                                        flow: "Receives input -> Calls Repository -> Updates LiveData -> UI reacts.",
+                                                                        functions: [
+                                                                            "login()",
+                                                                            "register()",
+                                                                            "Expose State (loginState, registerState)"
+                                                                        ],
+                                                                        usage: "Injected into Activities.",
                                                                         connections: [
                                                                             { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" },
-                                                                            { label: "Auth Repository", path: "app/src/main/java/com/example/taskmanagerpro/data/repository/AuthRepository.kt" }
+                                                                            { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
                                                                         ]
                                                                     }
                                                                 }
@@ -413,6 +707,16 @@ class AuthViewModel @Inject constructor(
                                                             name: "main",
                                                             type: "package",
                                                             isOpen: true,
+                                                            analysis: {
+                                                                role: "Feature Package (Main)",
+                                                                description: "Contains the main functionality of the app (Task list).",
+                                                                purpose: "To group the primary user journey.",
+                                                                flow: "User arrives here after login.",
+                                                                functions: ["Task List Management"],
+                                                                usage: "Core application loop.",
+                                                                connections: [],
+                                                                standards: "Main feature often needs its own package."
+                                                            },
                                                             children: {
                                                                 "MainActivity.kt": {
                                                                     name: "MainActivity.kt",
@@ -458,7 +762,15 @@ class MainActivity : AppCompatActivity() {
 }`,
                                                                     analysis: {
                                                                         role: "Main Activity",
-                                                                        description: "The central hub of the app. Displays the list of tasks.<br><br>• <b>RecyclerView:</b> Efficiently lists dynamic data.<br>• <b>Fab Click:</b> Launches the 'Add Task' dialog.",
+                                                                        description: "The central hub of the app. Displays the list of tasks.",
+                                                                        purpose: "To display the list of tasks and facilitate adding new ones.",
+                                                                        flow: "Observes ViewModel -> Updates Adapter -> RecyclerView draws list.",
+                                                                        functions: [
+                                                                            "Initialize RecyclerView",
+                                                                            "Observe Task List",
+                                                                            "Launch Add Dialog"
+                                                                        ],
+                                                                        usage: "Main user interface.",
                                                                         connections: [
                                                                             { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" },
                                                                             { label: "Add Task Dialog", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/AddTaskDialogFragment.kt" },
@@ -501,7 +813,15 @@ class AddTaskDialogFragment : DialogFragment() {
 }`,
                                                                     analysis: {
                                                                         role: "Dialog Fragment",
-                                                                        description: "A modal popup to create new tasks.<br><br>• <b>sharedViewModel:</b> Uses 'activityViewModels()' to share the SAME MainViewModel instance as the Activity, allowing it to easily pass data back without callbacks.",
+                                                                        description: "A modal popup to create new tasks.",
+                                                                        purpose: "To capture input without leaving the main screen.",
+                                                                        flow: "Input -> ViewModel.addTask() -> Dismiss.",
+                                                                        functions: [
+                                                                            "Render Dialog UI",
+                                                                            "Capture User Input",
+                                                                            "Communicate with Shared ViewModel"
+                                                                        ],
+                                                                        usage: "Triggered by FAB.",
                                                                         connections: [
                                                                             { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/dialog_add_task.xml" }
@@ -545,7 +865,15 @@ class MainViewModel @Inject constructor(
 }`,
                                                                     analysis: {
                                                                         role: "Main ViewModel",
-                                                                        description: "Bridge between Repository and UI.<br><br>• <b>LiveData:</b> 'tasks' is a LiveData stream observed by MainActivity.<br>• <b>viewModelScope:</b> Ensures coroutines (like DB writes) are cancelled automatically if the ViewModel is cleared, preventing memory leaks.",
+                                                                        description: "Bridge between Repository and UI.",
+                                                                        purpose: "To manage data for the MainActivity.",
+                                                                        flow: "Repository -> LiveData -> Activity.",
+                                                                        functions: [
+                                                                            "Expose tasks LiveData",
+                                                                            "addTask()",
+                                                                            "deleteTask()"
+                                                                        ],
+                                                                        usage: "Injected into MainActivity.",
                                                                         connections: [
                                                                             { label: "Task Repository", path: "app/src/main/java/com/example/taskmanagerpro/data/repository/TaskRepository.kt" },
                                                                             { label: "MainActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainActivity.kt" }
@@ -564,11 +892,31 @@ class MainViewModel @Inject constructor(
                                     name: "res",
                                     type: "folder",
                                     isOpen: true,
+                                    analysis: {
+                                        role: "Resources",
+                                        description: "Static content (layouts, strings, images).",
+                                        purpose: "To separate code from content.",
+                                        flow: "Compiled into a binary format accessed via the R class.",
+                                        functions: ["UI Definition", "Asset Management"],
+                                        usage: "Layouts, Strings, Colors, Drawables.",
+                                        connections: [],
+                                        standards: "Never hardcode strings or dimensions in Java/Kotlin code."
+                                    },
                                     children: {
                                         "layout": {
                                             name: "layout",
                                             type: "folder",
                                             isOpen: true,
+                                            analysis: {
+                                                role: "Layouts Folder",
+                                                description: "XML files defining UI structure.",
+                                                purpose: "To define how screens look.",
+                                                flow: "Inflated by Activity/Fragment to become View objects.",
+                                                functions: ["UI Structure Definition"],
+                                                usage: "One file per screen or component.",
+                                                connections: [],
+                                                standards: "Use constraint layouts for complex screens."
+                                            },
                                             children: {
                                                 "activity_login.xml": {
                                                     name: "activity_login.xml",
@@ -604,12 +952,89 @@ class MainViewModel @Inject constructor(
         android:text="Login"
         android:layout_marginTop="24dp" />
 
+    <TextView
+        android:id="@+id/btnRegister"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New here? Register"
+        android:textColor="@color/purple_500"
+        android:layout_marginTop="16dp" />
+
 </LinearLayout>`,
                                                     analysis: {
                                                         role: "Login Layout",
-                                                        description: "A simple vertical stack of views using LinearLayout.<br><br>Includes email/password fields and a login button.",
+                                                        description: "A simple vertical stack of views using LinearLayout.",
+                                                        purpose: "UI for LoginActivity.",
+                                                        flow: "Inflated in LoginActivity.onCreate().",
+                                                        functions: [
+                                                            "Email Input",
+                                                            "Password Input",
+                                                            "Login Button",
+                                                            "Register Link"
+                                                        ],
+                                                        usage: "Visuals for login.",
                                                         connections: [
                                                             { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" }
+                                                        ]
+                                                    }
+                                                },
+                                                "activity_register.xml": {
+                                                    name: "activity_register.xml",
+                                                    type: "file",
+                                                    language: "xml",
+                                                    content: `<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp">
+
+    <EditText
+        android:id="@+id/etName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Full Name"
+        android:inputType="textPersonName" />
+
+    <EditText
+        android:id="@+id/etEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Email Address"
+        android:inputType="textEmailAddress" />
+
+    <EditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Password"
+        android:inputType="textPassword"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/btnRegister"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Create Account"
+        android:layout_marginTop="24dp" />
+
+</LinearLayout>`,
+                                                    analysis: {
+                                                        role: "Register Layout",
+                                                        description: "UI for the Registration screen.",
+                                                        purpose: "Collect user details.",
+                                                        flow: "Inflated in RegisterActivity.",
+                                                        functions: [
+                                                            "Name Input",
+                                                            "Email Input",
+                                                            "Password Input",
+                                                            "Submit Button"
+                                                        ],
+                                                        usage: "Visuals for registration.",
+                                                        connections: [
+                                                            { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
                                                         ]
                                                     }
                                                 },
@@ -643,7 +1068,14 @@ class MainViewModel @Inject constructor(
 </androidx.coordinatorlayout.widget.CoordinatorLayout>`,
                                                     analysis: {
                                                         role: "Main Layout",
-                                                        description: "CoordinatorLayout is used here to allow for advanced interactions (like the FAB interacting with Snackbars).<br>It holds the main list (RecyclerView).",
+                                                        description: "CoordinatorLayout is used here to allow for advanced interactions (like the FAB interacting with Snackbars).",
+                                                        purpose: "Main screen UI container.",
+                                                        flow: "Holds the RecyclerView.",
+                                                        functions: [
+                                                            "List Container (RecyclerView)",
+                                                            "Add Button (FAB)"
+                                                        ],
+                                                        usage: "Visuals for main screen.",
                                                         connections: [
                                                             { label: "MainActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainActivity.kt" }
                                                         ]
@@ -686,7 +1118,14 @@ class MainViewModel @Inject constructor(
 </LinearLayout>`,
                                                     analysis: {
                                                         role: "Dialog Layout",
-                                                        description: "The content view for the 'Add Task' dialog.<br>Uses Material Components for styled text input fields.",
+                                                        description: "The content view for the 'Add Task' dialog.",
+                                                        purpose: "Input form for new tasks.",
+                                                        flow: "Shown inside a DialogFragment.",
+                                                        functions: [
+                                                            "Title Input",
+                                                            "Description Input"
+                                                        ],
+                                                        usage: "Visuals for adding a task.",
                                                         connections: [
                                                             { label: "AddTaskDialogFragment", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/AddTaskDialogFragment.kt" }
                                                         ]
@@ -698,6 +1137,16 @@ class MainViewModel @Inject constructor(
                                             name: "values",
                                             type: "folder",
                                             isOpen: false,
+                                            analysis: {
+                                                role: "Values Folder",
+                                                description: "Simple values like strings, colors, dimensions.",
+                                                purpose: "Centralization of constants.",
+                                                flow: "Referenced in XML as @string/name or in code as R.string.name.",
+                                                functions: ["Constant Storage"],
+                                                usage: "Stores all text/colors.",
+                                                connections: [],
+                                                standards: "Values are locale-aware (e.g., values-es for Spanish)."
+                                            },
                                             children: {
                                                 "strings.xml": {
                                                     name: "strings.xml",
@@ -709,8 +1158,13 @@ class MainViewModel @Inject constructor(
 </resources>`,
                                                     analysis: {
                                                         role: "Resource File",
-                                                        description: "Separating strings from code is best practice for Internationalization (i18n). You can have multiple versions of this file for different languages (e.g., values-es/strings.xml).",
-                                                        connections: []
+                                                        description: "Separating strings from code is best practice for Internationalization (i18n).",
+                                                        purpose: "To allow translation of the app without changing code.",
+                                                        flow: "Android loads the correct string based on device language.",
+                                                        functions: ["Text Definitions"],
+                                                        usage: "All UI text.",
+                                                        connections: [],
+                                                        standards: "Every UI string must be here, not hardcoded."
                                                     }
                                                 }
                                             }
@@ -786,13 +1240,19 @@ function renderTree(node, path = "", level = 0) {
     itemDiv.onclick = (e) => {
         e.stopPropagation();
 
+        // Always update inspector if analysis exists, for both files and folders
+        if (node.analysis) {
+            updateInspector(node);
+        }
+
         if (node.type === 'folder' || node.type === 'package') {
             node.isOpen = !node.isOpen;
-            refreshTree(); // Re-render tree to show/hide children
+            selectedPath = currentPath; // Also select folders
+            refreshTree();
         } else {
             selectedPath = currentPath;
             openFile(node, currentPath);
-            refreshTree(); // Re-render to update selection highlight
+            refreshTree();
         }
     };
 
@@ -846,9 +1306,6 @@ function openFile(node, path) {
     // Line Numbers
     const lineCount = node.content.split('\n').length;
     lineNumbers.innerHTML = Array.from({length: lineCount}, (_, i) => `<div>${i + 1}</div>`).join('');
-
-    // Inspector
-    updateInspector(node);
 }
 
 function syntaxHighlight(code, language) {
@@ -920,9 +1377,9 @@ function findNodeByPath(path) {
 function updateInspector(node) {
     if (!node.analysis) return;
 
-    const { role, description, connections } = node.analysis;
+    const { role, description, purpose, flow, functions, usage, connections, standards } = node.analysis;
 
-    const connectionsHtml = connections.map(conn => {
+    const connectionsHtml = connections && connections.length ? connections.map(conn => {
         return `
             <div class="group flex items-start p-2 rounded hover:bg-[#3c3f41] cursor-pointer transition-colors mb-1"
                  onclick="navigateToPath('${conn.path}')">
@@ -933,26 +1390,83 @@ function updateInspector(node) {
                 </div>
             </div>
         `;
-    }).join('');
+    }).join('') : '<div class="text-gray-600 italic text-xs">No direct connections linked.</div>';
+
+    const functionsHtml = functions && functions.length ?
+        `<ul class="list-disc list-inside text-gray-300 text-xs space-y-1 ml-1">
+            ${functions.map(f => `<li>${f}</li>`).join('')}
+         </ul>` : '<span class="text-gray-500 text-xs italic">N/A</span>';
+
+    const standardHtml = standards ?
+        `<div class="mt-4 p-2 bg-[#3a2e2e] rounded border border-[#503030]">
+            <div class="flex items-center text-orange-300 mb-1">
+                <span class="material-symbols-rounded text-sm mr-1">verified</span>
+                <span class="text-[10px] font-bold uppercase">Pro Standard</span>
+            </div>
+            <p class="text-gray-300 text-xs italic">${standards}</p>
+         </div>` : '';
 
     inspectorPanel.innerHTML = `
-        <div class="animate-fade-in">
-            <div class="bg-[#323232] rounded p-3 mb-4 border border-[#3e3e42]">
+        <div class="animate-fade-in space-y-4">
+            <!-- Header -->
+            <div class="bg-[#323232] rounded p-3 border border-[#3e3e42]">
                 <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Component Role</div>
                 <div class="text-base font-semibold text-green-400">${role}</div>
             </div>
 
-            <div class="mb-6">
-                <div class="text-xs font-bold text-gray-400 mb-2 uppercase">Analysis</div>
-                <p class="text-gray-300 leading-relaxed">${description}</p>
+            <!-- Meaning / Description -->
+            <div>
+                <div class="text-xs font-bold text-gray-400 mb-1 uppercase flex items-center">
+                    <span class="material-symbols-rounded text-sm mr-1">info</span> Description
+                </div>
+                <p class="text-gray-300 text-sm leading-relaxed">${description}</p>
             </div>
 
+            <!-- Purpose -->
+            ${purpose ? `
+            <div>
+                <div class="text-xs font-bold text-gray-400 mb-1 uppercase flex items-center">
+                    <span class="material-symbols-rounded text-sm mr-1">target</span> Purpose
+                </div>
+                <p class="text-gray-300 text-xs leading-relaxed">${purpose}</p>
+            </div>` : ''}
+
+            <!-- Flow -->
+            ${flow ? `
+            <div>
+                <div class="text-xs font-bold text-gray-400 mb-1 uppercase flex items-center">
+                    <span class="material-symbols-rounded text-sm mr-1">schema</span> Flow
+                </div>
+                <p class="text-gray-300 text-xs leading-relaxed bg-[#252526] p-2 rounded border border-[#323232] font-mono">${flow}</p>
+            </div>` : ''}
+
+            <!-- Functions -->
+            <div>
+                <div class="text-xs font-bold text-gray-400 mb-1 uppercase flex items-center">
+                    <span class="material-symbols-rounded text-sm mr-1">functions</span> Core Functions
+                </div>
+                ${functionsHtml}
+            </div>
+
+            <!-- Usage -->
+            ${usage ? `
+            <div>
+                <div class="text-xs font-bold text-gray-400 mb-1 uppercase flex items-center">
+                    <span class="material-symbols-rounded text-sm mr-1">code_blocks</span> When to use
+                </div>
+                <p class="text-gray-300 text-xs leading-relaxed">${usage}</p>
+            </div>` : ''}
+
+            <!-- Connections -->
             <div>
                 <div class="text-xs font-bold text-gray-400 mb-2 uppercase border-b border-gray-700 pb-1">Dependencies & Connections</div>
                 <div class="mt-2">
-                    ${connectionsHtml.length ? connectionsHtml : '<div class="text-gray-600 italic">No direct connections linked.</div>'}
+                    ${connectionsHtml}
                 </div>
             </div>
+
+            <!-- Standards -->
+            ${standardHtml}
         </div>
     `;
 }
@@ -973,7 +1487,14 @@ window.navigateToPath = (path) => {
         }
 
         selectedPath = fullPath;
-        openFile(node, fullPath);
+
+        // Check if it is a file or folder to determine action
+        if (node.type === 'file') {
+            openFile(node, fullPath);
+        } else {
+            updateInspector(node);
+            node.isOpen = true; // Open if it is a folder
+        }
 
         // We also need to expand the tree to show this file
         expandPath(fullPath);
@@ -1005,3 +1526,5 @@ function expandPath(path) {
 
 // Initialize
 refreshTree();
+// Default select root inspector
+updateInspector(fileSystem);
