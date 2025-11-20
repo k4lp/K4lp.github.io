@@ -15,7 +15,9 @@ const fileSystem = {
         functions: ["Project Organization", "Version Control Root"],
         usage: "Maintains the overall project structure.",
         connections: [],
-        standards: "Standard Android project structure follows Gradle conventions."
+        standards: "Standard Android project structure follows Gradle conventions.",
+        triggered_by: "IDE Open Project",
+        execution_context: "Gradle Build Process"
     },
     children: {
         "app": {
@@ -30,9 +32,70 @@ const fileSystem = {
                 functions: ["Source Code Hosting", "Resource Management"],
                 usage: "Where 99% of development happens.",
                 connections: [],
-                standards: "Separation of concerns: manifests, java (code), res (resources)."
+                standards: "Separation of concerns: manifests, java (code), res (resources).",
+                triggered_by: "Root build.gradle inclusion",
+                execution_context: "Module Compilation"
             },
             children: {
+                "build.gradle.kts": {
+                    name: "build.gradle.kts",
+                    type: "file",
+                    language: "kotlin",
+                    content: `plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp")
+    id("dagger.hilt.android.plugin")
+}
+
+android {
+    namespace = "com.example.taskmanagerpro"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.example.taskmanagerpro"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+
+    // Architecture Components
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+
+    // Dependency Injection
+    implementation("com.google.dagger:hilt-android:2.50")
+    ksp("com.google.dagger:hilt-android-compiler:2.50")
+
+    // Local Database
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+}`,
+                    analysis: {
+                        role: "Build Script",
+                        description: "Defines the build configuration and dependencies for the app module.",
+                        purpose: "To manage libraries, SDK versions, and plugins.",
+                        flow: "Read by Gradle during the Configuration phase.",
+                        functions: ["Dependency Management", "Plugin Application", "Android SDK Config"],
+                        usage: "Edit when adding new libraries or changing app version.",
+                        connections: [],
+                        standards: "Use Kotlin DSL (.kts) and Version Catalogs for modern dependency management.",
+                        triggered_by: "Gradle Sync",
+                        execution_context: "Build Time"
+                    }
+                },
                 "manifests": {
                     name: "manifests",
                     type: "folder",
@@ -45,7 +108,9 @@ const fileSystem = {
                         functions: ["Metadata Storage"],
                         usage: "Defining permissions, activities, and services.",
                         connections: [],
-                        standards: "Every Android module must have a manifest."
+                        standards: "Every Android module must have a manifest.",
+                        triggered_by: "APK Packaging",
+                        execution_context: "OS Parsing"
                     },
                     children: {
                         "AndroidManifest.xml": {
@@ -95,7 +160,9 @@ const fileSystem = {
                                     { label: "Application Class", path: "app/src/main/java/com/example/taskmanagerpro/TaskApplication.kt" },
                                     { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" },
                                     { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
-                                ]
+                                ],
+                                triggered_by: "App Installation / App Launch",
+                                execution_context: "System Level"
                             }
                         }
                     }
@@ -112,7 +179,9 @@ const fileSystem = {
                         functions: ["Source Set Organization"],
                         usage: "Standard Gradle structure.",
                         connections: [],
-                        standards: "Always keep unit tests (test) and instrumentation tests (androidTest) parallel to main."
+                        standards: "Always keep unit tests (test) and instrumentation tests (androidTest) parallel to main.",
+                        triggered_by: "Gradle Compilation",
+                        execution_context: "Development Time"
                     },
                     children: {
                         "main": {
@@ -127,7 +196,9 @@ const fileSystem = {
                                 functions: ["Production Code Hosting"],
                                 usage: "Primary development location.",
                                 connections: [],
-                                standards: "Follows 'java' (Kotlin) and 'res' (Resources) split."
+                                standards: "Follows 'java' (Kotlin) and 'res' (Resources) split.",
+                                triggered_by: "Build Process",
+                                execution_context: "Production Artifact"
                             },
                             children: {
                                 "java": {
@@ -142,7 +213,9 @@ const fileSystem = {
                                         functions: ["Logic Implementation"],
                                         usage: "Where you write the code that makes the app work.",
                                         connections: [],
-                                        standards: "Organized by package name (com.example...)."
+                                        standards: "Organized by package name (com.example...).",
+                                        triggered_by: "Compiler",
+                                        execution_context: "JVM / Dalvik"
                                     },
                                     children: {
                                         "com.example.taskmanagerpro": {
@@ -157,7 +230,9 @@ const fileSystem = {
                                                 functions: ["Namespacing"],
                                                 usage: "Should match the package ID in build.gradle.",
                                                 connections: [],
-                                                standards: "Reverse domain name notation."
+                                                standards: "Reverse domain name notation.",
+                                                triggered_by: "Folder Structure",
+                                                execution_context: "Namespace"
                                             },
                                             children: {
                                                 "TaskApplication.kt": {
@@ -170,10 +245,18 @@ import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 
+/**
+ * Base Application class for the Task Manager app.
+ *
+ * This acts as the entry point for the dependency injection graph.
+ */
 @HiltAndroidApp
 class TaskApplication : Application() {
+
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize Logging Library
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
@@ -193,7 +276,59 @@ class TaskApplication : Application() {
                                                         connections: [
                                                             { label: "Manifest", path: "app/manifests/AndroidManifest.xml" },
                                                             { label: "DI Module", path: "app/src/main/java/com/example/taskmanagerpro/di/AppModule.kt" }
-                                                        ]
+                                                        ],
+                                                        triggered_by: "Android OS (Process Start)",
+                                                        execution_context: "Main Thread (Singleton)"
+                                                    }
+                                                },
+                                                "util": {
+                                                    name: "util",
+                                                    type: "package",
+                                                    isOpen: false,
+                                                    analysis: {
+                                                        role: "Utilities Package",
+                                                        description: "Helper classes and common extensions.",
+                                                        purpose: "To prevent code duplication.",
+                                                        flow: "Imported by other classes.",
+                                                        functions: ["Common Logic"],
+                                                        usage: "Generic functions, State wrappers.",
+                                                        connections: [],
+                                                        standards: "Keep it pure Kotlin if possible.",
+                                                        triggered_by: "Code References",
+                                                        execution_context: "Various"
+                                                    },
+                                                    children: {
+                                                        "Resource.kt": {
+                                                            name: "Resource.kt",
+                                                            type: "file",
+                                                            language: "kotlin",
+                                                            content: `package com.example.taskmanagerpro.util
+
+/**
+ * A generic class that holds a value with its loading status.
+ * Used to communicate state between Data Layer and UI Layer.
+ */
+sealed class Resource<T>(
+    val data: T? = null,
+    val message: String? = null
+) {
+    class Success<T>(data: T) : Resource<T>(data)
+    class Error<T>(message: String, data: T? = null) : Resource<T>(data, message)
+    class Loading<T> : Resource<T>()
+}`,
+                                                            analysis: {
+                                                                role: "State Wrapper",
+                                                                description: "Sealed class pattern for handling UI State (Loading, Success, Error).",
+                                                                purpose: "To provide a standard way to pass data + status from Repository to ViewModel.",
+                                                                flow: "Repository returns Resource -> ViewModel exposes Resource -> UI renders based on type.",
+                                                                functions: ["State Encapsulation"],
+                                                                usage: "Wrap all Repository return types with this.",
+                                                                connections: [],
+                                                                standards: "Standard pattern in Google's Guide to App Architecture.",
+                                                                triggered_by: "Data Layer Operations",
+                                                                execution_context: "Data Stream"
+                                                            }
+                                                        }
                                                     }
                                                 },
                                                 "data": {
@@ -208,7 +343,9 @@ class TaskApplication : Application() {
                                                         functions: ["Data Persistence", "Network Communication", "Data Mapping"],
                                                         usage: "Any file handling raw data goes here.",
                                                         connections: [],
-                                                        standards: "Clean Architecture: The 'Data' layer should not know about the 'UI' layer."
+                                                        standards: "Clean Architecture: The 'Data' layer should not know about the 'UI' layer.",
+                                                        triggered_by: "ViewModel Requests",
+                                                        execution_context: "Background Threads (IO)"
                                                     },
                                                     children: {
                                                         "local": {
@@ -223,7 +360,9 @@ class TaskApplication : Application() {
                                                                 functions: ["Database Definition", "SQL Queries"],
                                                                 usage: "Storing tasks so they appear without internet.",
                                                                 connections: [],
-                                                                standards: "Use Room library for type-safe SQL."
+                                                                standards: "Use Room library for type-safe SQL.",
+                                                                triggered_by: "Repository",
+                                                                execution_context: "Disk I/O"
                                                             },
                                                             children: {
                                                                 "TaskDatabase.kt": {
@@ -236,8 +375,15 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.taskmanagerpro.data.model.Task
 
+/**
+ * The Room Database definition.
+ * Entities: Tables in the DB.
+ * Version: Schema version for migrations.
+ */
 @Database(entities = [Task::class], version = 1)
 abstract class TaskDatabase : RoomDatabase() {
+
+    // Expose DAOs
     abstract fun taskDao(): TaskDao
 }`,
                                                                     analysis: {
@@ -254,7 +400,9 @@ abstract class TaskDatabase : RoomDatabase() {
                                                                         connections: [
                                                                             { label: "Task Entity", path: "app/src/main/java/com/example/taskmanagerpro/data/model/Task.kt" },
                                                                             { label: "Task DAO", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDao.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "App Module (Dagger Graph)",
+                                                                        execution_context: "Singleton Scope"
                                                                     }
                                                                 },
                                                                 "TaskDao.kt": {
@@ -267,8 +415,14 @@ import androidx.room.*
 import com.example.taskmanagerpro.data.model.Task
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Data Access Object for the 'tasks' table.
+ * Provides methods to read/write data.
+ */
 @Dao
 interface TaskDao {
+
+    // Returns a Flow that emits new lists whenever the DB changes
     @Query("SELECT * FROM tasks ORDER BY date DESC")
     fun getAllTasks(): Flow<List<Task>>
 
@@ -291,7 +445,9 @@ interface TaskDao {
                                                                         usage: "Used whenever the app needs to touch the database.",
                                                                         connections: [
                                                                             { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "TaskRepository",
+                                                                        execution_context: "IO Dispatcher (Room handles threading)"
                                                                     }
                                                                 }
                                                             }
@@ -308,7 +464,9 @@ interface TaskDao {
                                                                 functions: ["Data Definition"],
                                                                 usage: "Defining what a 'Task' looks like.",
                                                                 connections: [],
-                                                                standards: "Keep these simple. No business logic in models."
+                                                                standards: "Keep these simple. No business logic in models.",
+                                                                triggered_by: "Instantiation",
+                                                                execution_context: "Memory (Heap)"
                                                             },
                                                             children: {
                                                                 "Task.kt": {
@@ -319,8 +477,11 @@ interface TaskDao {
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.util.Date
 
+/**
+ * Represents a Task item in the application.
+ * This class is also the schema for the 'tasks' table in Room.
+ */
 @Entity(tableName = "tasks")
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -341,7 +502,9 @@ data class Task(
                                                                         usage: "Passed between Layers (Data -> Domain -> UI).",
                                                                         connections: [
                                                                             { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "Database Query / User Input",
+                                                                        execution_context: "Data Transfer Object"
                                                                     }
                                                                 }
                                                             }
@@ -358,7 +521,9 @@ data class Task(
                                                                 functions: ["Data Arbitration", "API Abstraction"],
                                                                 usage: "The only class that ViewModels should talk to for data.",
                                                                 connections: [],
-                                                                standards: "Repository Pattern is a core Android Architectural component."
+                                                                standards: "Repository Pattern is a core Android Architectural component.",
+                                                                triggered_by: "ViewModel Construction",
+                                                                execution_context: "Background / Scope"
                                                             },
                                                             children: {
                                                                 "TaskRepository.kt": {
@@ -369,14 +534,27 @@ data class Task(
 
 import com.example.taskmanagerpro.data.local.TaskDao
 import com.example.taskmanagerpro.data.model.Task
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
+/**
+ * Repository for Task data operations.
+ * Abstracts the local database from the rest of the app.
+ */
 class TaskRepository @Inject constructor(
     private val taskDao: TaskDao
 ) {
-    val allTasks = taskDao.getAllTasks()
+    // Exposes the data stream from the DAO
+    val allTasks: Flow<List<Task>> = taskDao.getAllTasks()
 
-    suspend fun add(task: Task) = taskDao.insertTask(task)
+    suspend fun add(task: Task) {
+        try {
+            taskDao.insertTask(task)
+        } catch (e: Exception) {
+            // Log error or handle it
+            e.printStackTrace()
+        }
+    }
 
     suspend fun remove(task: Task) = taskDao.deleteTask(task)
 }`,
@@ -393,7 +571,9 @@ class TaskRepository @Inject constructor(
                                                                         connections: [
                                                                             { label: "Task DAO", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDao.kt" },
                                                                             { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "MainViewModel",
+                                                                        execution_context: "Coroutines Scope"
                                                                     }
                                                                 },
                                                                 "AuthRepository.kt": {
@@ -402,20 +582,34 @@ class TaskRepository @Inject constructor(
                                                                     language: "kotlin",
                                                                     content: `package com.example.taskmanagerpro.data.repository
 
+import com.example.taskmanagerpro.util.Resource
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 
+/**
+ * Repository for Authentication.
+ * Simulates network calls to a backend API.
+ */
 class AuthRepository @Inject constructor() {
 
-    // Simulated network call
-    suspend fun authenticate(email: String, pass: String): Boolean {
-        delay(1000) // Mock latency
-        return email.isNotEmpty() && pass.length >= 6
+    suspend fun authenticate(email: String, pass: String): Resource<Boolean> {
+        delay(1500) // Simulate Network Latency
+
+        return if (email.isNotEmpty() && pass.length >= 6) {
+            Resource.Success(true)
+        } else {
+            Resource.Error("Invalid Credentials")
+        }
     }
 
-    suspend fun register(name: String, email: String, pass: String): Boolean {
-        delay(1500) // Mock latency
-        return name.isNotEmpty() && email.isNotEmpty() && pass.length >= 6
+    suspend fun register(name: String, email: String, pass: String): Resource<Boolean> {
+        delay(2000) // Simulate Network Latency
+
+        return if (name.isNotEmpty() && email.contains("@")) {
+            Resource.Success(true)
+        } else {
+            Resource.Error("Registration Failed: Invalid Email")
+        }
     }
 }`,
                                                                     analysis: {
@@ -430,7 +624,9 @@ class AuthRepository @Inject constructor() {
                                                                         usage: "Used by Login and Register ViewModels.",
                                                                         connections: [
                                                                             { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "AuthViewModel",
+                                                                        execution_context: "IO Thread (Network)"
                                                                     }
                                                                 }
                                                             }
@@ -449,7 +645,9 @@ class AuthRepository @Inject constructor() {
                                                         functions: ["Dependency Provision"],
                                                         usage: "Configuration only.",
                                                         connections: [],
-                                                        standards: "Keeps object creation logic out of business logic classes."
+                                                        standards: "Keeps object creation logic out of business logic classes.",
+                                                        triggered_by: "Hilt Annotation Processor",
+                                                        execution_context: "Code Generation"
                                                     },
                                                     children: {
                                                         "AppModule.kt": {
@@ -475,7 +673,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext app: Context) =
-        Room.databaseBuilder(app, TaskDatabase::class.java, "task_db").build()
+        Room.databaseBuilder(app, TaskDatabase::class.java, "task_db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     @Singleton
@@ -493,7 +693,9 @@ object AppModule {
                                                                 usage: "Automatically used by Hilt.",
                                                                 connections: [
                                                                     { label: "Task Database", path: "app/src/main/java/com/example/taskmanagerpro/data/local/TaskDatabase.kt" }
-                                                                ]
+                                                                ],
+                                                                triggered_by: "Dependency Graph Resolution",
+                                                                execution_context: "Singleton Lifecycle"
                                                             }
                                                         }
                                                     }
@@ -510,7 +712,9 @@ object AppModule {
                                                         functions: ["Screen Rendering", "User Input Handling"],
                                                         usage: "Everything the user sees.",
                                                         connections: [],
-                                                        standards: "MVVM (Model-View-ViewModel) is the standard pattern here."
+                                                        standards: "MVVM (Model-View-ViewModel) is the standard pattern here.",
+                                                        triggered_by: "User Interaction",
+                                                        execution_context: "Main Thread (UI)"
                                                     },
                                                     children: {
                                                         "auth": {
@@ -525,7 +729,9 @@ object AppModule {
                                                                 functions: ["Feature Organization"],
                                                                 usage: "Modular code organization.",
                                                                 connections: [],
-                                                                standards: "Package-by-feature is preferred over package-by-layer."
+                                                                standards: "Package-by-feature is preferred over package-by-layer.",
+                                                                triggered_by: "Folder Structure",
+                                                                execution_context: "Namespace"
                                                             },
                                                             children: {
                                                                 "LoginActivity.kt": {
@@ -536,10 +742,13 @@ object AppModule {
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.example.taskmanagerpro.databinding.ActivityLoginBinding
 import com.example.taskmanagerpro.ui.main.MainActivity
+import com.example.taskmanagerpro.util.Resource
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -552,6 +761,11 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupListeners()
+        setupObservers()
+    }
+
+    private fun setupListeners() {
         binding.btnLogin.setOnClickListener {
             viewModel.login(
                 binding.etEmail.text.toString(),
@@ -562,11 +776,25 @@ class LoginActivity : AppCompatActivity() {
         binding.btnRegister.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
+    }
 
-        viewModel.loginState.observe(this) { success ->
-            if (success) {
-                startActivity(Intent(this, MainActivity::class.java))
-                finish()
+    private fun setupObservers() {
+        viewModel.loginState.observe(this) { resource ->
+            when (resource) {
+                is Resource.Loading -> {
+                    binding.progressBar.visibility = View.VISIBLE
+                    binding.btnLogin.isEnabled = false
+                }
+                is Resource.Success -> {
+                    binding.progressBar.visibility = View.GONE
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                }
+                is Resource.Error -> {
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnLogin.isEnabled = true
+                    Toast.makeText(this, resource.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -586,7 +814,9 @@ class LoginActivity : AppCompatActivity() {
                                                                             { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" },
                                                                             { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_login.xml" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "Launcher Intent (OS)",
+                                                                        execution_context: "Main Thread (UI)"
                                                                     }
                                                                 },
                                                                 "RegisterActivity.kt": {
@@ -596,10 +826,12 @@ class LoginActivity : AppCompatActivity() {
                                                                     content: `package com.example.taskmanagerpro.ui.auth
 
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.example.taskmanagerpro.databinding.ActivityRegisterBinding
+import com.example.taskmanagerpro.util.Resource
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -620,10 +852,20 @@ class RegisterActivity : AppCompatActivity() {
             )
         }
 
-        viewModel.registerState.observe(this) { success ->
-            if (success) {
-                Toast.makeText(this, "Registration Success!", Toast.LENGTH_SHORT).show()
-                finish() // Go back to Login
+        viewModel.registerState.observe(this) { resource ->
+             when (resource) {
+                is Resource.Loading -> {
+                    binding.progressBar.visibility = View.VISIBLE
+                }
+                is Resource.Success -> {
+                    binding.progressBar.visibility = View.GONE
+                    Toast.makeText(this, "Registration Success!", Toast.LENGTH_SHORT).show()
+                    finish() // Go back to Login
+                }
+                is Resource.Error -> {
+                    binding.progressBar.visibility = View.GONE
+                    Toast.makeText(this, resource.message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -641,7 +883,9 @@ class RegisterActivity : AppCompatActivity() {
                                                                         connections: [
                                                                             { label: "AuthViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/AuthViewModel.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_register.xml" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "LoginActivity (Intent)",
+                                                                        execution_context: "Main Thread (UI)"
                                                                     }
                                                                 },
                                                                 "AuthViewModel.kt": {
@@ -655,6 +899,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskmanagerpro.data.repository.AuthRepository
+import com.example.taskmanagerpro.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -664,13 +909,15 @@ class AuthViewModel @Inject constructor(
     private val repository: AuthRepository
 ) : ViewModel() {
 
-    private val _loginState = MutableLiveData<Boolean>()
-    val loginState: LiveData<Boolean> = _loginState
+    // Backing property to avoid exposing MutableLiveData
+    private val _loginState = MutableLiveData<Resource<Boolean>>()
+    val loginState: LiveData<Resource<Boolean>> = _loginState
 
-    private val _registerState = MutableLiveData<Boolean>()
-    val registerState: LiveData<Boolean> = _registerState
+    private val _registerState = MutableLiveData<Resource<Boolean>>()
+    val registerState: LiveData<Resource<Boolean>> = _registerState
 
     fun login(email: String, pass: String) {
+        _loginState.value = Resource.Loading()
         viewModelScope.launch {
             val result = repository.authenticate(email, pass)
             _loginState.value = result
@@ -678,6 +925,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun register(name: String, email: String, pass: String) {
+        _registerState.value = Resource.Loading()
         viewModelScope.launch {
             val result = repository.register(name, email, pass)
             _registerState.value = result
@@ -698,7 +946,9 @@ class AuthViewModel @Inject constructor(
                                                                         connections: [
                                                                             { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" },
                                                                             { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "Activity (via ViewModelProvider)",
+                                                                        execution_context: "ViewModel Scope"
                                                                     }
                                                                 }
                                                             }
@@ -715,7 +965,9 @@ class AuthViewModel @Inject constructor(
                                                                 functions: ["Task List Management"],
                                                                 usage: "Core application loop.",
                                                                 connections: [],
-                                                                standards: "Main feature often needs its own package."
+                                                                standards: "Main feature often needs its own package.",
+                                                                triggered_by: "Folder Structure",
+                                                                execution_context: "Namespace"
                                                             },
                                                             children: {
                                                                 "MainActivity.kt": {
@@ -745,6 +997,7 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
 
         viewModel.tasks.observe(this) { tasks ->
+            // Submit the new list to the adapter (DiffUtil will handle updates)
             adapter.submitList(tasks)
         }
 
@@ -775,7 +1028,9 @@ class MainActivity : AppCompatActivity() {
                                                                             { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" },
                                                                             { label: "Add Task Dialog", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/AddTaskDialogFragment.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/activity_main.xml" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "LoginActivity (Intent)",
+                                                                        execution_context: "Main Thread (UI)"
                                                                     }
                                                                 },
                                                                 "AddTaskDialogFragment.kt": {
@@ -792,7 +1047,7 @@ import com.example.taskmanagerpro.databinding.DialogAddTaskBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class AddTaskDialogFragment : DialogFragment() {
-    // Shared ViewModel with Activity
+    // Shared ViewModel with Activity (scoped to Activity)
     private val viewModel: MainViewModel by activityViewModels()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -802,10 +1057,13 @@ class AddTaskDialogFragment : DialogFragment() {
             .setTitle("New Task")
             .setView(binding.root)
             .setPositiveButton("Add") { _, _ ->
-                viewModel.addTask(
-                    binding.etTitle.text.toString(),
-                    binding.etDesc.text.toString()
-                )
+                val title = binding.etTitle.text.toString()
+                if (title.isNotEmpty()) {
+                    viewModel.addTask(
+                        title,
+                        binding.etDesc.text.toString()
+                    )
+                }
             }
             .setNegativeButton("Cancel", null)
             .create()
@@ -825,7 +1083,9 @@ class AddTaskDialogFragment : DialogFragment() {
                                                                         connections: [
                                                                             { label: "MainViewModel", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainViewModel.kt" },
                                                                             { label: "XML Layout", path: "app/src/main/res/layout/dialog_add_task.xml" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "MainActivity (FragmentManager)",
+                                                                        execution_context: "Main Thread (UI)"
                                                                     }
                                                                 },
                                                                 "MainViewModel.kt": {
@@ -848,6 +1108,7 @@ class MainViewModel @Inject constructor(
     private val repository: TaskRepository
 ) : ViewModel() {
 
+    // Converts the Flow from Repository to LiveData for the UI
     val tasks = repository.allTasks.asLiveData()
 
     fun addTask(title: String, description: String) {
@@ -877,7 +1138,9 @@ class MainViewModel @Inject constructor(
                                                                         connections: [
                                                                             { label: "Task Repository", path: "app/src/main/java/com/example/taskmanagerpro/data/repository/TaskRepository.kt" },
                                                                             { label: "MainActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainActivity.kt" }
-                                                                        ]
+                                                                        ],
+                                                                        triggered_by: "MainActivity",
+                                                                        execution_context: "ViewModel Scope"
                                                                     }
                                                                 }
                                                             }
@@ -900,7 +1163,9 @@ class MainViewModel @Inject constructor(
                                         functions: ["UI Definition", "Asset Management"],
                                         usage: "Layouts, Strings, Colors, Drawables.",
                                         connections: [],
-                                        standards: "Never hardcode strings or dimensions in Java/Kotlin code."
+                                        standards: "Never hardcode strings or dimensions in Java/Kotlin code.",
+                                        triggered_by: "Build Process",
+                                        execution_context: "Static Assets"
                                     },
                                     children: {
                                         "layout": {
@@ -915,7 +1180,9 @@ class MainViewModel @Inject constructor(
                                                 functions: ["UI Structure Definition"],
                                                 usage: "One file per screen or component.",
                                                 connections: [],
-                                                standards: "Use constraint layouts for complex screens."
+                                                standards: "Use constraint layouts for complex screens.",
+                                                triggered_by: "Resource System",
+                                                execution_context: "Layout Inflation"
                                             },
                                             children: {
                                                 "activity_login.xml": {
@@ -929,6 +1196,13 @@ class MainViewModel @Inject constructor(
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp">
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_marginBottom="24dp" />
 
     <EditText
         android:id="@+id/etEmail"
@@ -975,7 +1249,9 @@ class MainViewModel @Inject constructor(
                                                         usage: "Visuals for login.",
                                                         connections: [
                                                             { label: "LoginActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/LoginActivity.kt" }
-                                                        ]
+                                                        ],
+                                                        triggered_by: "LoginActivity.setContentView()",
+                                                        execution_context: "UI Rendering"
                                                     }
                                                 },
                                                 "activity_register.xml": {
@@ -989,6 +1265,13 @@ class MainViewModel @Inject constructor(
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp">
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_marginBottom="24dp" />
 
     <EditText
         android:id="@+id/etName"
@@ -1035,7 +1318,9 @@ class MainViewModel @Inject constructor(
                                                         usage: "Visuals for registration.",
                                                         connections: [
                                                             { label: "RegisterActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/auth/RegisterActivity.kt" }
-                                                        ]
+                                                        ],
+                                                        triggered_by: "RegisterActivity.setContentView()",
+                                                        execution_context: "UI Rendering"
                                                     }
                                                 },
                                                 "activity_main.xml": {
@@ -1078,7 +1363,9 @@ class MainViewModel @Inject constructor(
                                                         usage: "Visuals for main screen.",
                                                         connections: [
                                                             { label: "MainActivity", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/MainActivity.kt" }
-                                                        ]
+                                                        ],
+                                                        triggered_by: "MainActivity.setContentView()",
+                                                        execution_context: "UI Rendering"
                                                     }
                                                 },
                                                 "dialog_add_task.xml": {
@@ -1128,7 +1415,9 @@ class MainViewModel @Inject constructor(
                                                         usage: "Visuals for adding a task.",
                                                         connections: [
                                                             { label: "AddTaskDialogFragment", path: "app/src/main/java/com/example/taskmanagerpro/ui/main/AddTaskDialogFragment.kt" }
-                                                        ]
+                                                        ],
+                                                        triggered_by: "DialogFragment.onCreateDialog()",
+                                                        execution_context: "UI Rendering"
                                                     }
                                                 }
                                             }
@@ -1145,7 +1434,9 @@ class MainViewModel @Inject constructor(
                                                 functions: ["Constant Storage"],
                                                 usage: "Stores all text/colors.",
                                                 connections: [],
-                                                standards: "Values are locale-aware (e.g., values-es for Spanish)."
+                                                standards: "Values are locale-aware (e.g., values-es for Spanish).",
+                                                triggered_by: "Build Process",
+                                                execution_context: "Resource System"
                                             },
                                             children: {
                                                 "strings.xml": {
@@ -1164,7 +1455,9 @@ class MainViewModel @Inject constructor(
                                                         functions: ["Text Definitions"],
                                                         usage: "All UI text.",
                                                         connections: [],
-                                                        standards: "Every UI string must be here, not hardcoded."
+                                                        standards: "Every UI string must be here, not hardcoded.",
+                                                        triggered_by: "Resource Loader",
+                                                        execution_context: "Runtime Localization"
                                                     }
                                                 }
                                             }
@@ -1322,7 +1615,7 @@ function syntaxHighlight(code, language) {
 
         // 2. Mark Keywords
         // We use a specific prefix to avoid collision
-        const keywords = ["package", "import", "class", "interface", "fun", "val", "var", "return", "if", "else", "for", "while", "true", "false", "null", "this", "super", "object", "companion", "override", "private", "public", "protected", "internal", "lateinit", "constructor", "init", "try", "catch", "finally", "suspend", "data", "sealed", "open", "abstract", "enum"];
+        const keywords = ["package", "import", "class", "interface", "fun", "val", "var", "return", "if", "else", "for", "while", "true", "false", "null", "this", "super", "object", "companion", "override", "private", "public", "protected", "internal", "lateinit", "constructor", "init", "try", "catch", "finally", "suspend", "data", "sealed", "open", "abstract", "enum", "sealed"];
 
         keywords.forEach(kw => {
             const regex = new RegExp(`\\b${kw}\\b`, 'g');
@@ -1419,7 +1712,7 @@ function findNodeByPath(path) {
 function updateInspector(node) {
     if (!node.analysis) return;
 
-    const { role, description, purpose, flow, functions, usage, connections, standards } = node.analysis;
+    const { role, description, purpose, flow, functions, usage, connections, standards, triggered_by, execution_context } = node.analysis;
 
     const connectionsHtml = connections && connections.length ? connections.map(conn => {
         return `
@@ -1455,6 +1748,19 @@ function updateInspector(node) {
                 <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Component Role</div>
                 <div class="text-base font-semibold text-green-400">${role}</div>
             </div>
+
+            <!-- Execution Context (New) -->
+            ${triggered_by || execution_context ? `
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-[#252526] p-2 rounded border border-[#323232]">
+                    <div class="text-[9px] text-gray-500 uppercase font-bold mb-1">Triggered By</div>
+                    <div class="text-xs text-purple-300 truncate">${triggered_by || "N/A"}</div>
+                </div>
+                <div class="bg-[#252526] p-2 rounded border border-[#323232]">
+                    <div class="text-[9px] text-gray-500 uppercase font-bold mb-1">Context</div>
+                    <div class="text-xs text-orange-300 truncate">${execution_context || "N/A"}</div>
+                </div>
+            </div>` : ''}
 
             <!-- Meaning / Description -->
             <div>
