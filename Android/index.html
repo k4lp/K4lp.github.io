@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#1e1f22] text-gray-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Android Studio Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+  <style>
+    :root {
+      --panel: #2b2d30;
+      --editor: #1e1f22;
+      --accent: #56b6c2;
+      --muted: #6c7077;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #1a1b1f; }
+    ::-webkit-scrollbar-thumb { background: #3a3c40; border-radius: 8px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4e5258; }
+    .material-symbols-outlined { font-variation-settings: 'wght' 450; }
+    .code-font { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; }
+    .active-chip { border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent); color: #e5f6f9 !important; }
+    .active-row { background: #373940 !important; }
+    .scenario-note { background: #17181b; border: 1px solid #3d4047; }
+  </style>
+</head>
+<body class="h-full overflow-hidden">
+  <div class="flex flex-col h-full">
+    <header class="flex items-center justify-between px-4 py-3 bg-[#2c2f33] border-b border-[#41444a] shadow">
+      <div class="flex items-center space-x-3">
+        <span class="material-symbols-outlined text-[#7bc275]">android</span>
+        <div>
+          <div class="text-sm text-gray-400">Android Studio Simulation</div>
+          <div class="font-semibold text-gray-100">Darcula MVVM Lab</div>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 text-xs text-gray-400">
+        <span class="px-2 py-1 rounded bg-[#1e1f22] border border-[#3d4047]">DB Binding</span>
+        <span class="px-2 py-1 rounded bg-[#1e1f22] border border-[#3d4047]">Multi-layer UI</span>
+        <span class="px-2 py-1 rounded bg-[#1e1f22] border border-[#3d4047]">Navigation & Popups</span>
+        <span class="px-2 py-1 rounded bg-[#1e1f22] border border-[#3d4047]">DI + Repository</span>
+        <span class="px-2 py-1 rounded bg-[#1e1f22] border border-[#3d4047]">BG + Push + Receivers</span>
+      </div>
+    </header>
+
+    <section class="bg-[#24262a] border-b border-[#3d4047] px-4 py-3">
+      <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">Runtime Timeline</div>
+      <div id="timeline" class="flex flex-wrap gap-2 text-xs"></div>
+    </section>
+
+    <section class="bg-[#1f2024] border-b border-[#3d4047] px-4 py-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-gray-400 uppercase tracking-wide">Flow Simulator</div>
+          <div class="text-sm text-gray-200">Kick off common scenarios and see the involved nodes.</div>
+        </div>
+        <div id="sim-buttons" class="flex flex-wrap gap-2 text-xs"></div>
+      </div>
+    </section>
+
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Project Tree -->
+      <aside class="w-1/4 max-w-xs min-w-[240px] bg-[var(--panel)] border-r border-[#3d4047] overflow-y-auto" id="project-pane">
+        <div class="px-4 py-3 border-b border-[#3d4047] flex items-center justify-between">
+          <div>
+            <div class="text-xs text-gray-400 uppercase tracking-wide">Project</div>
+            <div class="font-semibold text-gray-100">Android MVVM</div>
+          </div>
+          <span class="material-symbols-outlined text-gray-400">folder_open</span>
+        </div>
+        <div id="file-tree" class="p-3 text-sm space-y-1"></div>
+      </aside>
+
+      <!-- Code Editor -->
+      <main class="flex-1 bg-[var(--editor)] text-gray-100 overflow-hidden">
+        <div class="px-4 py-3 border-b border-[#3d4047] flex items-center justify-between">
+          <div>
+            <div class="text-xs text-gray-400 uppercase tracking-wide">Breadcrumbs</div>
+            <div id="breadcrumbs" class="font-semibold text-[#9cdcfe]">Select a file</div>
+          </div>
+          <div class="flex items-center space-x-2 text-xs text-gray-400">
+            <span class="material-symbols-outlined text-sm">article</span>
+            <span id="current-role">Role: —</span>
+          </div>
+        </div>
+        <div id="editor" class="h-full overflow-auto">
+          <div class="grid grid-cols-[auto,1fr] text-sm code-font">
+            <pre id="line-numbers" class="bg-[#2b2d30] text-[#6c7077] px-4 py-3 border-r border-[#3d4047] text-right select-none leading-6">1</pre>
+            <pre id="code-view" class="px-4 py-3 whitespace-pre-wrap leading-6 min-h-[400px]"></pre>
+          </div>
+        </div>
+      </main>
+
+      <!-- Inspector -->
+      <aside class="w-1/4 max-w-xs min-w-[260px] bg-[var(--panel)] border-l border-[#3d4047] overflow-y-auto">
+        <div class="px-4 py-3 border-b border-[#3d4047] flex items-center justify-between">
+          <div>
+            <div class="text-xs text-gray-400 uppercase tracking-wide">Architecture Inspector</div>
+            <div class="font-semibold text-gray-100">Meta-Analysis</div>
+          </div>
+          <span class="material-symbols-outlined text-gray-400">info</span>
+        </div>
+        <div id="inspector" class="p-4 space-y-4 text-sm">
+          <div class="text-gray-400">Select a file to see its role, description, and connections.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
