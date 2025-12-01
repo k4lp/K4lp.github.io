@@ -3,145 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Android Studio Simulation</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" />
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            overflow: hidden; /* Prevent body scroll */
-        }
-        .code-font {
-            font-family: 'JetBrains Mono', monospace;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #2b2d30;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4e5157;
-            border-radius: 4px;
-            border: 2px solid #2b2d30;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #5e6168;
-        }
-
-        /* Syntax Highlighting Classes */
-        .hl-keyword { color: #cc7832; font-weight: bold; }
-        .hl-string { color: #6a8759; }
-        .hl-annotation { color: #bbb529; }
-        .hl-tag { color: #e8bf6a; }
-        .hl-attribute { color: #bababa; }
-        .hl-value { color: #a5c261; }
-        .hl-comment { color: #808080; font-style: italic; }
-        .hl-number { color: #6897bb; }
-        .hl-function { color: #ffc66d; }
-        .hl-class { color: #a9b7c6; }
-
-        .tree-item:hover {
-            background-color: #2d2f33;
-            cursor: pointer;
-        }
-        .tree-item.selected {
-            background-color: #2d2f33; /* Selection color same as hover for simplicity or slightly different */
-            background-color: #4b6eaf; /* Selection color */
-            color: white;
-        }
-
-        /* Resizable panes (simplified with flex for now) */
-    </style>
+    <title>Portfolio | Subtle. Yet. Bold.</title>
+    <meta name="description" content="A minimalist portfolio showcasing the art of simplicity.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Fallback to system fonts if no internet, but assuming standard sans-serif works for Swiss style -->
 </head>
-<body class="bg-[#1e1f22] text-[#a9b7c6] h-screen flex flex-col select-none">
-
-    <!-- Top Bar -->
-    <header class="h-10 bg-[#2b2d30] flex items-center px-4 border-b border-[#1e1f22] space-x-4">
-        <div class="flex items-center space-x-2">
-            <span class="material-symbols-rounded text-green-500 text-xl">android</span>
-            <span class="font-bold text-sm text-gray-300">Android Studio Simulation</span>
-        </div>
-        <div class="flex-1"></div>
-        <div class="flex space-x-3 text-gray-400 text-xs">
-            <span class="material-symbols-rounded text-sm cursor-pointer hover:text-white">play_arrow</span>
-            <span class="material-symbols-rounded text-sm cursor-pointer hover:text-white">bug_report</span>
-            <span class="material-symbols-rounded text-sm cursor-pointer hover:text-white">settings</span>
-        </div>
+<body>
+    <header class="header">
+        <div class="logo">JULES</div> <!-- Assuming my name or user's placeholder -->
+        <nav class="nav">
+            <a href="#projects">Work</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+        </nav>
     </header>
 
-    <!-- Main Layout -->
-    <div class="flex-1 flex overflow-hidden">
+    <main class="main-content">
+        <section class="hero">
+            <h1 class="headline">Subtle.<br>Yet.<br>Bold.</h1>
+            <p class="subhead">Modern. Sleek. Sophisticated.</p>
+        </section>
 
-        <!-- Left Pane: Project Tree -->
-        <aside class="w-72 bg-[#2b2d30] flex flex-col border-r border-[#1e1f22]">
-            <div class="h-8 flex items-center px-3 border-b border-[#1e1f22]">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Project</span>
+        <section id="projects" class="projects-section">
+            <div class="section-label">Selected Works</div>
+            <div class="project-grid">
+                <article class="project-card">
+                    <a href="#" class="project-link">
+                        <div class="project-image-placeholder"></div>
+                        <div class="project-info">
+                            <h2 class="project-title">The Current Project</h2>
+                            <p class="project-category">Full Stack Development</p>
+                        </div>
+                    </a>
+                </article>
             </div>
-            <div id="project-tree" class="flex-1 overflow-y-auto text-sm py-2">
-                <!-- Tree content injected by JS -->
+        </section>
+
+        <section id="about" class="about-section">
+            <div class="section-label">About</div>
+            <div class="about-content">
+                <p>Focusing on extreme usability and clean aesthetics. Creating digital experiences that are smooth as fuck.</p>
             </div>
-        </aside>
+        </section>
 
-        <!-- Middle Pane: Editor -->
-        <main class="flex-1 flex flex-col bg-[#1e1f22] min-w-0">
-            <!-- Tabs / Breadcrumbs -->
-            <div class="h-8 bg-[#2b2d30] flex items-center px-4 border-b border-[#1e1f22] overflow-x-auto">
-                <div id="breadcrumbs" class="flex items-center space-x-2 text-xs text-gray-400 whitespace-nowrap">
-                    <span class="material-symbols-rounded text-sm">home</span>
-                    <span>/</span>
-                    <span>Select a file...</span>
-                </div>
+        <section id="contact" class="contact-section">
+            <div class="section-label">Contact</div>
+            <div class="contact-content">
+                <a href="mailto:hello@example.com" class="contact-link">Get in touch</a>
             </div>
+        </section>
+    </main>
 
-            <!-- Code Area -->
-            <div class="flex-1 flex overflow-hidden relative">
-                <!-- Line Numbers -->
-                <div id="line-numbers" class="w-12 bg-[#2b2d30] text-right pr-2 py-2 text-gray-500 text-xs code-font leading-6 border-r border-[#323232] select-none overflow-hidden">
-
-                </div>
-
-                <!-- Code Content -->
-                <div class="flex-1 overflow-auto">
-                    <pre id="code-editor" class="p-2 text-sm code-font leading-6 tab-4 outline-none min-h-full text-[#a9b7c6]">
-                        <!-- Code injected by JS -->
-                    </pre>
-                </div>
-
-                <!-- Placeholder if empty -->
-                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none">
-                    <span class="material-symbols-rounded text-6xl opacity-20 mb-4">code_off</span>
-                    <p class="text-sm opacity-50">Select a file from the Project Tree to view source</p>
-                </div>
-            </div>
-        </main>
-
-        <!-- Right Pane: Inspector -->
-        <aside class="w-80 bg-[#2b2d30] flex flex-col border-l border-[#1e1f22]">
-            <div class="h-8 flex items-center px-3 border-b border-[#1e1f22]">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Architecture Inspector</span>
-            </div>
-            <div id="inspector-panel" class="flex-1 overflow-y-auto p-4 text-sm">
-                <div class="text-center text-gray-500 mt-10">
-                    <span class="material-symbols-rounded text-4xl opacity-30 block mb-2">analytics</span>
-                    Select a component to see Architecture Analysis
-                </div>
-            </div>
-        </aside>
-    </div>
-
-    <!-- Status Bar -->
-    <footer class="h-6 bg-[#2b2d30] flex items-center px-3 border-t border-[#1e1f22] text-[10px] text-gray-400">
-        <span>master</span>
-        <div class="flex-1"></div>
-        <span class="mr-2">UTF-8</span>
-        <span>Kotlin</span>
+    <footer class="footer">
+        <div class="copyright">&copy; 2024. All rights reserved.</div>
     </footer>
-
-    <script src="script.js"></script>
 </body>
 </html>
