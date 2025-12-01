@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesforceCore | Jules</title>
+    <meta name="description" content="A comprehensive .NET library for Salesforce integration.">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Project specific styles */
+        .project-header {
+            padding-top: 8rem;
+            padding-bottom: 4rem;
+        }
+
+        .project-meta {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 4rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            padding-top: 2rem;
+        }
+
+        .meta-item h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            opacity: 0.5;
+            margin-bottom: 0.5rem;
+        }
+
+        .meta-item p {
+            font-size: 1.1rem;
+        }
+
+        .content-block {
+            margin-bottom: 4rem;
+        }
+
+        .content-block h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .content-block p {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            max-width: 800px;
+        }
+
+        .content-block ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+        }
+
+        .content-block li {
+            font-size: 1.1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+        }
+
+        .content-block li::before {
+            content: "→";
+            margin-right: 1rem;
+            opacity: 0.5;
+        }
+
+        .doc-link {
+            display: block;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            transition: padding-left 0.3s ease;
+        }
+
+        .doc-link:hover {
+            padding-left: 1rem;
+            opacity: 1;
+        }
+
+        .code-block {
+            background: #d8c3a5;
+            padding: 2rem;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 2rem 0;
+            font-size: 0.9rem;
+        }
+
+        @media (min-width: 768px) {
+            .project-meta {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><a href="index.html">JULES</a></div>
+        <nav class="nav">
+            <a href="index.html#projects">Work</a>
+            <a href="index.html#about">About</a>
+            <a href="index.html#contact">Contact</a>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <section class="project-header">
+            <h1 class="headline" style="font-size: 10vw;">SalesforceCore</h1>
+            <div class="project-meta">
+                <div class="meta-item">
+                    <h3>Role</h3>
+                    <p>Lead Engineer</p>
+                </div>
+                <div class="meta-item">
+                    <h3>Stack</h3>
+                    <p>.NET 10.0, C#</p>
+                </div>
+                <div class="meta-item">
+                    <h3>Context</h3>
+                    <p>Enterprise Integration</p>
+                </div>
+                <div class="meta-item">
+                    <h3>Status</h3>
+                    <p>Production Ready</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-label">Overview</div>
+            <div class="content-block">
+                <p>SalesforceCore is a comprehensive .NET library designed to bridge the gap between complex enterprise requirements and the Salesforce ecosystem. It provides a robust, type-safe, and highly performant layer for building scalable integrations.</p>
+                <p>The framework was built to solve the common pain points of Salesforce integration: loose typing, complex authentication flows, and lack of maintainable query structures.</p>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-label">Key Features</div>
+            <div class="content-block">
+                <ul>
+                    <li>Strongly-typed data access with compile-time checking</li>
+                    <li>LINQ-to-SOQL query provider for intuitive querying</li>
+                    <li>Multiple authentication flows (PKCE, JWT, Client Credentials)</li>
+                    <li>High-volume operations via Bulk API 2.0 and Composite APIs</li>
+                    <li>Dynamic UI generation based on Salesforce metadata</li>
+                    <li>ASP.NET Core integration with Tag Helpers</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-label">Architecture</div>
+            <div class="content-block">
+                <p>The library is designed with a modular architecture to support various implementation scenarios, from lightweight background workers to full-scale web applications.</p>
+                <div class="code-block">
+┌─────────────────────────────────────────────┐
+│           Your Application                  │
+├─────────────────────────────────────────────┤
+│  SalesforceCore.AspNetCore (Web Apps)       │
+│  - Tag Helpers                              │
+│  - Controllers                              │
+│  - Authentication                           │
+│  - Middleware                               │
+├─────────────────────────────────────────────┤
+│  SalesforceCore (Core Library)              │
+│  - Data Services                            │
+│  - Schema Services                          │
+│  - Permission Services                      │
+│  - Layout Services                          │
+│  - Bulk/Composite Services                  │
+├─────────────────────────────────────────────┤
+│        Salesforce REST APIs                 │
+└─────────────────────────────────────────────┘
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-label">Documentation</div>
+            <div class="content-block">
+                <h2>Guides & References</h2>
+                <p>Explore the comprehensive documentation available in this repository.</p>
+
+                <a href="docs/00-Setup-Guide.md" class="doc-link">00. Setup Guide</a>
+                <a href="docs/01-Getting-Started.md" class="doc-link">01. Getting Started</a>
+                <a href="docs/02-Authentication.md" class="doc-link">02. Authentication Flows</a>
+                <a href="docs/03-Configuration.md" class="doc-link">03. Configuration Reference</a>
+                <a href="docs/04-Data-Service.md" class="doc-link">04. Data Service</a>
+                <a href="docs/05-Typed-Data-Service.md" class="doc-link">05. Typed Data Service (LINQ)</a>
+                <a href="docs/10-API-Reference.md" class="doc-link">10. API Reference</a>
+                <a href="docs/17-Dynamic-UI-System.md" class="doc-link">17. Dynamic UI System</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <div class="copyright">&copy; 2024. All rights reserved.</div>
+    </footer>
+</body>
+</html>
