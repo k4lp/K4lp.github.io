@@ -1,63 +1,505 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio | Subtle. Yet. Bold.</title>
-    <meta name="description" content="A minimalist portfolio showcasing the art of simplicity.">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Fallback to system fonts if no internet, but assuming standard sans-serif works for Swiss style -->
+  <meta charset="UTF-8" />
+  <title>Claude (Puter.js) Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(circle at top, #1e293b, #020617 55%);
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 960px;
+      margin: 32px 16px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 16px;
+      padding: 20px 20px 16px;
+      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      backdrop-filter: blur(14px);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 1.3rem;
+      font-weight: 650;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(94, 234, 212, 0.4);
+      color: #a5f3fc;
+      background: rgba(15, 118, 110, 0.14);
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .github-link {
+      font-size: 0.8rem;
+      color: #93c5fd;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 6px 10px;
+      border: 1px solid rgba(129, 140, 248, 0.5);
+      background: linear-gradient(
+        120deg,
+        rgba(15, 23, 42, 0.9),
+        rgba(30, 64, 175, 0.5)
+      );
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .github-link:hover {
+      background: linear-gradient(
+        120deg,
+        rgba(15, 23, 42, 1),
+        rgba(37, 99, 235, 0.7)
+      );
+    }
+
+    .github-link span {
+      font-size: 0.85rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font: inherit;
+      line-height: 1.4;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: rgba(129, 140, 248, 0.9);
+      box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.7);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .controls-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    select {
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    select:focus {
+      border-color: rgba(129, 140, 248, 0.9);
+      box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.7);
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: #4ade80;
+    }
+
+    button[type="submit"] {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      color: white;
+      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.7);
+      transition: transform 0.06s ease, box-shadow 0.06s ease,
+        filter 0.1s ease;
+    }
+
+    button[type="submit"]:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 36px rgba(37, 99, 235, 0.9);
+      filter: brightness(1.02);
+    }
+
+    button[type="submit"]:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow: 0 6px 20px rgba(30, 64, 175, 0.95);
+    }
+
+    button[type="submit"]:disabled {
+      cursor: default;
+      opacity: 0.6;
+      transform: none;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.9);
+    }
+
+    .status {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      min-height: 1.3em;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+      flex-shrink: 0;
+    }
+
+    .status-dot.idle {
+      background: #6b7280;
+      box-shadow: none;
+    }
+
+    .status-dot.error {
+      background: #f97373;
+      box-shadow: 0 0 10px rgba(248, 113, 113, 0.9);
+    }
+
+    .output-card {
+      margin-top: 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: radial-gradient(circle at top left, #020617, #020617 55%);
+      padding: 10px 12px 12px;
+      max-height: 420px;
+      overflow: auto;
+    }
+
+    .output-header {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .output-model {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+
+    #output {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      color: #e5e7eb;
+    }
+
+    .helper-text {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    a {
+      color: #93c5fd;
+    }
+
+    @media (max-width: 640px) {
+      .card {
+        padding: 16px 14px 12px;
+      }
+
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .github-link {
+        align-self: stretch;
+        justify-content: center;
+      }
+    }
+  </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">JULES</div> <!-- Assuming my name or user's placeholder -->
-        <nav class="nav">
-            <a href="#projects">Work</a>
-            <a href="#about">About</a>
-            <a href="#contact">Contact</a>
-        </nav>
-    </header>
+  <div class="app-shell">
+    <div class="card">
+      <div class="header">
+        <div>
+          <div class="title">
+            Claude via Puter.js
+            <span class="badge">Free · No API keys</span>
+          </div>
+          <div class="subtitle">
+            Simple frontend using
+            <code>puter.ai.chat()</code> to call Claude Sonnet / Opus / Haiku.
+          </div>
+        </div>
+        <a
+          class="github-link"
+          href="https://developer.puter.com/tutorials/free-unlimited-claude-35-sonnet-api/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span>View tutorial</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
 
-    <main class="main-content">
-        <section class="hero">
-            <h1 class="headline">Subtle.<br>Yet.<br>Bold.</h1>
-            <p class="subhead">Modern. Sleek. Sophisticated.</p>
-        </section>
+      <form id="chat-form">
+        <div>
+          <label for="prompt">Prompt</label>
+          <textarea
+            id="prompt"
+            placeholder="e.g. Explain quantum computing in simple terms, then give a fun analogy involving pizza."
+          ></textarea>
+        </div>
 
-        <section id="projects" class="projects-section">
-            <div class="section-label">Selected Works</div>
-            <div class="project-grid">
-                <article class="project-card">
-                    <a href="#" class="project-link">
-                        <div class="project-image-placeholder"></div>
-                        <div class="project-info">
-                            <h2 class="project-title">The Current Project</h2>
-                            <p class="project-category">Full Stack Development</p>
-                        </div>
-                    </a>
-                </article>
+        <div class="controls-row">
+          <div class="controls-group">
+            <div>
+              <label for="model">Model</label>
+              <select id="model">
+                <option value="claude-sonnet-4-5" selected>
+                  claude-sonnet-4-5 (recommended)
+                </option>
+                <option value="claude-sonnet-4">claude-sonnet-4</option>
+                <option value="claude-opus-4-5">claude-opus-4-5</option>
+                <option value="claude-opus-4-1">claude-opus-4-1</option>
+                <option value="claude-opus-4">claude-opus-4</option>
+                <option value="claude-haiku-4-5">claude-haiku-4-5</option>
+              </select>
             </div>
-        </section>
 
-        <section id="about" class="about-section">
-            <div class="section-label">About</div>
-            <div class="about-content">
-                <p>Focusing on extreme usability and clean aesthetics. Creating digital experiences that are smooth as fuck.</p>
-            </div>
-        </section>
+            <label class="toggle">
+              <input type="checkbox" id="stream" checked />
+              <span>Stream response</span>
+            </label>
+          </div>
 
-        <section id="contact" class="contact-section">
-            <div class="section-label">Contact</div>
-            <div class="contact-content">
-                <a href="mailto:hello@example.com" class="contact-link">Get in touch</a>
-            </div>
-        </section>
-    </main>
+          <button type="submit" id="submit-btn">
+            <span id="submit-label">Ask Claude</span>
+            <span aria-hidden="true">▶</span>
+          </button>
+        </div>
 
-    <footer class="footer">
-        <div class="copyright">&copy; 2024. All rights reserved.</div>
-    </footer>
+        <div class="status">
+          <span id="status-dot" class="status-dot idle"></span>
+          <span id="status-text">Idle</span>
+        </div>
+      </form>
+
+      <div class="output-card">
+        <div class="output-header">
+          <span>Claude output</span>
+          <span class="output-model" id="output-model-label"></span>
+        </div>
+        <div id="output"></div>
+      </div>
+
+      <div class="helper-text">
+        First call may trigger a Puter popup (user-pays model). Keep this tab
+        open while you experiment.
+      </div>
+    </div>
+  </div>
+
+  <!-- Puter.js: required to access Claude through Puter -->
+  <script src="https://js.puter.com/v2/"></script>
+
+  <script>
+    (function () {
+      const form = document.getElementById("chat-form");
+      const promptInput = document.getElementById("prompt");
+      const modelSelect = document.getElementById("model");
+      const streamCheckbox = document.getElementById("stream");
+      const outputEl = document.getElementById("output");
+      const statusDot = document.getElementById("status-dot");
+      const statusText = document.getElementById("status-text");
+      const submitBtn = document.getElementById("submit-btn");
+      const submitLabel = document.getElementById("submit-label");
+      const outputModelLabel = document.getElementById(
+        "output-model-label"
+      );
+
+      function setStatus(mode, text) {
+        statusDot.classList.remove("idle", "error");
+        if (mode === "idle") {
+          statusDot.classList.add("idle");
+        } else if (mode === "error") {
+          statusDot.classList.add("error");
+        }
+        statusText.textContent = text;
+      }
+
+      async function callClaude(prompt, model, stream) {
+        if (!window.puter || !puter.ai || !puter.ai.chat) {
+          throw new Error(
+            "Puter.js has not loaded yet. Check your connection or try refreshing."
+          );
+        }
+
+        if (stream) {
+          // Streaming mode: Async iterable of chunks
+          const response = await puter.ai.chat(prompt, {
+            model,
+            stream: true,
+          });
+
+          setStatus("busy", "Streaming from Claude…");
+          outputEl.textContent = "";
+
+          for await (const part of response) {
+            const delta =
+              (part && part.text) ||
+              (part &&
+                part.message &&
+                part.message.content &&
+                part.message.content[0] &&
+                part.message.content[0].text) ||
+              "";
+            outputEl.textContent += delta;
+          }
+        } else {
+          // Non-streaming: single response object
+          const response = await puter.ai.chat(prompt, { model });
+          const text =
+            (response &&
+              response.message &&
+              response.message.content &&
+              response.message.content[0] &&
+              response.message.content[0].text) ||
+            JSON.stringify(response, null, 2);
+          outputEl.textContent = text;
+        }
+      }
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const prompt = (promptInput.value || "").trim();
+        const model = modelSelect.value;
+        const stream = streamCheckbox.checked;
+
+        if (!prompt) {
+          promptInput.focus();
+          return;
+        }
+
+        outputModelLabel.textContent = model;
+        setStatus("busy", "Calling Claude via Puter…");
+        submitBtn.disabled = true;
+        submitLabel.textContent = "Thinking…";
+
+        try {
+          await callClaude(prompt, model, stream);
+          setStatus("idle", "Done");
+        } catch (err) {
+          console.error(err);
+          setStatus("error", "Error – see console for details");
+          outputEl.textContent =
+            "Error while calling Claude via Puter:\n\n" +
+            (err && err.message ? err.message : String(err));
+        } finally {
+          submitBtn.disabled = false;
+          submitLabel.textContent = "Ask Claude";
+        }
+      });
+
+      // Optional: a sample prompt on load
+      if (!promptInput.value) {
+        promptInput.value =
+          "You are Claude accessed via Puter.js. Briefly introduce yourself, then list three cool things a web developer can build with you.";
+      }
+    })();
+  </script>
 </body>
 </html>
