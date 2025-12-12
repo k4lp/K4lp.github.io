@@ -1,505 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Claude (Puter.js) Playground</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root {
-      color-scheme: dark;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Personal Portfolio & Project Showcase">
+    <title>Portfolio | Modern & Sleek</title>
+    <style>
+        /* --- VARIABLES & RESET --- */
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #141414;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent: #3b82f6; /* Electric Blue */
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
 
-    * {
-      box-sizing: border-box;
-    }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-      background: radial-gradient(circle at top, #1e293b, #020617 55%);
-      color: #e5e7eb;
-      min-height: 100vh;
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-    }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    .app-shell {
-      width: 100%;
-      max-width: 960px;
-      margin: 32px 16px;
-    }
+        /* --- TYPOGRAPHY --- */
+        h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+        h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); line-height: 1.1; }
+        h2 { font-size: 2rem; margin-bottom: 2rem; color: var(--text-primary); }
+        p { color: var(--text-secondary); max-width: 600px; }
+        a { text-decoration: none; color: inherit; transition: var(--transition); }
 
-    .card {
-      background: rgba(15, 23, 42, 0.96);
-      border-radius: 16px;
-      padding: 20px 20px 16px;
-      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      backdrop-filter: blur(14px);
-    }
+        /* --- LAYOUT UTILITIES --- */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        section {
+            padding: 6rem 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        section.visible { opacity: 1; transform: translateY(0); }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 16px;
-    }
+        /* --- NAVIGATION --- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.5rem 0;
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .title {
-      font-size: 1.3rem;
-      font-weight: 650;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+        .logo { font-weight: 700; font-size: 1.2rem; letter-spacing: -0.05em; }
+        
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a { font-size: 0.9rem; color: var(--text-secondary); }
+        .nav-links a:hover { color: var(--accent); }
 
-    .badge {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(94, 234, 212, 0.4);
-      color: #a5f3fc;
-      background: rgba(15, 118, 110, 0.14);
-      white-space: nowrap;
-    }
+        /* --- HERO SECTION --- */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
 
-    .subtitle {
-      font-size: 0.85rem;
-      color: #9ca3af;
-      margin-top: 4px;
-    }
+        .hero-tag {
+            color: var(--accent);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
 
-    .github-link {
-      font-size: 0.8rem;
-      color: #93c5fd;
-      text-decoration: none;
-      border-radius: 999px;
-      padding: 6px 10px;
-      border: 1px solid rgba(129, 140, 248, 0.5);
-      background: linear-gradient(
-        120deg,
-        rgba(15, 23, 42, 0.9),
-        rgba(30, 64, 175, 0.5)
-      );
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
+        .cta-button {
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            background: var(--text-primary);
+            color: var(--bg-color);
+            font-weight: 600;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(255,255,255,0.3);
+        }
 
-    .github-link:hover {
-      background: linear-gradient(
-        120deg,
-        rgba(15, 23, 42, 1),
-        rgba(37, 99, 235, 0.7)
-      );
-    }
+        /* --- PROJECTS GRID --- */
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
 
-    .github-link span {
-      font-size: 0.85rem;
-    }
+        .project-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
 
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 8px;
-    }
+        .project-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 20px 40px -15px var(--accent-glow);
+        }
 
-    label {
-      font-size: 0.85rem;
-      color: #9ca3af;
-      display: block;
-      margin-bottom: 4px;
-    }
+        .project-title { font-size: 1.25rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+        .project-desc { font-size: 0.9rem; margin-bottom: 1.5rem; }
+        
+        .tech-stack {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
 
-    textarea {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      background: rgba(15, 23, 42, 0.9);
-      color: #e5e7eb;
-      font: inherit;
-      line-height: 1.4;
-      outline: none;
-    }
+        .tech-tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            color: var(--text-secondary);
+        }
 
-    textarea:focus {
-      border-color: rgba(129, 140, 248, 0.9);
-      box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.7);
-    }
+        /* --- CONTACT --- */
+        .contact-links {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .contact-links a {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+        }
+        
+        .contact-links a:hover { color: var(--text-primary); }
 
-    .controls-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-    }
+        /* --- FOOTER --- */
+        footer {
+            padding: 2rem 0;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
 
-    .controls-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    select {
-      background: rgba(15, 23, 42, 0.9);
-      color: #e5e7eb;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      padding: 6px 10px;
-      font-size: 0.85rem;
-      outline: none;
-    }
-
-    select:focus {
-      border-color: rgba(129, 140, 248, 0.9);
-      box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.7);
-    }
-
-    .toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      color: #9ca3af;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .toggle input {
-      width: 16px;
-      height: 16px;
-      margin: 0;
-      accent-color: #4ade80;
-    }
-
-    button[type="submit"] {
-      border-radius: 999px;
-      border: none;
-      padding: 8px 20px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: linear-gradient(135deg, #4f46e5, #06b6d4);
-      color: white;
-      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.7);
-      transition: transform 0.06s ease, box-shadow 0.06s ease,
-        filter 0.1s ease;
-    }
-
-    button[type="submit"]:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 36px rgba(37, 99, 235, 0.9);
-      filter: brightness(1.02);
-    }
-
-    button[type="submit"]:active {
-      transform: translateY(1px) scale(0.99);
-      box-shadow: 0 6px 20px rgba(30, 64, 175, 0.95);
-    }
-
-    button[type="submit"]:disabled {
-      cursor: default;
-      opacity: 0.6;
-      transform: none;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.9);
-    }
-
-    .status {
-      font-size: 0.8rem;
-      color: #9ca3af;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 4px;
-      min-height: 1.3em;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #22c55e;
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
-      flex-shrink: 0;
-    }
-
-    .status-dot.idle {
-      background: #6b7280;
-      box-shadow: none;
-    }
-
-    .status-dot.error {
-      background: #f97373;
-      box-shadow: 0 0 10px rgba(248, 113, 113, 0.9);
-    }
-
-    .output-card {
-      margin-top: 16px;
-      border-radius: 14px;
-      border: 1px solid rgba(55, 65, 81, 0.9);
-      background: radial-gradient(circle at top left, #020617, #020617 55%);
-      padding: 10px 12px 12px;
-      max-height: 420px;
-      overflow: auto;
-    }
-
-    .output-header {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #6b7280;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-
-    .output-model {
-      font-size: 0.75rem;
-      color: #9ca3af;
-      font-weight: 500;
-    }
-
-    #output {
-      font-size: 0.9rem;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-      color: #e5e7eb;
-    }
-
-    .helper-text {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-top: 6px;
-    }
-
-    a {
-      color: #93c5fd;
-    }
-
-    @media (max-width: 640px) {
-      .card {
-        padding: 16px 14px 12px;
-      }
-
-      .header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .github-link {
-        align-self: stretch;
-        justify-content: center;
-      }
-    }
-  </style>
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .nav-links { display: none; } /* Mobile menu simplified for demo */
+        }
+    </style>
 </head>
 <body>
-  <div class="app-shell">
-    <div class="card">
-      <div class="header">
-        <div>
-          <div class="title">
-            Claude via Puter.js
-            <span class="badge">Free · No API keys</span>
-          </div>
-          <div class="subtitle">
-            Simple frontend using
-            <code>puter.ai.chat()</code> to call Claude Sonnet / Opus / Haiku.
-          </div>
-        </div>
-        <a
-          class="github-link"
-          href="https://developer.puter.com/tutorials/free-unlimited-claude-35-sonnet-api/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <span>View tutorial</span>
-          <span aria-hidden="true">↗</span>
-        </a>
-      </div>
 
-      <form id="chat-form">
-        <div>
-          <label for="prompt">Prompt</label>
-          <textarea
-            id="prompt"
-            placeholder="e.g. Explain quantum computing in simple terms, then give a fun analogy involving pizza."
-          ></textarea>
-        </div>
-
-        <div class="controls-row">
-          <div class="controls-group">
-            <div>
-              <label for="model">Model</label>
-              <select id="model">
-                <option value="claude-sonnet-4-5" selected>
-                  claude-sonnet-4-5 (recommended)
-                </option>
-                <option value="claude-sonnet-4">claude-sonnet-4</option>
-                <option value="claude-opus-4-5">claude-opus-4-5</option>
-                <option value="claude-opus-4-1">claude-opus-4-1</option>
-                <option value="claude-opus-4">claude-opus-4</option>
-                <option value="claude-haiku-4-5">claude-haiku-4-5</option>
-              </select>
+    <nav class="container">
+        <div class="nav-content">
+            <a href="#" class="logo">NAME.</a>
+            <div class="nav-links">
+                <a href="#about">About</a>
+                <a href="#projects">Work</a>
+                <a href="#contact">Contact</a>
             </div>
-
-            <label class="toggle">
-              <input type="checkbox" id="stream" checked />
-              <span>Stream response</span>
-            </label>
-          </div>
-
-          <button type="submit" id="submit-btn">
-            <span id="submit-label">Ask Claude</span>
-            <span aria-hidden="true">▶</span>
-          </button>
         </div>
+    </nav>
 
-        <div class="status">
-          <span id="status-dot" class="status-dot idle"></span>
-          <span id="status-text">Idle</span>
-        </div>
-      </form>
+    <main class="container">
+        <section class="hero">
+            <span class="hero-tag">Developer & Designer</span>
+            <h1>Crafting digital<br>experiences with<br><span style="color: var(--text-secondary);">precision & soul.</span></h1>
+            <p style="margin-top: 1.5rem;">
+                I build accessible, pixel-perfect, and performant web applications. 
+                Focusing on the intersection of strategic design and engineering.
+            </p>
+            <a href="#projects" class="cta-button">View Projects</a>
+        </section>
 
-      <div class="output-card">
-        <div class="output-header">
-          <span>Claude output</span>
-          <span class="output-model" id="output-model-label"></span>
-        </div>
-        <div id="output"></div>
-      </div>
+        <section id="projects">
+            <h2>Selected Works</h2>
+            <div class="project-grid">
+                <article class="project-card">
+                    <h3 class="project-title">Algorithmic Trading Bot</h3>
+                    <p class="project-desc">A high-frequency trading bot analyzing market sentiment in real-time. optimized for sub-millisecond execution.</p>
+                    <div class="tech-stack">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">WebSockets</span>
+                        <span class="tech-tag">Docker</span>
+                    </div>
+                </article>
 
-      <div class="helper-text">
-        First call may trigger a Puter popup (user-pays model). Keep this tab
-        open while you experiment.
-      </div>
-    </div>
-  </div>
+                <article class="project-card">
+                    <h3 class="project-title">SaaS Dashboard UI</h3>
+                    <p class="project-desc">A comprehensive analytics dashboard for enterprise clients featuring data visualization and role-based access.</p>
+                    <div class="tech-stack">
+                        <span class="tech-tag">React</span>
+                        <span class="tech-tag">TypeScript</span>
+                        <span class="tech-tag">D3.js</span>
+                    </div>
+                </article>
 
-  <!-- Puter.js: required to access Claude through Puter -->
-  <script src="https://js.puter.com/v2/"></script>
+                <article class="project-card">
+                    <h3 class="project-title">Neural Network Visualizer</h3>
+                    <p class="project-desc">Interactive 3D visualization of neural network layers to aid in educational understanding of deep learning.</p>
+                    <div class="tech-stack">
+                        <span class="tech-tag">Three.js</span>
+                        <span class="tech-tag">WebGL</span>
+                        <span class="tech-tag">Vue</span>
+                    </div>
+                </article>
+            </div>
+        </section>
 
-  <script>
-    (function () {
-      const form = document.getElementById("chat-form");
-      const promptInput = document.getElementById("prompt");
-      const modelSelect = document.getElementById("model");
-      const streamCheckbox = document.getElementById("stream");
-      const outputEl = document.getElementById("output");
-      const statusDot = document.getElementById("status-dot");
-      const statusText = document.getElementById("status-text");
-      const submitBtn = document.getElementById("submit-btn");
-      const submitLabel = document.getElementById("submit-label");
-      const outputModelLabel = document.getElementById(
-        "output-model-label"
-      );
+        <section id="contact" style="padding-bottom: 8rem;">
+            <h2>Let's Connect</h2>
+            <p>
+                I am currently open to consulting work or new opportunities. 
+                If you are looking for a partner to turn data into insight, get in touch.
+            </p>
+            <div class="contact-links">
+                <a href="mailto:your@email.com" aria-label="Email">Email</a>
+                <a href="#" aria-label="GitHub">GitHub</a>
+                <a href="#" aria-label="LinkedIn">LinkedIn</a>
+                <a href="#" aria-label="Twitter">X / Twitter</a>
+            </div>
+        </section>
+    </main>
 
-      function setStatus(mode, text) {
-        statusDot.classList.remove("idle", "error");
-        if (mode === "idle") {
-          statusDot.classList.add("idle");
-        } else if (mode === "error") {
-          statusDot.classList.add("error");
-        }
-        statusText.textContent = text;
-      }
+    <footer>
+        <p>&copy; 2024 Your Name. All rights reserved.</p>
+    </footer>
 
-      async function callClaude(prompt, model, stream) {
-        if (!window.puter || !puter.ai || !puter.ai.chat) {
-          throw new Error(
-            "Puter.js has not loaded yet. Check your connection or try refreshing."
-          );
-        }
+    <script>
+        // Smooth Reveal on Scroll
+        const observerOptions = {
+            threshold: 0.1
+        };
 
-        if (stream) {
-          // Streaming mode: Async iterable of chunks
-          const response = await puter.ai.chat(prompt, {
-            model,
-            stream: true,
-          });
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
 
-          setStatus("busy", "Streaming from Claude…");
-          outputEl.textContent = "";
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
 
-          for await (const part of response) {
-            const delta =
-              (part && part.text) ||
-              (part &&
-                part.message &&
-                part.message.content &&
-                part.message.content[0] &&
-                part.message.content[0].text) ||
-              "";
-            outputEl.textContent += delta;
-          }
-        } else {
-          // Non-streaming: single response object
-          const response = await puter.ai.chat(prompt, { model });
-          const text =
-            (response &&
-              response.message &&
-              response.message.content &&
-              response.message.content[0] &&
-              response.message.content[0].text) ||
-            JSON.stringify(response, null, 2);
-          outputEl.textContent = text;
-        }
-      }
-
-      form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const prompt = (promptInput.value || "").trim();
-        const model = modelSelect.value;
-        const stream = streamCheckbox.checked;
-
-        if (!prompt) {
-          promptInput.focus();
-          return;
-        }
-
-        outputModelLabel.textContent = model;
-        setStatus("busy", "Calling Claude via Puter…");
-        submitBtn.disabled = true;
-        submitLabel.textContent = "Thinking…";
-
-        try {
-          await callClaude(prompt, model, stream);
-          setStatus("idle", "Done");
-        } catch (err) {
-          console.error(err);
-          setStatus("error", "Error – see console for details");
-          outputEl.textContent =
-            "Error while calling Claude via Puter:\n\n" +
-            (err && err.message ? err.message : String(err));
-        } finally {
-          submitBtn.disabled = false;
-          submitLabel.textContent = "Ask Claude";
-        }
-      });
-
-      // Optional: a sample prompt on load
-      if (!promptInput.value) {
-        promptInput.value =
-          "You are Claude accessed via Puter.js. Briefly introduce yourself, then list three cool things a web developer can build with you.";
-      }
-    })();
-  </script>
+        // Dynamic Title Interaction (Optional refinement)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                document.title = "Come back soon!";
+            } else {
+                document.title = "Portfolio | Modern & Sleek";
+            }
+        });
+    </script>
 </body>
 </html>
