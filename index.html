@@ -3,286 +3,497 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Personal Portfolio & Project Showcase">
-    <title>Portfolio | Modern & Sleek</title>
+    <title>Kalp Pariya | Software Architect</title>
+    <meta name="description" content="Portfolio of Kalp Pariya - ASP.NET Core & Android Kotlin Developer specializing in robust software architecture.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+
     <style>
-        /* --- VARIABLES & RESET --- */
         :root {
-            --bg-color: #0a0a0a;
-            --card-bg: #141414;
-            --text-primary: #ffffff;
-            --text-secondary: #a1a1aa;
-            --accent: #3b82f6; /* Electric Blue */
-            --accent-glow: rgba(59, 130, 246, 0.15);
-            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            --bg: #050505;
+            --surface: #0f0f11;
+            --surface-hover: #1a1a1d;
+            --border: rgba(255, 255, 255, 0.08);
+            --primary: #00ff9d; /* Neon Mint - Stands out against dark mode */
+            --secondary: #bd00ff; /* Electric Violet */
+            --text-main: #ffffff;
+            --text-muted: #888899;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --easing: cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; scroll-behavior: smooth; }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            font-family: var(--font-main);
-            line-height: 1.6;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-display);
             overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+
+        /* --- BACKGROUND CANVAS --- */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+            pointer-events: none;
         }
 
         /* --- TYPOGRAPHY --- */
-        h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
-        h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); line-height: 1.1; }
-        h2 { font-size: 2rem; margin-bottom: 2rem; color: var(--text-primary); }
-        p { color: var(--text-secondary); max-width: 600px; }
-        a { text-decoration: none; color: inherit; transition: var(--transition); }
+        h1, h2, h3 { line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; }
+        .mono { font-family: var(--font-code); letter-spacing: -0.05em; }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--text-main) 0%, var(--text-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-        /* --- LAYOUT UTILITIES --- */
+        /* --- LAYOUT --- */
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 0 2rem;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
         }
-        
-        section {
-            padding: 6rem 0;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s ease, transform 0.8s ease;
-        }
-        
-        section.visible { opacity: 1; transform: translateY(0); }
 
-        /* --- NAVIGATION --- */
-        nav {
+        /* --- HEADER --- */
+        header {
             position: fixed;
             top: 0;
             width: 100%;
-            padding: 1.5rem 0;
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 20px 0;
+            background: rgba(5, 5, 5, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
         }
-        
-        .nav-content {
+
+        .nav-wrapper {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .logo { font-weight: 700; font-size: 1.2rem; letter-spacing: -0.05em; }
-        
-        .nav-links { display: flex; gap: 2rem; }
-        .nav-links a { font-size: 0.9rem; color: var(--text-secondary); }
-        .nav-links a:hover { color: var(--accent); }
-
-        /* --- HERO SECTION --- */
-        .hero {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: flex-start;
+        .logo {
+            font-family: var(--font-code);
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
         }
 
-        .hero-tag {
-            color: var(--accent);
+        .nav-links { display: flex; gap: 32px; }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
             font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+            transition: color 0.3s ease;
+        }
+        .nav-links a:hover { color: var(--primary); }
+
+        /* --- HERO --- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding-top: 80px;
         }
 
-        .cta-button {
-            margin-top: 2rem;
-            padding: 1rem 2rem;
-            background: var(--text-primary);
-            color: var(--bg-color);
-            font-weight: 600;
-            border-radius: 4px;
-            display: inline-block;
+        .hero-content { max-width: 800px; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px solid rgba(0, 255, 157, 0.2);
+            border-radius: 100px;
+            font-family: var(--font-code);
+            font-size: 0.75rem;
+            color: var(--primary);
+            margin-bottom: 24px;
         }
-        
-        .cta-button:hover {
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 10px var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            margin-bottom: 24px;
+        }
+
+        .hero p {
+            font-size: clamp(1.1rem, 2vw, 1.5rem);
+            color: var(--text-muted);
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
+
+        .btn-group { display: flex; gap: 16px; flex-wrap: wrap; }
+
+        .btn {
+            padding: 16px 32px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s var(--easing);
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--text-main);
+            color: var(--bg);
+        }
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(255,255,255,0.3);
+            background: var(--primary);
+        }
+
+        .btn-outline {
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+        .btn-outline:hover {
+            border-color: var(--text-main);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* --- TECH STACK (SCROLLING) --- */
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .marquee-content {
+            display: flex;
+            gap: 40px;
+            animation: scroll 20s linear infinite;
+            width: max-content;
+        }
+
+        .tech-item {
+            font-family: var(--font-code);
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            font-weight: 700;
+            opacity: 0.7;
         }
 
         /* --- PROJECTS GRID --- */
-        .project-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 2rem;
+        .section-header {
+            margin-bottom: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 20px;
         }
 
-        .project-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 2rem;
-            transition: var(--transition);
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 32px;
+            border-radius: 8px;
+            transition: all 0.4s var(--easing);
             position: relative;
             overflow: hidden;
         }
 
-        .project-card:hover {
+        .card:hover {
             transform: translateY(-5px);
-            border-color: var(--accent);
-            box-shadow: 0 20px 40px -15px var(--accent-glow);
+            border-color: var(--text-muted);
+            box-shadow: 0 20px 40px -20px rgba(0,0,0,0.5);
         }
 
-        .project-title { font-size: 1.25rem; margin-bottom: 0.5rem; color: var(--text-primary); }
-        .project-desc { font-size: 0.9rem; margin-bottom: 1.5rem; }
-        
-        .tech-stack {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: auto;
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s var(--easing);
         }
 
-        .tech-tag {
+        .card:hover::before { transform: scaleX(1); }
+
+        .card h3 { font-size: 1.5rem; margin-bottom: 12px; }
+        .card p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; }
+
+        .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+        .tag {
+            font-family: var(--font-code);
             font-size: 0.75rem;
-            padding: 0.25rem 0.75rem;
+            padding: 4px 12px;
             background: rgba(255,255,255,0.05);
-            border-radius: 20px;
-            color: var(--text-secondary);
+            border-radius: 4px;
+            color: var(--primary);
         }
-
-        /* --- CONTACT --- */
-        .contact-links {
-            display: flex;
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-        
-        .contact-links a {
-            font-size: 1.5rem;
-            color: var(--text-secondary);
-        }
-        
-        .contact-links a:hover { color: var(--text-primary); }
 
         /* --- FOOTER --- */
         footer {
-            padding: 2rem 0;
-            text-align: center;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            color: var(--text-secondary);
-            font-size: 0.8rem;
+            padding: 80px 0 40px;
+            border-top: 1px solid var(--border);
+            margin-top: 120px;
+        }
+        
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
         }
 
+        .social-link {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            transition: 0.2s;
+        }
+        .social-link:hover { color: var(--primary); padding-left: 8px; }
+
+        /* --- MOBILE OVERRIDES --- */
+        .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
         @media (max-width: 768px) {
-            h1 { font-size: 2.5rem; }
-            .nav-links { display: none; } /* Mobile menu simplified for demo */
+            .nav-links { display: none; } /* Add JS toggle for full implementation */
+            .grid { grid-template-columns: 1fr; } /* Force single column on mobile */
+            h1 { font-size: 3rem; }
+            .section-header { display: block; }
+            .footer-grid { grid-template-columns: 1fr; }
+            
+            /* Fix overflow issues */
+            .container { overflow-x: hidden; }
+            .marquee-content { gap: 20px; }
         }
     </style>
 </head>
 <body>
 
-    <nav class="container">
-        <div class="nav-content">
-            <a href="#" class="logo">NAME.</a>
-            <div class="nav-links">
-                <a href="#about">About</a>
-                <a href="#projects">Work</a>
-                <a href="#contact">Contact</a>
+    <canvas id="canvas-container"></canvas>
+
+    <header>
+        <div class="container nav-wrapper">
+            <a href="#" class="logo">&lt;k4lp /&gt;</a>
+            <nav class="nav-links">
+                <a href="#work">Architecture</a>
+                <a href="#stack">Stack</a>
+                <a href="mailto:kalppariya@gmail.com">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="container hero">
+            <div class="hero-content">
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span>System Status: ONLINE</span>
+                </div>
+                <h1>Architecting <br><span class="gradient-text">Scalable Reality.</span></h1>
+                <p>
+                    I am Kalp Pariya. I don't just write code; I design systems. 
+                    Specializing in high-performance <strong>ASP.NET Core</strong> backends and native <strong>Android (Kotlin)</strong> ecosystems.
+                </p>
+                <div class="btn-group">
+                    <a href="#work" class="btn btn-primary">View Architecture</a>
+                    <a href="https://github.com/k4lp" class="btn btn-outline">GitHub: k4lp</a>
+                </div>
+            </div>
+        </section>
+
+        <div class="marquee-container" id="stack">
+            <div class="marquee-content">
+                <span class="tech-item">ASP.NET CORE</span>
+                <span class="tech-item">C#</span>
+                <span class="tech-item">MSSQL</span>
+                <span class="tech-item">KOTLIN</span>
+                <span class="tech-item">ANDROID SDK</span>
+                <span class="tech-item">CLEAN ARCHITECTURE</span>
+                <span class="tech-item">DOCKER</span>
+                <span class="tech-item">ENTITY FRAMEWORK</span>
+                <span class="tech-item">ASP.NET CORE</span>
+                <span class="tech-item">C#</span>
+                <span class="tech-item">MSSQL</span>
+                <span class="tech-item">KOTLIN</span>
+                <span class="tech-item">ANDROID SDK</span>
+                <span class="tech-item">CLEAN ARCHITECTURE</span>
+                <span class="tech-item">DOCKER</span>
+                <span class="tech-item">ENTITY FRAMEWORK</span>
             </div>
         </div>
-    </nav>
 
-    <main class="container">
-        <section class="hero">
-            <span class="hero-tag">Developer & Designer</span>
-            <h1>Crafting digital<br>experiences with<br><span style="color: var(--text-secondary);">precision & soul.</span></h1>
-            <p style="margin-top: 1.5rem;">
-                I build accessible, pixel-perfect, and performant web applications. 
-                Focusing on the intersection of strategic design and engineering.
-            </p>
-            <a href="#projects" class="cta-button">View Projects</a>
-        </section>
+        <section class="container" id="work" style="padding-top: 120px;">
+            <div class="section-header">
+                <h2>Featured Systems</h2>
+                <p class="mono">/// SELECTED_WORKS_2024</p>
+            </div>
 
-        <section id="projects">
-            <h2>Selected Works</h2>
-            <div class="project-grid">
-                <article class="project-card">
-                    <h3 class="project-title">Algorithmic Trading Bot</h3>
-                    <p class="project-desc">A high-frequency trading bot analyzing market sentiment in real-time. optimized for sub-millisecond execution.</p>
-                    <div class="tech-stack">
-                        <span class="tech-tag">Python</span>
-                        <span class="tech-tag">WebSockets</span>
-                        <span class="tech-tag">Docker</span>
+            <div class="grid">
+                <article class="card">
+                    <h3 class="mono">Enterprise Resource Planner</h3>
+                    <p>A monolithic ASP.NET Core MVC application refactored into microservices. Implemented CQRS pattern for high-volume transaction handling.</p>
+                    <div class="tags">
+                        <span class="tag">.NET 8</span>
+                        <span class="tag">MSSQL</span>
+                        <span class="tag">RabbitMQ</span>
                     </div>
                 </article>
 
-                <article class="project-card">
-                    <h3 class="project-title">SaaS Dashboard UI</h3>
-                    <p class="project-desc">A comprehensive analytics dashboard for enterprise clients featuring data visualization and role-based access.</p>
-                    <div class="tech-stack">
-                        <span class="tech-tag">React</span>
-                        <span class="tech-tag">TypeScript</span>
-                        <span class="tech-tag">D3.js</span>
+                <article class="card">
+                    <h3 class="mono">Native Fintech Android App</h3>
+                    <p>Secure banking application built with Kotlin. Features biometric authentication, real-time socket connections, and offline-first architecture.</p>
+                    <div class="tags">
+                        <span class="tag">Kotlin</span>
+                        <span class="tag">Jetpack Compose</span>
+                        <span class="tag">Room DB</span>
                     </div>
                 </article>
 
-                <article class="project-card">
-                    <h3 class="project-title">Neural Network Visualizer</h3>
-                    <p class="project-desc">Interactive 3D visualization of neural network layers to aid in educational understanding of deep learning.</p>
-                    <div class="tech-stack">
-                        <span class="tech-tag">Three.js</span>
-                        <span class="tech-tag">WebGL</span>
-                        <span class="tech-tag">Vue</span>
+                <article class="card">
+                    <h3 class="mono">SQL Optimization Engine</h3>
+                    <p>Internal tool to analyze and optimize complex MSSQL queries. reduced reporting latency by 40% for legacy systems.</p>
+                    <div class="tags">
+                        <span class="tag">T-SQL</span>
+                        <span class="tag">Python</span>
+                        <span class="tag">Redis</span>
                     </div>
                 </article>
             </div>
         </section>
 
-        <section id="contact" style="padding-bottom: 8rem;">
-            <h2>Let's Connect</h2>
-            <p>
-                I am currently open to consulting work or new opportunities. 
-                If you are looking for a partner to turn data into insight, get in touch.
-            </p>
-            <div class="contact-links">
-                <a href="mailto:your@email.com" aria-label="Email">Email</a>
-                <a href="#" aria-label="GitHub">GitHub</a>
-                <a href="#" aria-label="LinkedIn">LinkedIn</a>
-                <a href="#" aria-label="Twitter">X / Twitter</a>
+        <footer class="container">
+            <div class="footer-grid">
+                <div>
+                    <h2 style="margin-bottom: 20px;">Let's Build.</h2>
+                    <p style="color: var(--text-muted); max-width: 300px;">
+                        Open for high-level architectural consulting and backend development.
+                    </p>
+                </div>
+                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end;">
+                    <a href="mailto:kalppariya@gmail.com" class="social-link">kalppariya@gmail.com</a>
+                    <a href="https://github.com/k4lp" class="social-link">github.com/k4lp</a>
+                </div>
             </div>
-        </section>
+            <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-code);">
+                © 2025 KALP PARIYA. SYSTEM NORMAL.
+            </div>
+        </footer>
     </main>
 
-    <footer>
-        <p>&copy; 2024 Your Name. All rights reserved.</p>
-    </footer>
-
     <script>
-        // Smooth Reveal on Scroll
-        const observerOptions = {
-            threshold: 0.1
-        };
+        // --- CANVAS PARTICLE NETWORK ---
+        // This creates the "Architectural" nodes and connections effect
+        const canvas = document.getElementById('canvas-container');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, observerOptions);
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
 
-        document.querySelectorAll('section').forEach(section => {
-            observer.observe(section);
-        });
-
-        // Dynamic Title Interaction (Optional refinement)
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                document.title = "Come back soon!";
-            } else {
-                document.title = "Portfolio | Modern & Sleek";
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2;
             }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+            }
+
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            // Calculate number of particles based on screen size (Architecture needs optimization)
+            const particleCount = Math.floor((width * height) / 15000); 
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                // Draw connections (The "Network")
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 100) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - distance/1000})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            initParticles();
         });
+
+        resize();
+        initParticles();
+        animate();
     </script>
 </body>
 </html>
