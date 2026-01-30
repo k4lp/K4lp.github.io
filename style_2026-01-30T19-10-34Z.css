@@ -1,0 +1,115 @@
+/* UNSMP Pilot Client Styles
+   Session: 2026-01-30T19-10-34Z */
+
+:root {
+  --bg: #0b0f14;
+  --card: #131a22;
+  --text: #e6edf3;
+  --muted: #9fb1c5;
+  --accent: #2f81f7;
+  --danger: #f85149;
+  --border: #1f2a36;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #0f141b;
+  border-bottom: 1px solid var(--border);
+}
+
+h1 { margin: 0; font-size: 20px; }
+.subtitle { color: var(--muted); font-size: 12px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.card.full {
+  grid-column: 1 / -1;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+input, textarea, select {
+  width: 100%;
+  margin-top: 6px;
+  background: #0f141b;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.footer {
+  padding: 16px;
+  text-align: center;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: #0f141b;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  min-height: 120px;
+}
