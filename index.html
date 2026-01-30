@@ -3,16 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>UNSMP Pilot Client (2026-01-30T19-10-34Z)</title>
-  <link rel="stylesheet" href="style_2026-01-30T19-10-34Z.css" />
+  <title>UNSMP Pilot Client</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
     <div>
       <h1>UNSMP Pilot Client</h1>
-      <div class="subtitle">Session: 2026-01-30T19-10-34Z • Local-only test UI</div>
+      <div class="subtitle">Simple test UI (browser-only) • No external libraries</div>
     </div>
-    <button id="clearStorageBtn" class="danger">Clear Storage</button>
+    <div class="row">
+      <button id="toggleModeBtn" class="ghost">Mode: Server</button>
+      <button id="clearStorageBtn" class="danger">Clear Storage</button>
+    </div>
   </header>
 
   <main class="grid">
@@ -21,13 +24,51 @@
       <label>Base URL
         <input id="baseUrl" placeholder="https://localhost:7089" />
       </label>
-      <label>User Id Hash (hex)
+      <label>Active UserIdHash (hex)
         <input id="userIdHash" placeholder="32 hex chars" />
       </label>
       <div class="row">
         <button id="saveSettingsBtn">Save Settings</button>
         <button id="loadSettingsBtn" class="ghost">Load Settings</button>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Identity & Keys</h2>
+      <div class="note">
+        Browser cannot generate ML-DSA / ML-KEM keys natively. The “Generate Demo Keys” button creates random
+        placeholders for offline testing and export. For real server calls, use externally generated PQC keys
+        and signatures.
+      </div>
+      <div class="row">
+        <button id="generateDemoKeysBtn">Generate Demo Keys</button>
+        <button id="exportKeysBtn" class="ghost">Export Keys JSON</button>
+      </div>
+      <label>IK Public (base64)
+        <textarea id="ikPublic" rows="2"></textarea>
+      </label>
+      <label>IK Private (base64)
+        <textarea id="ikPrivate" rows="2"></textarea>
+      </label>
+      <label>SPK Public (base64)
+        <textarea id="spkPublic" rows="2"></textarea>
+      </label>
+      <label>SPK Signature (base64)
+        <textarea id="spkSignature" rows="2"></textarea>
+      </label>
+      <label>SPK Timestamp (unix ms)
+        <input id="spkTimestamp" />
+      </label>
+      <label>SPK Expiry (unix ms)
+        <input id="spkExpiry" />
+      </label>
+      <label>OPK Pool (JSON array)
+        <textarea id="opkPool" rows="4" placeholder='[{"opk_id_hash":"...","opk_public":"..."}]'></textarea>
+      </label>
+      <label>Registration Bundle Signature (base64)
+        <textarea id="bundleSignature" rows="2"></textarea>
+      </label>
+      <button id="registerBtn">Register (one click)</button>
     </section>
 
     <section class="card">
@@ -46,7 +87,61 @@
         <button id="genNonceBtn" class="ghost">Generate Nonce</button>
       </div>
       <div class="note">
-        Signature uses IK private key: SHAKE256(canonical_string, 512 bits).
+        Signed requests are required for inbox, key bundle, opk-count, and message submit.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Send Message</h2>
+      <label>Protocol Version
+        <input id="sendProtocolVersion" value="UNSMP/1.0" />
+      </label>
+      <label>Message Type
+        <select id="sendMessageType">
+          <option>INITIAL</option>
+          <option selected>RATCHET</option>
+        </select>
+      </label>
+      <label>Client Timestamp (ISO-8601)
+        <input id="sendTimestamp" placeholder="2026-01-30T19:00:00Z" />
+      </label>
+      <label>Receiver UserIdHash
+        <input id="sendReceiverIdHash" placeholder="32 hex chars" />
+      </label>
+      <label>Message (plain text for demo)
+        <textarea id="sendMessageText" rows="3" placeholder="Hello..."></textarea>
+      </label>
+      <label>Encrypted Payload (base64)
+        <textarea id="sendEncryptedPayload" rows="3" placeholder="Paste real encrypted payload here"></textarea>
+      </label>
+      <label>Message Signature (base64)
+        <textarea id="sendMessageSignature" rows="2"></textarea>
+      </label>
+      <div class="row">
+        <button id="buildEnvelopeBtn" class="ghost">Build Envelope JSON</button>
+        <button id="sendMessageBtn">Send Message</button>
+      </div>
+      <label>Envelope JSON (auto)
+        <textarea id="sendEnvelopeJson" rows="6"></textarea>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Inbox</h2>
+      <label>ReceiverIdHash
+        <input id="inboxUserIdHash" placeholder="32 hex chars" />
+      </label>
+      <button id="inboxBtn">Get Inbox</button>
+    </section>
+
+    <section class="card">
+      <h2>Key Bundle + OPK</h2>
+      <label>Target UserIdHash
+        <input id="bundleUserIdHash" placeholder="32 hex chars" />
+      </label>
+      <div class="row">
+        <button id="bundleBtn">Get Key Bundle</button>
+        <button id="opkBtn" class="ghost">OPK Count</button>
       </div>
     </section>
 
@@ -59,12 +154,12 @@
         </select>
       </label>
       <label>Path
-        <input id="canonPath" placeholder="/api/messages/inbox" />
+        <input id="canonPath" placeholder="/api/messages/submit" />
       </label>
-      <label>Query (e.g., receiverIdHash=...)
+      <label>Query
         <input id="canonQuery" placeholder="receiverIdHash=..." />
       </label>
-      <label>Body (raw JSON or empty)
+      <label>Body (raw JSON)
         <textarea id="canonBody" rows="4"></textarea>
       </label>
       <label>Body Hash (SHAKE256 hex)
@@ -80,50 +175,10 @@
     </section>
 
     <section class="card">
-      <h2>Register User</h2>
-      <label>Registration JSON (body)
-        <textarea id="registerBody" rows="6" placeholder='{"bundle": {...}, "signature":"..."}'></textarea>
-      </label>
-      <button id="registerBtn">POST /api/auth/register</button>
-    </section>
-
-    <section class="card">
-      <h2>Get Key Bundle</h2>
-      <label>Target UserIdHash
-        <input id="bundleUserIdHash" placeholder="32 hex chars" />
-      </label>
-      <button id="bundleBtn">GET /api/auth/users/{userIdHash}/keys</button>
-    </section>
-
-    <section class="card">
-      <h2>OPK Count</h2>
-      <label>UserIdHash
-        <input id="opkUserIdHash" placeholder="32 hex chars" />
-      </label>
-      <button id="opkBtn">GET /api/auth/users/{userIdHash}/opk-count</button>
-    </section>
-
-    <section class="card">
-      <h2>Submit Message</h2>
-      <label>Message JSON (body)
-        <textarea id="messageBody" rows="6" placeholder='{"protocol_version":"UNSMP/1.0", ...}'></textarea>
-      </label>
-      <button id="messageBtn">POST /api/messages/submit</button>
-    </section>
-
-    <section class="card">
-      <h2>Inbox</h2>
-      <label>ReceiverIdHash
-        <input id="inboxUserIdHash" placeholder="32 hex chars" />
-      </label>
-      <button id="inboxBtn">GET /api/messages/inbox</button>
-    </section>
-
-    <section class="card">
       <h2>Transparency</h2>
       <div class="row">
-        <button id="sthBtn">GET /api/transparency/sth</button>
-        <button id="entriesBtn" class="ghost">GET /api/transparency/entries</button>
+        <button id="sthBtn">Get STH</button>
+        <button id="entriesBtn" class="ghost">Get Entries</button>
       </div>
       <label>Entries Range (start,end)
         <input id="entriesRange" placeholder="1,100" />
@@ -131,11 +186,11 @@
       <label>Proof by MessageId
         <input id="proofMessageId" placeholder="GUID" />
       </label>
-      <button id="proofBtn">GET /api/transparency/proof/{messageId}</button>
+      <button id="proofBtn">Get Proof</button>
       <label>Verify Range (start,end)
         <input id="verifyRange" placeholder="1,100" />
       </label>
-      <button id="verifyBtn" class="ghost">GET /api/transparency/verify</button>
+      <button id="verifyBtn" class="ghost">Verify Hash Chain</button>
     </section>
 
     <section class="card full">
@@ -145,9 +200,9 @@
   </main>
 
   <footer class="footer">
-    All data stored in browser localStorage. No network libraries used.
+    All data stored in browser localStorage. Demo keys are placeholders unless you paste real PQC keys.
   </footer>
 
-  <script src="app_2026-01-30T19-10-34Z.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
