@@ -3,206 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>UNSMP Pilot Client</title>
+  <title>A Message for Peace</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>UNSMP Pilot Client</h1>
-      <div class="subtitle">Simple test UI (browser-only) • No external libraries</div>
-    </div>
-    <div class="row">
-      <button id="toggleModeBtn" class="ghost">Mode: Server</button>
-      <button id="clearStorageBtn" class="danger">Clear Storage</button>
-    </div>
-  </header>
+  <div class="letter-container">
+    <header class="letter-header">
+      <h1>An Open Letter to the World</h1>
+    </header>
 
-  <main class="grid">
-    <section class="card">
-      <h2>Server Settings</h2>
-      <label>Base URL
-        <input id="baseUrl" placeholder="https://localhost:7089" />
-      </label>
-      <label>Active UserIdHash (hex)
-        <input id="userIdHash" placeholder="32 hex chars" />
-      </label>
-      <div class="row">
-        <button id="saveSettingsBtn">Save Settings</button>
-        <button id="loadSettingsBtn" class="ghost">Load Settings</button>
+    <main class="letter-body">
+      <p>To whom it may concern,</p>
+
+      <p>In the grand tapestry of human existence, we are but fragile threads woven together across time and space. Yet, so often, we focus on the borders that divide us rather than the shared humanity that unites us.</p>
+
+      <p>Peace is not merely the absence of conflict; it is the active presence of understanding, compassion, and a shared commitment to the flourishing of all life. It is the quiet strength found in extending a hand instead of a fist, in listening to understand rather than simply to reply.</p>
+
+      <p>Let us strive to build a world where our differences are celebrated as variations of a single melody. Where the echoes of our past struggles inform a future of collective harmony. Every act of kindness, no matter how small, sends a ripple across the waters of our shared destiny.</p>
+
+      <p>May we have the courage to choose empathy over apathy, love over fear, and peace over strife.</p>
+    </main>
+
+    <footer class="letter-footer">
+      <div class="signature">
+        <p>With enduring hope,</p>
+        <p class="signatory">Citizens of Earth</p>
       </div>
-    </section>
-
-    <section class="card">
-      <h2>Identity & Keys</h2>
-      <div class="note">
-        Browser cannot generate ML-DSA / ML-KEM keys natively. The “Generate Demo Keys” button creates random
-        placeholders for offline testing and export. For real server calls, use externally generated PQC keys
-        and signatures.
-      </div>
-      <div class="row">
-        <button id="generateDemoKeysBtn">Generate Demo Keys</button>
-        <button id="exportKeysBtn" class="ghost">Export Keys JSON</button>
-      </div>
-      <label>IK Public (base64)
-        <textarea id="ikPublic" rows="2"></textarea>
-      </label>
-      <label>IK Private (base64)
-        <textarea id="ikPrivate" rows="2"></textarea>
-      </label>
-      <label>SPK Public (base64)
-        <textarea id="spkPublic" rows="2"></textarea>
-      </label>
-      <label>SPK Signature (base64)
-        <textarea id="spkSignature" rows="2"></textarea>
-      </label>
-      <label>SPK Timestamp (unix ms)
-        <input id="spkTimestamp" />
-      </label>
-      <label>SPK Expiry (unix ms)
-        <input id="spkExpiry" />
-      </label>
-      <label>OPK Pool (JSON array)
-        <textarea id="opkPool" rows="4" placeholder='[{"opk_id_hash":"...","opk_public":"..."}]'></textarea>
-      </label>
-      <label>Registration Bundle Signature (base64)
-        <textarea id="bundleSignature" rows="2"></textarea>
-      </label>
-      <button id="registerBtn">Register (one click)</button>
-    </section>
-
-    <section class="card">
-      <h2>Auth Headers</h2>
-      <label>X-Timestamp (unix ms)
-        <input id="xTimestamp" />
-      </label>
-      <label>X-Nonce
-        <input id="xNonce" />
-      </label>
-      <label>X-Signature (base64)
-        <textarea id="xSignature" rows="3"></textarea>
-      </label>
-      <div class="row">
-        <button id="genTimestampBtn">Generate Timestamp</button>
-        <button id="genNonceBtn" class="ghost">Generate Nonce</button>
-      </div>
-      <div class="note">
-        Signed requests are required for inbox, key bundle, opk-count, and message submit.
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Send Message</h2>
-      <label>Protocol Version
-        <input id="sendProtocolVersion" value="UNSMP/1.0" />
-      </label>
-      <label>Message Type
-        <select id="sendMessageType">
-          <option>INITIAL</option>
-          <option selected>RATCHET</option>
-        </select>
-      </label>
-      <label>Client Timestamp (ISO-8601)
-        <input id="sendTimestamp" placeholder="2026-01-30T19:00:00Z" />
-      </label>
-      <label>Receiver UserIdHash
-        <input id="sendReceiverIdHash" placeholder="32 hex chars" />
-      </label>
-      <label>Message (plain text for demo)
-        <textarea id="sendMessageText" rows="3" placeholder="Hello..."></textarea>
-      </label>
-      <label>Encrypted Payload (base64)
-        <textarea id="sendEncryptedPayload" rows="3" placeholder="Paste real encrypted payload here"></textarea>
-      </label>
-      <label>Message Signature (base64)
-        <textarea id="sendMessageSignature" rows="2"></textarea>
-      </label>
-      <div class="row">
-        <button id="buildEnvelopeBtn" class="ghost">Build Envelope JSON</button>
-        <button id="sendMessageBtn">Send Message</button>
-      </div>
-      <label>Envelope JSON (auto)
-        <textarea id="sendEnvelopeJson" rows="6"></textarea>
-      </label>
-    </section>
-
-    <section class="card">
-      <h2>Inbox</h2>
-      <label>ReceiverIdHash
-        <input id="inboxUserIdHash" placeholder="32 hex chars" />
-      </label>
-      <button id="inboxBtn">Get Inbox</button>
-    </section>
-
-    <section class="card">
-      <h2>Key Bundle + OPK</h2>
-      <label>Target UserIdHash
-        <input id="bundleUserIdHash" placeholder="32 hex chars" />
-      </label>
-      <div class="row">
-        <button id="bundleBtn">Get Key Bundle</button>
-        <button id="opkBtn" class="ghost">OPK Count</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Canonical String Builder</h2>
-      <label>Method
-        <select id="canonMethod">
-          <option>GET</option>
-          <option>POST</option>
-        </select>
-      </label>
-      <label>Path
-        <input id="canonPath" placeholder="/api/messages/submit" />
-      </label>
-      <label>Query
-        <input id="canonQuery" placeholder="receiverIdHash=..." />
-      </label>
-      <label>Body (raw JSON)
-        <textarea id="canonBody" rows="4"></textarea>
-      </label>
-      <label>Body Hash (SHAKE256 hex)
-        <input id="canonBodyHash" placeholder="Paste SHAKE256(body) hex here" />
-      </label>
-      <label>Canonical String
-        <textarea id="canonOutput" rows="6" readonly></textarea>
-      </label>
-      <div class="row">
-        <button id="buildCanonicalBtn">Build Canonical String</button>
-        <button id="copyCanonicalBtn" class="ghost">Copy</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Transparency</h2>
-      <div class="row">
-        <button id="sthBtn">Get STH</button>
-        <button id="entriesBtn" class="ghost">Get Entries</button>
-      </div>
-      <label>Entries Range (start,end)
-        <input id="entriesRange" placeholder="1,100" />
-      </label>
-      <label>Proof by MessageId
-        <input id="proofMessageId" placeholder="GUID" />
-      </label>
-      <button id="proofBtn">Get Proof</button>
-      <label>Verify Range (start,end)
-        <input id="verifyRange" placeholder="1,100" />
-      </label>
-      <button id="verifyBtn" class="ghost">Verify Hash Chain</button>
-    </section>
-
-    <section class="card full">
-      <h2>Response Log</h2>
-      <pre id="responseLog"></pre>
-    </section>
-  </main>
-
-  <footer class="footer">
-    All data stored in browser localStorage. Demo keys are placeholders unless you paste real PQC keys.
-  </footer>
-
-  <script src="app.js"></script>
+    </footer>
+  </div>
 </body>
 </html>
