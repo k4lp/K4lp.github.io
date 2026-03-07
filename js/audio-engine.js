@@ -39,13 +39,28 @@ class BinauralAudioEngine {
   /**
    * Initializes the AudioContext and builds the routing graph.
    * Browsers require audio contexts to be created ONLY after a user gesture (like clicking a button).
+   *
+   * @param {Object} options - Configuration options for the AudioContext
    */
-  initialize() {
-    if (this.audioContext) return; // Only initialize once
+  initialize(options = {}) {
+    if (this.audioContext) return; // Only initialize once if it exists
 
     // Fallback for older Safari
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    this.audioContext = new AudioContextClass();
+
+    // Setup high quality options prioritizing playback smoothness
+    const contextOptions = { latencyHint: 'playback' };
+
+    if (options.sampleRate && options.sampleRate !== 'default') {
+      contextOptions.sampleRate = parseInt(options.sampleRate, 10);
+    }
+
+    try {
+      this.audioContext = new AudioContextClass(contextOptions);
+    } catch (e) {
+      console.warn("Requested sample rate not supported, falling back to default.", e);
+      this.audioContext = new AudioContextClass(); // Fallback if hardware rejects 192kHz
+    }
 
     // 1. Create the master volume control
     this.nodes.masterGain = this.audioContext.createGain();
@@ -171,6 +186,38 @@ class BinauralAudioEngine {
 
     if (this.nodes[channelSide].oscillator) {
       this.nodes[channelSide].oscillator.type = waveType;
+    }
+  }
+
+  /**
+   * Re-instantiates the AudioContext to change the sample rate (engine fidelity).
+   * It gracefully stops the audio, destroys the context, rebuilds it, and resumes.
+   *
+   * @param {string} sampleRate - 'default', '96000', or '192000'
+   */
+  async setFidelity(sampleRate) {
+    const wasPlaying = this.isPlaying;
+
+    // 1. Gracefully fade out
+    if (wasPlaying) {
+      this.stop();
+      // Wait for fade out to complete (0.1s + buffer)
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+
+    // 2. Destroy the existing context
+    if (this.audioContext) {
+      await this.audioContext.close();
+      this.audioContext = null;
+    }
+
+    // 3. Re-initialize with new settings.
+    // This will use this.state to rebuild the oscillators exactly as they were.
+    this.initialize({ sampleRate });
+
+    // 4. Resume if needed
+    if (wasPlaying) {
+      this.play();
     }
   }
 

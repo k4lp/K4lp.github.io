@@ -14,6 +14,7 @@ class GeneratorUIController {
     this.elements = {
       masterPlayBtn: document.getElementById('master-play-btn'),
       masterPlayBtnText: document.querySelector('#master-play-btn .btn-text'),
+      fidelityBtns: document.querySelectorAll('.fidelity-btn'),
 
       left: {
         volumeSlider: document.getElementById('left-volume'),
@@ -46,9 +47,10 @@ class GeneratorUIController {
   }
 
   /**
-   * Binds the giant "Initiate Sound" button.
+   * Binds the giant "Initiate Sound" button and fidelity toggles.
    */
   _setupMasterControls() {
+    // 1. Play Button
     this.elements.masterPlayBtn.addEventListener('click', () => {
       // Toggle playback in the engine, which returns the new state
       const isNowPlaying = this.audioEngine.togglePlayback();
@@ -61,6 +63,31 @@ class GeneratorUIController {
         this.elements.masterPlayBtn.classList.remove('playing');
         this.elements.masterPlayBtnText.textContent = 'Initiate Sound';
       }
+    });
+
+    // 2. Fidelity (Sample Rate) Selection
+    this.elements.fidelityBtns.forEach(btn => {
+      btn.addEventListener('click', async (event) => {
+        // Prevent clicking if this button is already active
+        if (btn.classList.contains('active')) return;
+
+        // Visual update
+        this.elements.fidelityBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Disable all buttons while transition happens to prevent race conditions
+        this.elements.fidelityBtns.forEach(b => b.disabled = true);
+
+        const rate = btn.getAttribute('data-rate');
+
+        try {
+          // Tell the engine to re-initialize with the new sample rate
+          await this.audioEngine.setFidelity(rate);
+        } finally {
+          // Re-enable buttons once transition is complete (or if it fails)
+          this.elements.fidelityBtns.forEach(b => b.disabled = false);
+        }
+      });
     });
   }
 
