@@ -12,9 +12,12 @@ class GeneratorUIController {
 
     // Cache our main DOM elements so we don't have to repeatedly search the page
     this.elements = {
+      appFooter: document.getElementById('app-footer'),
       masterPlayBtn: document.getElementById('master-play-btn'),
       masterPlayBtnText: document.querySelector('#master-play-btn .btn-text'),
       fidelityBtns: document.querySelectorAll('.fidelity-btn'),
+      drawerToggleBtn: document.getElementById('drawer-toggle-btn'),
+      advancedDrawer: document.getElementById('advanced-drawer'),
 
       left: {
         volumeSlider: document.getElementById('left-volume'),
@@ -41,9 +44,28 @@ class GeneratorUIController {
    * Called once on startup.
    */
   initialize() {
+    this._setupLayoutObservers();
     this._setupMasterControls();
     this._setupChannelControls('left');
     this._setupChannelControls('right');
+  }
+
+  /**
+   * Initializes the ResizeObserver to ensure the fixed footer never overlays content.
+   * This professionally handles any device sizes or dynamic drawer expansions.
+   */
+  _setupLayoutObservers() {
+    if (!window.ResizeObserver) return; // Graceful fallback for ancient browsers
+
+    const footerObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        // Update the CSS variable with the exact pixel height of the footer
+        const height = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : entry.contentRect.height;
+        document.documentElement.style.setProperty('--footer-height', `${height + 20}px`); // +20px breathing room
+      }
+    });
+
+    footerObserver.observe(this.elements.appFooter);
   }
 
   /**
@@ -65,7 +87,13 @@ class GeneratorUIController {
       }
     });
 
-    // 2. Fidelity (Sample Rate) Selection
+    // 2. Drawer Toggle
+    this.elements.drawerToggleBtn.addEventListener('click', () => {
+      this.elements.advancedDrawer.classList.toggle('expanded');
+      this.elements.drawerToggleBtn.classList.toggle('expanded');
+    });
+
+    // 3. Fidelity (Sample Rate) Selection
     this.elements.fidelityBtns.forEach(btn => {
       btn.addEventListener('click', async (event) => {
         // Prevent clicking if this button is already active
