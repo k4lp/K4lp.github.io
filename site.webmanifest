@@ -1,0 +1,21 @@
+{
+  "name": "Kalp Pariya | .NET Architect",
+  "short_name": "Kalp Pariya",
+  "description": "Expert .NET Developer and Software Architect in Ahmedabad and Surat.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eae7dc",
+  "theme_color": "#b59c72",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
