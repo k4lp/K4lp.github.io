@@ -32,10 +32,10 @@ body {
   justify-content: center;
 }
 
+/* Ensure original app-container padding is completely replaced, not duplicated */
 .app-container {
   max-width: 500px;
   width: 100%;
-  padding-bottom: 120px; /* space for fixed footer */
 }
 
 /* Typography & Headers */
@@ -248,6 +248,12 @@ input[type=range]::-webkit-slider-runnable-track {
 }
 
 /* Fixed Footer & Master Play Button */
+.app-container {
+  max-width: 500px;
+  width: 100%;
+  padding-bottom: 200px; /* Increased space for taller fixed footer */
+}
+
 .app-footer {
   position: fixed;
   bottom: 0;
@@ -285,6 +291,48 @@ input[type=range]::-webkit-slider-runnable-track {
 .play-btn.playing {
   background-color: var(--accent);
   color: #fff;
+}
+
+/* Fidelity Group Controls */
+.fidelity-group {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-color);
+  text-align: left;
+}
+
+.fidelity-group .control-label {
+  text-align: center;
+  font-size: 0.75rem;
+  margin-bottom: 8px;
+}
+
+.fidelity-selector {
+  display: flex;
+  gap: 8px;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 30px;
+}
+
+.fidelity-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 8px 5px;
+  border-radius: 20px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fidelity-btn.active {
+  background-color: var(--text-main);
+  color: var(--bg);
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .warning-text {

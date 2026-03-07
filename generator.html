@@ -87,6 +87,15 @@
         <button id="master-play-btn" class="play-btn">
           <span class="btn-text">Initiate Sound</span>
         </button>
+
+        <div class="fidelity-group">
+          <label class="control-label">Engine Fidelity (Sample Rate)</label>
+          <div class="fidelity-selector">
+            <button class="fidelity-btn active" data-rate="default" title="Standard Quality">Standard</button>
+            <button class="fidelity-btn" data-rate="96000" title="High-Resolution Audio">96kHz</button>
+            <button class="fidelity-btn" data-rate="192000" title="Audiophile Quality (If Supported)">192kHz</button>
+          </div>
+        </div>
       </div>
       <p class="warning-text">Use headphones for binaural effect. Keep volume moderate.</p>
     </footer>
