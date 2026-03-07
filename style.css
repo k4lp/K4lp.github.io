@@ -1,114 +1,132 @@
 :root {
-  --bg: #0b0f14;
-  --card: #131a22;
-  --text: #e6edf3;
-  --muted: #9fb1c5;
-  --accent: #2f81f7;
-  --danger: #f85149;
-  --border: #1f2a36;
+  --bg: #eae7dc;
+  --text-main: #2b2b2b;
+  --text-muted: #5a5a5a;
+  --accent: #d8c3a5;
+  --border-light: rgba(0, 0, 0, 0.05);
+
+  --font-heading: 'Cinzel', serif;
+  --font-body: 'Lora', serif;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.topbar {
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  color: var(--text-main);
+  line-height: 1.8;
+  font-size: 16px;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  padding: 16px 20px;
-  background: #0f141b;
-  border-bottom: 1px solid var(--border);
-  gap: 12px;
+  min-height: 100vh;
+  padding: 20px;
 }
 
-h1 { margin: 0; font-size: 20px; }
-.subtitle { color: var(--muted); font-size: 12px; }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
-  padding: 16px;
-}
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-}
-
-.card.full {
-  grid-column: 1 / -1;
-}
-
-label {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-
-input, textarea, select {
+.letter-container {
+  background-color: #fdfdfc; /* Slightly brighter than bg for contrast */
+  max-width: 650px;
   width: 100%;
-  margin-top: 6px;
-  background: #0f141b;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px;
+  padding: 40px 30px;
+  border-radius: 4px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+  position: relative;
+  /* subtle texture feel */
+  background-image: linear-gradient(to right, rgba(255,255,255,0.01) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.01) 1px, transparent 1px);
 }
 
-button {
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
+/* Add a delicate border line inside the letter */
+.letter-container::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  bottom: 15px;
+  border: 1px solid var(--accent);
+  pointer-events: none;
+  opacity: 0.6;
 }
 
-button.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
-button.danger {
-  background: var(--danger);
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.note {
-  margin: 8px 0 12px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.footer {
-  padding: 16px;
+.letter-header {
   text-align: center;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 20px;
 }
 
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  background: #0f141b;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  min-height: 120px;
+h1 {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-main);
+  text-transform: uppercase;
+}
+
+.letter-body {
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1; /* Keep text above the pseudo border */
+}
+
+.letter-body p {
+  margin-bottom: 1.5rem;
+  color: #3d3d3d;
+}
+
+.letter-body p:first-of-type {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.letter-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 50px;
+  position: relative;
+  z-index: 1;
+}
+
+.signature {
+  text-align: right;
+}
+
+.signature p {
+  margin-bottom: 5px;
+  color: var(--text-muted);
+}
+
+.signature .signatory {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-top: 15px;
+  letter-spacing: 1px;
+}
+
+/* Mobile First Adjustments */
+@media (min-width: 768px) {
+  body {
+    padding: 40px;
+    font-size: 18px;
+  }
+
+  .letter-container {
+    padding: 60px 80px;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    letter-spacing: 3px;
+  }
 }
