@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gemini Multi-Talk</title>
+  <meta name="description" content="Multi-candidate Gemini conversation lab with API key rotation, reasoning export, and turn-by-turn observation." />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/chat.css" />
+  <link rel="stylesheet" href="css/settings.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <h1>Gemini Multi-Talk</h1>
+        <div class="sub">Multi-candidate · turn-by-turn · key rotation · <span id="app-version"></span></div>
+      </div>
+
+      <div class="hud" aria-live="polite">
+        <span class="hud-chip" id="session-status" data-state="idle">idle</span>
+        <span class="hud-chip"><strong id="hud-keys">0/0 keys</strong></span>
+        <span class="hud-chip"><strong id="hud-turns">0/0 turns</strong></span>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn" id="btn-settings">Settings</button>
+        <button type="button" class="btn btn-primary" id="btn-start">Start</button>
+        <button type="button" class="btn" id="btn-pause" disabled>Pause</button>
+        <button type="button" class="btn btn-danger" id="btn-stop" disabled>Stop</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="tabs" role="tablist">
+            <button type="button" class="active" data-tab="chat">Conversation</button>
+            <button type="button" data-tab="observer">Observer log</button>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn btn-xs" id="btn-export-json" title="Full JSON incl. reasoning + events">Export JSON</button>
+            <button type="button" class="btn btn-xs" id="btn-export-md">Export MD</button>
+            <button type="button" class="btn btn-xs" id="btn-export-chat">Chat only</button>
+            <button type="button" class="btn btn-xs" id="btn-export-reasoning">Reasoning</button>
+            <button type="button" class="btn btn-xs" id="btn-export-events">Events</button>
+            <button type="button" class="btn btn-xs" id="btn-clear-log">Clear log</button>
+          </div>
+        </div>
+
+        <div class="pane active" data-pane="chat">
+          <div id="chat-stream" aria-label="Conversation transcript"></div>
+        </div>
+        <div class="pane" data-pane="observer">
+          <div id="event-log" aria-label="Observability event stream"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>Static client — keys stay in your browser (optional localStorage).</span>
+      <span>
+        API: <code class="mono">generativelanguage.googleapis.com/v1beta</code>
+        · <a href="docs/ARCHITECTURE.md">Architecture</a>
+        · <a href="README.md">README</a>
+      </span>
+    </footer>
+  </div>
+
+  <!-- Settings drawer -->
+  <div id="settings-backdrop"></div>
+  <aside id="settings-panel" aria-hidden="true" aria-label="Settings">
+    <div class="settings-head">
+      <h2>Settings</h2>
+      <button type="button" class="btn btn-xs" id="btn-settings-close">Close</button>
+    </div>
+    <div class="settings-body">
+      <section class="settings-section">
+        <h3>Gemini API keys</h3>
+        <p class="muted" style="margin-top:0;font-size:0.85rem">
+          Paste many keys (one per line, or comma-separated). The rotator picks healthy keys and backs off on 429 / invalid.
+        </p>
+        <label class="field">
+          <span>Keys</span>
+          <textarea id="keys-textarea" class="input" placeholder="AIza...&#10;AIza..."></textarea>
+        </label>
+        <div class="key-actions">
+          <button type="button" class="btn btn-primary btn-xs" id="btn-apply-keys">Apply keys</button>
+          <button type="button" class="btn btn-xs" id="btn-reset-key-status">Reset statuses</button>
+          <button type="button" class="btn btn-xs" id="btn-refresh-models">Refresh model catalogue</button>
+        </div>
+        <p class="muted" id="keys-summary" style="font-size:0.8rem;margin:0.25rem 0 0.5rem"></p>
+        <div id="keys-status-list"></div>
+        <label class="check" style="margin-top:0.6rem">
+          <input type="checkbox" id="opt-persist-keys" checked />
+          <span>Persist keys in localStorage</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h3>Rotation &amp; limits</h3>
+        <div class="grid-2">
+          <label class="field">
+            <span>Strategy</span>
+            <select id="opt-rotation" class="input">
+              <option value="healthy_first">Healthy first</option>
+              <option value="round_robin">Round robin</option>
+              <option value="least_used">Least used</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Rate-limit cooldown (sec)</span>
+            <input id="opt-cooldown" class="input" type="number" min="5" step="1" value="60" />
+          </label>
+          <label class="field">
+            <span>Max speaker turns</span>
+            <input id="opt-max-turns" class="input" type="number" min="1" step="1" value="12" />
+          </label>
+          <label class="field">
+            <span>Inter-turn delay (ms)</span>
+            <input id="opt-turn-delay" class="input" type="number" min="0" step="50" value="400" />
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Generation &amp; thinking</h3>
+        <div class="grid-2">
+          <label class="field">
+            <span>Max output tokens</span>
+            <input id="opt-max-tokens" class="input" type="number" min="256" step="64" value="2048" />
+          </label>
+          <label class="field">
+            <span>Top P</span>
+            <input id="opt-top-p" class="input" type="number" min="0" max="1" step="0.01" value="0.95" />
+          </label>
+          <label class="field">
+            <span>Thinking level</span>
+            <select id="opt-thinking-level" class="input">
+              <option value="">(omit)</option>
+              <option value="minimal">minimal</option>
+              <option value="low">low</option>
+              <option value="medium" selected>medium</option>
+              <option value="high">high</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Thinking budget (0=omit)</span>
+            <input id="opt-thinking-budget" class="input" type="number" min="0" step="256" value="0" />
+          </label>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="opt-include-thoughts" checked />
+          <span>Include thought summaries in responses</span>
+        </label>
+        <label class="check" style="margin-top:0.4rem;display:flex">
+          <input type="checkbox" id="opt-auto-scroll" checked />
+          <span>Auto-scroll conversation</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-head-row">
+          <h3>Seed topic (moderator)</h3>
+          <div class="section-reset-actions">
+            <button type="button" class="btn btn-xs" id="btn-reset-seed" title="Restore default seed topic">Reset seed</button>
+            <button type="button" class="btn btn-xs" id="btn-reset-addendum" title="Clear addendum">Reset addendum</button>
+          </div>
+        </div>
+        <label class="field">
+          <span>Opening context shown to all candidates (editable)</span>
+          <textarea id="opt-seed" class="input" rows="4"></textarea>
+        </label>
+        <label class="field">
+          <span>Global system addendum (optional, editable)</span>
+          <textarea id="opt-addendum" class="input" rows="2" placeholder="Shared scene details, constraints…"></textarea>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-head-row">
+          <h3>Candidates (Gemini only · ≥3)</h3>
+          <button type="button" class="btn btn-xs" id="btn-reset-candidates" title="Restore Alex / Jordan / Sam defaults">Reset candidates</button>
+        </div>
+        <p class="muted" style="margin-top:0;font-size:0.85rem">
+          Each candidate is a Gemini model role-playing as a human. Names, personas, models, and temperature are fully editable.
+        </p>
+        <div id="candidates-list"></div>
+        <div class="key-actions">
+          <button type="button" class="btn btn-xs" id="btn-add-candidate">+ Add candidate</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-head-row">
+          <h3>Human frame template</h3>
+          <button type="button" class="btn btn-xs" id="btn-reset-human-frame" title="Restore default human-frame system prompt">Reset to default</button>
+        </div>
+        <p class="muted" style="margin-top:0;font-size:0.8rem">
+          Fully editable system prompt. Placeholders: <code>{{NAME}}</code>, <code>{{OTHERS}}</code>, <code>{{PERSONA}}</code>
+        </p>
+        <textarea id="opt-human-frame" class="input" rows="10"></textarea>
+      </section>
+
+      <section class="settings-section">
+        <h3>Factory reset</h3>
+        <p class="muted" style="margin-top:0;font-size:0.85rem">
+          Restore prompts, candidates, generation, and rotation defaults. <strong>API keys are never removed.</strong>
+        </p>
+        <button type="button" class="btn btn-xs danger" id="btn-reset-all-defaults">Reset all prompts &amp; defaults</button>
+      </section>
+    </div>
+    <div class="settings-foot">
+      <button type="button" class="btn" id="btn-settings-close-foot" onclick="document.getElementById('btn-settings-close').click()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-save-settings">Save settings</button>
+    </div>
+  </aside>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
