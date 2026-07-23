@@ -60,18 +60,27 @@ export const DEFAULT_SEED_TOPIC =
 
 export function createDefaultSettings() {
   return {
-    /** @type {string} */
-    rotationStrategy: ROTATION_STRATEGY.HEALTHY_FIRST,
-    /** Default cooldown after HTTP 429 (ms) */
+    /**
+     * Spread load across the pool *before* any key hits quota.
+     * healthy_first piles everything on one key until it dies — bad for pools.
+     * @type {string}
+     */
+    rotationStrategy: ROTATION_STRATEGY.ROUND_ROBIN,
+    /** Default cooldown after short RPM 429 (ms) */
     rateLimitCooldownMs: 60_000,
+    /** Longer park when message says resource/quota exhausted (ms) */
+    quotaCooldownMs: 90_000,
     /** Max consecutive failures before marking a key error */
     maxKeyFailures: 3,
     /** Delay between turns (ms) for readability / rate friendliness */
-    interTurnDelayMs: 400,
+    interTurnDelayMs: 800,
     /** Max completed speaker turns (each person speaking once counts as 1) */
     maxTurns: 12,
-    /** Max retries per turn across different keys */
-    maxRetriesPerTurn: 4,
+    /**
+     * Floor for key attempts per request. Client uses
+     * max(this, enabledKeyCount + 2) so the whole pool is tried.
+     */
+    maxRetriesPerTurn: 8,
     /** Shared generation defaults */
     maxOutputTokens: 2048,
     topP: 0.95,
@@ -156,6 +165,7 @@ export function resetSettingsToDefaults(current = {}, which = { all: true }) {
   if (all || which.rotation) {
     next.rotationStrategy = defaults.rotationStrategy;
     next.rateLimitCooldownMs = defaults.rateLimitCooldownMs;
+    next.quotaCooldownMs = defaults.quotaCooldownMs;
     next.maxKeyFailures = defaults.maxKeyFailures;
   }
 

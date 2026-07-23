@@ -151,9 +151,9 @@ export class ConversationEngine {
       model: candidate.model,
     });
 
-    const maxRetries = settings.maxRetriesPerTurn ?? 4;
-    // temporarily lower client retries? Client already rotates keys.
-    // We wrap once with surface-level error handling.
+    // Key rotation lives inside GeminiClient (full pool pass + cooldown wait).
+    // Outer loop only retries empty responses / rare non-pool failures.
+    const maxRetries = 2;
     let lastErr = null;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -199,8 +199,10 @@ export class ConversationEngine {
           name: candidate.name,
           message: err.message,
           attempt,
+          code: err.code,
         });
-        if (err.code === 'NO_KEYS') break;
+        // Pool already exhausted / all cooling — don't spam more identical attempts
+        if (err.code === 'NO_KEYS' || err.code === 'POOL_EXHAUSTED') break;
       }
     }
 

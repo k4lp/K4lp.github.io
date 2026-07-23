@@ -59,13 +59,17 @@ async function main() {
   };
 
   const keyManager = new KeyManager({
-    strategy: settings.rotationStrategy,
+    strategy: settings.rotationStrategy || 'round_robin',
     rateLimitCooldownMs: settings.rateLimitCooldownMs,
+    quotaCooldownMs: settings.quotaCooldownMs ?? 90_000,
     maxKeyFailures: settings.maxKeyFailures,
   });
   if (settings.persistKeys) keyManager.restore();
 
-  const client = new GeminiClient(keyManager, { maxRetries: settings.maxRetriesPerTurn ?? 4 });
+  const client = new GeminiClient(keyManager, {
+    maxRetries: settings.maxRetriesPerTurn ?? 8,
+    maxCooldownWaitMs: 45_000,
+  });
   const catalogue = new ModelCatalogue(client);
   const engine = new ConversationEngine({ client, getSettings });
 
@@ -83,7 +87,9 @@ async function main() {
       keyManager.configure({
         strategy: settings.rotationStrategy,
         rateLimitCooldownMs: settings.rateLimitCooldownMs,
+        quotaCooldownMs: settings.quotaCooldownMs,
       });
+      client.maxRetries = settings.maxRetriesPerTurn ?? 8;
       updateHud();
     },
   });

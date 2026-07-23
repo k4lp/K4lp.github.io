@@ -278,8 +278,9 @@ export function initSettingsPanel(deps) {
    */
   function readFormIntoSettings() {
     const s = deps.getSettings();
-    s.rotationStrategy = $('#opt-rotation')?.value || ROTATION_STRATEGY.HEALTHY_FIRST;
+    s.rotationStrategy = $('#opt-rotation')?.value || ROTATION_STRATEGY.ROUND_ROBIN;
     s.rateLimitCooldownMs = Number($('#opt-cooldown')?.value) * 1000 || 60_000;
+    s.quotaCooldownMs = Number($('#opt-quota-cooldown')?.value) * 1000 || s.quotaCooldownMs || 90_000;
     s.maxTurns = Number($('#opt-max-turns')?.value) || 12;
     s.interTurnDelayMs = Number($('#opt-turn-delay')?.value) || 400;
     s.maxOutputTokens = Number($('#opt-max-tokens')?.value) || 2048;
@@ -300,6 +301,7 @@ export function initSettingsPanel(deps) {
     deps.keyManager.configure({
       strategy: s.rotationStrategy,
       rateLimitCooldownMs: s.rateLimitCooldownMs,
+      quotaCooldownMs: s.quotaCooldownMs,
     });
     if (persist) deps.keyManager.persist(s.persistKeys);
     deps.onSave?.();
@@ -368,8 +370,13 @@ export function initSettingsPanel(deps) {
   function syncFromState() {
     const s = deps.getSettings();
     if (keysTextarea) keysTextarea.value = deps.keyManager.getTextBlob();
-    if ($('#opt-rotation')) $('#opt-rotation').value = s.rotationStrategy;
+    if ($('#opt-rotation')) {
+      $('#opt-rotation').value = s.rotationStrategy || ROTATION_STRATEGY.ROUND_ROBIN;
+    }
     if ($('#opt-cooldown')) $('#opt-cooldown').value = String((s.rateLimitCooldownMs || 60000) / 1000);
+    if ($('#opt-quota-cooldown')) {
+      $('#opt-quota-cooldown').value = String((s.quotaCooldownMs || 90000) / 1000);
+    }
     if ($('#opt-max-turns')) $('#opt-max-turns').value = String(s.maxTurns);
     if ($('#opt-turn-delay')) $('#opt-turn-delay').value = String(s.interTurnDelayMs);
     if ($('#opt-max-tokens')) $('#opt-max-tokens').value = String(s.maxOutputTokens);

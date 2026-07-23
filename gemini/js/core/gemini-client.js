@@ -2,9 +2,9 @@
  * Thin Gemini v1beta REST client.
  * Uses key manager for rotation; never hardcodes a single key.
  *
- * Endpoints:
- *  - GET  /v1beta/models
- *  - POST /v1beta/models/{model}:generateContent
+ * On quota / resource-exhausted: park that key and immediately try
+ * the next key in the pool until healthy keys are exhausted (then
+ * optionally wait for the soonest cooldown).
  *
  * @module core/gemini-client
  */
@@ -12,6 +12,8 @@
 import { GEMINI_API_BASE, EVENTS } from '../config/constants.js';
 import { bus } from './event-bus.js';
 import { uid } from '../utils/id.js';
+import { sleep } from '../utils/time.js';
+import { isQuotaOrRateLimitError, isAuthError } from './key-manager.js';
 
 /**
  * Normalize model id to `models/xxx` path segment form without double prefix.
@@ -43,11 +45,6 @@ export function parseGenerateResponse(data) {
     }
   }
 
-  // Some responses put thought summaries elsewhere
-  if (!thoughts.length && data?.candidates?.[0]?.citationMetadata) {
-    /* ignore */
-  }
-
   return {
     text: texts.join('\n\n').trim(),
     thoughts: thoughts.join('\n\n').trim(),
@@ -68,20 +65,41 @@ function parseRetryAfter(res) {
   return null;
 }
 
+function shouldRotateToNextKey(status, message) {
+  if (isQuotaOrRateLimitError(status, message)) return true;
+  if (status === 429 || status === 403 || status >= 500) return true;
+  if (status === 400 && /api key|permission|quota|exhausted/i.test(message || '')) return true;
+  // Network / transient
+  if (!status) return true;
+  return false;
+}
+
 export class GeminiClient {
   /**
    * @param {import('./key-manager.js').KeyManager} keyManager
-   * @param {{baseUrl?: string, maxRetries?: number}} [opts]
+   * @param {{baseUrl?: string, maxRetries?: number, maxCooldownWaitMs?: number}} [opts]
    */
   constructor(keyManager, opts = {}) {
     this.keys = keyManager;
     this.baseUrl = opts.baseUrl || GEMINI_API_BASE;
+    /** Floor for attempts; actual = max(this, enabled key count, 1) per cycle */
     this.maxRetries = opts.maxRetries ?? 4;
+    /** How long to wait for a cooling key before giving up (one wait cycle) */
+    this.maxCooldownWaitMs = opts.maxCooldownWaitMs ?? 45_000;
   }
 
   /**
-   * Low-level fetch with key rotation.
-   * @param {string} path  e.g. `/models` or `/models/x:generateContent`
+   * How many keys we should try before waiting on cooldowns.
+   */
+  _attemptBudget() {
+    const n = Math.max(1, this.keys.enabledCount() || this.keys.keys.length || 1);
+    // At least one full pass over every enabled key, plus a couple extras
+    return Math.max(this.maxRetries, n, n + 2);
+  }
+
+  /**
+   * Low-level fetch with key rotation across the whole pool.
+   * @param {string} path
    * @param {{method?: string, body?: object, query?: Record<string,string>}} options
    */
   async request(path, options = {}) {
@@ -89,15 +107,42 @@ export class GeminiClient {
     const excludeIds = [];
     let lastError = null;
     const requestId = uid('req');
+    let waitedOnce = false;
 
-    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
-      const rec = this.keys.selectKey({ excludeIds });
+    const budget = this._attemptBudget();
+
+    for (let attempt = 0; attempt < budget; attempt++) {
+      let rec = this.keys.selectKey({ excludeIds });
+
+      // All healthy keys tried or cooling — wait once for soonest cooldown
       if (!rec) {
+        const waitMs = this.keys.msUntilNextHealthy();
+        if (!waitedOnce && waitMs > 0 && waitMs <= this.maxCooldownWaitMs) {
+          waitedOnce = true;
+          bus.log(
+            `All keys cooling/exhausted — waiting ${Math.ceil(waitMs / 1000)}s for pool…`,
+            'warn'
+          );
+          bus.emit(EVENTS.TOAST, {
+            message: `Keys exhausted — waiting ${Math.ceil(waitMs / 1000)}s then rotating`,
+            level: 'warn',
+          });
+          await sleep(waitMs + 50);
+          // Fresh pass after wait
+          excludeIds.length = 0;
+          rec = this.keys.selectKey({ excludeIds });
+        }
+      }
+
+      if (!rec) {
+        const sum = this.keys.summary();
         const err = new Error(
-          lastError?.message ||
-            'No healthy Gemini API keys available. Add keys in Settings and reset statuses.'
+          lastError?.message
+            ? `All keys failed or cooling (${sum.healthy}/${sum.total} healthy). Last: ${lastError.message}`
+            : `No healthy Gemini API keys (${sum.healthy}/${sum.total}). Add keys or Reset statuses in Settings.`
         );
         err.code = 'NO_KEYS';
+        err.cause = lastError;
         throw err;
       }
 
@@ -117,7 +162,9 @@ export class GeminiClient {
         method,
         keyId: rec.id,
         keyLabel: rec.label,
+        poolHealthy: this.keys.healthyKeys().length,
       });
+      bus.log(`Attempt ${attempt + 1}/${budget} with key ${rec.label}`, 'info');
 
       const started = performance.now();
       try {
@@ -145,6 +192,7 @@ export class GeminiClient {
             data?.message ||
             text?.slice?.(0, 200) ||
             `HTTP ${res.status}`;
+
           this.keys.markFailure(rec.id, {
             status: res.status,
             message: msg,
@@ -155,7 +203,9 @@ export class GeminiClient {
             status: res.status,
             data,
             keyId: rec.id,
+            keyLabel: rec.label,
           });
+
           bus.emit(EVENTS.REQUEST_ERROR, {
             requestId,
             attempt,
@@ -164,16 +214,19 @@ export class GeminiClient {
             keyId: rec.id,
             keyLabel: rec.label,
             durationMs,
+            rotating: shouldRotateToNextKey(res.status, msg),
           });
-          // retry on 429 / 5xx / 403 quota-ish
-          if (res.status === 429 || res.status >= 500 || res.status === 403) {
+
+          if (shouldRotateToNextKey(res.status, msg)) {
+            const left = this.keys.healthyKeys().filter((k) => !excludeIds.includes(k.id)).length;
+            bus.log(
+              `Key ${rec.label} failed (${res.status}): ${msg} → rotating (${left} healthy left)`,
+              'warn'
+            );
             continue;
           }
-          // 400 usually not fixed by other keys (bad request) — still try once more if multi-key
-          if (res.status === 400 && attempt < this.maxRetries - 1) {
-            // only continue if looks like key-related
-            if (/api key|permission|quota/i.test(msg)) continue;
-          }
+
+          // Non-rotatable (e.g. bad request body) — fail fast
           throw lastError;
         }
 
@@ -187,6 +240,9 @@ export class GeminiClient {
           durationMs,
           ok: true,
         });
+        if (attempt > 0) {
+          bus.log(`Succeeded with key ${rec.label} after ${attempt} rotation(s)`, 'info');
+        }
         return {
           data,
           keyId: rec.id,
@@ -196,23 +252,43 @@ export class GeminiClient {
           status: res.status,
         };
       } catch (err) {
-        if (err.status) throw err; // already handled HTTP error
-        this.keys.markFailure(rec.id, { message: err.message || 'network error' });
-        excludeIds.push(rec.id);
-        lastError = err;
-        bus.emit(EVENTS.REQUEST_ERROR, {
-          requestId,
-          attempt,
-          message: err.message,
-          keyId: rec.id,
-          keyLabel: rec.label,
-        });
+        // HTTP errors we already decided to throw (non-rotatable)
+        if (err.status && !shouldRotateToNextKey(err.status, err.message)) {
+          throw err;
+        }
+        // Network / rotatable rethrow path: park and continue if not already marked
+        if (!err.keyId) {
+          this.keys.markFailure(rec.id, {
+            status: err.status,
+            message: err.message || 'network error',
+          });
+          excludeIds.push(rec.id);
+          lastError = err;
+          bus.emit(EVENTS.REQUEST_ERROR, {
+            requestId,
+            attempt,
+            message: err.message,
+            keyId: rec.id,
+            keyLabel: rec.label,
+          });
+          continue;
+        }
+        // Already marked inside !res.ok with status — if we threw, rethrow; else continue handled above
+        if (err.status && shouldRotateToNextKey(err.status, err.message)) {
+          continue;
+        }
+        throw err;
       } finally {
         this.keys.releaseBusy(rec.id);
       }
     }
 
-    throw lastError || new Error('Gemini request failed after retries');
+    throw (
+      lastError ||
+      Object.assign(new Error('Gemini request failed after trying the key pool'), {
+        code: 'POOL_EXHAUSTED',
+      })
+    );
   }
 
   /**
@@ -245,11 +321,6 @@ export class GeminiClient {
   /**
    * generateContent with optional thinking config.
    * @param {object} params
-   * @param {string} params.model
-   * @param {object[]} params.contents
-   * @param {object} [params.systemInstruction]
-   * @param {object} [params.generationConfig]
-   * @param {object} [params.safetySettings]
    */
   async generateContent(params) {
     const model = normalizeModelName(params.model);
