@@ -178,15 +178,30 @@
 
   /**
    * Clone the paper document for export (deep clone with SVG).
+   * Strips preview-only chrome (zoom transforms live on .paper-sheet parent,
+   * which we intentionally do not clone).
    */
   function cloneForExport() {
     const paper = document.getElementById("paper-document");
     if (!paper) return null;
     const clone = paper.cloneNode(true);
     clone.id = "paper-document-export";
+    // Drop preview inline styles that can pollute capture geometry
+    clone.removeAttribute("style");
     clone.style.margin = "0";
+    clone.style.padding = "0";
     clone.style.boxShadow = "none";
-    // Ensure mermaid SVGs are present
+    clone.style.transform = "none";
+    clone.style.position = "relative";
+    clone.style.left = "0";
+    clone.style.top = "0";
+    // Normalize mermaid / SVG presentation attributes that can overflow
+    clone.querySelectorAll("svg").forEach((svg) => {
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      svg.style.maxWidth = "100%";
+      svg.style.height = "auto";
+      svg.style.display = "block";
+    });
     return clone;
   }
 

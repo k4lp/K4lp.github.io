@@ -18,6 +18,7 @@
 
   box-sizing: border-box;
   width: var(--paper-width);
+  max-width: 100%;
   min-height: var(--paper-height);
   margin: 0 auto;
   padding: var(--paper-margin-top) var(--paper-margin-right)
@@ -32,10 +33,47 @@
   -webkit-hyphens: var(--paper-hyphens);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  overflow-x: hidden;
   text-rendering: optimizeLegibility;
   font-kerning: normal;
   font-variant-ligatures: common-ligatures;
   position: relative;
+}
+
+/* Prevent wide media from blowing the content box (preview + export) */
+.paper-document img,
+.paper-document svg,
+.paper-document video,
+.paper-document canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.paper-document pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.paper-document .table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.paper-document table {
+  max-width: 100%;
+}
+
+.paper-document .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.paper-document .mermaid-figure,
+.paper-document .figure {
+  max-width: 100%;
 }
 
 /* Multi-column (IEEE-style) body */
