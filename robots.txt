@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-# Aggressive indexing: Point crawlers directly to the sitemap
-Sitemap: https://kalp.runasp.net/sitemap.xml
