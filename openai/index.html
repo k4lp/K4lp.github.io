@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenAI Chat Lab</title>
+  <meta name="description" content="Modular OpenAI Chat Completions lab — full controls, realtime streaming, multi-key rotation, live network status." />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/chat.css" />
+  <link rel="stylesheet" href="css/settings.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <h1>OpenAI Chat Lab</h1>
+        <div class="sub">Chat Completions · stream · full controls · <span id="app-version"></span></div>
+      </div>
+      <div class="hud" aria-live="polite">
+        <span class="hud-chip"><strong id="hud-model">—</strong></span>
+        <span class="hud-chip"><strong id="hud-stream">stream</strong></span>
+        <span class="hud-chip"><strong id="hud-keys">0/0 keys</strong></span>
+        <span class="hud-chip"><strong id="hud-msgs">0 msgs</strong></span>
+        <span class="hud-chip"><strong id="hud-latency">—</strong></span>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn" id="btn-new-chat">New chat</button>
+        <button type="button" class="btn" id="btn-settings">Settings</button>
+      </div>
+    </header>
+
+    <div class="net-bar">
+      <div id="net-status" aria-live="polite"></div>
+    </div>
+
+    <main class="app-main">
+      <section class="panel">
+        <div class="panel-head">
+          <div class="tabs" role="tablist">
+            <button type="button" class="active" data-tab="chat">Chat</button>
+            <button type="button" data-tab="observer">Observer</button>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn btn-xs" id="btn-export-json">Export JSON</button>
+            <button type="button" class="btn btn-xs" id="btn-export-md">Export MD</button>
+            <button type="button" class="btn btn-xs" id="btn-export-events">Events</button>
+            <button type="button" class="btn btn-xs" id="btn-clear-log">Clear log</button>
+          </div>
+        </div>
+        <div class="pane active" data-pane="chat">
+          <div id="chat-stream" aria-label="Chat transcript"></div>
+        </div>
+        <div class="pane" data-pane="observer">
+          <div id="event-log" aria-label="Event stream"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="composer">
+      <div class="composer-meta">
+        <span>Model: <strong id="composer-model" class="mono">—</strong></span>
+        <label class="check">
+          <input type="checkbox" id="opt-stream-quick" checked />
+          <span>Stream realtime</span>
+        </label>
+        <span class="muted">Enter send · Shift+Enter newline</span>
+      </div>
+      <div class="composer-row">
+        <textarea
+          id="composer-input"
+          class="input"
+          rows="2"
+          placeholder="Message the model…"
+          autocomplete="off"
+        ></textarea>
+        <div class="composer-actions">
+          <button type="button" class="btn btn-primary" id="btn-send">Send</button>
+          <button type="button" class="btn btn-danger" id="btn-stop" disabled>Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="app-footer">
+      <span>Static client — keys stay in your browser.</span>
+      <span>
+        API: <code class="mono">/v1/chat/completions</code>
+        · <a href="docs/ARCHITECTURE.md">Architecture</a>
+        · <a href="README.md">README</a>
+      </span>
+    </footer>
+  </div>
+
+  <div id="settings-backdrop"></div>
+  <aside id="settings-panel" aria-hidden="true" aria-label="Settings">
+    <div class="settings-head">
+      <h2>Settings</h2>
+      <button type="button" class="btn btn-xs" id="btn-settings-close">Close</button>
+    </div>
+    <div class="settings-body">
+      <section class="settings-section">
+        <h3>API keys</h3>
+        <p class="muted" style="margin-top:0;font-size:0.85rem">
+          Paste one or more OpenAI keys (<code>sk-…</code>). Rotates on 429 / failures.
+        </p>
+        <label class="field">
+          <span>Keys</span>
+          <textarea id="keys-textarea" class="input" placeholder="sk-..."></textarea>
+        </label>
+        <div class="key-actions">
+          <button type="button" class="btn btn-primary btn-xs" id="btn-apply-keys">Apply keys</button>
+          <button type="button" class="btn btn-xs" id="btn-reset-key-status">Reset statuses</button>
+          <button type="button" class="btn btn-xs" id="btn-refresh-models">Refresh models</button>
+        </div>
+        <p class="muted" id="keys-summary" style="font-size:0.8rem"></p>
+        <div id="keys-status-list"></div>
+        <label class="check" style="margin-top:0.5rem">
+          <input type="checkbox" id="opt-persist-keys" checked />
+          <span>Persist keys in localStorage</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h3>Endpoint &amp; model</h3>
+        <label class="field">
+          <span>API base</span>
+          <input id="opt-api-base" class="input mono" type="text" value="https://api.openai.com/v1" />
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Organization (optional)</span>
+            <input id="opt-org" class="input mono" type="text" placeholder="org-…" />
+          </label>
+          <label class="field">
+            <span>Project (optional)</span>
+            <input id="opt-project" class="input mono" type="text" placeholder="proj_…" />
+          </label>
+        </div>
+        <label class="field">
+          <span>Model</span>
+          <select id="opt-model" class="input"></select>
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Key rotation</span>
+            <select id="opt-rotation" class="input">
+              <option value="round_robin">Round robin</option>
+              <option value="least_used">Least used</option>
+              <option value="healthy_first">Healthy first</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Rate-limit cooldown (sec)</span>
+            <input id="opt-cooldown" class="input" type="number" min="5" value="60" />
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-head-row">
+          <h3>Sampling controls</h3>
+          <button type="button" class="btn btn-xs" id="btn-reset-sampling">Reset sampling</button>
+        </div>
+        <div class="grid-2">
+          <label class="field">
+            <span>temperature</span>
+            <input id="opt-temperature" class="input" type="number" min="0" max="2" step="0.05" value="0.7" />
+          </label>
+          <label class="field">
+            <span>top_p</span>
+            <input id="opt-top-p" class="input" type="number" min="0" max="1" step="0.01" value="1" />
+          </label>
+          <label class="field">
+            <span>presence_penalty</span>
+            <input id="opt-presence" class="input" type="number" min="-2" max="2" step="0.1" value="0" />
+          </label>
+          <label class="field">
+            <span>frequency_penalty</span>
+            <input id="opt-frequency" class="input" type="number" min="-2" max="2" step="0.1" value="0" />
+          </label>
+          <label class="field">
+            <span>n</span>
+            <input id="opt-n" class="input" type="number" min="1" max="8" step="1" value="1" />
+          </label>
+          <label class="field">
+            <span>seed (empty = omit)</span>
+            <input id="opt-seed" class="input" type="number" step="1" placeholder="optional" />
+          </label>
+        </div>
+        <label class="check" style="margin-bottom:0.6rem">
+          <input type="checkbox" id="opt-use-max-completion" checked />
+          <span>Use max_completion_tokens (recommended)</span>
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>max_completion_tokens</span>
+            <input id="opt-max-completion" class="input" type="number" min="1" step="1" value="2048" />
+          </label>
+          <label class="field">
+            <span>max_tokens (legacy)</span>
+            <input id="opt-max-tokens" class="input" type="number" min="1" step="1" value="2048" />
+          </label>
+        </div>
+        <label class="field">
+          <span>stop (comma / newline separated)</span>
+          <textarea id="opt-stop" class="input" rows="2" placeholder="optional stop sequences"></textarea>
+        </label>
+        <label class="field">
+          <span>user (end-user id)</span>
+          <input id="opt-user" class="input" type="text" placeholder="optional" />
+        </label>
+        <label class="field">
+          <span>logit_bias (JSON object)</span>
+          <textarea id="opt-logit-bias" class="input mono" rows="2" placeholder='{"50256": -100}'></textarea>
+        </label>
+        <div class="grid-2">
+          <label class="check">
+            <input type="checkbox" id="opt-logprobs" />
+            <span>logprobs</span>
+          </label>
+          <label class="field">
+            <span>top_logprobs</span>
+            <input id="opt-top-logprobs" class="input" type="number" min="0" max="20" value="0" />
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Response &amp; stream</h3>
+        <div class="grid-2">
+          <label class="field">
+            <span>response_format</span>
+            <select id="opt-response-format" class="input">
+              <option value="text">text</option>
+              <option value="json_object">json_object</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>reasoning_effort</span>
+            <select id="opt-reasoning" class="input">
+              <option value="">(omit)</option>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </label>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="opt-stream" checked />
+          <span>stream (SSE realtime)</span>
+        </label>
+        <label class="check" style="margin-top:0.4rem;display:flex">
+          <input type="checkbox" id="opt-stream-usage" checked />
+          <span>stream_options.include_usage</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-head-row">
+          <h3>System prompt</h3>
+          <button type="button" class="btn btn-xs" id="btn-reset-system">Reset default</button>
+        </div>
+        <textarea id="opt-system" class="input" rows="5"></textarea>
+      </section>
+
+      <section class="settings-section">
+        <h3>Network monitor</h3>
+        <div class="grid-2">
+          <label class="field">
+            <span>Probe interval (sec)</span>
+            <input id="opt-probe-interval" class="input" type="number" min="5" value="30" />
+          </label>
+          <label class="field">
+            <span>Request timeout (sec)</span>
+            <input id="opt-timeout" class="input" type="number" min="10" value="120" />
+          </label>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="opt-auto-scroll" checked />
+          <span>Auto-scroll chat</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h3>Factory reset</h3>
+        <button type="button" class="btn btn-xs btn-danger" id="btn-reset-all-defaults">
+          Reset all controls (keep keys)
+        </button>
+      </section>
+    </div>
+    <div class="settings-foot">
+      <button type="button" class="btn" onclick="document.getElementById('btn-settings-close').click()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-save-settings">Save settings</button>
+    </div>
+  </aside>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
