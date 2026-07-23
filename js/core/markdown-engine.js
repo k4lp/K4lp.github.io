@@ -28,13 +28,16 @@
       text = text.slice(fmMatch[0].length);
     }
 
-    // Fenced code blocks (including mermaid) — protect first
-    text = text.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (full, info, body) => {
+    // Fenced code blocks (including mermaid) — protect first.
+    // Allow optional spaces after ``` and language aliases.
+    text = text.replace(/```([^\n`]*)\r?\n([\s\S]*?)```/g, (full, info, body) => {
       const lang = (info || "").trim().split(/\s+/)[0].toLowerCase();
-      if (lang === "mermaid") {
+      if (lang === "mermaid" || lang === "mmd") {
         const i = blocks.mermaid.length;
-        blocks.mermaid.push(body.replace(/\s+$/, ""));
-        return makePlaceholder("MERMAID", i);
+        // Keep internal newlines; only trim trailing blank lines
+        blocks.mermaid.push(String(body).replace(/\s+$/, ""));
+        // ASCII placeholder — safe through marked + HTML (no private-use chars)
+        return "\n\n%%PPDF_MERMAID_" + i + "%%\n\n";
       }
       const i = blocks.code.length;
       blocks.code.push({ lang, body: body.replace(/\n$/, "") });
@@ -133,18 +136,22 @@
       }
     );
 
-    // Mermaid
+    // Mermaid — support both legacy private-use placeholders and %%PPDF_MERMAID_n%%
+    const injectMermaid = (_, idx) => {
+      const src = blocks.mermaid[Number(idx)];
+      if (src == null) return "";
+      return mermaid.placeholder(Number(idx), src);
+    };
     html = html.replace(
       new RegExp(
         escapeReg(PLACEHOLDER_PREFIX) + "MERMAID(\\d+)" + escapeReg(PLACEHOLDER_SUFFIX),
         "g"
       ),
-      (_, idx) => {
-        const src = blocks.mermaid[Number(idx)];
-        if (src == null) return "";
-        return mermaid.placeholder(Number(idx), src);
-      }
+      injectMermaid
     );
+    // marked usually wraps the token in <p>…</p> — unwrap first so we inject a bare <figure>
+    html = html.replace(/<p>\s*%%PPDF_MERMAID_(\d+)%%\s*<\/p>/gi, injectMermaid);
+    html = html.replace(/%%PPDF_MERMAID_(\d+)%%/g, injectMermaid);
 
     // Code
     html = html.replace(
@@ -380,6 +387,11 @@
     const markedLib = configureMarked();
     let md = String(markdown || "");
 
+    // Fresh mermaid registry each convert so ids stay aligned with placeholders
+    if (engines && engines.mermaid && typeof engines.mermaid.clearRegistry === "function") {
+      engines.mermaid.clearRegistry();
+    }
+
     md = processFootnotes(md);
     const { text, blocks, frontMatter } = protect(md);
 
@@ -444,6 +456,7 @@
         ADD_ATTR: [
           "xmlns",
           "viewBox",
+          "viewbox",
           "d",
           "fill",
           "stroke",
@@ -451,6 +464,7 @@
           "stroke-dasharray",
           "stroke-linecap",
           "stroke-linejoin",
+          "stroke-miterlimit",
           "transform",
           "cx",
           "cy",
@@ -470,6 +484,7 @@
           "points",
           "marker-end",
           "marker-start",
+          "marker-mid",
           "text-anchor",
           "dominant-baseline",
           "font-size",
@@ -480,23 +495,36 @@
           "style",
           "data-mermaid-id",
           "data-mermaid-src",
+          "data-mermaid-b64",
+          "data-mermaid-index",
+          "data-mermaid-pending",
+          "data-mermaid-ok",
+          "data-pending",
           "data-pagebreak",
           "aria-hidden",
+          "aria-label",
           "role",
           "focusable",
           "preserveAspectRatio",
+          "preserveaspectratio",
           "clip-path",
+          "clip-rule",
+          "fill-rule",
           "opacity",
           "fx",
           "fy",
           "gradientUnits",
+          "gradientTransform",
           "offset",
           "stop-color",
+          "stop-opacity",
           "colspan",
           "rowspan",
           "align",
           "valign",
         ],
+        // Keep data-* used by the mermaid pipeline
+        ALLOW_DATA_ATTR: true,
       });
     }
 

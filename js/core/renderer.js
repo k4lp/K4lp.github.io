@@ -87,12 +87,36 @@
         PP().Presets.applyPresetToElement(paper, merged);
       }
 
-      // Mermaid
-      const mermaidStats = await PP().Mermaid.renderAll(canvas);
+      // Mermaid (async SVG fill — must run after DOM is in the canvas)
+      let mermaidStats = { ok: 0, fail: 0, total: 0 };
+      try {
+        mermaidStats = await PP().Mermaid.renderAll(canvas);
+        if (mermaidStats.fail > 0) {
+          console.warn(
+            "[PaperPDF] mermaid:",
+            mermaidStats.ok,
+            "ok,",
+            mermaidStats.fail,
+            "failed of",
+            mermaidStats.total
+          );
+        }
+      } catch (mErr) {
+        console.error("[PaperPDF] mermaid renderAll threw", mErr);
+        mermaidStats = { ok: 0, fail: 1, total: 1, reason: mErr.message };
+      }
       if (seq !== renderSeq) return null;
 
-      // Page estimate
+      // Page estimate (after diagrams affect height)
       updatePageEstimate(merged);
+
+      // Status line hint when diagrams fail
+      if (mermaidStats.total > 0 && mermaidStats.fail > 0 && PP().DOM && PP().DOM.setStatus) {
+        PP().DOM.setStatus(
+          "Mermaid: " + mermaidStats.ok + " ok, " + mermaidStats.fail + " failed",
+          "warn"
+        );
+      }
 
       PP().bus.emit("render:done", {
         result,
@@ -198,9 +222,18 @@
     // Normalize mermaid / SVG presentation attributes that can overflow
     clone.querySelectorAll("svg").forEach((svg) => {
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      if (!svg.getAttribute("xmlns")) {
+        svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      }
       svg.style.maxWidth = "100%";
+      svg.style.width = "100%";
       svg.style.height = "auto";
       svg.style.display = "block";
+      svg.style.margin = "0 auto";
+    });
+    // Drop loading placeholders if any left
+    clone.querySelectorAll(".mermaid-loading, [data-pending]").forEach((el) => {
+      if (!el.closest("svg")) el.remove();
     });
     return clone;
   }

@@ -541,34 +541,49 @@
   text-align: center;
   page-break-inside: avoid;
   break-inside: avoid;
+  max-width: 100%;
+  clear: both;
 }
 
 .paper-document .mermaid,
 .paper-document .mermaid-svg-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: block;
   margin: 0.4em auto;
   max-width: 100%;
   overflow: visible;
   background: transparent;
+  text-align: center;
+}
+
+.paper-document .mermaid-loading {
+  color: #64748b;
+  font-size: 0.9em;
+  font-style: italic;
+  padding: 1em;
 }
 
 .paper-document .mermaid svg,
 .paper-document .mermaid-svg-wrap svg {
-  max-width: 100%;
-  height: auto;
+  max-width: 100% !important;
+  width: 100%;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
 }
 
 .paper-document .mermaid-error {
   color: #b91c1c;
   background: #fef2f2;
   border: 1px solid #fecaca;
-  padding: 0.75em;
-  font-size: 0.85em;
+  border-radius: 6px;
+  padding: 0.75em 1em;
+  font-size: 0.82em;
   text-align: left;
-  font-family: var(--pd-code);
+  font-family: var(--pd-code, ui-monospace, monospace);
   white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: auto;
 }
 
 /* ---------- Math (KaTeX) ---------- */
