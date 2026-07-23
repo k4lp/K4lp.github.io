@@ -13,7 +13,7 @@ import { GEMINI_API_BASE, EVENTS } from '../config/constants.js';
 import { bus } from './event-bus.js';
 import { uid } from '../utils/id.js';
 import { sleep } from '../utils/time.js';
-import { isQuotaOrRateLimitError, isAuthError } from './key-manager.js';
+import { isQuotaOrRateLimitError } from './key-manager.js';
 
 /**
  * Normalize model id to `models/xxx` path segment form without double prefix.
