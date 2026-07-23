@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="PaperPDF — research-grade Markdown to PDF with LaTeX, Mermaid, and academic presets." />
+  <title>PaperPDF — Markdown → Research PDF</title>
+
+  <!-- Local fonts & app chrome -->
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/editor.css" />
+  <link rel="stylesheet" href="css/preview.css" />
+  <link rel="stylesheet" href="css/paper.css" />
+  <link rel="stylesheet" href="css/print.css" />
+
+  <!-- Vendor (local) -->
+  <link rel="stylesheet" href="lib/katex/katex.min.css" />
+  <link rel="stylesheet" href="lib/highlightjs/github.min.css" />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b82f6'/%3E%3Ctext x='16' y='22' text-anchor='middle' fill='white' font-size='14' font-family='serif' font-weight='700'%3EP%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="app">
+    <!-- ========== TOOLBAR ========== -->
+    <header id="toolbar" role="banner">
+      <div class="toolbar-brand">
+        <div class="logo">P</div>
+        <span class="title">PaperPDF</span>
+      </div>
+
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" id="btn-new" title="New document">
+          <span class="label">New</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="btn-open" title="Open Markdown file">
+          <span class="label">Open</span>
+        </button>
+        <input type="file" id="file-open" class="hidden" accept=".md,.markdown,.txt,text/markdown,text/plain" />
+        <button type="button" class="toolbar-btn" id="btn-sample" title="Load sample research paper">
+          <span class="label">Sample</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="btn-save-md" title="Download Markdown (Ctrl+S)">
+          <span class="label">Save .md</span>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" id="btn-presets" title="Academic presets">
+          <span class="label">Preset:</span>
+          <strong id="preset-label">arXiv</strong>
+        </button>
+        <button type="button" class="toolbar-btn" id="btn-settings" title="Typography & margins">
+          <span class="label">Layout</span>
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" data-snippet="mathDisplay" title="Insert display math">∑ Math</button>
+        <button type="button" class="toolbar-btn" data-snippet="mermaid" title="Insert flowchart">▣ Flow</button>
+        <button type="button" class="toolbar-btn" data-snippet="table" title="Insert table">⊞ Table</button>
+        <button type="button" class="toolbar-btn" data-snippet="pagebreak" title="Insert page break">⎘ Break</button>
+      </div>
+
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn active" data-view="split" title="Split view">Split</button>
+        <button type="button" class="toolbar-btn" data-view="edit" title="Editor only">Edit</button>
+        <button type="button" class="toolbar-btn" data-view="preview" title="Preview only">Preview</button>
+      </div>
+
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" id="btn-export-html" title="Export HTML snapshot">HTML</button>
+        <button type="button" class="toolbar-btn" id="btn-print" title="Print / Save as PDF (Ctrl+P)">Print</button>
+        <button type="button" class="toolbar-btn primary" id="btn-export-pdf" title="Download PDF (Ctrl+Shift+E)">
+          Export PDF
+        </button>
+      </div>
+    </header>
+
+    <!-- ========== WORKSPACE ========== -->
+    <main id="workspace" class="mode-split" role="main">
+      <!-- Editor -->
+      <section class="pane pane-editor" aria-label="Markdown editor">
+        <div class="pane-header">
+          <span>Markdown</span>
+          <span class="meta">GFM · LaTeX · Mermaid · YAML front matter</span>
+        </div>
+        <div class="pane-body" id="editor-wrap">
+          <textarea
+            id="markdown-input"
+            spellcheck="true"
+            placeholder="Write your research paper in Markdown…
+
+---
+title: Your Title
+author: Your Name
+---
+
+## Abstract
+
+…
+
+$$ E = mc^2 $$
+
+```mermaid
+flowchart LR
+  A --> B
+```"
+            aria-label="Markdown source"
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- Preview -->
+      <section class="pane pane-preview" aria-label="Paper preview">
+        <div class="pane-header">
+          <span>Preview</span>
+          <span class="meta">
+            Zoom
+            <button type="button" class="zoom-btn" data-zoom="0.6" style="margin-left:6px">60%</button>
+            <button type="button" class="zoom-btn active" data-zoom="0.85">85%</button>
+            <button type="button" class="zoom-btn" data-zoom="1">100%</button>
+            <button type="button" class="zoom-btn" data-zoom="1.25">125%</button>
+          </span>
+        </div>
+        <div class="pane-body" id="preview-scroll">
+          <div id="preview-canvas">
+            <div class="preview-empty">
+              <strong>Live paper preview</strong>
+              Start typing, open a file, or load the sample document.
+            </div>
+          </div>
+          <div class="page-estimate" id="page-estimate">—</div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <aside id="settings-panel" aria-label="Layout settings">
+        <div class="pane-header">
+          <span>Layout</span>
+          <button type="button" class="toolbar-btn" id="btn-close-settings" title="Close" onclick="PaperPDF.Toolbar.toggleSettings(false)">✕</button>
+        </div>
+        <div class="settings-scroll">
+          <div class="settings-section">
+            <h3>Page</h3>
+            <div class="field">
+              <label for="cfg-paper-size">Paper size</label>
+              <select id="cfg-paper-size"></select>
+            </div>
+            <div class="field">
+              <label for="cfg-columns">Columns</label>
+              <select id="cfg-columns">
+                <option value="1">Single</option>
+                <option value="2">Two (IEEE/ACM)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cfg-align">Text alignment</label>
+              <select id="cfg-align">
+                <option value="left">Left</option>
+                <option value="justify">Justify</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Typography</h3>
+            <div class="field">
+              <label for="cfg-font">Body font</label>
+              <select id="cfg-font"></select>
+            </div>
+            <div class="field">
+              <label for="cfg-font-size">Font size</label>
+              <div class="range-row">
+                <input type="range" id="cfg-font-size" min="8" max="14" step="0.5" value="11" />
+                <span class="val" id="cfg-font-size-val">11 pt</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="cfg-line-height">Line height</label>
+              <div class="range-row">
+                <input type="range" id="cfg-line-height" min="1" max="2.5" step="0.05" value="1.5" />
+                <span class="val" id="cfg-line-height-val">1.50</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="cfg-indent">Paragraph indent</label>
+              <div class="range-row">
+                <input type="range" id="cfg-indent" min="0" max="0.75" step="0.05" value="0.3" />
+                <span class="val" id="cfg-indent-val">0.3 in</span>
+              </div>
+            </div>
+            <label class="field-check">
+              <input type="checkbox" id="cfg-booktabs" />
+              Booktabs-style tables
+            </label>
+          </div>
+
+          <div class="settings-section">
+            <h3>Margins (inches)</h3>
+            <div class="field-row">
+              <div class="field">
+                <label for="cfg-margin-top">Top</label>
+                <div class="range-row">
+                  <input type="range" id="cfg-margin-top" min="0.4" max="2" step="0.05" value="1" />
+                  <span class="val" id="cfg-margin-top-val">1″</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="cfg-margin-bottom">Bottom</label>
+                <div class="range-row">
+                  <input type="range" id="cfg-margin-bottom" min="0.4" max="2" step="0.05" value="1" />
+                  <span class="val" id="cfg-margin-bottom-val">1″</span>
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="cfg-margin-left">Left</label>
+                <div class="range-row">
+                  <input type="range" id="cfg-margin-left" min="0.4" max="2" step="0.05" value="1" />
+                  <span class="val" id="cfg-margin-left-val">1″</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="cfg-margin-right">Right</label>
+                <div class="range-row">
+                  <input type="range" id="cfg-margin-right" min="0.4" max="2" step="0.05" value="1" />
+                  <span class="val" id="cfg-margin-right-val">1″</span>
+                </div>
+              </div>
+            </div>
+            <p class="hint">Thesis preset uses 1.5″ left for binding. Changes apply live.</p>
+          </div>
+
+          <div class="settings-section">
+            <h3>Markdown tips</h3>
+            <p class="hint" style="line-height:1.5;color:var(--app-text-muted)">
+              <code>$$ … $$</code> display math · <code>$…$</code> inline<br />
+              <code>```mermaid</code> flowcharts · <code><!-- pagebreak --></code><br />
+              YAML front matter for title/authors<br />
+              <code><!-- table: Caption --></code> before tables<br />
+              Footnotes: <code>[^1]</code> + <code>[^1]: note</code>
+            </p>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- ========== STATUS ========== -->
+    <footer id="statusbar" role="contentinfo">
+      <span class="stat">Words <strong id="stat-words">0</strong></span>
+      <span class="stat">Chars <strong id="stat-chars">0</strong></span>
+      <span class="stat">Pages ≈ <strong id="stat-pages">1</strong></span>
+      <span class="spacer"></span>
+      <span class="status-msg" id="status-msg">Loading…</span>
+    </footer>
+  </div>
+
+  <!-- Preset modal -->
+  <div id="modal-presets" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="preset-modal-title">Academic presets</h2>
+        <button type="button" class="toolbar-btn" data-close-modal="modal-presets" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="preset-grid" id="preset-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-close-modal="modal-presets">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-host" aria-live="polite"></div>
+
+  <div id="export-overlay" aria-live="assertive" aria-busy="true">
+    <div class="spinner"></div>
+    <div class="export-msg">Generating PDF…</div>
+  </div>
+
+  <div id="pdf-export-source" aria-hidden="true"></div>
+
+  <!-- ========== Vendor libs (local only) ========== -->
+  <script src="lib/marked/marked.min.js"></script>
+  <script src="lib/dompurify/purify.min.js"></script>
+  <script src="lib/katex/katex.min.js"></script>
+  <script src="lib/katex/auto-render.min.js"></script>
+  <script src="lib/highlightjs/highlight.min.js"></script>
+  <script src="lib/mermaid/mermaid.min.js"></script>
+  <script src="lib/html2pdf/html2pdf.bundle.min.js"></script>
+
+  <!-- ========== App modules ========== -->
+  <script src="js/config/presets.js"></script>
+  <script src="js/utils/storage.js"></script>
+  <script src="js/utils/debounce.js"></script>
+  <script src="js/utils/events.js"></script>
+  <script src="js/utils/dom.js"></script>
+  <script src="js/core/latex-engine.js"></script>
+  <script src="js/core/code-engine.js"></script>
+  <script src="js/core/mermaid-engine.js"></script>
+  <script src="js/core/markdown-engine.js"></script>
+  <script src="js/core/renderer.js"></script>
+  <script src="js/core/pdf-export.js"></script>
+  <script src="js/ui/editor.js"></script>
+  <script src="js/ui/settings-panel.js"></script>
+  <script src="js/ui/toolbar.js"></script>
+  <script src="samples/sample-embedded.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

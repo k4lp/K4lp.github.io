@@ -1,0 +1,148 @@
+/* ============================================================
+   Design tokens & reset
+   ============================================================ */
+
+:root {
+  /* App chrome */
+  --app-bg: #0f1117;
+  --app-surface: #161b22;
+  --app-surface-2: #1c2330;
+  --app-border: #2a3344;
+  --app-border-subtle: #212936;
+  --app-text: #e6edf3;
+  --app-text-muted: #8b9cb3;
+  --app-text-faint: #5c6b82;
+  --app-accent: #3b82f6;
+  --app-accent-hover: #2563eb;
+  --app-accent-soft: rgba(59, 130, 246, 0.15);
+  --app-success: #22c55e;
+  --app-warning: #f59e0b;
+  --app-danger: #ef4444;
+  --app-radius: 8px;
+  --app-radius-sm: 6px;
+  --app-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --app-font: "Inter", system-ui, -apple-system, sans-serif;
+  --app-mono: "JetBrains Mono", "Source Code Pro", ui-monospace, monospace;
+  --toolbar-h: 52px;
+  --statusbar-h: 28px;
+  --sidebar-w: 300px;
+  --transition: 0.15s ease;
+
+  /* Paper defaults (overridden by presets via JS) */
+  --paper-width: 8.5in;
+  --paper-height: 11in;
+  --paper-margin-top: 1in;
+  --paper-margin-right: 1in;
+  --paper-margin-bottom: 1in;
+  --paper-margin-left: 1in;
+  --paper-font-family: "Libre Baskerville", "Times New Roman", Times, serif;
+  --paper-font-size: 12pt;
+  --paper-line-height: 2;
+  --paper-paragraph-indent: 0.5in;
+  --paper-paragraph-spacing: 0;
+  --paper-heading-font: "Libre Baskerville", "Times New Roman", Times, serif;
+  --paper-title-size: 12pt;
+  --paper-h1-size: 12pt;
+  --paper-h2-size: 12pt;
+  --paper-h3-size: 12pt;
+  --paper-text-color: #000000;
+  --paper-bg: #ffffff;
+  --paper-link-color: #000000;
+  --paper-code-font: "Source Code Pro", "Courier New", monospace;
+  --paper-code-size: 0.9em;
+  --paper-columns: 1;
+  --paper-column-gap: 0.25in;
+  --paper-text-align: left;
+  --paper-hyphens: auto;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--app-font);
+  font-size: 14px;
+  color: var(--app-text);
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+a {
+  color: var(--app-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a4558;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4d5b73;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+::selection {
+  background: var(--app-accent-soft);
+  color: var(--app-text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}

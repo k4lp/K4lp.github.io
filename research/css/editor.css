@@ -1,0 +1,61 @@
+/* ============================================================
+   Markdown editor pane
+   ============================================================ */
+
+#editor-wrap {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#markdown-input {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 20px 24px 40px;
+  background: #0d1117;
+  color: #e6edf3;
+  font-family: var(--app-mono);
+  font-size: 13.5px;
+  line-height: 1.65;
+  tab-size: 2;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  caret-color: var(--app-accent);
+}
+
+#markdown-input::placeholder {
+  color: #3d4a5c;
+}
+
+#markdown-input:focus {
+  outline: none;
+}
+
+/* Drop zone */
+#editor-wrap.drag-over::after {
+  content: "Drop Markdown or image files here";
+  position: absolute;
+  inset: 8px;
+  border: 2px dashed var(--app-accent);
+  border-radius: var(--app-radius);
+  background: rgba(59, 130, 246, 0.08);
+  display: grid;
+  place-items: center;
+  color: var(--app-accent);
+  font-weight: 600;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Line number gutter optional — hidden by default for simplicity */
+.editor-gutter {
+  display: none;
+}

@@ -1,0 +1,110 @@
+/* ============================================================
+   Preview pane chrome (on-screen only)
+   ============================================================ */
+
+#preview-scroll {
+  height: 100%;
+  overflow: auto;
+  background:
+    radial-gradient(ellipse at top, #252b38 0%, #1a1f2a 55%),
+    #1a1f2a;
+  padding: 28px 20px 48px;
+}
+
+#preview-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+}
+
+#preview-canvas .paper-sheet {
+  transform-origin: top center;
+  transition: transform 0.15s ease;
+}
+
+/* Zoom controls floating */
+.preview-zoom-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  margin: -8px 0 16px;
+  pointer-events: none;
+}
+
+.preview-zoom-bar > * {
+  pointer-events: auto;
+}
+
+.zoom-btn {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(22, 27, 34, 0.9);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
+.zoom-btn:hover {
+  color: var(--app-text);
+  background: var(--app-surface-2);
+}
+
+.zoom-btn.active {
+  color: var(--app-accent);
+  border-color: var(--app-accent);
+}
+
+/* Empty state */
+.preview-empty {
+  color: var(--app-text-faint);
+  text-align: center;
+  padding: 80px 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.preview-empty strong {
+  color: var(--app-text-muted);
+  display: block;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+/* Render error banner */
+.preview-error {
+  width: min(var(--paper-width), 100%);
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  background: #3b1219;
+  border: 1px solid #7f1d1d;
+  border-radius: 6px;
+  color: #fecaca;
+  font-size: 12.5px;
+  font-family: var(--app-mono);
+  white-space: pre-wrap;
+}
+
+/* Page count badge */
+.page-estimate {
+  position: sticky;
+  bottom: 12px;
+  align-self: center;
+  background: rgba(22, 27, 34, 0.92);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 11.5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  margin-top: 8px;
+  z-index: 5;
+}

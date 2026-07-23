@@ -1,0 +1,252 @@
+/* ============================================================
+   Academic typefaces — all served from local /fonts
+   ============================================================ */
+
+/* --- UI: Inter --- */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/sans/Inter-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/sans/Inter-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/sans/Inter-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/sans/Inter-Bold.woff2") format("woff2");
+}
+
+/* --- UI / body sans: Source Sans 3 --- */
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/sans/SourceSans3-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/sans/SourceSans3-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/sans/SourceSans3-Bold.woff2") format("woff2");
+}
+
+/* --- STIX Two Text (scientific, IEEE-friendly) --- */
+@font-face {
+  font-family: "STIX Two Text";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/STIXTwoText-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "STIX Two Text";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/STIXTwoText-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "STIX Two Text";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/STIXTwoText-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "STIX Two Text";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/STIXTwoText-BoldItalic.woff2") format("woff2");
+}
+
+/* --- Source Serif 4 --- */
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/SourceSerif4-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/SourceSerif4-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/SourceSerif4-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/SourceSerif4-BoldItalic.woff2") format("woff2");
+}
+
+/* --- EB Garamond (classic book / MLA feel) --- */
+@font-face {
+  font-family: "EB Garamond";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/EBGaramond-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "EB Garamond";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/EBGaramond-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "EB Garamond";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/EBGaramond-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "EB Garamond";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/EBGaramond-BoldItalic.woff2") format("woff2");
+}
+
+/* --- Libre Baskerville (Times-like for APA) --- */
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/LibreBaskerville-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/LibreBaskerville-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/LibreBaskerville-Bold.woff2") format("woff2");
+}
+
+/* --- Crimson Pro --- */
+@font-face {
+  font-family: "Crimson Pro";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/CrimsonPro-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Crimson Pro";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/CrimsonPro-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Crimson Pro";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/CrimsonPro-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Crimson Pro";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/CrimsonPro-BoldItalic.woff2") format("woff2");
+}
+
+/* --- Libertinus Serif (TeX / arXiv / Computer Modern successor) --- */
+@font-face {
+  font-family: "Libertinus Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/LibertinusSerif-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libertinus Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/serif/LibertinusSerif-Italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libertinus Serif";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/LibertinusSerif-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Libertinus Serif";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/serif/LibertinusSerif-BoldItalic.woff2") format("woff2");
+}
+
+/* --- Monospace --- */
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/mono/JetBrainsMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/mono/JetBrainsMono-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/mono/SourceCodePro-Regular.woff2") format("woff2");
+}

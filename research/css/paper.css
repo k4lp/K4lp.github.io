@@ -1,0 +1,712 @@
+/* ============================================================
+   Research-paper document typography
+   Applied to .paper-document (preview + print export)
+   ============================================================ */
+
+.paper-document {
+  --pd-font: var(--paper-font-family);
+  --pd-size: var(--paper-font-size);
+  --pd-lh: var(--paper-line-height);
+  --pd-indent: var(--paper-paragraph-indent);
+  --pd-p-space: var(--paper-paragraph-spacing);
+  --pd-color: var(--paper-text-color);
+  --pd-bg: var(--paper-bg);
+  --pd-heading: var(--paper-heading-font);
+  --pd-code: var(--paper-code-font);
+  --pd-code-size: var(--paper-code-size);
+  --pd-align: var(--paper-text-align);
+
+  box-sizing: border-box;
+  width: var(--paper-width);
+  min-height: var(--paper-height);
+  margin: 0 auto;
+  padding: var(--paper-margin-top) var(--paper-margin-right)
+    var(--paper-margin-bottom) var(--paper-margin-left);
+  background: var(--pd-bg);
+  color: var(--pd-color);
+  font-family: var(--pd-font);
+  font-size: var(--pd-size);
+  line-height: var(--pd-lh);
+  text-align: var(--pd-align);
+  hyphens: var(--paper-hyphens);
+  -webkit-hyphens: var(--paper-hyphens);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures;
+  position: relative;
+}
+
+/* Multi-column (IEEE-style) body */
+.paper-document.columns-2 .paper-body {
+  column-count: 2;
+  column-gap: var(--paper-column-gap);
+  column-fill: balance;
+}
+
+.paper-document.columns-2 .paper-title-block,
+.paper-document.columns-2 .paper-abstract,
+.paper-document.columns-2 .paper-keywords,
+.paper-document.columns-2 .no-columns,
+.paper-document.columns-2 .mermaid-figure,
+.paper-document.columns-2 .figure,
+.paper-document.columns-2 table,
+.paper-document.columns-2 .table-wrap,
+.paper-document.columns-2 pre,
+.paper-document.columns-2 .katex-display {
+  column-span: all;
+}
+
+/* ---------- Title block ---------- */
+.paper-title-block {
+  text-align: center;
+  margin-bottom: 1.5em;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.paper-title-block .paper-title {
+  font-family: var(--pd-heading);
+  font-size: var(--paper-title-size);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0 0 0.75em;
+  text-align: center;
+  hyphens: none;
+}
+
+.paper-title-block .paper-authors {
+  font-size: 1em;
+  font-weight: 400;
+  margin: 0 0 0.35em;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.paper-title-block .paper-affiliations {
+  font-size: 0.92em;
+  font-style: italic;
+  margin: 0 0 0.5em;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.paper-title-block .paper-meta {
+  font-size: 0.9em;
+  margin: 0.25em 0 0;
+  text-align: center;
+  color: inherit;
+}
+
+/* APA running head style */
+.paper-running-head {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 1.5em;
+  text-align: left;
+}
+
+/* ---------- Abstract ---------- */
+.paper-abstract {
+  margin: 1.25em 0 1.5em;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.paper-abstract .abstract-label {
+  font-weight: 700;
+  font-style: normal;
+  display: block;
+  text-align: center;
+  margin-bottom: 0.5em;
+  text-transform: none;
+}
+
+.paper-document.preset-ieee .paper-abstract .abstract-label,
+.paper-document.preset-acm .paper-abstract .abstract-label {
+  text-align: left;
+  font-weight: 700;
+}
+
+.paper-abstract p {
+  text-indent: 0 !important;
+  margin: 0 0 0.5em !important;
+  text-align: justify;
+}
+
+.paper-keywords {
+  margin: 0.5em 0 1.5em;
+  font-size: 0.95em;
+}
+
+.paper-keywords strong {
+  font-weight: 700;
+}
+
+/* ---------- Body prose ---------- */
+.paper-body > p,
+.paper-document > p {
+  margin: 0 0 var(--pd-p-space);
+  text-indent: var(--pd-indent);
+  orphans: 3;
+  widows: 3;
+}
+
+/* First paragraph after heading: no indent (common academic style) */
+.paper-body > h1 + p,
+.paper-body > h2 + p,
+.paper-body > h3 + p,
+.paper-body > h4 + p,
+.paper-body > h5 + p,
+.paper-body > h6 + p,
+.paper-abstract + .paper-body > p:first-child,
+.paper-body > p:first-child {
+  text-indent: 0;
+}
+
+/* No-indent class & blockquote children */
+.paper-body > p.no-indent,
+.paper-body blockquote p,
+.paper-body li p,
+.paper-body td p,
+.paper-body th p {
+  text-indent: 0;
+}
+
+/* Double-space presets: paragraphs flush */
+.paper-document.spacing-double > .paper-body > p,
+.paper-document.spacing-double p {
+  margin-bottom: 0;
+}
+
+/* ---------- Headings ---------- */
+.paper-document h1,
+.paper-document h2,
+.paper-document h3,
+.paper-document h4,
+.paper-document h5,
+.paper-document h6 {
+  font-family: var(--pd-heading);
+  color: inherit;
+  line-height: 1.3;
+  page-break-after: avoid;
+  break-after: avoid;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  hyphens: none;
+  text-indent: 0;
+}
+
+.paper-document h1 {
+  font-size: var(--paper-h1-size);
+  font-weight: 700;
+  margin: 1.4em 0 0.6em;
+  text-align: center;
+}
+
+.paper-document h2 {
+  font-size: var(--paper-h2-size);
+  font-weight: 700;
+  margin: 1.2em 0 0.5em;
+  text-align: left;
+}
+
+.paper-document h3 {
+  font-size: var(--paper-h3-size);
+  font-weight: 700;
+  font-style: italic;
+  margin: 1em 0 0.4em;
+}
+
+.paper-document h4 {
+  font-size: 1em;
+  font-weight: 700;
+  margin: 0.9em 0 0.35em;
+}
+
+.paper-document h5,
+.paper-document h6 {
+  font-size: 1em;
+  font-weight: 400;
+  font-style: italic;
+  margin: 0.8em 0 0.3em;
+}
+
+/* IEEE numbered section style */
+.paper-document.preset-ieee h1,
+.paper-document.preset-acm h1 {
+  text-align: center;
+  font-size: 1em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 1.2em;
+}
+
+.paper-document.preset-ieee h2,
+.paper-document.preset-acm h2 {
+  font-style: italic;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* APA level headings */
+.paper-document.preset-apa h1 {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1em;
+}
+.paper-document.preset-apa h2 {
+  text-align: left;
+  font-weight: 700;
+  font-size: 1em;
+}
+.paper-document.preset-apa h3 {
+  text-align: left;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1em;
+}
+
+/* MLA */
+.paper-document.preset-mla h1,
+.paper-document.preset-mla h2,
+.paper-document.preset-mla h3 {
+  text-align: center;
+  font-size: 1em;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Thesis */
+.paper-document.preset-thesis h1 {
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 1.15em;
+  margin-top: 1.5em;
+}
+
+/* ---------- Links ---------- */
+.paper-document a {
+  color: var(--paper-link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.paper-document a:hover {
+  opacity: 0.8;
+}
+
+/* ---------- Emphasis ---------- */
+.paper-document strong {
+  font-weight: 700;
+}
+.paper-document em {
+  font-style: italic;
+}
+
+/* ---------- Lists ---------- */
+.paper-document ul,
+.paper-document ol {
+  margin: 0.5em 0 0.75em;
+  padding-left: 1.5em;
+  text-indent: 0;
+}
+
+.paper-document li {
+  margin-bottom: 0.25em;
+  orphans: 2;
+  widows: 2;
+}
+
+.paper-document li > p {
+  text-indent: 0;
+  margin: 0.2em 0;
+}
+
+.paper-document ul {
+  list-style-type: disc;
+}
+.paper-document ul ul {
+  list-style-type: circle;
+}
+.paper-document ol {
+  list-style-type: decimal;
+}
+
+/* ---------- Blockquotes ---------- */
+.paper-document blockquote {
+  margin: 0.75em 0.5in;
+  padding: 0;
+  border: none;
+  font-size: 0.95em;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.paper-document blockquote p {
+  text-indent: 0;
+  margin: 0 0 0.4em;
+}
+
+/* ---------- Horizontal rule / page break ---------- */
+.paper-document hr {
+  border: none;
+  border-top: 1px solid #000;
+  margin: 1.5em 0;
+  width: 30%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.paper-document .page-break,
+.paper-document hr.page-break {
+  border: none;
+  margin: 0;
+  height: 0;
+  page-break-after: always;
+  break-after: page;
+  display: block;
+  visibility: hidden;
+}
+
+/* ---------- Code ---------- */
+.paper-document code {
+  font-family: var(--pd-code);
+  font-size: var(--pd-code-size);
+  background: #f4f4f4;
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+  word-break: break-word;
+}
+
+.paper-document pre {
+  font-family: var(--pd-code);
+  font-size: var(--pd-code-size);
+  line-height: 1.4;
+  background: #f6f8fa;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 0.75em 1em;
+  margin: 0.9em 0;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  text-align: left;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.paper-document pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ---------- Tables ---------- */
+.paper-document .table-wrap {
+  margin: 1em 0 1.25em;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.paper-document table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0.5em auto 0.35em;
+  font-size: 0.92em;
+  line-height: 1.35;
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  text-align: left;
+}
+
+.paper-document th,
+.paper-document td {
+  border: 1px solid #000;
+  padding: 0.35em 0.6em;
+  vertical-align: top;
+}
+
+.paper-document th {
+  font-weight: 700;
+  background: #f0f0f0;
+}
+
+/* Booktabs-style option */
+.paper-document.table-booktabs th,
+.paper-document.table-booktabs td {
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom: 0.5pt solid #000;
+}
+.paper-document.table-booktabs thead th {
+  border-top: 1.5pt solid #000;
+  border-bottom: 1pt solid #000;
+  background: transparent;
+}
+.paper-document.table-booktabs tbody tr:last-child td {
+  border-bottom: 1.5pt solid #000;
+}
+
+.paper-document .table-caption,
+.paper-document caption {
+  caption-side: top;
+  text-align: center;
+  font-size: 0.95em;
+  margin-bottom: 0.4em;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.paper-document .table-caption strong,
+.paper-document caption strong {
+  font-weight: 700;
+}
+
+/* ---------- Figures ---------- */
+.paper-document .figure,
+.paper-document figure {
+  margin: 1.1em 0 1.25em;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.paper-document .figure img,
+.paper-document figure img,
+.paper-document p > img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+.paper-document .figure-caption,
+.paper-document figcaption {
+  font-size: 0.92em;
+  margin-top: 0.45em;
+  text-align: center;
+  line-height: 1.35;
+  text-indent: 0;
+}
+
+/* ---------- Mermaid / diagrams ---------- */
+.paper-document .mermaid-figure {
+  margin: 1.1em 0 1.25em;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.paper-document .mermaid,
+.paper-document .mermaid-svg-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0.4em auto;
+  max-width: 100%;
+  overflow: visible;
+  background: transparent;
+}
+
+.paper-document .mermaid svg,
+.paper-document .mermaid-svg-wrap svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.paper-document .mermaid-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 0.75em;
+  font-size: 0.85em;
+  text-align: left;
+  font-family: var(--pd-code);
+  white-space: pre-wrap;
+}
+
+/* ---------- Math (KaTeX) ---------- */
+.paper-document .katex {
+  font-size: 1.08em;
+}
+
+.paper-document .katex-display {
+  margin: 0.9em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  text-align: center;
+}
+
+.paper-document .katex-display > .katex {
+  text-align: center;
+}
+
+.paper-document .math-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  padding: 0 0.25em;
+  font-family: var(--pd-code);
+  font-size: 0.9em;
+}
+
+/* Equation number alignment */
+.paper-document .equation-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1em;
+  margin: 0.9em 0;
+  page-break-inside: avoid;
+}
+
+.paper-document .equation-block .eq-body {
+  flex: 1;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.paper-document .equation-block .eq-number {
+  flex-shrink: 0;
+  font-family: var(--pd-font);
+  font-size: 1em;
+  min-width: 2.5em;
+  text-align: right;
+}
+
+/* ---------- Footnotes ---------- */
+.paper-document .footnotes {
+  margin-top: 2em;
+  padding-top: 0.75em;
+  border-top: 1px solid #000;
+  font-size: 0.88em;
+  line-height: 1.4;
+}
+
+.paper-document .footnotes ol {
+  padding-left: 1.25em;
+}
+
+.paper-document .footnote-ref {
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+  text-decoration: none;
+}
+
+/* ---------- References / Bibliography ---------- */
+.paper-document .references,
+.paper-document #references {
+  margin-top: 1.5em;
+}
+
+.paper-document .references ol,
+.paper-document .bibliography {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5em 0;
+}
+
+.paper-document .references li,
+.paper-document .bibliography li,
+.paper-document .ref-item {
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+  margin-bottom: 0.5em;
+  text-align: left;
+  line-height: 1.4;
+}
+
+/* ---------- TOC ---------- */
+.paper-document .toc {
+  margin: 1em 0 1.5em;
+  page-break-after: always;
+  break-after: page;
+}
+
+.paper-document .toc ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.paper-document .toc li {
+  margin: 0.25em 0;
+  line-height: 1.5;
+}
+
+.paper-document .toc a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.paper-document .toc .toc-h2 {
+  padding-left: 1.25em;
+}
+.paper-document .toc .toc-h3 {
+  padding-left: 2.5em;
+}
+
+/* ---------- Header / footer areas (preview indicators) ---------- */
+.paper-page-header,
+.paper-page-footer {
+  font-size: 0.85em;
+  color: #333;
+  font-family: var(--pd-font);
+}
+
+/* ---------- Definition lists ---------- */
+.paper-document dl {
+  margin: 0.75em 0;
+}
+.paper-document dt {
+  font-weight: 700;
+  margin-top: 0.5em;
+}
+.paper-document dd {
+  margin-left: 1.5em;
+  margin-bottom: 0.35em;
+}
+
+/* ---------- Task lists ---------- */
+.paper-document ul.contains-task-list {
+  list-style: none;
+  padding-left: 0.25em;
+}
+.paper-document .task-list-item {
+  list-style: none;
+}
+.paper-document .task-list-item input {
+  margin-right: 0.4em;
+}
+
+/* ---------- Superscript / subscript ---------- */
+.paper-document sub,
+.paper-document sup {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+/* ---------- Print-preview page simulation ---------- */
+.paper-sheet {
+  width: var(--paper-width);
+  min-height: var(--paper-height);
+  margin: 0 auto 24px;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  position: relative;
+}
+
+.paper-sheet .paper-document {
+  box-shadow: none;
+  margin: 0;
+  min-height: var(--paper-height);
+}
