@@ -1,0 +1,3079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#030407">
+<meta name="description" content="TYPE-Ω Metric Sovereignty — Real-time General Relativistic Kerr Geodesic Raytracer, Penrose Ergosphere Extraction Engine, and Kardashev Civilizational Observatory.">
+<title>K4LP // TYPE-Ω METRIC SOVEREIGNTY</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23030407'/%3E%3Ccircle cx='34' cy='32' r='19' fill='none' stroke='%23f5a623' stroke-width='2.2' stroke-opacity='0.85'/%3E%3Cpath d='M22 15 A19 19 0 0 0 22 49' fill='none' stroke='%239ad8ff' stroke-width='4.2' stroke-linecap='round'/%3E%3Ccircle cx='35' cy='32' r='12.5' fill='%23030407' stroke='%23ff4d38' stroke-width='0.9' stroke-opacity='0.6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #030407;
+    --panel: rgba(6, 8, 13, 0.76);
+    --panel-solid: #07090f;
+    --bone: #f4f0e8;
+    --bone-dim: rgba(244, 240, 232, 0.72);
+    --muted: #828997;
+    --faint: rgba(244, 240, 232, 0.11);
+    --faint-strong: rgba(244, 240, 232, 0.24);
+    --amber: #f5a623;
+    --amber-bright: #ffd07b;
+    --cyan: #9ad8ff;
+    --crimson: #ff4d38;
+    --emerald: #5ce0a8;
+    --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    background: var(--void);
+    color: var(--bone);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    selection-background-color: var(--amber);
+  }
+
+  ::selection {
+    background: rgba(245, 166, 35, 0.28);
+    color: var(--bone);
+  }
+
+  body {
+    background: var(--void);
+    overflow-x: hidden;
+    min-height: 100dvh;
+  }
+
+  /* FIXED RELATIVISTIC VIEWPORT */
+  .viewport-stack {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 50%, #070a12 0%, #030407 75%);
+  }
+
+  #spacetime-gl,
+  #geodesic-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* SUBTLE ARCHITECTURAL FIDUCIAL GRID */
+  .fiducial-frame {
+    position: fixed;
+    inset: 14px;
+    border: 1px solid var(--faint);
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fiducial-frame::before,
+  .fiducial-frame::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-color: var(--amber);
+    border-style: solid;
+  }
+
+  .fiducial-frame::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+  }
+
+  .fiducial-frame::after {
+    bottom: -1px;
+    right: -1px;
+    border-width: 0 1px 1px 0;
+  }
+
+  body.cinema-mode .hud-chrome,
+  body.cinema-mode .fiducial-frame,
+  body.cinema-mode .chronicle {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  #cinema-restore {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  body.cinema-mode #cinema-restore {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* TOP INSTRUMENT PERIMETER */
+  .top-bar {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    height: 46px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: rgba(5, 7, 12, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--faint);
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .brand-cluster {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .status-beacon {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 12px var(--amber);
+    animation: pulseBeacon 2.6s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulseBeacon {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.82); }
+  }
+
+  .brand-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--bone);
+    white-space: nowrap;
+  }
+
+  .brand-sep {
+    color: var(--faint-strong);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .kardashev-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--amber-bright);
+    padding: 3px 8px;
+    border: 1px solid rgba(245, 166, 35, 0.32);
+    background: rgba(245, 166, 35, 0.07);
+    font-variant-numeric: tabular-nums slashed-zero;
+    white-space: nowrap;
+  }
+
+  .nav-cluster {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .nav-link {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    color: var(--bone);
+    border-color: var(--faint);
+    background: rgba(244, 240, 232, 0.04);
+  }
+
+  .utility-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .inst-btn {
+    appearance: none;
+    background: rgba(244, 240, 232, 0.03);
+    border: 1px solid var(--faint);
+    color: var(--bone-dim);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+    font-variant-numeric: tabular-nums slashed-zero;
+    white-space: nowrap;
+  }
+
+  .inst-btn:hover {
+    color: var(--bone);
+    border-color: var(--faint-strong);
+    background: rgba(244, 240, 232, 0.08);
+  }
+
+  .inst-btn.is-on {
+    color: var(--void);
+    background: var(--bone);
+    border-color: var(--bone);
+    font-weight: 600;
+  }
+
+  .inst-btn.accent-amber {
+    color: var(--amber-bright);
+    border-color: rgba(245, 166, 35, 0.48);
+    background: rgba(245, 166, 35, 0.09);
+  }
+
+  .inst-btn.accent-amber:hover {
+    background: var(--amber);
+    color: var(--void);
+    border-color: var(--amber);
+  }
+
+  /* STAGE 1: FULL-SCREEN INTERACTIVE OBSERVATORY */
+  .observatory-stage {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr 336px;
+    grid-template-rows: 1fr auto;
+    padding: 60px 14px 52px 14px;
+    pointer-events: none;
+  }
+
+  /* INTERACTIVE DRAG SURFACE FOR CAMERA ORBIT */
+  #orbit-surface {
+    position: absolute;
+    inset: 60px 14px 52px 14px;
+    pointer-events: auto;
+    cursor: grab;
+    z-index: 1;
+    touch-action: pan-y;
+  }
+
+  #orbit-surface:active {
+    cursor: grabbing;
+  }
+
+  /* LEFT LOWER MONUMENTAL STATEMENT */
+  .hero-monument {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    align-self: end;
+    justify-self: start;
+    max-width: 650px;
+    padding: 24px 28px;
+    z-index: 4;
+    pointer-events: none;
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .eyebrow-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+  }
+
+  .eyebrow-tag::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--amber);
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.55rem, 4.9vw, 4.75rem);
+    line-height: 0.94;
+    letter-spacing: -0.02em;
+    color: var(--bone);
+    margin-bottom: 14px;
+    text-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--amber-bright);
+  }
+
+  .hero-sub {
+    font-size: 13.5px;
+    line-height: 1.58;
+    color: var(--bone-dim);
+    max-width: 52ch;
+    margin-bottom: 18px;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.95);
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto;
+  }
+
+  .penrose-trigger {
+    appearance: none;
+    background: var(--bone);
+    color: var(--void);
+    border: 1px solid var(--bone);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 11px 18px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.14s ease, background 0.16s ease, box-shadow 0.2s ease;
+  }
+
+  .penrose-trigger:hover {
+    background: var(--amber-bright);
+    border-color: var(--amber-bright);
+    box-shadow: 0 0 28px rgba(245, 166, 35, 0.35);
+  }
+
+  .penrose-trigger:active {
+    transform: translateY(1px);
+  }
+
+  .penrose-trigger:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--faint);
+    box-shadow: none;
+  }
+
+  .preset-strip {
+    display: inline-flex;
+    border: 1px solid var(--faint);
+    background: rgba(5, 7, 12, 0.72);
+    backdrop-filter: blur(10px);
+  }
+
+  .preset-btn {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--faint);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .preset-btn:last-child {
+    border-right: none;
+  }
+
+  .preset-btn:hover {
+    color: var(--bone);
+    background: rgba(244, 240, 232, 0.06);
+  }
+
+  .preset-btn.active {
+    color: var(--amber-bright);
+    background: rgba(245, 166, 35, 0.11);
+  }
+
+  .interaction-hint {
+    margin-top: 11px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.11em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* RIGHT DOCKED METRIC TENSOR & PHASE-SPACE INSTRUMENT RACK */
+  .metric-rack {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    align-self: stretch;
+    margin: 12px 12px 12px 0;
+    background: var(--panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--faint);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 6;
+    pointer-events: auto;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .rack-section {
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--faint);
+  }
+
+  .rack-section:last-child {
+    border-bottom: none;
+  }
+
+  .rack-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .rack-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .rack-badge {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  /* PRECISION POINTER-CAPTURED SCRUBBERS */
+  .scrubber-group {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .scrubber {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .scrubber-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+  }
+
+  .scrubber-label {
+    color: var(--bone-dim);
+    letter-spacing: 0.04em;
+  }
+
+  .scrubber-val {
+    color: var(--bone);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .scrubber-track {
+    position: relative;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    cursor: ew-resize;
+    touch-action: none;
+  }
+
+  .scrubber-rail {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: rgba(244, 240, 232, 0.14);
+  }
+
+  .scrubber-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--amber);
+    width: 50%;
+  }
+
+  .scrubber-thumb {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 14px;
+    background: var(--bone);
+    border: 1px solid var(--void);
+    transform: translate(-50%, -50%);
+    left: 50%;
+    transition: background 0.12s ease, height 0.12s ease;
+  }
+
+  .scrubber-track:hover .scrubber-thumb,
+  .scrubber-track.dragging .scrubber-thumb {
+    background: var(--amber-bright);
+    height: 17px;
+  }
+
+  /* LAYER DECOMPOSITION MATRIX */
+  .flag-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .flag-toggle {
+    appearance: none;
+    background: rgba(244, 240, 232, 0.025);
+    border: 1px solid var(--faint);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 7px 8px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.15s ease;
+  }
+
+  .flag-toggle::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: rgba(244, 240, 232, 0.2);
+  }
+
+  .flag-toggle.active {
+    color: var(--bone);
+    border-color: rgba(244, 240, 232, 0.28);
+    background: rgba(244, 240, 232, 0.06);
+  }
+
+  .flag-toggle.active::after {
+    background: var(--emerald);
+    box-shadow: 0 0 8px var(--emerald);
+  }
+
+  /* RK4 EFFECTIVE POTENTIAL OSCILLOSCOPE */
+  .scope-wrap {
+    position: relative;
+    width: 100%;
+    height: 128px;
+    border: 1px solid var(--faint);
+    background: rgba(2, 3, 6, 0.85);
+  }
+
+  #potential-scope {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .penrose-ledger {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .penrose-ledger strong {
+    color: var(--emerald);
+    font-weight: 600;
+  }
+
+  /* BOTTOM TELEMETRY READOUT STRIP */
+  .telemetry-strip {
+    position: fixed;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    height: 38px;
+    z-index: 20;
+    background: rgba(5, 7, 12, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--faint);
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: center;
+    padding: 0 12px;
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .tele-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 0 8px;
+    border-right: 1px solid var(--faint);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .tele-cell:last-child {
+    border-right: none;
+  }
+
+  .tele-key {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .tele-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--bone);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .tele-val.amber { color: var(--amber-bright); }
+  .tele-val.cyan { color: var(--cyan); }
+
+  /* STAGE 2: ARCHITECTURAL CHRONICLE & MATHEMATICAL DOSSIER */
+  .chronicle {
+    position: relative;
+    z-index: 10;
+    max-width: 1260px;
+    margin: 0 auto;
+    padding: 96px 28px 120px 28px;
+    transition: opacity 0.45s ease;
+  }
+
+  .dossier-masthead {
+    border-top: 1px solid var(--faint-strong);
+    border-bottom: 1px solid var(--faint);
+    padding: 48px 0 42px 0;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 40px;
+    align-items: end;
+    background: linear-gradient(180deg, rgba(3, 4, 7, 0.86) 0%, rgba(3, 4, 7, 0.66) 100%);
+    backdrop-filter: blur(10px);
+    padding-inline: 28px;
+  }
+
+  .dossier-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 14px;
+  }
+
+  .dossier-heading {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.2rem, 4vw, 3.8rem);
+    line-height: 0.98;
+    letter-spacing: -0.015em;
+  }
+
+  .dossier-lead {
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--bone-dim);
+  }
+
+  .epoch-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-left: 1px solid var(--faint);
+    border-right: 1px solid var(--faint);
+    background: rgba(5, 7, 12, 0.82);
+    backdrop-filter: blur(14px);
+  }
+
+  .epoch-card {
+    padding: 34px 30px;
+    border-bottom: 1px solid var(--faint);
+    border-right: 1px solid var(--faint);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 22px;
+  }
+
+  .epoch-card:nth-child(2n) {
+    border-right: none;
+  }
+
+  .epoch-index {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .epoch-index span:last-child {
+    color: var(--amber-bright);
+    border: 1px solid rgba(245, 166, 35, 0.3);
+    padding: 2px 7px;
+  }
+
+  .epoch-name {
+    font-family: var(--serif);
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.05;
+    margin-top: 10px;
+    color: var(--bone);
+  }
+
+  .epoch-prose {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--bone-dim);
+  }
+
+  .equation-plate {
+    border: 1px solid var(--faint);
+    background: rgba(2, 3, 6, 0.78);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .eq-math {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--bone);
+    letter-spacing: 0.02em;
+    overflow-x: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eq-caption {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* LIVE CONVERSION EFFICIENCY COMPARISON MATRIX */
+  .yield-matrix {
+    margin-top: 36px;
+    border: 1px solid var(--faint);
+    background: rgba(5, 7, 12, 0.86);
+    backdrop-filter: blur(16px);
+    padding: 32px 30px;
+  }
+
+  .matrix-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--faint);
+  }
+
+  .matrix-title {
+    font-family: var(--serif);
+    font-size: 1.85rem;
+    font-weight: 400;
+  }
+
+  .matrix-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber-bright);
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .yield-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .yield-row {
+    display: grid;
+    grid-template-columns: 250px 1fr 96px;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .yield-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+  }
+
+  .yield-bar-bg {
+    height: 10px;
+    background: rgba(244, 240, 232, 0.06);
+    border: 1px solid var(--faint);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .yield-bar-fill {
+    height: 100%;
+    background: var(--bone-dim);
+    transition: width 0.2s ease;
+  }
+
+  .yield-bar-fill.live-amber {
+    background: linear-gradient(90deg, var(--amber), var(--amber-bright));
+  }
+
+  .yield-bar-fill.live-cyan {
+    background: linear-gradient(90deg, #3da5d9, var(--cyan));
+  }
+
+  .yield-bar-fill.live-crimson {
+    background: linear-gradient(90deg, var(--crimson), var(--amber));
+  }
+
+  .yield-pct {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: right;
+    color: var(--bone);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  .colophon {
+    margin-top: 36px;
+    padding-top: 20px;
+    border-top: 1px solid var(--faint);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  #mobile-rack-btn {
+    display: none;
+  }
+
+  /* RESPONSIVE BREAKPOINTS */
+  @media (max-width: 1080px) {
+    .nav-cluster {
+      display: none;
+    }
+
+    .observatory-stage {
+      grid-template-columns: 1fr;
+    }
+
+    #mobile-rack-btn {
+      display: inline-flex;
+    }
+
+    .metric-rack {
+      position: fixed;
+      top: 66px;
+      right: 14px;
+      bottom: 58px;
+      width: min(340px, calc(100vw - 28px));
+      margin: 0;
+      z-index: 30;
+      transform: translateX(calc(100% + 24px));
+    }
+
+    .metric-rack.open {
+      transform: translateX(0);
+    }
+
+    .telemetry-strip {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tele-cell:nth-child(n+5) {
+      display: none;
+    }
+
+    .dossier-masthead,
+    .epoch-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .epoch-card {
+      border-right: none;
+    }
+
+    .yield-row {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .yield-pct {
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .brand-sep,
+    .kardashev-pill {
+      display: none;
+    }
+
+    .hero-monument {
+      padding: 16px 12px;
+    }
+
+    .telemetry-strip {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tele-cell:nth-child(n+3) {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="viewport-stack" aria-hidden="true">
+  <canvas id="spacetime-gl"></canvas>
+  <canvas id="geodesic-overlay"></canvas>
+</div>
+
+<div class="fiducial-frame" aria-hidden="true"></div>
+
+<button id="cinema-restore" class="inst-btn accent-amber" type="button">[H] EXIT PURE CINEMA</button>
+
+<!-- TOP PERIMETER INSTRUMENT BAR -->
+<header class="top-bar hud-chrome">
+  <div class="brand-cluster">
+    <span class="status-beacon"></span>
+    <span class="brand-id">K4LP // METRIC SOVEREIGNTY</span>
+    <span class="brand-sep">/</span>
+    <span class="kardashev-pill" id="hud-kardashev">K = 3.68 · TYPE-Ω</span>
+  </div>
+
+  <nav class="nav-cluster" aria-label="Observatory Sections">
+    <a class="nav-link active" href="#observatory">01 Singularity Deck</a>
+    <a class="nav-link" href="#chronicle">02 Four Equations</a>
+    <a class="nav-link" href="#yield-matrix">03 Mass-Energy Yield</a>
+  </nav>
+
+  <div class="utility-cluster">
+    <button id="mobile-rack-btn" class="inst-btn" type="button">TENSOR RACK</button>
+    <button id="quality-btn" class="inst-btn" type="button" title="Cycle internal raymarch resolution">RES: 1.0X</button>
+    <button id="audio-btn" class="inst-btn" type="button" title="Synthesize horizon harmonic audio [M]">AUDIO: OFF</button>
+    <button id="cinema-btn" class="inst-btn" type="button" title="Hide interface chrome [H]">[H] CINEMA</button>
+  </div>
+</header>
+
+<!-- STAGE 1: INTERACTIVE KERR-PENROSE OBSERVATORY -->
+<main id="observatory" class="observatory-stage">
+  <div id="orbit-surface" title="Drag to orbit camera in Boyer-Lindquist coordinates · Shift+Scroll to zoom"></div>
+
+  <section class="hero-monument hud-chrome">
+    <div class="eyebrow-tag">ERA Ω · KERR-DYSON HORIZON ARCHITECTURE</div>
+    <h1 class="hero-title">We did not pray to the heavens.<br><em>We solved their boundary conditions.</em></h1>
+    <p class="hero-sub">
+      Stars waste 99.3% of rest mass as inert ash. A Type-Ω civilization encloses spinning singularities—harvesting rotational spacetime via the Penrose process and Blandford-Znajek magnetospheres until entropy bows to geometry.
+    </p>
+    <div class="hero-actions">
+      <button id="penrose-btn" class="penrose-trigger" type="button">
+        <span>INJECT PENROSE PACKET</span>
+        <span style="opacity:0.62;font-weight:400">[SPACE]</span>
+      </button>
+      <div class="preset-strip" role="group" aria-label="Metric Presets">
+        <button class="preset-btn active" type="button" data-preset="thorne">THORNE 0.998</button>
+        <button class="preset-btn" type="button" data-preset="m87">M87* 17°</button>
+        <button class="preset-btn" type="button" data-preset="edge">EDGE 85°</button>
+        <button class="preset-btn" type="button" data-preset="schwarzschild">a* = 0</button>
+      </div>
+    </div>
+    <div class="interaction-hint" id="status-line">
+      DRAG SPACE TO ORBIT · SHIFT+SCROLL TO PLUNGE · LIVE RK4 GEODESICS + GLSL KERR RAYTRACER
+    </div>
+  </section>
+
+  <!-- RIGHT DOCKED TENSOR & PHASE-SPACE INSTRUMENT RACK -->
+  <aside id="metric-rack" class="metric-rack hud-chrome" aria-label="Metric Tensor Controls">
+    <div class="rack-section">
+      <div class="rack-header">
+        <span class="rack-title">METRIC TENSOR g_μν</span>
+        <span class="rack-badge" id="fps-readout">60 FPS · RK4+GL2</span>
+      </div>
+
+      <div class="scrubber-group">
+        <div class="scrubber" data-param="spin" data-min="0" data-max="0.998" data-step="0.001">
+          <div class="scrubber-meta">
+            <span class="scrubber-label">KERR SPIN a* = Jc/GM²</span>
+            <span class="scrubber-val" id="val-spin">0.998</span>
+          </div>
+          <div class="scrubber-track">
+            <div class="scrubber-rail"><div class="scrubber-fill" id="fill-spin"></div></div>
+            <div class="scrubber-thumb" id="thumb-spin"></div>
+          </div>
+        </div>
+
+        <div class="scrubber" data-param="massLog" data-min="1.0" data-max="10.0" data-step="0.05">
+          <div class="scrubber-meta">
+            <span class="scrubber-label">SINGULARITY log₁₀(M/M☉)</span>
+            <span class="scrubber-val" id="val-massLog">9.81 M☉</span>
+          </div>
+          <div class="scrubber-track">
+            <div class="scrubber-rail"><div class="scrubber-fill" id="fill-massLog"></div></div>
+            <div class="scrubber-thumb" id="thumb-massLog"></div>
+          </div>
+        </div>
+
+        <div class="scrubber" data-param="mdot" data-min="0.05" data-max="2.40" data-step="0.01">
+          <div class="scrubber-meta">
+            <span class="scrubber-label">ACCRETION FLUX ṁ / ṁ_Edd</span>
+            <span class="scrubber-val" id="val-mdot">1.15</span>
+          </div>
+          <div class="scrubber-track">
+            <div class="scrubber-rail"><div class="scrubber-fill" id="fill-mdot"></div></div>
+            <div class="scrubber-thumb" id="thumb-mdot"></div>
+          </div>
+        </div>
+
+        <div class="scrubber" data-param="inclination" data-min="3" data-max="88" data-step="0.5">
+          <div class="scrubber-meta">
+            <span class="scrubber-label">INCLINATION θ₀</span>
+            <span class="scrubber-val" id="val-inclination">76.0°</span>
+          </div>
+          <div class="scrubber-track">
+            <div class="scrubber-rail"><div class="scrubber-fill" id="fill-inclination"></div></div>
+            <div class="scrubber-thumb" id="thumb-inclination"></div>
+          </div>
+        </div>
+
+        <div class="scrubber" data-param="camDist" data-min="6.2" data-max="32.0" data-step="0.1">
+          <div class="scrubber-meta">
+            <span class="scrubber-label">OBSERVER RADIUS r_obs / M</span>
+            <span class="scrubber-val" id="val-camDist">17.5 M</span>
+          </div>
+          <div class="scrubber-track">
+            <div class="scrubber-rail"><div class="scrubber-fill" id="fill-camDist"></div></div>
+            <div class="scrubber-thumb" id="thumb-camDist"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rack-section">
+      <div class="rack-header">
+        <span class="rack-title">PHYSICAL OPERATORS</span>
+        <span class="rack-badge">REALTIME ISOLATION</span>
+      </div>
+      <div class="flag-grid">
+        <button class="flag-toggle active" type="button" data-flag="lensing">GR LENSING</button>
+        <button class="flag-toggle active" type="button" data-flag="doppler">DOPPLER g⁴</button>
+        <button class="flag-toggle active" type="button" data-flag="dyson">DYSON RINGS</button>
+        <button class="flag-toggle active" type="button" data-flag="jets">BZ POLAR JETS</button>
+        <button class="flag-toggle" type="button" data-flag="ergo" style="grid-column: span 2;">ERGOSPHERE MANIFOLD r_E(θ)</button>
+      </div>
+    </div>
+
+    <div class="rack-section">
+      <div class="rack-header">
+        <span class="rack-title">EFFECTIVE POTENTIAL V_eff(r)</span>
+        <span class="rack-badge" id="scope-readout">r_ISCO = 1.24 M</span>
+      </div>
+      <div class="scope-wrap">
+        <canvas id="potential-scope"></canvas>
+      </div>
+      <div class="penrose-ledger">
+        <span>PENROSE GAIN ΔE/E₀</span>
+        <strong id="penrose-gain">+20.8% SUPER-RADIANT</strong>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- BOTTOM LIVE INVARIANT TELEMETRY STRIP -->
+<footer class="telemetry-strip hud-chrome" aria-label="Relativistic Invariants">
+  <div class="tele-cell">
+    <span class="tele-key">r₊ HORIZON</span>
+    <span class="tele-val" id="tele-rplus">1.063 M</span>
+  </div>
+  <div class="tele-cell">
+    <span class="tele-key">r_ISCO</span>
+    <span class="tele-val amber" id="tele-isco">1.237 M</span>
+  </div>
+  <div class="tele-cell">
+    <span class="tele-key">DISK η_NT</span>
+    <span class="tele-val amber" id="tele-eta">32.09%</span>
+  </div>
+  <div class="tele-cell">
+    <span class="tele-key">PENROSE η_MAX</span>
+    <span class="tele-val cyan" id="tele-penrose">27.03%</span>
+  </div>
+  <div class="tele-cell">
+    <span class="tele-key">HORIZON Ω_H</span>
+    <span class="tele-val" id="tele-omegah">0.469 c/M</span>
+  </div>
+  <div class="tele-cell">
+    <span class="tele-key">HAWKING T_H</span>
+    <span class="tele-val" id="tele-hawking">1.09e-18 K</span>
+  </div>
+  <div class="tele-cell">
+    <span class="tele-key">OUTPUT P_TOT</span>
+    <span class="tele-val amber" id="tele-power">6.92e39 W</span>
+  </div>
+</footer>
+
+<!-- STAGE 2: ARCHITECTURAL CHRONICLE OF HUMAN APOTHEOSIS -->
+<section id="chronicle" class="chronicle">
+  <div class="dossier-masthead">
+    <div>
+      <div class="dossier-kicker">CHRONICLE OF APOTHEOSIS // KARDASHEV 0.73 → Ω</div>
+      <h2 class="dossier-heading">Four Differential Equations That Ended Scarcity, Night, and Fate.</h2>
+    </div>
+    <p class="dossier-lead">
+      Mythology imagined gods throwing thunderbolts. Physics revealed something colder and infinitely grander: every symmetry yields a conservation law, information has exact mass-energy equivalence, and rotating curvature stores the highest free-energy density permitted by causality.
+    </p>
+  </div>
+
+  <div class="epoch-grid">
+    <article class="epoch-card">
+      <div>
+        <div class="epoch-index">
+          <span>EPOCH I · PLANETARY IGNITION</span>
+          <span>K = 1.00 · 10¹⁶ W</span>
+        </div>
+        <h3 class="epoch-name">Reversible Computation &amp; Landauer Mastery</h3>
+      </div>
+      <p class="epoch-prose">
+        Before conquering stars, intelligence conquered thermal waste. Approaching the Landauer erasure bound turned planetary crusts into near-reversible computronium—simulating molecular assembly, fusion confinement, and self-replicating orbital foundries prior to cutting steel.
+      </p>
+      <div class="equation-plate">
+        <div class="eq-math">ΔE_min = k_B T ln(2) &nbsp;│&nbsp; ∂_μ J^μ = 0</div>
+        <div class="eq-caption">LANDAUER ERASURE LIMIT &amp; NOETHER CONTINUITY</div>
+      </div>
+    </article>
+
+    <article class="epoch-card">
+      <div>
+        <div class="epoch-index">
+          <span>EPOCH II · STELLAR DISASSEMBLY</span>
+          <span>K = 2.00 · 10²⁶ W</span>
+        </div>
+        <h3 class="epoch-name">Magnetic Star-Lifting &amp; Dyson Geodesics</h3>
+      </div>
+      <p class="epoch-prose">
+        Leaving nuclear fuel trapped inside wild stellar cores was Neolithic. Resonant magnetohydrodynamic pumps stripped heavy elements directly from stellar equators, weaving trillions of phase-locked statite collectors until whole solar systems vanished from the optical sky—radiating only waste infrared.
+      </p>
+      <div class="equation-plate">
+        <div class="eq-math">L_* = 4π R² σ_SB T_eff⁴ &nbsp;│&nbsp; 2⟨K⟩ + ⟨U⟩ = 0</div>
+        <div class="eq-caption">STEFAN-BOLTZMANN FLUX CLOSURE &amp; VIRIAL EQUILIBRIUM</div>
+      </div>
+    </article>
+
+    <article class="epoch-card">
+      <div>
+        <div class="epoch-index">
+          <span>EPOCH III · ERGOSPHERE HARVEST</span>
+          <span>K = 3.70 · 10⁴³ W</span>
+        </div>
+        <h3 class="epoch-name">Penrose Splitting &amp; Blandford-Znajek Engines</h3>
+      </div>
+      <p class="epoch-prose">
+        Inside the Kerr ergosphere (r₊ &lt; r &lt; r_E), frame-dragging pulls space faster than light relative to infinity, turning the Killing vector ∂_t spacelike. Mass dropped inside splits: a retrograde counterweight enters negative energy (E₁ &lt; 0) across the horizon while the escaping vessel harvests pure rotational geometry.
+      </p>
+      <div class="equation-plate">
+        <div class="eq-math">M_irr = M √[(1 + √(1 − a*²)) / 2] &nbsp;│&nbsp; δM − Ω_H δJ ≥ 0</div>
+        <div class="eq-caption">CHRISTODOULOU-RUFFINI IRREDUCIBLE MASS &amp; AREA LAW</div>
+      </div>
+    </article>
+
+    <article class="epoch-card">
+      <div>
+        <div class="epoch-index">
+          <span>EPOCH IV · METRIC SOVEREIGNTY</span>
+          <span>K = Ω · HOLOGRAPHIC</span>
+        </div>
+        <h3 class="epoch-name">Bekenstein Saturation at the Edge of Time</h3>
+      </div>
+      <p class="epoch-prose">
+        Long after the last red dwarf freezes, supermassive Kerr horizons remain immaculate reservoirs of negentropy and holographic state density. Civilization migrates inward to gravitational redshift layers near r₊—stretching subjective millennia out of every external cosmic second.
+      </p>
+      <div class="equation-plate">
+        <div class="eq-math">S_BH / k_B = A / (4 ℓ_P²) = 2π G M² (1 + √(1 − a*²)) / (ℏ c)</div>
+        <div class="eq-caption">BEKENSTEIN-HAWKING HOLOGRAPHIC ENTROPY BOUND</div>
+      </div>
+    </article>
+  </div>
+
+  <!-- LIVE MASS-ENERGY CONVERSION MATRIX COUPLED TO CURRENT SPIN a* -->
+  <div id="yield-matrix" class="yield-matrix">
+    <div class="matrix-head">
+      <h3 class="matrix-title">Mass-Energy Extraction Regimes (Coupled Live to Spin a*)</h3>
+      <span class="matrix-sub" id="matrix-live-spin">ACTIVE METRIC: a* = 0.998 · r_ISCO = 1.237 M</span>
+    </div>
+
+    <div class="yield-rows">
+      <div class="yield-row">
+        <div class="yield-name">Chemical Oxidation (Anthropocene)</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill" style="width: 0.15%"></div></div>
+        <div class="yield-pct">0.0000001%</div>
+      </div>
+      <div class="yield-row">
+        <div class="yield-name">Deuterium-Tritium Fusion (Type I–II)</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill" style="width: 0.76%"></div></div>
+        <div class="yield-pct">0.38% mc²</div>
+      </div>
+      <div class="yield-row">
+        <div class="yield-name">Hydrogen→Iron Stellar Nucleosynthesis</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill" style="width: 1.42%"></div></div>
+        <div class="yield-pct">0.71% mc²</div>
+      </div>
+      <div class="yield-row">
+        <div class="yield-name">Schwarzschild Accretion Baseline (a* = 0)</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill" style="width: 11.44%"></div></div>
+        <div class="yield-pct">5.72% mc²</div>
+      </div>
+      <div class="yield-row">
+        <div class="yield-name">Active Kerr Penrose Rotational Reserve</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill live-cyan" id="bar-penrose" style="width: 54.06%"></div></div>
+        <div class="yield-pct" id="pct-penrose">27.03% Mc²</div>
+      </div>
+      <div class="yield-row">
+        <div class="yield-name">Active Novikov-Thorne Kerr Accretion</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill live-amber" id="bar-nt" style="width: 64.18%"></div></div>
+        <div class="yield-pct" id="pct-nt">32.09% mc²</div>
+      </div>
+      <div class="yield-row">
+        <div class="yield-name">Extremal Kerr Theoretical Ceiling (a* → 1)</div>
+        <div class="yield-bar-bg"><div class="yield-bar-fill live-crimson" style="width: 84.53%"></div></div>
+        <div class="yield-pct">42.26% mc²</div>
+      </div>
+    </div>
+
+    <div class="colophon">
+      <span>K4LP // SOVEREIGN METRIC ENGINE · EXACT BPT-1972 + RK4 + GLSL ES 3.00</span>
+      <a href="#observatory" class="inst-btn">↑ RETURN TO SINGULARITY DECK</a>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  'use strict';
+
+  // ============================================================================
+  // 1. PHYSICAL CONSTANTS & EXACT GENERAL RELATIVISTIC KERR SOLVER (M = G = c = 1)
+  // ============================================================================
+  const SI = {
+    G: 6.67430e-11,
+    c: 299792458,
+    hbar: 1.054571817e-34,
+    kB: 1.380649e-23,
+    M_sun: 1.98847e30,
+    sigmaT_mp: 0.4 // opacity scale for Eddington luminosity ~ 1.26e31 W / M_sun
+  };
+
+  function solveKerrMetric(spinRaw, massLog, mdot) {
+    const a = Math.min(0.9985, Math.max(0.0, spinRaw));
+    const a2 = a * a;
+    const root = Math.sqrt(Math.max(0.0, 1.0 - a2));
+
+    // Outer & inner Boyer-Lindquist horizons
+    const rPlus = 1.0 + root;
+    const rMinus = 1.0 - root;
+
+    // Exact Bardeen-Press-Teukolsky (1972) prograde ISCO
+    const cbrt1ma2 = Math.cbrt(Math.max(0.0, 1.0 - a2));
+    const z1 = 1.0 + cbrt1ma2 * (Math.cbrt(1.0 + a) + Math.cbrt(Math.max(0.0, 1.0 - a)));
+    const z2 = Math.sqrt(3.0 * a2 + z1 * z1);
+    const rIsco = 3.0 + z2 - Math.sqrt(Math.max(0.0, (3.0 - z1) * (3.0 + z1 + 2.0 * z2)));
+
+    // Prograde equatorial photon orbit radius (Bardeen 1973)
+    const rPhoton = 2.0 * (1.0 + Math.cos((2.0 / 3.0) * Math.acos(-a)));
+
+    // Specific energy E at ISCO & Novikov-Thorne radiative efficiency eta = 1 - E_ISCO
+    const rHalf = Math.sqrt(rIsco);
+    const denom = Math.pow(rIsco, 0.75) * Math.sqrt(Math.max(1e-9, rIsco * rHalf - 3.0 * rHalf + 2.0 * a));
+    const eIsco = (rIsco * rHalf - 2.0 * rHalf + a) / denom;
+    const etaNT = Math.max(0.0, 1.0 - eIsco);
+
+    // Christodoulou-Ruffini irreducible mass fraction & max Penrose extractable energy
+    const mIrrFrac = Math.sqrt(0.5 * rPlus);
+    const etaPenrose = Math.max(0.0, 1.0 - mIrrFrac);
+
+    // Horizon angular velocity Omega_H = a / (2 r_+)
+    const omegaH = a / (2.0 * rPlus);
+
+    // Physical SI observables for mass M = 10^massLog * M_sun
+    const massSolar = Math.pow(10.0, massLog);
+    const massKg = massSolar * SI.M_sun;
+    const rgMeters = (SI.G * massKg) / (SI.c * SI.c);
+
+    // Hawking temperature T_H = (hbar c^3 / 8 pi G M k_B) * (2 sqrt(1 - a^2) / r_+)
+    const tSchwarz = (SI.hbar * Math.pow(SI.c, 3)) / (8.0 * Math.PI * SI.G * massKg * SI.kB);
+    const tHawking = tSchwarz * ((2.0 * root) / rPlus);
+
+    // Eddington luminosity L_Edd = 1.257e31 W * (M / M_sun)
+    const lEdd = 1.257e31 * massSolar;
+    // Total harvested civilization power: radiative disk + Blandford-Znajek magnetospheric luminosity
+    const pDisk = (etaNT / 0.1) * mdot * lEdd;
+    const bzFactor = 2.8 * a2 * omegaH * omegaH * 4.0; // normalized BZ scaling ~ Phi_BH^2 Omega_H^2
+    const pTotal = Math.max(1e12, pDisk * (1.0 + bzFactor));
+
+    // Sagan continuous Kardashev index K = (log10(P) - 6) / 10
+    const kardashev = (Math.log10(pTotal) - 6.0) / 10.0;
+
+    return {
+      a, a2, rPlus, rMinus, rIsco, rPhoton, eIsco,
+      etaNT, etaPenrose, omegaH, massSolar, rgMeters,
+      tHawking, pTotal, kardashev
+    };
+  }
+
+  // ============================================================================
+  // 2. APPLICATION STATE WITH CRITICALLY-DAMPED SPRING INTERPOLATION
+  // ============================================================================
+  const target = {
+    spin: 0.998,
+    massLog: 9.81,
+    mdot: 1.15,
+    inclination: 76.0,
+    camDist: 17.5,
+    azimuth: -0.42
+  };
+
+  const current = { ...target };
+  const velocity = {
+    spin: 0, massLog: 0, mdot: 0, inclination: 0, camDist: 0, azimuth: 0
+  };
+
+  const flags = {
+    lensing: 1.0,
+    doppler: 1.0,
+    dyson: 1.0,
+    jets: 1.0,
+    ergo: 0.0
+  };
+  const flagsSmooth = { ...flags };
+
+  let renderScale = 1.0;
+  let penrosePulse = 0.0;
+  let lastPenroseGainPct = 20.8;
+  let metric = solveKerrMetric(current.spin, current.massLog, current.mdot);
+
+  // ============================================================================
+  // 3. RK4 GEODESIC & PENROSE ERGOSPHERE EXTRACTION ENGINE (ZERO-ALLOC BUFFERS)
+  // ============================================================================
+  // Pre-allocated flat typed-array particle pool:
+  // Slots: 0 = carrier, 1 = negative-energy fragment (E1 < 0), 2 = super-radiant escape (E2 > E0)
+  // Plus ambient Dyson supply geodesics (slots 3..5)
+  const MAX_TRAILS = 6;
+  const TRAIL_LEN = 180;
+  const trailXYZ = new Float32Array(MAX_TRAILS * TRAIL_LEN * 3);
+  const trailHead = new Int32Array(MAX_TRAILS);
+  const trailCount = new Int32Array(MAX_TRAILS);
+
+  const bodies = Array.from({ length: MAX_TRAILS }, () => ({
+    active: false,
+    kind: 0, // 0: carrier, 1: E<0 capture, 2: super-radiant escape, 3: resonant orbiter
+    r: 12.0,
+    phi: 0.0,
+    vr: 0.0,
+    E: 1.0,
+    Lz: 3.5,
+    incl: 0.0,
+    node: 0.0,
+    age: 0.0
+  }));
+
+  function pushTrailPoint(idx, x, y, z) {
+    const head = trailHead[idx];
+    const base = (idx * TRAIL_LEN + head) * 3;
+    trailXYZ[base] = x;
+    trailXYZ[base + 1] = y;
+    trailXYZ[base + 2] = z;
+    trailHead[idx] = (head + 1) % TRAIL_LEN;
+    if (trailCount[idx] < TRAIL_LEN) trailCount[idx]++;
+  }
+
+  function clearTrail(idx) {
+    trailHead[idx] = 0;
+    trailCount[idx] = 0;
+  }
+
+  // Exact Kerr radial proper acceleration d²r/dτ² = -(1/2) ∂(V_eff²)/∂r for massive particle (μ = 1)
+  function kerrRadialAccel(r, E, Lz, a) {
+    const invR = 1.0 / Math.max(0.25, r);
+    const invR2 = invR * invR;
+    const invR3 = invR2 * invR;
+    const invR4 = invR2 * invR2;
+    const lMinusAE = Lz - a * E;
+    const a2Term = Lz * Lz - a * a * (E * E - 1.0);
+    return -invR2 + a2Term * invR3 - 3.0 * lMinusAE * lMinusAE * invR4;
+  }
+
+  // Exact Boyer-Lindquist azimuthal velocity dφ/dτ (matched to right-handed prograde convention)
+  function kerrPhiDot(r, E, Lz, a, rPlus) {
+    const rSafe = Math.max(rPlus * 1.015, r);
+    const delta = Math.max(0.02, rSafe * rSafe - 2.0 * rSafe + a * a);
+    return ((1.0 - 2.0 / rSafe) * Lz + (2.0 * a * E) / rSafe) / delta;
+  }
+
+  function stepGeodesicRK4(b, dt, a, rPlus) {
+    const r0 = b.r, v0 = b.vr, p0 = b.phi;
+    const E = b.E, Lz = b.Lz;
+
+    const a1 = kerrRadialAccel(r0, E, Lz, a);
+    const w1 = kerrPhiDot(r0, E, Lz, a, rPlus);
+
+    const r1 = r0 + 0.5 * dt * v0;
+    const v1 = v0 + 0.5 * dt * a1;
+    const a2 = kerrRadialAccel(r1, E, Lz, a);
+    const w2 = kerrPhiDot(r1, E, Lz, a, rPlus);
+
+    const r2 = r0 + 0.5 * dt * v1;
+    const v2 = v0 + 0.5 * dt * a2;
+    const a3 = kerrRadialAccel(r2, E, Lz, a);
+    const w3 = kerrPhiDot(r2, E, Lz, a, rPlus);
+
+    const r3 = r0 + dt * v2;
+    const v3 = v0 + dt * a3;
+    const a4 = kerrRadialAccel(r3, E, Lz, a);
+    const w4 = kerrPhiDot(r3, E, Lz, a, rPlus);
+
+    b.r = r0 + (dt / 6.0) * (v0 + 2.0 * v1 + 2.0 * v2 + v3);
+    b.vr = v0 + (dt / 6.0) * (a1 + 2.0 * a2 + 2.0 * a3 + a4);
+    // Negative sign aligns φ advancement with GLSL right-handed prograde tangent (y × x)
+    b.phi = p0 - (dt / 6.0) * (w1 + 2.0 * w2 + 2.0 * w3 + w4);
+    b.age += dt;
+  }
+
+  function bodyWorldPos(b, out) {
+    const cp = Math.cos(b.phi), sp = Math.sin(b.phi);
+    const ci = Math.cos(b.incl), si = Math.sin(b.incl);
+    const cn = Math.cos(b.node), sn = Math.sin(b.node);
+    const xOrb = b.r * cp;
+    const zOrb = b.r * sp;
+    const yOrb = zOrb * si;
+    const zFlat = zOrb * ci;
+    out[0] = xOrb * cn - zFlat * sn;
+    out[1] = yOrb;
+    out[2] = xOrb * sn + zFlat * cn;
+  }
+
+  const tmpPos = new Float32Array(3);
+
+  function seedResonantOrbiters() {
+    const radii = [9.6, 13.8, 18.8];
+    const incls = [0.24, -0.36, 0.52];
+    for (let i = 0; i < 3; i++) {
+      const idx = 3 + i;
+      const r = radii[i];
+      const a = metric.a;
+      const rHalf = Math.sqrt(r);
+      const denom = Math.pow(r, 0.75) * Math.sqrt(Math.max(0.1, r * rHalf - 3.0 * rHalf + 2.0 * a));
+      const b = bodies[idx];
+      b.active = true;
+      b.kind = 3;
+      b.r = r;
+      b.phi = i * 2.094;
+      b.vr = 0.0;
+      b.E = (r * rHalf - 2.0 * rHalf + a) / denom;
+      b.Lz = (r * r - 2.0 * a * rHalf + a * a) / denom;
+      b.incl = incls[i];
+      b.node = i * 1.1;
+      b.age = 0;
+      clearTrail(idx);
+    }
+  }
+
+  function launchPenrosePacket() {
+    if (metric.a < 0.08) return false;
+    const a = metric.a;
+    // Choose periastron cleanly inside the equatorial ergosphere (r_+ < r_p < 2.0M)
+    const rSplitTarget = Math.min(1.88, 0.5 * (metric.rPlus + 2.0) + 0.06);
+    const E0 = 1.035;
+    // Solve radial turning point V_eff(r_p; E0, Lz) = E0 for Lz so carrier grazes inside ergosphere!
+    // (E0^2 - 1) + 2/r - (Lz^2 - a^2(E0^2 - 1))/r^2 + 2(Lz - a E0)^2 / r^3 = 0
+    // Quadratic in Lz: Lz^2 (2/r^3 - 1/r^2) - Lz (4 a E0 / r^3) + [(E0^2-1)(1 + a^2/r^2) + 2/r + 2 a^2 E0^2 / r^3] = 0
+    const r = rSplitTarget;
+    const invR = 1.0 / r, invR2 = invR * invR, invR3 = invR2 * invR;
+    const A = 2.0 * invR3 - invR2;
+    const B = -4.0 * a * E0 * invR3;
+    const C = (E0 * E0 - 1.0) * (1.0 + a * a * invR2) + 2.0 * invR + 2.0 * a * a * E0 * E0 * invR3;
+    let Lz0 = 1.82 + 1.25 * a;
+    const disc = B * B - 4.0 * A * C;
+    if (Math.abs(A) > 1e-6 && disc >= 0.0) {
+      const root1 = (-B + Math.sqrt(disc)) / (2.0 * A);
+      const root2 = (-B - Math.sqrt(disc)) / (2.0 * A);
+      // Smaller positive root is the true outer-infall periastron inside the ergosphere;
+      // larger root lies trapped behind the centrifugal barrier peak.
+      const rMinRoot = Math.min(root1, root2);
+      if (rMinRoot > 0.5) Lz0 = rMinRoot;
+    }
+
+    const rStart = 12.8;
+    // Initial inward radial speed from exact energy integral at rStart
+    const eff2 = (E0 * E0 - 1.0) + 2.0 / rStart
+      - (Lz0 * Lz0 - a * a * (E0 * E0 - 1.0)) / (rStart * rStart)
+      + (2.0 * Math.pow(Lz0 - a * E0, 2)) / Math.pow(rStart, 3);
+    const vr0 = -Math.sqrt(Math.max(0.02, eff2));
+
+    const carrier = bodies[0];
+    carrier.active = true;
+    carrier.kind = 0;
+    carrier.r = rStart;
+    carrier.phi = current.azimuth + 1.05;
+    carrier.vr = vr0;
+    carrier.E = E0;
+    carrier.Lz = Lz0;
+    carrier.incl = 0.035;
+    carrier.node = 0.0;
+    carrier.age = 0.0;
+
+    bodies[1].active = false;
+    bodies[2].active = false;
+    clearTrail(0);
+    clearTrail(1);
+    clearTrail(2);
+
+    triggerAudioImpulse(220, 0.07);
+    return true;
+  }
+
+  function triggerPenroseSplit(carrier) {
+    const a = metric.a;
+    const r = carrier.r;
+    // Inside ergosphere (r_+ < r < 2M), Killing vector ∂_t is spacelike (g_tt = -(1 - 2/r) > 0).
+    // Counterweight fires retrograde into negative Killing energy E1 < 0 while obeying δM - Ω_H δJ > 0!
+    const ergoDepth = Math.max(0.02, (2.0 - r) / Math.max(0.08, 2.0 - metric.rPlus));
+    const E1 = -(0.06 + 0.19 * a * ergoDepth); // strictly negative Killing energy at infinity!
+    // Hawking Area Theorem constraint: E1 - Omega_H * Lz1 > 0  =>  Lz1 < E1 / Omega_H < 0
+    const Lz1 = (E1 / Math.max(0.05, metric.omegaH)) * 1.42 - 0.55;
+
+    // 4-momentum conservation: E2 = E0 - E1 > E0
+    const E2 = carrier.E - E1;
+    const Lz2Max = 2.25 * E2 + 0.45 * a;
+    const Lz2 = Math.min(Lz2Max, carrier.Lz - Lz1);
+
+    lastPenroseGainPct = ((E2 - carrier.E) / carrier.E) * 100.0;
+    penrosePulse = 1.0;
+
+    // Fragment 1: Negative-energy plunging trajectory into r_+
+    const frag1 = bodies[1];
+    frag1.active = true;
+    frag1.kind = 1;
+    frag1.r = r * 0.99;
+    frag1.phi = carrier.phi;
+    frag1.vr = -0.32;
+    frag1.E = E1;
+    frag1.Lz = Lz1;
+    frag1.incl = -0.04;
+    frag1.node = 0.0;
+    frag1.age = 0;
+    clearTrail(1);
+
+    // Fragment 2: Super-radiant escaping vessel with exact Kerr radial 4-velocity norm
+    const rEsc = r * 1.01;
+    const eff2Esc = (E2 * E2 - 1.0) + 2.0 / rEsc
+      - (Lz2 * Lz2 - a * a * (E2 * E2 - 1.0)) / (rEsc * rEsc)
+      + (2.0 * Math.pow(Lz2 - a * E2, 2)) / Math.pow(rEsc, 3);
+    const frag2 = bodies[2];
+    frag2.active = true;
+    frag2.kind = 2;
+    frag2.r = rEsc;
+    frag2.phi = carrier.phi;
+    frag2.vr = Math.sqrt(Math.max(0.20, eff2Esc));
+    frag2.E = E2;
+    frag2.Lz = Lz2;
+    frag2.incl = 0.05;
+    frag2.node = 0.0;
+    frag2.age = 0;
+    clearTrail(2);
+
+    carrier.active = false;
+    triggerAudioImpulse(528, 0.14);
+  }
+
+  function updateGeodesicSystem(dtReal) {
+    const subSteps = 6;
+    const h = (Math.min(0.05, dtReal) * 5.2) / subSteps;
+    const a = metric.a;
+    const rPlus = metric.rPlus;
+
+    for (let s = 0; s < subSteps; s++) {
+      for (let i = 0; i < MAX_TRAILS; i++) {
+        const b = bodies[i];
+        if (!b.active) continue;
+
+        // Lense-Thirring nodal precession on inclined Dyson supply orbiters: Ω_LT = 2a / r^3
+        if (b.kind === 3 && a > 0.001) {
+          b.node -= (2.0 * a / Math.pow(b.r, 3)) * h;
+        }
+
+        stepGeodesicRK4(b, h, a, rPlus);
+
+        // Check Penrose periastron split inside ergosphere (r_+ < r < 1.96M)
+        if (b.kind === 0 && a >= 0.08 && b.r < 1.95 && (b.vr >= -0.02 || b.r <= rPlus * 1.16)) {
+          triggerPenroseSplit(b);
+          continue;
+        }
+
+        // Horizon capture
+        if (b.r <= rPlus * 1.02) {
+          if (b.kind !== 3) b.active = false;
+          continue;
+        }
+
+        // Outer escape boundary -> auto-relaunch subtle cycle or finish
+        if (b.r > 30.0) {
+          b.active = false;
+          continue;
+        }
+      }
+    }
+
+    for (let i = 0; i < MAX_TRAILS; i++) {
+      const b = bodies[i];
+      if (!b.active) continue;
+      bodyWorldPos(b, tmpPos);
+      pushTrailPoint(i, tmpPos[0], tmpPos[1], tmpPos[2]);
+    }
+  }
+
+  // ============================================================================
+  // 4. WEBGL2 KERR GEODESIC RAYMARCHER + HDR BLOOM COMPOSITOR
+  // ============================================================================
+  const glCanvas = document.getElementById('spacetime-gl');
+  const hudCanvas = document.getElementById('geodesic-overlay');
+  const scopeCanvas = document.getElementById('potential-scope');
+  const hudCtx = hudCanvas.getContext('2d');
+  const scopeCtx = scopeCanvas.getContext('2d');
+
+  const gl = glCanvas.getContext('webgl2', {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    powerPreference: 'high-performance'
+  });
+
+  const VERT_SRC = `#version 300 es
+  precision highp float;
+  out vec2 v_uv;
+  void main() {
+    vec2 pos = vec2((gl_VertexID == 1) ? 3.0 : -1.0, (gl_VertexID == 2) ? 3.0 : -1.0);
+    v_uv = 0.5 * (pos + 1.0);
+    gl_Position = vec4(pos, 0.0, 1.0);
+  }`;
+
+  const SCENE_FRAG_SRC = `#version 300 es
+  precision highp float;
+
+  in vec2 v_uv;
+  out vec4 fragColor;
+
+  uniform vec2 u_res;
+  uniform float u_time;
+  uniform vec3 u_camPos;
+  uniform vec3 u_camRight;
+  uniform vec3 u_camUp;
+  uniform vec3 u_camFwd;
+  uniform float u_tanHalfFov;
+
+  uniform float u_spin;
+  uniform float u_rPlus;
+  uniform float u_rIsco;
+  uniform float u_mdot;
+  uniform float u_omegaH;
+  uniform vec4 u_flags;     // x: lensing, y: doppler, z: dyson, w: jets
+  uniform float u_ergoVis;
+  uniform float u_pulse;
+  uniform float u_hdrPack;  // 0.0 for float16 FBO, 1.0 for tone-packed RGBA8 fallback
+  uniform vec3 u_ringN[3];
+  uniform vec3 u_ringU[3];
+
+  float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
+  float hash13(vec3 p3) {
+    p3 = fract(p3 * 0.1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
+  float noise2(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash12(i);
+    float b = hash12(i + vec2(1.0, 0.0));
+    float c = hash12(i + vec2(0.0, 1.0));
+    float d = hash12(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  float fbm(vec2 p) {
+    float v = 0.0;
+    float amp = 0.5;
+    mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
+    for (int i = 0; i < 4; i++) {
+      v += amp * noise2(p);
+      p = rot * p * 2.03 + vec2(17.1, 31.7);
+      amp *= 0.5;
+    }
+    return v;
+  }
+
+  // Exact Boyer-Lindquist radial coordinate r from Kerr-Schild Cartesian coordinates (spin along +y)
+  float kerrRadius(vec3 p, float a2) {
+    float R2 = dot(p, p);
+    float b = R2 - a2;
+    float disc = sqrt(max(0.0, b * b + 4.0 * a2 * p.y * p.y));
+    return sqrt(max(1e-5, 0.5 * (b + disc)));
+  }
+
+  // Analytic Planckian blackbody locus (T in Kelvin -> linear HDR RGB)
+  vec3 blackbody(float tempK) {
+    float t = clamp(tempK, 1000.0, 42000.0) * 0.01;
+    vec3 c;
+    if (t <= 66.0) {
+      c.r = 1.0;
+      c.g = clamp(0.39008 * log(max(1.0, t)) - 0.63184, 0.0, 1.0);
+      c.b = (t <= 19.0) ? 0.0 : clamp(0.54320 * log(max(1.0, t - 10.0)) - 1.19625, 0.0, 1.0);
+    } else {
+      c.r = clamp(1.29293 * pow(max(1.0, t - 60.0), -0.13320), 0.0, 1.0);
+      c.g = clamp(1.12989 * pow(max(1.0, t - 60.0), -0.07551), 0.0, 1.0);
+      c.b = 1.0;
+    }
+    return pow(c, vec3(2.2));
+  }
+
+  // Lensed background cosmos: procedural starfield + subtle galactic dust plane
+  vec3 sampleCosmos(vec3 dir) {
+    vec3 d = normalize(dir);
+    float galPlane = exp(-abs(d.y * 0.85 + d.x * 0.25) * 6.5);
+    float dust = fbm(vec2(atan(d.z, d.x) * 3.0, d.y * 6.0));
+    vec3 bg = vec3(0.0022, 0.0030, 0.0052) + galPlane * dust * vec3(0.014, 0.011, 0.018);
+
+    // Dual-layer procedural astrometric star grid on cube-projected sphere
+    vec3 ad = abs(d);
+    vec2 suv = (ad.x > ad.y && ad.x > ad.z) ? d.yz / ad.x :
+               (ad.y > ad.z) ? d.xz / ad.y : d.xy / ad.z;
+
+    for (int layer = 0; layer < 2; layer++) {
+      float scale = (layer == 0) ? 135.0 : 260.0;
+      vec2 grid = suv * scale;
+      vec2 id = floor(grid);
+      vec2 gv = fract(grid) - 0.5;
+      float rnd = hash13(vec3(id, float(layer) + step(0.0, d.z) * 7.0 + step(0.0, d.x) * 13.0));
+      if (rnd > 0.968) {
+        vec2 offset = (vec2(fract(rnd * 43.7), fract(rnd * 91.3)) - 0.5) * 0.62;
+        float dist2 = dot(gv - offset, gv - offset);
+        float mag = smoothstep(0.968, 0.9999, rnd);
+        float core = exp(-dist2 * (95.0 - 55.0 * mag));
+        float starTemp = mix(3400.0, 19000.0, fract(rnd * 17.9));
+        bg += blackbody(starTemp) * core * (0.35 + 3.2 * mag * mag);
+      }
+    }
+    return bg;
+  }
+
+  // Evaluate Novikov-Thorne relativistic thin accretion disk at equatorial crossing y = 0
+  vec4 shadeAccretionDisk(vec3 hitPos, vec3 rayVel) {
+    float rho = length(hitPos.xz);
+    if (rho < u_rIsco * 0.92 || rho > 21.5) return vec4(0.0);
+
+    float innerFade = smoothstep(u_rIsco * 0.92, u_rIsco * 1.07, rho);
+    float outerFade = 1.0 - smoothstep(13.5, 21.5, rho);
+    float radialProfile = pow(max(u_rIsco / max(rho, 0.5), 0.02), 1.65) * innerFade * outerFade;
+
+    // Differential Keplerian angular velocity Omega_K = 1 / (r^(3/2) + a*)
+    float r32 = rho * sqrt(rho);
+    float omegaK = 1.0 / (r32 + u_spin);
+    float phi = atan(hitPos.z, hitPos.x);
+
+    // Dual-phase flow advection prevents differential Keplerian winding moire over infinite runtime
+    float cycle = 0.065;
+    float p0 = fract(u_time * cycle);
+    float p1 = fract(u_time * cycle + 0.5);
+    float blend = abs(2.0 * p0 - 1.0);
+
+    float adv0 = phi + omegaK * (p0 / cycle) * 1.6;
+    float adv1 = phi + omegaK * (p1 / cycle) * 1.6;
+    float logR = log(max(rho, 0.5)) * 4.8;
+
+    float turb0 = fbm(vec2(logR, sin(adv0) * 2.4 + cos(adv0 * 2.0) * 1.3));
+    float turb1 = fbm(vec2(logR + 5.2, sin(adv1) * 2.4 + cos(adv1 * 2.0) * 1.3));
+    float mri = mix(turb0, turb1, blend);
+
+    // Spiral magneto-rotational density waves
+    float spiral = 0.65 + 0.35 * sin(3.0 * phi + logR * 2.8 + u_time * 1.35);
+    float rings = 0.72 + 0.28 * sin(rho * 4.2 - mri * 4.5);
+    float density = radialProfile * (0.35 + 0.95 * mri) * spiral * rings;
+
+    // Prograde plasma 3-velocity tangent t_phi = normalize(y x pos) = (z, 0, -x) / rho
+    vec3 tPhi = vec3(hitPos.z, 0.0, -hitPos.x) / max(rho, 1e-4);
+    float beta = clamp(sqrt(1.0 / max(rho - 1.2 * (1.0 - 0.5 * u_spin), 0.35)) * 0.88, 0.0, 0.90);
+
+    // Physical photon travels FROM disk TOWARD camera: k_hat = -normalize(rayVel)
+    vec3 kHat = -normalize(rayVel);
+    float gravFactor = sqrt(clamp(1.0 - (1.85 * u_rPlus * 0.5) / max(rho, 0.6), 0.05, 1.0));
+    float lorentzInv = sqrt(max(0.04, 1.0 - beta * beta));
+    float dopplerRaw = (gravFactor * lorentzInv) / max(0.16, 1.0 - beta * dot(tPhi, kHat));
+    float gFactor = mix(gravFactor, dopplerRaw, u_flags.y);
+
+    // Temperature & bolometric intensity scaling I_obs = g^4 I_emit
+    float baseTemp = 5400.0 * pow(max(u_mdot, 0.05), 0.25) * pow(max(u_rIsco / rho, 0.05), 0.62);
+    float obsTemp = baseTemp * pow(max(gFactor, 0.15), 0.88);
+    float beaming = pow(clamp(gFactor, 0.18, 2.85), 3.45);
+
+    // Penrose extraction harmonic wave propagating outward into collector disk
+    float shockR = mix(u_rPlus, 19.0, 1.0 - u_pulse);
+    float shock = u_pulse * exp(-pow((rho - shockR) * 0.9, 2.0)) * 1.8;
+
+    vec3 col = blackbody(obsTemp) * density * beaming * (1.55 + 1.15 * u_mdot + shock);
+    float alpha = clamp(density * (0.72 + 0.22 * u_mdot), 0.0, 0.94);
+    return vec4(col, alpha);
+  }
+
+  // Evaluate 3D Dyson-Penrose Harvester Rings along curved null geodesics (gravitationally lensed!)
+  vec3 shadeDysonRing(vec3 hitPos, int idx) {
+    float rRing = (idx == 0) ? 9.6 : ((idx == 1) ? 13.8 : 18.8);
+    float halfW = (idx == 0) ? 0.24 : ((idx == 1) ? 0.30 : 0.36);
+    float r = length(hitPos);
+    float dr = abs(r - rRing);
+    if (dr > halfW) return vec3(0.0);
+
+    vec3 n = u_ringN[idx];
+    vec3 u = u_ringU[idx];
+    vec3 v = cross(n, u);
+    float ang = atan(dot(hitPos, v), dot(hitPos, u));
+
+    float segFreq = (idx == 0) ? 48.0 : ((idx == 1) ? 64.0 : 84.0);
+    float rotSpeed = (idx == 0) ? 0.22 : ((idx == 1) ? -0.14 : 0.09);
+    float cellPhase = fract((ang + u_time * rotSpeed) * segFreq / 6.2831853);
+
+    float rail = smoothstep(0.045, 0.0, abs(dr - halfW * 0.78));
+    float strut = smoothstep(0.09, 0.02, abs(cellPhase - 0.5)) * step(dr, halfW * 0.78);
+    float collector = smoothstep(0.36, 0.18, abs(cellPhase - 0.5)) * (1.0 - rail) * 0.38;
+
+    float beacon = pow(0.5 + 0.5 * sin(ang * 6.0 - u_time * 2.4 + float(idx) * 2.1), 8.0);
+    vec3 structCol = vec3(0.85, 0.72, 0.48) * (rail * 1.4 + strut * 0.9);
+    vec3 energyCol = vec3(0.45, 0.82, 1.0) * (collector + beacon * 0.85 * (0.4 + 0.6 * u_pulse));
+    float edgeMask = 1.0 - smoothstep(halfW * 0.72, halfW, dr);
+    return (structCol + energyCol) * edgeMask * 0.95;
+  }
+
+  void main() {
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / min(u_res.x, u_res.y);
+    vec3 rd = normalize(u_camFwd + uv.x * u_tanHalfFov * u_camRight + uv.y * u_tanHalfFov * u_camUp);
+
+    vec3 pos = u_camPos;
+    vec3 vel = rd;
+
+    float a = u_spin;
+    float a2 = a * a;
+    float rCap = u_rPlus * 1.008;
+
+    vec3 accum = vec3(0.0);
+    float trans = 1.0;
+    bool captured = false;
+    float minR = 1000.0;
+
+    for (int i = 0; i < 144; i++) {
+      float r = kerrRadius(pos, a2);
+      minR = min(minR, r);
+
+      if (r <= rCap) {
+        captured = true;
+        break;
+      }
+      if (r > 46.0 && dot(pos, vel) > 0.0) {
+        break;
+      }
+      if (trans < 0.012) {
+        break;
+      }
+
+      float radialStep = clamp(0.060 * (r - 0.82 * u_rPlus), 0.017, 0.88);
+      float diskStep = clamp(abs(pos.y) * 0.52 + 0.022, 0.022, 0.88);
+      float dt = min(radialStep, diskStep);
+
+      vec3 hVec = cross(pos, vel);
+      float h2 = dot(hVec, hVec);
+
+      // Physical photon moves opposite to backward-traced ray: Ly_phys = -hVec.y
+      // Prograde photons (Ly_phys > 0) experience weaker effective capture barrier (b - a*)^2,
+      // reproducing Bardeen's asymmetric D-shaped Kerr shadow aligned with Doppler-boosted limb!
+      float lyPhys = -hVec.y;
+      float sin2Theta = clamp((pos.x * pos.x + pos.z * pos.z) / max(r * r, 1e-4), 0.0, 1.0);
+      float hEff2 = max(0.0, h2 - 2.0 * a * lyPhys + a2 * sin2Theta);
+
+      float invR = 1.0 / max(r, 0.25);
+      float invR2 = invR * invR;
+      float invR5 = invR2 * invR2 * invR;
+
+      // Exact null geodesic curvature in M = 1 units (-3M h_eff^2 / r^5 * pos) + ZAMO frame dragging
+      vec3 accGR = -3.0 * hEff2 * invR5 * pos;
+      vec3 frameDrag = (2.0 * a * invR2 * invR) * cross(vec3(0.0, 1.0, 0.0), vel);
+      vec3 acc = (accGR + frameDrag) * u_flags.x;
+
+      vec3 nextVel = normalize(vel + acc * dt);
+      vec3 nextPos = pos + 0.5 * (vel + nextVel) * dt;
+
+      // 1. Exact equatorial Novikov-Thorne disk plane-crossing (zero slice banding!)
+      if (pos.y * nextPos.y <= 0.0) {
+        float frac = pos.y / max(1e-6, pos.y - nextPos.y);
+        vec3 hit = mix(pos, nextPos, clamp(frac, 0.0, 1.0));
+        vec4 diskSample = shadeAccretionDisk(hit, vel);
+        accum += trans * diskSample.rgb;
+        trans *= (1.0 - diskSample.a);
+      }
+
+      // 2. Soft volumetric relativistic corona & inner photon-ring glow
+      float absY = abs(pos.y);
+      float cylR = length(pos.xz);
+      if (absY < 1.35 && cylR > u_rPlus * 1.02 && cylR < 16.0) {
+        float hScale = 0.11 + 0.045 * cylR;
+        float corona = exp(-(absY * absY) / (hScale * hScale)) * exp(-cylR * 0.26);
+        vec3 cCol = mix(vec3(1.0, 0.52, 0.16), vec3(0.55, 0.80, 1.0), clamp(1.8 / cylR, 0.0, 1.0));
+        accum += trans * cCol * corona * dt * 0.24 * u_mdot;
+      }
+
+      // 3. Blandford-Znajek magnetospheric polar Poynting jets (power ~ a*^2 Omega_H^2)
+      if (u_flags.w > 0.01 && a > 0.02) {
+        float jetAxisR = length(pos.xz);
+        float absJetY = abs(pos.y);
+        float jetRadius = 0.34 + 0.14 * pow(absJetY + 0.4, 0.68);
+        if (jetAxisR < jetRadius * 2.2 && absJetY > u_rPlus * 0.72 && absJetY < 26.0) {
+          float sheath = exp(-pow((jetAxisR - jetRadius * 0.68) / (0.24 * jetRadius), 2.0));
+          float core = exp(-pow(jetAxisR / (0.35 * jetRadius), 2.0)) * 0.5;
+          float twist = atan(pos.z, pos.x) + sign(pos.y) * (absJetY * 0.85 - u_time * 3.4);
+          float helix = 0.55 + 0.45 * sin(twist * 3.0);
+          float bzPower = a * a * (0.45 + 1.8 * u_omegaH);
+          float axialFade = exp(-absJetY * 0.095) * smoothstep(u_rPlus * 0.72, u_rPlus * 1.35, absJetY);
+          vec3 jetCol = mix(vec3(0.32, 0.68, 1.0), vec3(0.95, 0.82, 0.62), core);
+          accum += trans * jetCol * (sheath * helix + core) * bzPower * axialFade * dt * 0.52 * u_flags.w;
+        }
+      }
+
+      // 4. Lensed 3D Dyson-Penrose Megastructure Rings
+      if (u_flags.z > 0.01) {
+        for (int k = 0; k < 3; k++) {
+          float d0 = dot(pos, u_ringN[k]);
+          float d1 = dot(nextPos, u_ringN[k]);
+          if (d0 * d1 <= 0.0) {
+            float tCross = d0 / max(1e-6, d0 - d1);
+            vec3 ringHit = mix(pos, nextPos, clamp(tCross, 0.0, 1.0));
+            vec3 ringCol = shadeDysonRing(ringHit, k);
+            accum += trans * ringCol * u_flags.z;
+          }
+        }
+      }
+
+      // 5. Optional exact Ergosphere surface manifold r_E(theta) = 1 + sqrt(1 - a^2 cos^2 theta)
+      if (u_ergoVis > 0.01 && a > 0.01) {
+        float cosT0 = clamp(pos.y / max(r, 1e-4), -1.0, 1.0);
+        float rNext = kerrRadius(nextPos, a2);
+        float cosT1 = clamp(nextPos.y / max(rNext, 1e-4), -1.0, 1.0);
+        float ergo0 = r - (1.0 + sqrt(max(0.0, 1.0 - a2 * cosT0 * cosT0)));
+        float ergo1 = rNext - (1.0 + sqrt(max(0.0, 1.0 - a2 * cosT1 * cosT1)));
+        if (ergo0 * ergo1 <= 0.0) {
+          float lat = acos(cosT0) * 18.0;
+          float lon = atan(pos.z, pos.x) * 16.0 + u_time * u_omegaH * 5.0;
+          float wire = max(smoothstep(0.92, 0.995, abs(sin(lat))), smoothstep(0.92, 0.995, abs(sin(lon))));
+          vec3 ergoCol = mix(vec3(1.0, 0.26, 0.18), vec3(0.42, 0.85, 1.0), 0.35);
+          accum += trans * ergoCol * (0.09 + 0.55 * wire) * u_ergoVis;
+        }
+      }
+
+      pos = nextPos;
+      vel = nextVel;
+    }
+
+    // Background lensed starfield for escaping null geodesics
+    if (!captured) {
+      accum += trans * sampleCosmos(vel);
+      // Subtle critical photon-sphere grazing glint
+      float graze = exp(-max(0.0, minR - u_rPlus * 1.18) * 9.0);
+      accum += trans * vec3(1.0, 0.78, 0.46) * graze * 0.16;
+    }
+
+    accum = max(accum, vec3(0.0));
+    if (u_hdrPack > 0.5) {
+      accum = accum / (1.0 + accum);
+    }
+    fragColor = vec4(accum, 1.0);
+  }`;
+
+  const BLOOM_FRAG_SRC = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 fragColor;
+  uniform sampler2D u_tex;
+  uniform vec2 u_texel;
+  uniform float u_hdrPack;
+
+  vec3 fetchHdr(vec2 uv) {
+    vec3 c = texture(u_tex, clamp(uv, vec2(0.001), vec2(0.999))).rgb;
+    if (u_hdrPack > 0.5) {
+      c = c / max(vec3(0.02), 1.0 - c);
+    }
+    float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    return c * smoothstep(0.55, 1.65, lum);
+  }
+
+  void main() {
+    vec2 o = u_texel * 2.2;
+    vec3 sum = fetchHdr(v_uv) * 0.26;
+    sum += fetchHdr(v_uv + vec2( o.x,  o.y)) * 0.125;
+    sum += fetchHdr(v_uv + vec2(-o.x,  o.y)) * 0.125;
+    sum += fetchHdr(v_uv + vec2( o.x, -o.y)) * 0.125;
+    sum += fetchHdr(v_uv + vec2(-o.x, -o.y)) * 0.125;
+    // Subtle horizontal anamorphic optical flare tap
+    sum += fetchHdr(v_uv + vec2( o.x * 2.8, 0.0)) * 0.12;
+    sum += fetchHdr(v_uv + vec2(-o.x * 2.8, 0.0)) * 0.12;
+    fragColor = vec4( (u_hdrPack > 0.5) ? (sum / (1.0 + sum)) : sum, 1.0 );
+  }`;
+
+  const COMPOSITE_FRAG_SRC = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 fragColor;
+  uniform sampler2D u_scene;
+  uniform sampler2D u_bloom;
+  uniform vec2 u_bloomTexel;
+  uniform float u_hdrPack;
+  uniform float u_scrollDim;
+  uniform float u_time;
+
+  vec3 unpack(vec3 c) {
+    return (u_hdrPack > 0.5) ? (c / max(vec3(0.015), 1.0 - c)) : c;
+  }
+
+  // ACES RRT+ODT Filmic Curve (Narkowicz / Hill fit)
+  vec3 aces(vec3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+  }
+
+  void main() {
+    // Subtle edge chromatic dispersion
+    vec2 centered = v_uv - 0.5;
+    float r2 = dot(centered, centered);
+    vec2 caShift = centered * r2 * 0.0045;
+
+    vec3 col;
+    col.r = unpack(texture(u_scene, clamp(v_uv + caShift, 0.0, 1.0)).rgb).r;
+    col.g = unpack(texture(u_scene, v_uv).rgb).g;
+    col.b = unpack(texture(u_scene, clamp(v_uv - caShift, 0.0, 1.0)).rgb).b;
+
+    // 5-tap wide upsample on bloom buffer
+    vec2 bt = u_bloomTexel * 1.8;
+    vec3 bloom = unpack(texture(u_bloom, v_uv).rgb) * 0.4;
+    bloom += unpack(texture(u_bloom, v_uv + vec2( bt.x,  bt.y)).rgb) * 0.15;
+    bloom += unpack(texture(u_bloom, v_uv + vec2(-bt.x,  bt.y)).rgb) * 0.15;
+    bloom += unpack(texture(u_bloom, v_uv + vec2( bt.x, -bt.y)).rgb) * 0.15;
+    bloom += unpack(texture(u_bloom, v_uv + vec2(-bt.x, -bt.y)).rgb) * 0.15;
+
+    vec3 hdr = (col + bloom * 0.44) * mix(1.0, 0.52, u_scrollDim);
+
+    // Optical vignette
+    hdr *= 1.0 - r2 * 0.42;
+
+    vec3 mapped = pow(aces(hdr * 0.96), vec3(1.0 / 2.2));
+
+    // Sub-LSB animated dither eliminates 8-bit dark gradient banding
+    float grain = fract(sin(dot(gl_FragCoord.xy + fract(u_time), vec2(12.9898, 78.233))) * 43758.5453);
+    mapped += (grain - 0.5) / 255.0;
+
+    fragColor = vec4(mapped, 1.0);
+  }`;
+
+  let glReady = false;
+  let vao = null;
+  let sceneProg = null, bloomProg = null, compProg = null;
+  let sceneLoc = {}, bloomLoc = {}, compLoc = {};
+  let sceneFbo = null, sceneTex = null, bloomFbo = null, bloomTex = null;
+  let fboW = 0, fboH = 0, bloomW = 0, bloomH = 0;
+  let useFloatFbo = false;
+
+  function compileShader(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(sh));
+      gl.deleteShader(sh);
+      return null;
+    }
+    return sh;
+  }
+
+  function linkProgram(vsSrc, fsSrc) {
+    const vs = compileShader(gl.VERTEX_SHADER, vsSrc);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+    if (!vs || !fs) return null;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error(gl.getProgramInfoLog(prog));
+      return null;
+    }
+    return prog;
+  }
+
+  function createRenderTarget(w, h, float16) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    if (float16) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    } else {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!ok) {
+      gl.deleteFramebuffer(fbo);
+      gl.deleteTexture(tex);
+      return null;
+    }
+    return { fbo, tex };
+  }
+
+  function rebuildFramebuffers(targetW, targetH) {
+    if (!gl) return;
+    if (sceneFbo) { gl.deleteFramebuffer(sceneFbo); gl.deleteTexture(sceneTex); }
+    if (bloomFbo) { gl.deleteFramebuffer(bloomFbo); gl.deleteTexture(bloomTex); }
+
+    fboW = Math.max(64, targetW);
+    fboH = Math.max(64, targetH);
+    bloomW = Math.max(32, fboW >> 1);
+    bloomH = Math.max(32, fboH >> 1);
+
+    let rtScene = useFloatFbo ? createRenderTarget(fboW, fboH, true) : null;
+    let rtBloom = useFloatFbo ? createRenderTarget(bloomW, bloomH, true) : null;
+    if (!rtScene || !rtBloom) {
+      if (rtScene) { gl.deleteFramebuffer(rtScene.fbo); gl.deleteTexture(rtScene.tex); }
+      if (rtBloom) { gl.deleteFramebuffer(rtBloom.fbo); gl.deleteTexture(rtBloom.tex); }
+      useFloatFbo = false;
+      rtScene = createRenderTarget(fboW, fboH, false);
+      rtBloom = createRenderTarget(bloomW, bloomH, false);
+    }
+    sceneFbo = rtScene.fbo; sceneTex = rtScene.tex;
+    bloomFbo = rtBloom.fbo; bloomTex = rtBloom.tex;
+  }
+
+  if (gl) {
+    useFloatFbo = Boolean(gl.getExtension('EXT_color_buffer_float'));
+    vao = gl.createVertexArray();
+    sceneProg = linkProgram(VERT_SRC, SCENE_FRAG_SRC);
+    bloomProg = linkProgram(VERT_SRC, BLOOM_FRAG_SRC);
+    compProg = linkProgram(VERT_SRC, COMPOSITE_FRAG_SRC);
+
+    if (sceneProg && bloomProg && compProg) {
+      const u = (p, names) => {
+        const out = {};
+        for (const n of names) out[n] = gl.getUniformLocation(p, n) ?? gl.getUniformLocation(p, `${n}[0]`);
+        return out;
+      };
+      sceneLoc = u(sceneProg, [
+        'u_res', 'u_time', 'u_camPos', 'u_camRight', 'u_camUp', 'u_camFwd',
+        'u_tanHalfFov', 'u_spin', 'u_rPlus', 'u_rIsco', 'u_mdot', 'u_omegaH',
+        'u_flags', 'u_ergoVis', 'u_pulse', 'u_hdrPack', 'u_ringN', 'u_ringU'
+      ]);
+      bloomLoc = u(bloomProg, ['u_tex', 'u_texel', 'u_hdrPack']);
+      compLoc = u(compProg, ['u_scene', 'u_bloom', 'u_bloomTexel', 'u_hdrPack', 'u_scrollDim', 'u_time']);
+      glReady = true;
+    }
+  }
+
+  // Pre-allocated uniform arrays for Dyson orbital bases + shared 3D camera frame
+  const ringNormals = new Float32Array(9);
+  const ringTangents = new Float32Array(9);
+  const camPos = new Float32Array(3);
+  const camFwd = new Float32Array(3);
+  const camRight = new Float32Array(3);
+  const camUp = new Float32Array(3);
+  const TAN_HALF_FOV = Math.tan((44.0 * Math.PI) / 360.0);
+
+  function computeCameraFrame() {
+    const theta = (current.inclination * Math.PI) / 180.0;
+    const phi = current.azimuth;
+    const r = current.camDist;
+
+    const sinT = Math.sin(theta), cosT = Math.cos(theta);
+    const sinP = Math.sin(phi), cosP = Math.cos(phi);
+
+    camPos[0] = r * sinT * sinP;
+    camPos[1] = r * cosT;
+    camPos[2] = r * sinT * cosP;
+
+    // Look slightly offset toward center with crisp framing
+    const invLen = 1.0 / Math.max(1e-5, Math.hypot(camPos[0], camPos[1], camPos[2]));
+    camFwd[0] = -camPos[0] * invLen;
+    camFwd[1] = -camPos[1] * invLen;
+    camFwd[2] = -camPos[2] * invLen;
+
+    // Right = normalize(camFwd × worldUp(0,1,0)) = normalize((-fwd.z, 0, fwd.x))
+    const rx = -camFwd[2], rz = camFwd[0];
+    const rLen = Math.max(1e-5, Math.hypot(rx, rz));
+    camRight[0] = rx / rLen;
+    camRight[1] = 0.0;
+    camRight[2] = rz / rLen;
+
+    // Up = camRight × camFwd
+    camUp[0] = camRight[1] * camFwd[2] - camRight[2] * camFwd[1];
+    camUp[1] = camRight[2] * camFwd[0] - camRight[0] * camFwd[2];
+    camUp[2] = camRight[0] * camFwd[1] - camRight[1] * camFwd[0];
+  }
+
+  function updateDysonBases(t) {
+    const tilts = [0.42, -0.64, 0.96];
+    const radii = [9.6, 13.8, 18.8];
+    for (let k = 0; k < 3; k++) {
+      // Exact Lense-Thirring nodal precession rate Omega_LT = 2a / r^3 (amplified smoothly for visual inspection)
+      const prec = (k * 2.094) + t * (0.04 + 18.0 * metric.a / Math.pow(radii[k], 3));
+      const ct = Math.cos(tilts[k]), st = Math.sin(tilts[k]);
+      const cp = Math.cos(prec), sp = Math.sin(prec);
+
+      const nx = st * cp, ny = ct, nz = st * sp;
+      const base = k * 3;
+      ringNormals[base] = nx;
+      ringNormals[base + 1] = ny;
+      ringNormals[base + 2] = nz;
+
+      // Orthogonal basis vector u in ring plane: normalize((-nz, 0, nx))
+      const uLen = Math.max(1e-5, Math.hypot(nx, nz));
+      ringTangents[base] = -nz / uLen;
+      ringTangents[base + 1] = 0.0;
+      ringTangents[base + 2] = nx / uLen;
+    }
+  }
+
+  // ============================================================================
+  // 5. 2D VECTOR ASTROMETRIC & RK4 GEODESIC PROJECTION OVERLAY + PHASE SCOPE
+  // ============================================================================
+  const projOut = new Float32Array(3); // [sx, sy, depth]
+
+  function projectWorldToScreen(wx, wy, wz, w, h) {
+    const dx = wx - camPos[0];
+    const dy = wy - camPos[1];
+    const dz = wz - camPos[2];
+    const zCam = dx * camFwd[0] + dy * camFwd[1] + dz * camFwd[2];
+    if (zCam <= 0.25) {
+      projOut[2] = -1.0;
+      return false;
+    }
+    const xCam = dx * camRight[0] + dy * camRight[1] + dz * camRight[2];
+    const yCam = dx * camUp[0] + dy * camUp[1] + dz * camUp[2];
+    const minDim = Math.min(w, h);
+    const scale = minDim / (2.0 * TAN_HALF_FOV * zCam);
+    projOut[0] = 0.5 * w + xCam * scale;
+    projOut[1] = 0.5 * h - yCam * scale;
+    projOut[2] = zCam;
+    return true;
+  }
+
+  function renderHudOverlay(t, scrollDim) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = hudCanvas.width;
+    const h = hudCanvas.height;
+    hudCtx.clearRect(0, 0, w, h);
+
+    // Fallback relativistic canvas rendering if WebGL2 is absent on machine
+    if (!glReady) {
+      const cx = w * 0.5, cy = h * 0.5;
+      const rPx = Math.min(w, h) * 0.14;
+      const grad = hudCtx.createRadialGradient(cx - rPx * 0.25, cy, rPx * 0.85, cx, cy, rPx * 3.1);
+      grad.addColorStop(0, 'rgba(255, 220, 150, 0.92)');
+      grad.addColorStop(0.28, 'rgba(245, 166, 35, 0.45)');
+      grad.addColorStop(1, 'rgba(3, 4, 7, 0)');
+      hudCtx.fillStyle = grad;
+      hudCtx.fillRect(0, 0, w, h);
+      hudCtx.fillStyle = '#030407';
+      hudCtx.beginPath();
+      hudCtx.arc(cx + rPx * 0.12 * metric.a, cy, rPx * 0.92, 0, Math.PI * 2);
+      hudCtx.fill();
+    }
+
+    const fade = Math.max(0.0, 1.0 - scrollDim * 1.4);
+    if (fade <= 0.02 || document.body.classList.contains('cinema-mode')) return;
+
+    hudCtx.save();
+    hudCtx.globalAlpha = fade;
+
+    // Approximate shadow occlusion radius in screen pixels for background trajectory segments
+    const camR = current.camDist;
+    const bCrit = 2.6 + 2.6 * Math.sqrt(Math.max(0.05, 1.0 - 0.55 * metric.a));
+    const shadowPx = (Math.min(w, h) / (2.0 * TAN_HALF_FOV)) * (bCrit / camR);
+    const cx = 0.5 * w, cy = 0.5 * h;
+
+    // Draw RK4 Geodesic & Penrose Split Trajectories in 3D projected coordinates
+    for (let idx = 0; idx < 3; idx++) {
+      const count = trailCount[idx];
+      if (count < 2) continue;
+
+      const color = (idx === 0) ? '244, 240, 232' :
+                    (idx === 1) ? '255, 77, 56' : '154, 216, 255';
+
+      hudCtx.lineWidth = (idx === 2 ? 2.0 : 1.4) * dpr;
+      hudCtx.beginPath();
+      let started = false;
+      const head = trailHead[idx];
+      const oldest = (head - count + TRAIL_LEN) % TRAIL_LEN;
+
+      for (let k = 0; k < count; k++) {
+        const slot = (oldest + k) % TRAIL_LEN;
+        const base = (idx * TRAIL_LEN + slot) * 3;
+        const wx = trailXYZ[base], wy = trailXYZ[base + 1], wz = trailXYZ[base + 2];
+        if (!projectWorldToScreen(wx, wy, wz, w, h)) {
+          started = false;
+          continue;
+        }
+        // Occlude segments physically behind the black hole shadow
+        const behindHole = projOut[2] > camR && Math.hypot(projOut[0] - cx, projOut[1] - cy) < shadowPx * 0.92;
+        if (behindHole) {
+          started = false;
+          continue;
+        }
+        if (!started) {
+          hudCtx.moveTo(projOut[0], projOut[1]);
+          started = true;
+        } else {
+          hudCtx.lineTo(projOut[0], projOut[1]);
+        }
+      }
+      hudCtx.strokeStyle = `rgba(${color}, ${idx === 0 ? 0.58 : 0.88})`;
+      hudCtx.stroke();
+
+      // Live astrometric vector marker & energy callout on active head
+      const b = bodies[idx];
+      if (b.active) {
+        bodyWorldPos(b, tmpPos);
+        if (projectWorldToScreen(tmpPos[0], tmpPos[1], tmpPos[2], w, h)) {
+          const sx = projOut[0], sy = projOut[1];
+          const behind = projOut[2] > camR && Math.hypot(sx - cx, sy - cy) < shadowPx * 0.92;
+          if (!behind) {
+            hudCtx.fillStyle = `rgb(${color})`;
+            hudCtx.beginPath();
+            hudCtx.arc(sx, sy, 3.2 * dpr, 0, Math.PI * 2);
+            hudCtx.fill();
+
+            hudCtx.font = `${Math.round(10 * dpr)}px "JetBrains Mono", monospace`;
+            const tag = (idx === 0) ? `CARRIER E₀=${b.E.toFixed(2)}` :
+                        (idx === 1) ? `CAPTURE E₁=${b.E.toFixed(2)} mc²` :
+                                      `ESCAPING E₂=+${b.E.toFixed(2)} mc²`;
+            hudCtx.fillStyle = `rgba(${color}, 0.95)`;
+            hudCtx.fillText(tag, sx + 8 * dpr, sy - 6 * dpr);
+          }
+        }
+      }
+    }
+
+    // Subtle astrometric shadow-scale reticle ticks around singularity center
+    hudCtx.strokeStyle = 'rgba(244, 240, 232, 0.14)';
+    hudCtx.lineWidth = 1 * dpr;
+    const tickR = shadowPx * 1.18;
+    for (let q = 0; q < 4; q++) {
+      const ang = q * Math.PI * 0.5 + Math.PI * 0.25;
+      const c = Math.cos(ang), s = Math.sin(ang);
+      hudCtx.beginPath();
+      hudCtx.moveTo(cx + c * tickR, cy + s * tickR);
+      hudCtx.lineTo(cx + c * (tickR + 8 * dpr), cy + s * (tickR + 8 * dpr));
+      hudCtx.stroke();
+    }
+
+    hudCtx.restore();
+  }
+
+  // Real-time Kerr Radial Effective Potential V_eff(r) & Phase-Space Oscilloscope
+  function renderPotentialScope() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = scopeCanvas.width;
+    const h = scopeCanvas.height;
+    if (w < 10 || h < 10) return;
+
+    scopeCtx.clearRect(0, 0, w, h);
+
+    const a = metric.a;
+    const rMin = 1.0, rMax = 14.0;
+    const vMin = 0.68, vMax = 1.24;
+
+    const mapX = (r) => ((r - rMin) / (rMax - rMin)) * w;
+    const mapY = (v) => h - ((v - vMin) / (vMax - vMin)) * h;
+
+    // Shade Ergosphere region [r_+, 2M]
+    const xHorizon = mapX(metric.rPlus);
+    const xErgo = mapX(2.0);
+    if (xErgo > xHorizon) {
+      scopeCtx.fillStyle = 'rgba(255, 77, 56, 0.11)';
+      scopeCtx.fillRect(xHorizon, 0, xErgo - xHorizon, h);
+    }
+
+    // Shade Event Horizon interior [1M, r_+]
+    scopeCtx.fillStyle = 'rgba(255, 77, 56, 0.22)';
+    scopeCtx.fillRect(0, 0, xHorizon, h);
+
+    // Reference rest-mass energy line E = 1.0 mc^2
+    const yRest = mapY(1.0);
+    scopeCtx.strokeStyle = 'rgba(244, 240, 232, 0.14)';
+    scopeCtx.lineWidth = 1 * dpr;
+    scopeCtx.setLineDash([3 * dpr, 3 * dpr]);
+    scopeCtx.beginPath();
+    scopeCtx.moveTo(0, yRest);
+    scopeCtx.lineTo(w, yRest);
+    scopeCtx.stroke();
+
+    // Vertical ISCO marker
+    const xIsco = mapX(metric.rIsco);
+    scopeCtx.strokeStyle = 'rgba(245, 166, 35, 0.45)';
+    scopeCtx.beginPath();
+    scopeCtx.moveTo(xIsco, 0);
+    scopeCtx.lineTo(xIsco, h);
+    scopeCtx.stroke();
+    scopeCtx.setLineDash([]);
+
+    // Plot exact Kerr Effective Potential V_eff(r) for Lz = 1.12 * L_ISCO
+    const rI = metric.rIsco;
+    const rHalf = Math.sqrt(rI);
+    const lIsco = (rI * rI - 2.0 * a * rHalf + a * a) /
+      (Math.pow(rI, 0.75) * Math.sqrt(Math.max(1e-6, rI * rHalf - 3.0 * rHalf + 2.0 * a)));
+    const Lz = lIsco * 1.08;
+
+    scopeCtx.strokeStyle = '#f5a623';
+    scopeCtx.lineWidth = 1.6 * dpr;
+    scopeCtx.beginPath();
+    let penDown = false;
+    for (let px = 0; px <= w; px += 2) {
+      const r = rMin + (px / w) * (rMax - rMin);
+      if (r < metric.rPlus) continue;
+      // Solve exact quadratic in E for turning point dr/dτ = 0:
+      // E^2 (1 + a^2/r^2 + 2a^2/r^3) - E (4 a Lz / r^3) + (-1 + 2/r - Lz^2/r^2 + 2 Lz^2/r^3 - a^2/r^2) = 0
+      const invR = 1.0 / r, invR2 = invR * invR, invR3 = invR2 * invR;
+      const A = 1.0 + a * a * invR2 + 2.0 * a * a * invR3;
+      const B = -4.0 * a * Lz * invR3;
+      const C = -1.0 + 2.0 * invR - (Lz * Lz + a * a) * invR2 + 2.0 * Lz * Lz * invR3;
+      const disc = B * B - 4.0 * A * C;
+      const vEff = (-B + Math.sqrt(Math.max(0.0, disc))) / (2.0 * A);
+      const py = mapY(vEff);
+      if (!penDown) {
+        scopeCtx.moveTo(px, py);
+        penDown = true;
+      } else {
+        scopeCtx.lineTo(px, py);
+      }
+    }
+    scopeCtx.stroke();
+
+    // Plot active Penrose packet states (r, E) on the phase scope
+    const colors = ['#f4f0e8', '#ff4d38', '#9ad8ff'];
+    for (let i = 0; i < 3; i++) {
+      const b = bodies[i];
+      if (!b.active) continue;
+      const sx = clampNum(mapX(b.r), 3 * dpr, w - 3 * dpr);
+      const sy = clampNum(mapY(Math.max(vMin + 0.04, b.E)), 4 * dpr, h - 4 * dpr);
+      scopeCtx.fillStyle = colors[i];
+      scopeCtx.beginPath();
+      scopeCtx.arc(sx, sy, 3.2 * dpr, 0, Math.PI * 2);
+      scopeCtx.fill();
+    }
+
+    // Axis micro-labels
+    scopeCtx.font = `${Math.round(9 * dpr)}px "JetBrains Mono", monospace`;
+    scopeCtx.fillStyle = 'rgba(244, 240, 232, 0.55)';
+    scopeCtx.fillText('r₊', xHorizon + 3 * dpr, h - 5 * dpr);
+    scopeCtx.fillStyle = 'rgba(245, 166, 35, 0.85)';
+    scopeCtx.fillText('ISCO', xIsco + 3 * dpr, 11 * dpr);
+  }
+
+  function clampNum(x, lo, hi) {
+    return x < lo ? lo : (x > hi ? hi : x);
+  }
+
+  // ============================================================================
+  // 6. OPTIONAL WEB AUDIO HORIZON HARMONIC SYNTHESIZER (USER-GATED)
+  // ============================================================================
+  let audioCtx = null;
+  let masterGain = null;
+  let oscFund = null;
+  let oscFifth = null;
+  let audioEnabled = false;
+
+  function toggleAudio() {
+    const btn = document.getElementById('audio-btn');
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      audioCtx = new Ctx();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.0;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 260;
+
+      oscFund = audioCtx.createOscillator();
+      oscFund.type = 'sine';
+      oscFund.frequency.value = 55;
+
+      oscFifth = audioCtx.createOscillator();
+      oscFifth.type = 'triangle';
+      oscFifth.frequency.value = 82.5;
+
+      const fifthGain = audioCtx.createGain();
+      fifthGain.gain.value = 0.22;
+
+      oscFund.connect(filter);
+      oscFifth.connect(fifthGain);
+      fifthGain.connect(filter);
+      filter.connect(masterGain);
+      masterGain.connect(audioCtx.destination);
+
+      oscFund.start();
+      oscFifth.start();
+    }
+
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    audioEnabled = !audioEnabled;
+    const now = audioCtx.currentTime;
+    masterGain.gain.setTargetAtTime(audioEnabled ? 0.085 : 0.0, now, 0.12);
+    btn.textContent = audioEnabled ? 'AUDIO: ON' : 'AUDIO: OFF';
+    btn.classList.toggle('is-on', audioEnabled);
+  }
+
+  function updateAudioHarmonics() {
+    if (!audioEnabled || !audioCtx || !oscFund) return;
+    // Map horizon angular velocity Omega_H in [0, 0.5] to deep relativistic drone [42 Hz .. 98 Hz]
+    const f0 = 42.0 + metric.omegaH * 112.0;
+    const now = audioCtx.currentTime;
+    oscFund.frequency.setTargetAtTime(f0, now, 0.08);
+    oscFifth.frequency.setTargetAtTime(f0 * 1.4983, now, 0.08);
+  }
+
+  function triggerAudioImpulse(freq, gainAmt) {
+    if (!audioEnabled || !audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.62, now + 0.36);
+    g.gain.setValueAtTime(gainAmt, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.45);
+  }
+
+  // ============================================================================
+  // 7. DOM CACHE, PRECISION SCRUBBERS & INTERACTION HANDLERS
+  // ============================================================================
+  const dom = {
+    kardashev: document.getElementById('hud-kardashev'),
+    fps: document.getElementById('fps-readout'),
+    scopeReadout: document.getElementById('scope-readout'),
+    penroseGain: document.getElementById('penrose-gain'),
+    penroseBtn: document.getElementById('penrose-btn'),
+    statusLine: document.getElementById('status-line'),
+    teleRplus: document.getElementById('tele-rplus'),
+    teleIsco: document.getElementById('tele-isco'),
+    teleEta: document.getElementById('tele-eta'),
+    telePenrose: document.getElementById('tele-penrose'),
+    teleOmegah: document.getElementById('tele-omegah'),
+    teleHawking: document.getElementById('tele-hawking'),
+    telePower: document.getElementById('tele-power'),
+    matrixSpin: document.getElementById('matrix-live-spin'),
+    barPenrose: document.getElementById('bar-penrose'),
+    pctPenrose: document.getElementById('pct-penrose'),
+    barNt: document.getElementById('bar-nt'),
+    pctNt: document.getElementById('pct-nt'),
+    val: {
+      spin: document.getElementById('val-spin'),
+      massLog: document.getElementById('val-massLog'),
+      mdot: document.getElementById('val-mdot'),
+      inclination: document.getElementById('val-inclination'),
+      camDist: document.getElementById('val-camDist')
+    },
+    fill: {
+      spin: document.getElementById('fill-spin'),
+      massLog: document.getElementById('fill-massLog'),
+      mdot: document.getElementById('fill-mdot'),
+      inclination: document.getElementById('fill-inclination'),
+      camDist: document.getElementById('fill-camDist')
+    },
+    thumb: {
+      spin: document.getElementById('thumb-spin'),
+      massLog: document.getElementById('thumb-massLog'),
+      mdot: document.getElementById('thumb-mdot'),
+      inclination: document.getElementById('thumb-inclination'),
+      camDist: document.getElementById('thumb-camDist')
+    }
+  };
+
+  const scrubberDefs = {};
+  document.querySelectorAll('.scrubber').forEach((el) => {
+    const param = el.dataset.param;
+    const min = parseFloat(el.dataset.min);
+    const max = parseFloat(el.dataset.max);
+    scrubberDefs[param] = { min, max };
+
+    const track = el.querySelector('.scrubber-track');
+    const setFromClientX = (clientX) => {
+      const rect = track.getBoundingClientRect();
+      const pct = clampNum((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+      target[param] = min + pct * (max - min);
+      clearPresetActive();
+    };
+
+    track.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      track.setPointerCapture(e.pointerId);
+      track.classList.add('dragging');
+      setFromClientX(e.clientX);
+    });
+    track.addEventListener('pointermove', (e) => {
+      if (!track.hasPointerCapture(e.pointerId)) return;
+      setFromClientX(e.clientX);
+    });
+    const endDrag = (e) => {
+      if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId);
+      track.classList.remove('dragging');
+    };
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
+  });
+
+  function syncScrubberVisuals() {
+    for (const key in scrubberDefs) {
+      const { min, max } = scrubberDefs[key];
+      const pct = clampNum(((current[key] - min) / (max - min)) * 100.0, 0, 100).toFixed(2) + '%';
+      dom.fill[key].style.width = pct;
+      dom.thumb[key].style.left = pct;
+    }
+    dom.val.spin.textContent = current.spin.toFixed(3);
+    dom.val.massLog.textContent = `10^${current.massLog.toFixed(2)} M☉`;
+    dom.val.mdot.textContent = current.mdot.toFixed(2);
+    dom.val.inclination.textContent = `${current.inclination.toFixed(1)}°`;
+    dom.val.camDist.textContent = `${current.camDist.toFixed(1)} M`;
+  }
+
+  // Presets
+  const PRESETS = {
+    thorne: { spin: 0.998, massLog: 9.81, mdot: 1.15, inclination: 76.0, camDist: 17.5 },
+    m87: { spin: 0.900, massLog: 9.81, mdot: 0.72, inclination: 17.0, camDist: 16.0 },
+    edge: { spin: 0.998, massLog: 8.60, mdot: 1.45, inclination: 85.5, camDist: 15.2 },
+    schwarzschild: { spin: 0.000, massLog: 7.50, mdot: 0.85, inclination: 78.0, camDist: 20.5 }
+  };
+
+  function clearPresetActive() {
+    document.querySelectorAll('.preset-btn').forEach((b) => b.classList.remove('active'));
+  }
+
+  document.querySelectorAll('.preset-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[btn.dataset.preset];
+      if (!p) return;
+      clearPresetActive();
+      btn.classList.add('active');
+      Object.assign(target, p);
+    });
+  });
+
+  // Physical operator layer flags
+  document.querySelectorAll('.flag-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.flag;
+      flags[f] = flags[f] > 0.5 ? 0.0 : 1.0;
+      btn.classList.toggle('active', flags[f] > 0.5);
+    });
+  });
+
+  // Orbit drag + Shift+Wheel zoom on Observatory stage
+  const orbitSurface = document.getElementById('orbit-surface');
+  let orbitDragging = false;
+  let lastPtrX = 0, lastPtrY = 0;
+
+  orbitSurface.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    orbitDragging = true;
+    lastPtrX = e.clientX;
+    lastPtrY = e.clientY;
+    orbitSurface.setPointerCapture(e.pointerId);
+  });
+
+  orbitSurface.addEventListener('pointermove', (e) => {
+    if (!orbitDragging) return;
+    const dx = e.clientX - lastPtrX;
+    const dy = e.clientY - lastPtrY;
+    lastPtrX = e.clientX;
+    lastPtrY = e.clientY;
+    target.azimuth -= dx * 0.0065;
+    target.inclination = clampNum(target.inclination - dy * 0.22, 3.0, 88.0);
+  });
+
+  const stopOrbit = (e) => {
+    orbitDragging = false;
+    if (orbitSurface.hasPointerCapture(e.pointerId)) {
+      orbitSurface.releasePointerCapture(e.pointerId);
+    }
+  };
+  orbitSurface.addEventListener('pointerup', stopOrbit);
+  orbitSurface.addEventListener('pointercancel', stopOrbit);
+
+  orbitSurface.addEventListener('wheel', (e) => {
+    if (!e.shiftKey) return;
+    e.preventDefault();
+    target.camDist = clampNum(target.camDist + e.deltaY * 0.014, 6.2, 32.0);
+  }, { passive: false });
+
+  // Penrose Launch Trigger
+  function handlePenroseAction() {
+    const ok = launchPenrosePacket();
+    if (!ok) {
+      dom.statusLine.textContent = 'PENROSE LOCKED: SPIN a* < 0.08 → ZERO USABLE ERGOSPHERE VOLUME (r_E ≈ r₊)';
+    } else {
+      dom.statusLine.textContent = 'CARRIER INJECTED → GRAZING ERGOSPHERE r₊ < r < 2M FOR NEGATIVE-ENERGY SPLIT';
+    }
+  }
+  dom.penroseBtn.addEventListener('click', handlePenroseAction);
+
+  // Quality, Audio, Cinema, Mobile Rack Controls
+  const scales = [1.0, 0.72, 1.25];
+  const scaleLabels = ['RES: 1.0X', 'RES: 0.72X', 'RES: ULTRA'];
+  let scaleIdx = 0;
+  document.getElementById('quality-btn').addEventListener('click', (e) => {
+    scaleIdx = (scaleIdx + 1) % scales.length;
+    renderScale = scales[scaleIdx];
+    e.currentTarget.textContent = scaleLabels[scaleIdx];
+    resizeViewport(true);
+  });
+
+  document.getElementById('audio-btn').addEventListener('click', toggleAudio);
+
+  function toggleCinema() {
+    document.body.classList.toggle('cinema-mode');
+  }
+  document.getElementById('cinema-btn').addEventListener('click', toggleCinema);
+  document.getElementById('cinema-restore').addEventListener('click', toggleCinema);
+
+  const mobileRackBtn = document.getElementById('mobile-rack-btn');
+  const metricRack = document.getElementById('metric-rack');
+  mobileRackBtn.addEventListener('click', () => {
+    const open = metricRack.classList.toggle('open');
+    mobileRackBtn.classList.toggle('is-on', open);
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      handlePenroseAction();
+    } else if (e.key === 'h' || e.key === 'H') {
+      toggleCinema();
+    } else if (e.key === 'm' || e.key === 'M') {
+      toggleAudio();
+    }
+  });
+
+  // ============================================================================
+  // 8. RESIZE MANAGEMENT & TELEMETRY FORMATTERS
+  // ============================================================================
+  function resizeViewport(forceFbo) {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const glW = Math.max(64, Math.round(w * Math.min(dpr, 1.65) * renderScale));
+    const glH = Math.max(64, Math.round(h * Math.min(dpr, 1.65) * renderScale));
+
+    if (forceFbo || glCanvas.width !== glW || glCanvas.height !== glH) {
+      glCanvas.width = glW;
+      glCanvas.height = glH;
+      if (glReady) rebuildFramebuffers(glW, glH);
+    }
+
+    const hudW = Math.round(w * dpr);
+    const hudH = Math.round(h * dpr);
+    if (hudCanvas.width !== hudW || hudCanvas.height !== hudH) {
+      hudCanvas.width = hudW;
+      hudCanvas.height = hudH;
+    }
+
+    const scopeRect = scopeCanvas.parentElement.getBoundingClientRect();
+    const sw = Math.max(64, Math.round(scopeRect.width * dpr));
+    const sh = Math.max(48, Math.round(scopeRect.height * dpr));
+    if (scopeCanvas.width !== sw || scopeCanvas.height !== sh) {
+      scopeCanvas.width = sw;
+      scopeCanvas.height = sh;
+    }
+  }
+
+  window.addEventListener('resize', () => resizeViewport(false));
+
+  function fmtSci(val) {
+    if (!Number.isFinite(val) || val === 0) return '0.00';
+    const exp = Math.floor(Math.log10(Math.abs(val)));
+    const mant = val / Math.pow(10, exp);
+    return `${mant.toFixed(2)}e${exp}`;
+  }
+
+  function updateTelemetryDOM() {
+    const kType = metric.kardashev >= 3.0 ? 'TYPE-Ω' : (metric.kardashev >= 2.0 ? 'TYPE-II+' : 'TYPE-I+');
+    dom.kardashev.textContent = `K = ${metric.kardashev.toFixed(2)} · ${kType}`;
+
+    dom.teleRplus.textContent = `${metric.rPlus.toFixed(3)} M`;
+    dom.teleIsco.textContent = `${metric.rIsco.toFixed(3)} M`;
+    dom.teleEta.textContent = `${(metric.etaNT * 100).toFixed(2)}%`;
+    dom.telePenrose.textContent = `${(metric.etaPenrose * 100).toFixed(2)}%`;
+    dom.teleOmegah.textContent = `${metric.omegaH.toFixed(3)} c/M`;
+    dom.teleHawking.textContent = `${fmtSci(metric.tHawking)} K`;
+    dom.telePower.textContent = `${fmtSci(metric.pTotal)} W`;
+
+    dom.scopeReadout.textContent = `r_ISCO = ${metric.rIsco.toFixed(2)} M`;
+
+    const canPenrose = metric.a >= 0.08;
+    dom.penroseBtn.disabled = !canPenrose;
+    dom.penroseGain.textContent = canPenrose
+      ? `+${lastPenroseGainPct.toFixed(1)}% SUPER-RADIANT`
+      : 'LOCKED (a* → 0)';
+
+    // Coupled Mass-Energy Matrix in Chronicle section
+    const ntPct = (metric.etaNT * 100).toFixed(2);
+    const penPct = (metric.etaPenrose * 100).toFixed(2);
+    dom.matrixSpin.textContent = `ACTIVE METRIC: a* = ${metric.a.toFixed(3)} · r_ISCO = ${metric.rIsco.toFixed(3)} M`;
+    dom.pctPenrose.textContent = `${penPct}% Mc²`;
+    dom.barPenrose.style.width = `${Math.min(100, metric.etaPenrose * 200).toFixed(2)}%`;
+    dom.pctNt.textContent = `${ntPct}% mc²`;
+    dom.barNt.style.width = `${Math.min(100, metric.etaNT * 200).toFixed(2)}%`;
+  }
+
+  // ============================================================================
+  // 9. MAIN REALTIME SIMULATION & RENDERING LOOP
+  // ============================================================================
+  resizeViewport(true);
+  seedResonantOrbiters();
+  launchPenrosePacket();
+
+  let prevTime = performance.now();
+  let fpsAccum = 0, fpsFrames = 0;
+  let uiTick = 0;
+
+  function frame(nowMs) {
+    const dt = Math.min(0.05, Math.max(0.001, (nowMs - prevTime) * 0.001));
+    prevTime = nowMs;
+    const tSec = nowMs * 0.001;
+
+    // Subtle slow orbital drift when user isn't actively dragging
+    if (!orbitDragging) {
+      target.azimuth += dt * 0.032;
+    }
+
+    // Critically damped spring integration (stiffness k = 110, damping c = 21)
+    const kSpring = 110.0, cDamp = 21.0;
+    for (const key in current) {
+      const force = (target[key] - current[key]) * kSpring - velocity[key] * cDamp;
+      velocity[key] += force * dt;
+      current[key] += velocity[key] * dt;
+    }
+
+    const flagRate = 1.0 - Math.exp(-dt * 10.0);
+    for (const fk in flags) {
+      flagsSmooth[fk] += (flags[fk] - flagsSmooth[fk]) * flagRate;
+    }
+
+    penrosePulse = Math.max(0.0, penrosePulse - dt * 0.55);
+
+    metric = solveKerrMetric(current.spin, current.massLog, current.mdot);
+    computeCameraFrame();
+    updateDysonBases(tSec);
+    updateGeodesicSystem(dt);
+    updateAudioHarmonics();
+
+    const scrollDim = clampNum(window.scrollY / Math.max(400, window.innerHeight * 0.85), 0.0, 1.0);
+
+    // WebGL2 Two-Pass + Bloom HDR Pipeline
+    if (glReady) {
+      const hdrPackVal = useFloatFbo ? 0.0 : 1.0;
+      gl.bindVertexArray(vao);
+
+      // Pass 1: Kerr Geodesic Raymarcher -> sceneFbo
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
+      gl.viewport(0, 0, fboW, fboH);
+      gl.useProgram(sceneProg);
+      gl.uniform2f(sceneLoc.u_res, fboW, fboH);
+      gl.uniform1f(sceneLoc.u_time, tSec);
+      gl.uniform3fv(sceneLoc.u_camPos, camPos);
+      gl.uniform3fv(sceneLoc.u_camRight, camRight);
+      gl.uniform3fv(sceneLoc.u_camUp, camUp);
+      gl.uniform3fv(sceneLoc.u_camFwd, camFwd);
+      gl.uniform1f(sceneLoc.u_tanHalfFov, TAN_HALF_FOV);
+      gl.uniform1f(sceneLoc.u_spin, metric.a);
+      gl.uniform1f(sceneLoc.u_rPlus, metric.rPlus);
+      gl.uniform1f(sceneLoc.u_rIsco, metric.rIsco);
+      gl.uniform1f(sceneLoc.u_mdot, current.mdot);
+      gl.uniform1f(sceneLoc.u_omegaH, metric.omegaH);
+      gl.uniform4f(sceneLoc.u_flags, flagsSmooth.lensing, flagsSmooth.doppler, flagsSmooth.dyson, flagsSmooth.jets);
+      gl.uniform1f(sceneLoc.u_ergoVis, flagsSmooth.ergo);
+      gl.uniform1f(sceneLoc.u_pulse, penrosePulse);
+      gl.uniform1f(sceneLoc.u_hdrPack, hdrPackVal);
+      gl.uniform3fv(sceneLoc.u_ringN, ringNormals);
+      gl.uniform3fv(sceneLoc.u_ringU, ringTangents);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      // Pass 2: Optical Airy + Anamorphic Bloom -> bloomFbo
+      gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFbo);
+      gl.viewport(0, 0, bloomW, bloomH);
+      gl.useProgram(bloomProg);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+      gl.uniform1i(bloomLoc.u_tex, 0);
+      gl.uniform2f(bloomLoc.u_texel, 1.0 / fboW, 1.0 / fboH);
+      gl.uniform1f(bloomLoc.u_hdrPack, hdrPackVal);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      // Pass 3: ACES Filmic Composite + Chromatic Dispersion -> Screen
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+      gl.useProgram(compProg);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+      gl.uniform1i(compLoc.u_scene, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, bloomTex);
+      gl.uniform1i(compLoc.u_bloom, 1);
+      gl.uniform2f(compLoc.u_bloomTexel, 1.0 / bloomW, 1.0 / bloomH);
+      gl.uniform1f(compLoc.u_hdrPack, hdrPackVal);
+      gl.uniform1f(compLoc.u_scrollDim, scrollDim);
+      gl.uniform1f(compLoc.u_time, tSec);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    renderHudOverlay(tSec, scrollDim);
+
+    // Scrubber tracks + Phase Scope + Tabular Telemetry
+    syncScrubberVisuals();
+    if ((uiTick++ & 1) === 0) {
+      renderPotentialScope();
+      updateTelemetryDOM();
+    }
+
+    fpsAccum += dt;
+    fpsFrames++;
+    if (fpsAccum >= 0.5) {
+      const fps = Math.round(fpsFrames / fpsAccum);
+      dom.fps.textContent = `${fps} FPS · ${glReady ? (useFloatFbo ? 'FP16 HDR' : 'GL2 PACK') : '2D FALLBACK'}`;
+      fpsAccum = 0;
+      fpsFrames = 0;
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
