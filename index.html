@@ -1827,7 +1827,7 @@
       c.g = clamp(1.12989 * pow(max(1.0, t - 60.0), -0.07551), 0.0, 1.0);
       c.b = 1.0;
     }
-    return pow(c, vec3(2.2));
+    return pow(max(c, vec3(1e-5)), vec3(2.2));
   }
 
   // Lensed background cosmos: procedural starfield + subtle galactic dust plane
@@ -1911,7 +1911,8 @@
 
     // Penrose extraction harmonic wave propagating outward into collector disk
     float shockR = mix(u_rPlus, 19.0, 1.0 - u_pulse);
-    float shock = u_pulse * exp(-pow((rho - shockR) * 0.9, 2.0)) * 1.8;
+    float dShock = (rho - shockR) * 0.9;
+    float shock = u_pulse * exp(-dShock * dShock) * 1.8;
 
     vec3 col = blackbody(obsTemp) * density * beaming * (1.55 + 1.15 * u_mdot + shock);
     float alpha = clamp(density * (0.72 + 0.22 * u_mdot), 0.0, 0.94);
@@ -1939,7 +1940,7 @@
     float strut = smoothstep(0.09, 0.02, abs(cellPhase - 0.5)) * step(dr, halfW * 0.78);
     float collector = smoothstep(0.36, 0.18, abs(cellPhase - 0.5)) * (1.0 - rail) * 0.38;
 
-    float beacon = pow(0.5 + 0.5 * sin(ang * 6.0 - u_time * 2.4 + float(idx) * 2.1), 8.0);
+    float beacon = pow(max(1e-4, 0.5 + 0.5 * sin(ang * 6.0 - u_time * 2.4 + float(idx) * 2.1)), 8.0);
     vec3 structCol = vec3(0.85, 0.72, 0.48) * (rail * 1.4 + strut * 0.9);
     vec3 energyCol = vec3(0.45, 0.82, 1.0) * (collector + beacon * 0.85 * (0.4 + 0.6 * u_pulse));
     float edgeMask = 1.0 - smoothstep(halfW * 0.72, halfW, dr);
@@ -2028,8 +2029,10 @@
         float absJetY = abs(pos.y);
         float jetRadius = 0.34 + 0.14 * pow(absJetY + 0.4, 0.68);
         if (jetAxisR < jetRadius * 2.2 && absJetY > u_rPlus * 0.72 && absJetY < 26.0) {
-          float sheath = exp(-pow((jetAxisR - jetRadius * 0.68) / (0.24 * jetRadius), 2.0));
-          float core = exp(-pow(jetAxisR / (0.35 * jetRadius), 2.0)) * 0.5;
+          float dSheath = (jetAxisR - jetRadius * 0.68) / (0.24 * jetRadius);
+          float dCore = jetAxisR / (0.35 * jetRadius);
+          float sheath = exp(-dSheath * dSheath);
+          float core = exp(-dCore * dCore) * 0.5;
           float twist = atan(pos.z, pos.x) + sign(pos.y) * (absJetY * 0.85 - u_time * 3.4);
           float helix = 0.55 + 0.45 * sin(twist * 3.0);
           float bzPower = a * a * (0.45 + 1.8 * u_omegaH);
@@ -2167,7 +2170,7 @@
     // Optical vignette
     hdr *= 1.0 - r2 * 0.42;
 
-    vec3 mapped = pow(aces(hdr * 0.96), vec3(1.0 / 2.2));
+    vec3 mapped = pow(max(aces(hdr * 0.96), vec3(1e-5)), vec3(1.0 / 2.2));
 
     // Sub-LSB animated dither eliminates 8-bit dark gradient banding
     float grain = fract(sin(dot(gl_FragCoord.xy + fract(u_time), vec2(12.9898, 78.233))) * 43758.5453);
