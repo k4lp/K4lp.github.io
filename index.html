@@ -1768,40 +1768,13 @@
   uniform float u_hdrPack;  // 0.0 for float16 FBO, 1.0 for tone-packed RGBA8 fallback
   uniform vec3 u_ringN[3];
   uniform vec3 u_ringU[3];
-
-  float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
+  uniform sampler2D u_noiseTex;
+  uniform sampler2D u_spectrumTex;
 
   float hash13(vec3 p3) {
     p3 = fract(p3 * 0.1031);
     p3 += dot(p3, p3.zyx + 31.32);
     return fract((p3.x + p3.y) * p3.z);
-  }
-
-  float noise2(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float a = hash12(i);
-    float b = hash12(i + vec2(1.0, 0.0));
-    float c = hash12(i + vec2(0.0, 1.0));
-    float d = hash12(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  }
-
-  float fbm(vec2 p) {
-    float v = 0.0;
-    float amp = 0.5;
-    mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
-    for (int i = 0; i < 4; i++) {
-      v += amp * noise2(p);
-      p = rot * p * 2.03 + vec2(17.1, 31.7);
-      amp *= 0.5;
-    }
-    return v;
   }
 
   // Exact Boyer-Lindquist radial coordinate r from Kerr-Schild Cartesian coordinates (spin along +y)
@@ -1812,84 +1785,76 @@
     return sqrt(max(1e-5, 0.5 * (b + disc)));
   }
 
-  // Analytic Planckian blackbody locus (T in Kelvin -> linear HDR RGB)
+  // Hardware 1D LUT fetch of CIE-1931 integrated Planckian blackbody spectrum (zero pow/log loops!)
   vec3 blackbody(float tempK) {
-    float t = clamp(tempK, 1000.0, 42000.0) * 0.01;
-    vec3 c;
-    if (t <= 66.0) {
-      c.r = 1.0;
-      c.g = clamp(0.39008 * log(max(1.0, t)) - 0.63184, 0.0, 1.0);
-      c.b = (t <= 19.0) ? 0.0 : clamp(0.54320 * log(max(1.0, t - 10.0)) - 1.19625, 0.0, 1.0);
-    } else {
-      c.r = clamp(1.29293 * pow(max(1.0, t - 60.0), -0.13320), 0.0, 1.0);
-      c.g = clamp(1.12989 * pow(max(1.0, t - 60.0), -0.07551), 0.0, 1.0);
-      c.b = 1.0;
-    }
-    return pow(max(c, vec3(1e-5)), vec3(2.2));
+    float u = clamp(log(clamp(tempK, 900.0, 45000.0) * 0.001111111) * 0.2556222, 0.0, 1.0);
+    vec3 s = textureLod(u_spectrumTex, vec2(u, 0.5), 0.0).rgb;
+    return s * s;
   }
 
-  // Lensed background cosmos: procedural starfield + subtle galactic dust plane
+  // Lensed background cosmos: LUT galactic dust + single-pass astrometric star lattice
   vec3 sampleCosmos(vec3 dir) {
     vec3 d = normalize(dir);
     float galPlane = exp(-abs(d.y * 0.85 + d.x * 0.25) * 6.5);
-    float dust = fbm(vec2(atan(d.z, d.x) * 3.0, d.y * 6.0));
-    vec3 bg = vec3(0.0022, 0.0030, 0.0052) + galPlane * dust * vec3(0.014, 0.011, 0.018);
+    vec2 dustUv = vec2(atan(d.z, d.x) * 0.1591549, d.y * 0.5 + 0.5);
+    vec2 dustSample = textureLod(u_noiseTex, dustUv * 2.0, 0.0).rg;
+    float dust = 0.65 * dustSample.r + 0.35 * dustSample.g;
+    vec3 bg = vec3(0.0020, 0.0028, 0.0048) + galPlane * dust * vec3(0.016, 0.012, 0.020);
 
-    // Dual-layer procedural astrometric star grid on cube-projected sphere
     vec3 ad = abs(d);
     vec2 suv = (ad.x > ad.y && ad.x > ad.z) ? d.yz / ad.x :
                (ad.y > ad.z) ? d.xz / ad.y : d.xy / ad.z;
 
-    for (int layer = 0; layer < 2; layer++) {
-      float scale = (layer == 0) ? 135.0 : 260.0;
-      vec2 grid = suv * scale;
-      vec2 id = floor(grid);
-      vec2 gv = fract(grid) - 0.5;
-      float rnd = hash13(vec3(id, float(layer) + step(0.0, d.z) * 7.0 + step(0.0, d.x) * 13.0));
-      if (rnd > 0.968) {
-        vec2 offset = (vec2(fract(rnd * 43.7), fract(rnd * 91.3)) - 0.5) * 0.62;
-        float dist2 = dot(gv - offset, gv - offset);
-        float mag = smoothstep(0.968, 0.9999, rnd);
-        float core = exp(-dist2 * (95.0 - 55.0 * mag));
-        float starTemp = mix(3400.0, 19000.0, fract(rnd * 17.9));
-        bg += blackbody(starTemp) * core * (0.35 + 3.2 * mag * mag);
-      }
+    vec2 grid = suv * 195.0;
+    vec2 id = floor(grid);
+    vec2 gv = fract(grid) - 0.5;
+    float faceHash = step(0.0, d.z) * 7.0 + step(0.0, d.x) * 13.0 + step(0.0, d.y) * 29.0;
+    float rnd = hash13(vec3(id, faceHash));
+    if (rnd > 0.962) {
+      vec2 offset = (vec2(fract(rnd * 43.7), fract(rnd * 91.3)) - 0.5) * 0.60;
+      vec2 dv = gv - offset;
+      float dist2 = dot(dv, dv);
+      float mag = smoothstep(0.962, 0.9998, rnd);
+      float core = exp(-dist2 * (98.0 - 58.0 * mag));
+      float starTemp = mix(3200.0, 22000.0, fract(rnd * 17.9));
+      bg += blackbody(starTemp) * core * (0.40 + 3.6 * mag * mag);
     }
     return bg;
   }
 
-  // Evaluate Novikov-Thorne relativistic thin accretion disk at equatorial crossing y = 0
+  // Evaluate Novikov-Thorne relativistic accretion disk using prebaked 6-octave MRI + ridged flux LUT
   vec4 shadeAccretionDisk(vec3 hitPos, vec3 rayVel) {
     float rho = length(hitPos.xz);
     if (rho < u_rIsco * 0.92 || rho > 21.5) return vec4(0.0);
 
-    float innerFade = smoothstep(u_rIsco * 0.92, u_rIsco * 1.07, rho);
-    float outerFade = 1.0 - smoothstep(13.5, 21.5, rho);
-    float radialProfile = pow(max(u_rIsco / max(rho, 0.5), 0.02), 1.65) * innerFade * outerFade;
+    float innerFade = smoothstep(u_rIsco * 0.92, u_rIsco * 1.06, rho);
+    float outerFade = 1.0 - smoothstep(13.2, 21.5, rho);
+    float radialProfile = pow(max(u_rIsco / max(rho, 0.5), 0.02), 1.62) * innerFade * outerFade;
 
     // Differential Keplerian angular velocity Omega_K = 1 / (r^(3/2) + a*)
-    float r32 = rho * sqrt(rho);
-    float omegaK = 1.0 / (r32 + u_spin);
+    float omegaK = 1.0 / (rho * sqrt(rho) + u_spin);
     float phi = atan(hitPos.z, hitPos.x);
 
-    // Dual-phase flow advection prevents differential Keplerian winding moire over infinite runtime
+    // Dual-phase flow advection over seamless periodic hardware LUT (textureLod avoids atan ±π mip seam!)
     float cycle = 0.065;
     float p0 = fract(u_time * cycle);
     float p1 = fract(u_time * cycle + 0.5);
     float blend = abs(2.0 * p0 - 1.0);
 
-    float adv0 = phi + omegaK * (p0 / cycle) * 1.6;
-    float adv1 = phi + omegaK * (p1 / cycle) * 1.6;
-    float logR = log(max(rho, 0.5)) * 4.8;
+    float invTwoPi = 0.15915494;
+    float logR = log(max(rho, 0.5)) * 0.42;
+    vec2 uv0 = vec2(logR, (phi + omegaK * (p0 / cycle) * 1.65) * invTwoPi * 2.0);
+    vec2 uv1 = vec2(logR + 0.37, (phi + omegaK * (p1 / cycle) * 1.65) * invTwoPi * 2.0);
 
-    float turb0 = fbm(vec2(logR, sin(adv0) * 2.4 + cos(adv0 * 2.0) * 1.3));
-    float turb1 = fbm(vec2(logR + 5.2, sin(adv1) * 2.4 + cos(adv1 * 2.0) * 1.3));
-    float mri = mix(turb0, turb1, blend);
+    vec4 n0 = textureLod(u_noiseTex, uv0, 0.0);
+    vec4 n1 = textureLod(u_noiseTex, uv1, 0.0);
+    vec4 mriSample = mix(n0, n1, blend);
 
-    // Spiral magneto-rotational density waves
-    float spiral = 0.65 + 0.35 * sin(3.0 * phi + logR * 2.8 + u_time * 1.35);
-    float rings = 0.72 + 0.28 * sin(rho * 4.2 - mri * 4.5);
-    float density = radialProfile * (0.35 + 0.95 * mri) * spiral * rings;
+    // Combine multi-octave MRI shear (.r), ridged magnetic flux filaments (.g), and granulation (.b)
+    float filaments = mix(mriSample.r, mriSample.g * mriSample.g * 1.45, 0.52);
+    float spiral = 0.62 + 0.38 * sin(3.0 * phi + logR * 16.5 + u_time * 1.35);
+    float rings = 0.74 + 0.26 * sin(rho * 4.4 - mriSample.b * 4.2);
+    float density = radialProfile * (0.28 + 1.18 * filaments) * spiral * rings;
 
     // Prograde plasma 3-velocity tangent t_phi = normalize(y x pos) = (z, 0, -x) / rho
     vec3 tPhi = vec3(hitPos.z, 0.0, -hitPos.x) / max(rho, 1e-4);
@@ -1897,27 +1862,28 @@
 
     // Physical photon travels FROM disk TOWARD camera: k_hat = -normalize(rayVel)
     vec3 kHat = -normalize(rayVel);
-    float gravFactor = sqrt(clamp(1.0 - (1.85 * u_rPlus * 0.5) / max(rho, 0.6), 0.05, 1.0));
+    float gravFactor = sqrt(clamp(1.0 - (0.925 * u_rPlus) / max(rho, 0.6), 0.05, 1.0));
     float lorentzInv = sqrt(max(0.04, 1.0 - beta * beta));
     float dopplerRaw = (gravFactor * lorentzInv) / max(0.16, 1.0 - beta * dot(tPhi, kHat));
     float gFactor = mix(gravFactor, dopplerRaw, u_flags.y);
 
-    // Temperature & bolometric intensity scaling I_obs = g^4 I_emit
-    float baseTemp = 5400.0 * pow(max(u_mdot, 0.05), 0.25) * pow(max(u_rIsco / rho, 0.05), 0.62);
+    float baseTemp = 5600.0 * pow(max(u_mdot, 0.05), 0.25) * pow(max(u_rIsco / rho, 0.05), 0.62);
     float obsTemp = baseTemp * pow(max(gFactor, 0.15), 0.88);
     float beaming = pow(clamp(gFactor, 0.18, 2.85), 3.45);
 
-    // Penrose extraction harmonic wave propagating outward into collector disk
     float shockR = mix(u_rPlus, 19.0, 1.0 - u_pulse);
     float dShock = (rho - shockR) * 0.9;
-    float shock = u_pulse * exp(-dShock * dShock) * 1.8;
+    float shock = u_pulse * exp(-dShock * dShock) * 1.85;
 
-    vec3 col = blackbody(obsTemp) * density * beaming * (1.55 + 1.15 * u_mdot + shock);
-    float alpha = clamp(density * (0.72 + 0.22 * u_mdot), 0.0, 0.94);
+    // Subtle hot magnetic reconnection sparks along ridged flux tubes near ISCO
+    float fluxSpark = mriSample.g * mriSample.g * smoothstep(5.5, u_rIsco, rho) * 0.55;
+
+    vec3 col = blackbody(obsTemp) * (density + fluxSpark * innerFade) * beaming * (1.58 + 1.15 * u_mdot + shock);
+    float alpha = clamp(density * (0.74 + 0.22 * u_mdot), 0.0, 0.95);
     return vec4(col, alpha);
   }
 
-  // Evaluate 3D Dyson-Penrose Harvester Rings along curved null geodesics (gravitationally lensed!)
+  // Evaluate 3D Dyson-Penrose Harvester Rings along curved null geodesics
   vec3 shadeDysonRing(vec3 hitPos, int idx) {
     float rRing = (idx == 0) ? 9.6 : ((idx == 1) ? 13.8 : 18.8);
     float halfW = (idx == 0) ? 0.24 : ((idx == 1) ? 0.30 : 0.36);
@@ -1932,14 +1898,18 @@
 
     float segFreq = (idx == 0) ? 48.0 : ((idx == 1) ? 64.0 : 84.0);
     float rotSpeed = (idx == 0) ? 0.22 : ((idx == 1) ? -0.14 : 0.09);
-    float cellPhase = fract((ang + u_time * rotSpeed) * segFreq / 6.2831853);
+    float cellPhase = fract((ang + u_time * rotSpeed) * segFreq * 0.15915494);
 
     float rail = smoothstep(0.045, 0.0, abs(dr - halfW * 0.78));
     float strut = smoothstep(0.09, 0.02, abs(cellPhase - 0.5)) * step(dr, halfW * 0.78);
     float collector = smoothstep(0.36, 0.18, abs(cellPhase - 0.5)) * (1.0 - rail) * 0.38;
 
-    float beacon = pow(max(1e-4, 0.5 + 0.5 * sin(ang * 6.0 - u_time * 2.4 + float(idx) * 2.1)), 8.0);
-    vec3 structCol = vec3(0.85, 0.72, 0.48) * (rail * 1.4 + strut * 0.9);
+    float sArg = max(1e-4, 0.5 + 0.5 * sin(ang * 6.0 - u_time * 2.4 + float(idx) * 2.1));
+    float s2 = sArg * sArg;
+    float s4 = s2 * s2;
+    float beacon = s4 * s4;
+
+    vec3 structCol = vec3(0.86, 0.73, 0.49) * (rail * 1.4 + strut * 0.9);
     vec3 energyCol = vec3(0.45, 0.82, 1.0) * (collector + beacon * 0.85 * (0.4 + 0.6 * u_pulse));
     float edgeMask = 1.0 - smoothstep(halfW * 0.72, halfW, dr);
     return (structCol + energyCol) * edgeMask * 0.95;
@@ -1952,6 +1922,33 @@
     vec3 pos = u_camPos;
     vec3 vel = rd;
 
+    // Analytic Bounding Sphere Skip (R_BOUND = 23.0M):
+    // Rays missing the active metric volume skip raymarching in 0 steps with exact Einstein deflection!
+    const float R_BOUND = 23.0;
+    const float R_BOUND2 = R_BOUND * R_BOUND;
+    float r0Sq = dot(pos, pos);
+    float bProj = dot(pos, vel);
+    vec3 hInit = cross(pos, vel);
+    float b2Init = dot(hInit, hInit);
+
+    if (r0Sq > R_BOUND2) {
+      float discS = bProj * bProj - (r0Sq - R_BOUND2);
+      if (discS <= 0.0 || bProj >= 0.0) {
+        vec3 bPerp = pos - bProj * vel;
+        vec3 deflVel = normalize(vel - (4.0 / max(b2Init, 16.0)) * bPerp * u_flags.x);
+        vec3 sky = sampleCosmos(deflVel);
+        fragColor = vec4(u_hdrPack > 0.5 ? sky / (1.0 + sky) : sky, 1.0);
+        return;
+      }
+      pos += vel * (-bProj - sqrt(discS) + 0.02);
+    } else if (b2Init > 465.0 && bProj > 0.0) {
+      vec3 bPerp = pos - bProj * vel;
+      vec3 deflVel = normalize(vel - (2.0 / max(b2Init, 16.0)) * bPerp * u_flags.x);
+      vec3 sky = sampleCosmos(deflVel);
+      fragColor = vec4(u_hdrPack > 0.5 ? sky / (1.0 + sky) : sky, 1.0);
+      return;
+    }
+
     float a = u_spin;
     float a2 = a * a;
     float rCap = u_rPlus * 1.008;
@@ -1960,103 +1957,122 @@
     float trans = 1.0;
     bool captured = false;
     float minR = 1000.0;
+    float totalDefl = 0.0;
+    bool checkDyson = u_flags.z > 0.01;
+    bool checkJets = (u_flags.w > 0.01 && a > 0.02);
+    bool checkErgo = (u_ergoVis > 0.01 && a > 0.01);
 
-    for (int i = 0; i < 144; i++) {
-      float r = kerrRadius(pos, a2);
+    for (int i = 0; i < 64; i++) {
+      float R2 = dot(pos, pos);
+      // Fast spherical radius approximation far from hole; exact oblate Boyer-Lindquist near r < 9M
+      float r = (R2 > 81.0 || a2 < 1e-4) ? sqrt(R2) : kerrRadius(pos, a2);
       minR = min(minR, r);
 
       if (r <= rCap) {
         captured = true;
         break;
       }
-      if (r > 46.0 && dot(pos, vel) > 0.0) {
-        break;
-      }
-      if (trans < 0.012) {
-        break;
-      }
-
-      float radialStep = clamp(0.060 * (r - 0.82 * u_rPlus), 0.017, 0.88);
-      float diskStep = clamp(abs(pos.y) * 0.52 + 0.022, 0.022, 0.88);
-      float dt = min(radialStep, diskStep);
 
       vec3 hVec = cross(pos, vel);
       float h2 = dot(hVec, hVec);
 
-      // Physical photon moves opposite to backward-traced ray: Ly_phys = -hVec.y
-      // Prograde photons (Ly_phys > 0) experience weaker effective capture barrier (b - a*)^2,
-      // reproducing Bardeen's asymmetric D-shaped Kerr shadow aligned with Doppler-boosted limb!
+      if (r > 23.2 && dot(pos, vel) > 0.0) {
+        vec3 bPerp = pos - dot(pos, vel) * vel;
+        vel = normalize(vel - (2.0 / max(r * max(h2, 4.0), 12.0)) * bPerp * u_flags.x);
+        break;
+      }
+      if (trans < 0.015) {
+        break;
+      }
+
+      // Curvature-adaptive step: fast 1.4M strides in weak field, surgical 0.03M steps on photon sphere!
+      float dt = clamp(0.095 * (r - 0.86 * u_rPlus) + 0.0115 * R2, 0.028, 1.42);
+      if (r < 4.2) {
+        dt = min(dt, 0.030 + 0.058 * max(0.0, r - u_rPlus));
+      }
+
       float lyPhys = -hVec.y;
-      float sin2Theta = clamp((pos.x * pos.x + pos.z * pos.z) / max(r * r, 1e-4), 0.0, 1.0);
+      float sin2Theta = clamp((pos.x * pos.x + pos.z * pos.z) / max(R2, 1e-4), 0.0, 1.0);
       float hEff2 = max(0.0, h2 - 2.0 * a * lyPhys + a2 * sin2Theta);
 
       float invR = 1.0 / max(r, 0.25);
       float invR2 = invR * invR;
       float invR5 = invR2 * invR2 * invR;
 
-      // Exact null geodesic curvature in M = 1 units (-3M h_eff^2 / r^5 * pos) + ZAMO frame dragging
       vec3 accGR = -3.0 * hEff2 * invR5 * pos;
-      vec3 frameDrag = (2.0 * a * invR2 * invR) * cross(vec3(0.0, 1.0, 0.0), vel);
+      vec3 frameDrag = (2.0 * a * invR2 * invR) * vec3(vel.z, 0.0, -vel.x);
       vec3 acc = (accGR + frameDrag) * u_flags.x;
 
       vec3 nextVel = normalize(vel + acc * dt);
       vec3 nextPos = pos + 0.5 * (vel + nextVel) * dt;
+      totalDefl += length(nextVel - vel);
 
-      // 1. Exact equatorial Novikov-Thorne disk plane-crossing (zero slice banding!)
+      // 1. Quadratic-refined Novikov-Thorne equatorial plane crossing (sub-pixel smooth even at dt = 1.4!)
       if (pos.y * nextPos.y <= 0.0) {
-        float frac = pos.y / max(1e-6, pos.y - nextPos.y);
-        vec3 hit = mix(pos, nextPos, clamp(frac, 0.0, 1.0));
-        vec4 diskSample = shadeAccretionDisk(hit, vel);
+        float frac = clamp(pos.y / max(1e-6, pos.y - nextPos.y), 0.0, 1.0);
+        float s = frac * dt;
+        float yMid = pos.y + vel.y * s + 0.5 * acc.y * s * s;
+        float vyMid = vel.y + acc.y * s;
+        s = clamp(s - yMid / (abs(vyMid) > 1e-4 ? vyMid : -1e-4), 0.0, dt);
+        vec3 hit = pos + vel * s + 0.5 * acc * s * s;
+        vec4 diskSample = shadeAccretionDisk(hit, mix(vel, nextVel, s / dt));
         accum += trans * diskSample.rgb;
         trans *= (1.0 - diskSample.a);
       }
 
-      // 2. Soft volumetric relativistic corona & inner photon-ring glow
-      float absY = abs(pos.y);
-      float cylR = length(pos.xz);
-      if (absY < 1.35 && cylR > u_rPlus * 1.02 && cylR < 16.0) {
-        float hScale = 0.11 + 0.045 * cylR;
-        float corona = exp(-(absY * absY) / (hScale * hScale)) * exp(-cylR * 0.26);
-        vec3 cCol = mix(vec3(1.0, 0.52, 0.16), vec3(0.55, 0.80, 1.0), clamp(1.8 / cylR, 0.0, 1.0));
-        accum += trans * cCol * corona * dt * 0.24 * u_mdot;
-      }
-
-      // 3. Blandford-Znajek magnetospheric polar Poynting jets (power ~ a*^2 Omega_H^2)
-      if (u_flags.w > 0.01 && a > 0.02) {
-        float jetAxisR = length(pos.xz);
-        float absJetY = abs(pos.y);
-        float jetRadius = 0.34 + 0.14 * pow(absJetY + 0.4, 0.68);
-        if (jetAxisR < jetRadius * 2.2 && absJetY > u_rPlus * 0.72 && absJetY < 26.0) {
-          float dSheath = (jetAxisR - jetRadius * 0.68) / (0.24 * jetRadius);
-          float dCore = jetAxisR / (0.35 * jetRadius);
-          float sheath = exp(-dSheath * dSheath);
-          float core = exp(-dCore * dCore) * 0.5;
-          float twist = atan(pos.z, pos.x) + sign(pos.y) * (absJetY * 0.85 - u_time * 3.4);
-          float helix = 0.55 + 0.45 * sin(twist * 3.0);
-          float bzPower = a * a * (0.45 + 1.8 * u_omegaH);
-          float axialFade = exp(-absJetY * 0.095) * smoothstep(u_rPlus * 0.72, u_rPlus * 1.35, absJetY);
-          vec3 jetCol = mix(vec3(0.32, 0.68, 1.0), vec3(0.95, 0.82, 0.62), core);
-          accum += trans * jetCol * (sheath * helix + core) * bzPower * axialFade * dt * 0.52 * u_flags.w;
-        }
-      }
-
-      // 4. Lensed 3D Dyson-Penrose Megastructure Rings
-      if (u_flags.z > 0.01) {
-        for (int k = 0; k < 3; k++) {
-          float d0 = dot(pos, u_ringN[k]);
-          float d1 = dot(nextPos, u_ringN[k]);
-          if (d0 * d1 <= 0.0) {
-            float tCross = d0 / max(1e-6, d0 - d1);
-            vec3 ringHit = mix(pos, nextPos, clamp(tCross, 0.0, 1.0));
-            vec3 ringCol = shadeDysonRing(ringHit, k);
-            accum += trans * ringCol * u_flags.z;
+      // 2. Relativistic inner corona glow (restricted to inner R2 < 144)
+      if (R2 < 144.0) {
+        float absY = abs(pos.y);
+        if (absY < 1.25) {
+          float cylR = sqrt(max(1e-4, pos.x * pos.x + pos.z * pos.z));
+          if (cylR > u_rPlus * 1.02) {
+            float hScale = 0.11 + 0.045 * cylR;
+            float rNorm = absY / hScale;
+            float corona = exp(-rNorm * rNorm) * exp(-cylR * 0.28);
+            vec3 cCol = mix(vec3(1.0, 0.52, 0.16), vec3(0.55, 0.80, 1.0), clamp(1.8 / cylR, 0.0, 1.0));
+            accum += trans * cCol * corona * dt * 0.23 * u_mdot;
           }
         }
       }
 
-      // 5. Optional exact Ergosphere surface manifold r_E(theta) = 1 + sqrt(1 - a^2 cos^2 theta)
-      if (u_ergoVis > 0.01 && a > 0.01) {
-        float cosT0 = clamp(pos.y / max(r, 1e-4), -1.0, 1.0);
+      // 3. Blandford-Znajek magnetospheric polar Poynting jets
+      if (checkJets) {
+        float absJetY = abs(pos.y);
+        float xz2 = pos.x * pos.x + pos.z * pos.z;
+        if (xz2 < 14.0 && absJetY > u_rPlus * 0.72 && absJetY < 23.0) {
+          float jetAxisR = sqrt(xz2);
+          float jetRadius = 0.34 + 0.14 * pow(absJetY + 0.4, 0.68);
+          if (jetAxisR < jetRadius * 2.1) {
+            float dSheath = (jetAxisR - jetRadius * 0.68) / (0.24 * jetRadius);
+            float dCore = jetAxisR / (0.35 * jetRadius);
+            float sheath = exp(-dSheath * dSheath);
+            float core = exp(-dCore * dCore) * 0.5;
+            float twist = atan(pos.z, pos.x) + sign(pos.y) * (absJetY * 0.85 - u_time * 3.4);
+            float helix = 0.55 + 0.45 * sin(twist * 3.0);
+            float bzPower = a2 * (0.45 + 1.8 * u_omegaH);
+            float axialFade = exp(-absJetY * 0.095) * smoothstep(u_rPlus * 0.72, u_rPlus * 1.35, absJetY);
+            vec3 jetCol = mix(vec3(0.32, 0.68, 1.0), vec3(0.95, 0.82, 0.62), core);
+            accum += trans * jetCol * (sheath * helix + core) * bzPower * axialFade * dt * 0.52 * u_flags.w;
+          }
+        }
+      }
+
+      // 4. Lensed 3D Dyson-Penrose Megastructure Rings (evaluated only inside ring shell 8.5M..20M)
+      if (checkDyson && R2 > 72.0 && R2 < 405.0) {
+        for (int k = 0; k < 3; k++) {
+          float d0 = dot(pos, u_ringN[k]);
+          float d1 = dot(nextPos, u_ringN[k]);
+          if (d0 * d1 <= 0.0) {
+            float tCross = clamp(d0 / max(1e-6, d0 - d1), 0.0, 1.0);
+            vec3 ringHit = mix(pos, nextPos, tCross);
+            accum += trans * shadeDysonRing(ringHit, k) * u_flags.z;
+          }
+        }
+      }
+
+      // 5. Exact Ergosphere surface manifold r_E(theta) = 1 + sqrt(1 - a^2 cos^2 theta)
+      if (checkErgo && R2 < 5.2) {
+        float cosT0 = clamp(pos.y * invR, -1.0, 1.0);
         float rNext = kerrRadius(nextPos, a2);
         float cosT1 = clamp(nextPos.y / max(rNext, 1e-4), -1.0, 1.0);
         float ergo0 = r - (1.0 + sqrt(max(0.0, 1.0 - a2 * cosT0 * cosT0)));
@@ -2074,12 +2090,13 @@
       vel = nextVel;
     }
 
-    // Background lensed starfield for escaping null geodesics
     if (!captured) {
       accum += trans * sampleCosmos(vel);
-      // Subtle critical photon-sphere grazing glint
-      float graze = exp(-max(0.0, minR - u_rPlus * 1.18) * 9.0);
-      accum += trans * vec3(1.0, 0.78, 0.46) * graze * 0.16;
+      // Lyapunov critical photon-ring caustic (n >= 1 winding orbits around the Kerr shadow!)
+      float dLyap = (totalDefl - 3.14159) * 1.65;
+      float lyapRing = smoothstep(1.85, 3.05, totalDefl) * exp(-dLyap * dLyap * 0.35);
+      float graze = exp(-max(0.0, minR - u_rPlus * 1.16) * 9.5);
+      accum += trans * (vec3(1.0, 0.82, 0.52) * graze * 0.18 + vec3(1.0, 0.90, 0.72) * lyapRing * (0.42 + 0.35 * u_mdot));
     }
 
     accum = max(accum, vec3(0.0));
@@ -2113,7 +2130,6 @@
     sum += fetchHdr(v_uv + vec2(-o.x,  o.y)) * 0.125;
     sum += fetchHdr(v_uv + vec2( o.x, -o.y)) * 0.125;
     sum += fetchHdr(v_uv + vec2(-o.x, -o.y)) * 0.125;
-    // Subtle horizontal anamorphic optical flare tap
     sum += fetchHdr(v_uv + vec2( o.x * 2.8, 0.0)) * 0.12;
     sum += fetchHdr(v_uv + vec2(-o.x * 2.8, 0.0)) * 0.12;
     fragColor = vec4( (u_hdrPack > 0.5) ? (sum / (1.0 + sum)) : sum, 1.0 );
@@ -2125,6 +2141,7 @@
   out vec4 fragColor;
   uniform sampler2D u_scene;
   uniform sampler2D u_bloom;
+  uniform vec2 u_sceneTexel;
   uniform vec2 u_bloomTexel;
   uniform float u_hdrPack;
   uniform float u_scrollDim;
@@ -2134,7 +2151,6 @@
     return (u_hdrPack > 0.5) ? (c / max(vec3(0.015), 1.0 - c)) : c;
   }
 
-  // ACES RRT+ODT Filmic Curve (Narkowicz / Hill fit)
   vec3 aces(vec3 x) {
     const float a = 2.51;
     const float b = 0.03;
@@ -2145,17 +2161,24 @@
   }
 
   void main() {
-    // Subtle edge chromatic dispersion
     vec2 centered = v_uv - 0.5;
     float r2 = dot(centered, centered);
-    vec2 caShift = centered * r2 * 0.0045;
+    vec2 caShift = centered * r2 * 0.0038;
 
-    vec3 col;
-    col.r = unpack(texture(u_scene, clamp(v_uv + caShift, 0.0, 1.0)).rgb).r;
-    col.g = unpack(texture(u_scene, v_uv).rgb).g;
-    col.b = unpack(texture(u_scene, clamp(v_uv - caShift, 0.0, 1.0)).rgb).b;
+    // Contrast-Adaptive Sharpening (CAS) + Edge Dispersion for razor-sharp upsampling in AUTO mode
+    vec3 cM = unpack(texture(u_scene, v_uv).rgb);
+    vec3 cN = unpack(texture(u_scene, v_uv + vec2(0.0, u_sceneTexel.y)).rgb);
+    vec3 cS = unpack(texture(u_scene, v_uv - vec2(0.0, u_sceneTexel.y)).rgb);
+    vec3 cE = unpack(texture(u_scene, clamp(v_uv + vec2(u_sceneTexel.x, 0.0) + caShift, 0.0, 1.0)).rgb);
+    vec3 cW = unpack(texture(u_scene, clamp(v_uv - vec2(u_sceneTexel.x, 0.0) - caShift, 0.0, 1.0)).rgb);
 
-    // 5-tap wide upsample on bloom buffer
+    vec3 minC = min(cM, min(min(cN, cS), min(cE, cW)));
+    vec3 maxC = max(cM, max(max(cN, cS), max(cE, cW)));
+    vec3 casWeight = -0.11 * sqrt(clamp(minC / (maxC + vec3(1e-4)), 0.0, 1.0));
+    vec3 col = max(vec3(0.0), (cM + (cN + cS + cE + cW) * casWeight) / (1.0 + 4.0 * casWeight));
+    col.r = mix(col.r, cE.r, clamp(r2 * 1.4, 0.0, 0.45));
+    col.b = mix(col.b, cW.b, clamp(r2 * 1.4, 0.0, 0.45));
+
     vec2 bt = u_bloomTexel * 1.8;
     vec3 bloom = unpack(texture(u_bloom, v_uv).rgb) * 0.4;
     bloom += unpack(texture(u_bloom, v_uv + vec2( bt.x,  bt.y)).rgb) * 0.15;
@@ -2164,13 +2187,10 @@
     bloom += unpack(texture(u_bloom, v_uv + vec2(-bt.x, -bt.y)).rgb) * 0.15;
 
     vec3 hdr = (col + bloom * 0.44) * mix(1.0, 0.52, u_scrollDim);
-
-    // Optical vignette
     hdr *= 1.0 - r2 * 0.42;
 
     vec3 mapped = pow(max(aces(hdr * 0.96), vec3(1e-5)), vec3(1.0 / 2.2));
 
-    // Sub-LSB animated dither eliminates 8-bit dark gradient banding
     float grain = fract(sin(dot(gl_FragCoord.xy + fract(u_time), vec2(12.9898, 78.233))) * 43758.5453);
     mapped += (grain - 0.5) / 255.0;
 
@@ -2182,8 +2202,123 @@
   let sceneProg = null, bloomProg = null, compProg = null;
   let sceneLoc = {}, bloomLoc = {}, compLoc = {};
   let sceneFbo = null, sceneTex = null, bloomFbo = null, bloomTex = null;
+  let noiseTex = null, spectrumTex = null;
   let fboW = 0, fboH = 0, bloomW = 0, bloomH = 0;
   let useFloatFbo = false;
+
+  // Bake seamless 6-octave MRI turbulence + ridged flux LUT & CIE-1931 Planckian spectrum LUT once at init
+  function buildPrebakedLUTs() {
+    // 1. Periodic seamless 256x256 RGBA8 noise LUT
+    const N = 256;
+    const perm = new Uint8Array(512);
+    let seed = 1337;
+    for (let i = 0; i < 256; i++) perm[i] = i;
+    for (let i = 255; i > 0; i--) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      const j = seed & i;
+      const tmp = perm[i]; perm[i] = perm[j]; perm[j] = tmp;
+    }
+    for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+
+    const pVal = (u, v, freq, offset) => {
+      const gx = u * freq, gy = v * freq;
+      const x0 = Math.floor(gx), y0 = Math.floor(gy);
+      const fx = gx - x0, fy = gy - y0;
+      const sx = fx * fx * (3.0 - 2.0 * fx);
+      const sy = fy * fy * (3.0 - 2.0 * fy);
+      const ix0 = x0 % freq, ix1 = (ix0 + 1) % freq;
+      const iy0 = y0 % freq, iy1 = (iy0 + 1) % freq;
+      const a = perm[(perm[(ix0 + offset) & 255] + iy0) & 255] / 255.0;
+      const b = perm[(perm[(ix1 + offset) & 255] + iy0) & 255] / 255.0;
+      const c = perm[(perm[(ix0 + offset) & 255] + iy1) & 255] / 255.0;
+      const d = perm[(perm[(ix1 + offset) & 255] + iy1) & 255] / 255.0;
+      return (a + (b - a) * sx) + ((c + (d - c) * sx) - (a + (b - a) * sx)) * sy;
+    };
+
+    const noiseData = new Uint8Array(N * N * 4);
+    let ptr = 0;
+    for (let y = 0; y < N; y++) {
+      const v = y / N;
+      for (let x = 0; x < N; x++) {
+        const u = x / N;
+        // Channel R: 5-octave seamless MRI shear turbulence
+        const fbm = 0.50 * pVal(u, v, 4, 0)
+                  + 0.25 * pVal(u, v, 8, 37)
+                  + 0.125 * pVal(u, v, 16, 73)
+                  + 0.075 * pVal(u, v, 32, 119)
+                  + 0.050 * pVal(u, v, 64, 181);
+        // Channel G: 4-octave ridged multifractal magnetic flux tubes
+        const r0 = 1.0 - Math.abs(2.0 * pVal(u, v, 6, 19) - 1.0);
+        const r1 = 1.0 - Math.abs(2.0 * pVal(u, v, 12, 53) - 1.0);
+        const r2 = 1.0 - Math.abs(2.0 * pVal(u, v, 24, 97) - 1.0);
+        const r3 = 1.0 - Math.abs(2.0 * pVal(u, v, 48, 149) - 1.0);
+        const ridge = 0.48 * r0 + 0.28 * r1 + 0.15 * r2 + 0.09 * r3;
+        // Channel B: high-frequency convective granulation
+        const gran = 0.55 * pVal(u, v, 16, 211) + 0.45 * pVal(u, v, 48, 29);
+        // Channel A: large-scale density envelope
+        const env = 0.65 * pVal(u, v, 3, 67) + 0.35 * pVal(u, v, 6, 131);
+
+        noiseData[ptr++] = Math.min(255, Math.max(0, Math.round(fbm * 255)));
+        noiseData[ptr++] = Math.min(255, Math.max(0, Math.round(ridge * 255)));
+        noiseData[ptr++] = Math.min(255, Math.max(0, Math.round(gran * 255)));
+        noiseData[ptr++] = Math.min(255, Math.max(0, Math.round(env * 255)));
+      }
+    }
+
+    noiseTex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, noiseData);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+    // 2. CIE-1931 XYZ Wyman-Sloan-Shirley Planckian Blackbody Integrator (256x1 LUT)
+    const specData = new Uint8Array(256 * 4);
+    const gauss = (x, mu, s1, s2) => {
+      const t = (x - mu) * (x < mu ? s1 : s2);
+      return Math.exp(-0.5 * t * t);
+    };
+    for (let i = 0; i < 256; i++) {
+      const u = i / 255.0;
+      const tempK = 900.0 * Math.exp(u * 3.912023);
+      let X = 0.0, Y = 0.0, Z = 0.0;
+      for (let lamNm = 380; lamNm <= 720; lamNm += 15) {
+        const lamM = lamNm * 1e-9;
+        const c2OverLT = Math.min(80.0, 0.01438777 / (lamM * tempK));
+        const B = 1.0 / (Math.pow(lamNm * 0.001, 5) * (Math.exp(c2OverLT) - 1.0));
+        const xBar = 1.056 * gauss(lamNm, 599.8, 0.0264, 0.0323)
+                   + 0.362 * gauss(lamNm, 442.0, 0.0624, 0.0374)
+                   - 0.065 * gauss(lamNm, 501.1, 0.0490, 0.0382);
+        const yBar = 0.821 * gauss(lamNm, 568.8, 0.0213, 0.0247)
+                   + 0.286 * gauss(lamNm, 530.9, 0.0613, 0.0322);
+        const zBar = 1.217 * gauss(lamNm, 437.0, 0.0845, 0.0278)
+                   + 0.681 * gauss(lamNm, 459.0, 0.0385, 0.0725);
+        X += B * xBar; Y += B * yBar; Z += B * zBar;
+      }
+      // CIE XYZ -> Linear Rec.709 / sRGB
+      let rL = Math.max(0.0,  3.2406 * X - 1.5372 * Y - 0.4986 * Z);
+      let gL = Math.max(0.0, -0.9689 * X + 1.8758 * Y + 0.0415 * Z);
+      let bL = Math.max(0.0,  0.0557 * X - 0.2040 * Y + 1.0570 * Z);
+      const peak = Math.max(1e-9, rL, gL, bL);
+      rL /= peak; gL /= peak; bL /= peak;
+      // Sqrt-encode for 16-bit equivalent dark precision
+      specData[i * 4]     = Math.round(Math.sqrt(rL) * 255);
+      specData[i * 4 + 1] = Math.round(Math.sqrt(gL) * 255);
+      specData[i * 4 + 2] = Math.round(Math.sqrt(bL) * 255);
+      specData[i * 4 + 3] = 255;
+    }
+
+    spectrumTex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, spectrumTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, specData);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
 
   function compileShader(type, src) {
     const sh = gl.createShader(type);
@@ -2216,6 +2351,7 @@
 
   function createRenderTarget(w, h, float16) {
     const tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     if (float16) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
@@ -2266,6 +2402,7 @@
   if (gl) {
     useFloatFbo = Boolean(gl.getExtension('EXT_color_buffer_float'));
     vao = gl.createVertexArray();
+    buildPrebakedLUTs();
     sceneProg = linkProgram(VERT_SRC, SCENE_FRAG_SRC);
     bloomProg = linkProgram(VERT_SRC, BLOOM_FRAG_SRC);
     compProg = linkProgram(VERT_SRC, COMPOSITE_FRAG_SRC);
@@ -2279,10 +2416,16 @@
       sceneLoc = u(sceneProg, [
         'u_res', 'u_time', 'u_camPos', 'u_camRight', 'u_camUp', 'u_camFwd',
         'u_tanHalfFov', 'u_spin', 'u_rPlus', 'u_rIsco', 'u_mdot', 'u_omegaH',
-        'u_flags', 'u_ergoVis', 'u_pulse', 'u_hdrPack', 'u_ringN', 'u_ringU'
+        'u_flags', 'u_ergoVis', 'u_pulse', 'u_hdrPack', 'u_ringN', 'u_ringU',
+        'u_noiseTex', 'u_spectrumTex'
       ]);
       bloomLoc = u(bloomProg, ['u_tex', 'u_texel', 'u_hdrPack']);
-      compLoc = u(compProg, ['u_scene', 'u_bloom', 'u_bloomTexel', 'u_hdrPack', 'u_scrollDim', 'u_time']);
+      compLoc = u(compProg, ['u_scene', 'u_bloom', 'u_sceneTexel', 'u_bloomTexel', 'u_hdrPack', 'u_scrollDim', 'u_time']);
+
+      // Bind static LUT sampler slots once forever (TEXTURE2 = noiseTex, TEXTURE3 = spectrumTex)
+      gl.useProgram(sceneProg);
+      gl.uniform1i(sceneLoc.u_noiseTex, 2);
+      gl.uniform1i(sceneLoc.u_spectrumTex, 3);
       glReady = true;
     }
   }
