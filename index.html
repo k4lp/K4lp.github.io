@@ -2497,6 +2497,12 @@
   // 5. 2D VECTOR ASTROMETRIC & RK4 GEODESIC PROJECTION OVERLAY + PHASE SCOPE
   // ============================================================================
   const projOut = new Float32Array(3); // [sx, sy, depth]
+  let hudDpr = 1.0;
+  let dirtyValid = false;
+  let dirtyMinX = 0, dirtyMinY = 0, dirtyMaxX = 0, dirtyMaxY = 0;
+  let probeActive = false, probeClientX = 0, probeClientY = 0;
+  let cachedWinW = window.innerWidth, cachedWinH = window.innerHeight;
+  let cachedScrollY = window.scrollY || 0;
 
   function projectWorldToScreen(wx, wy, wz, w, h) {
     const dx = wx - camPos[0];
@@ -2517,14 +2523,12 @@
     return true;
   }
 
-  function renderHudOverlay(t, scrollDim) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  function renderHudOverlay(scrollDim) {
     const w = hudCanvas.width;
     const h = hudCanvas.height;
-    hudCtx.clearRect(0, 0, w, h);
 
-    // Fallback relativistic canvas rendering if WebGL2 is absent on machine
     if (!glReady) {
+      hudCtx.clearRect(0, 0, w, h);
       const cx = w * 0.5, cy = h * 0.5;
       const rPx = Math.min(w, h) * 0.14;
       const grad = hudCtx.createRadialGradient(cx - rPx * 0.25, cy, rPx * 0.85, cx, cy, rPx * 3.1);
@@ -2537,21 +2541,38 @@
       hudCtx.beginPath();
       hudCtx.arc(cx + rPx * 0.12 * metric.a, cy, rPx * 0.92, 0, Math.PI * 2);
       hudCtx.fill();
+      return;
+    }
+
+    // Surgical dirty-rectangle clear instead of wiping millions of transparent 4K pixels
+    if (dirtyValid) {
+      const cw = dirtyMaxX - dirtyMinX;
+      const ch = dirtyMaxY - dirtyMinY;
+      if (cw > 0 && ch > 0) hudCtx.clearRect(dirtyMinX, dirtyMinY, cw, ch);
+      dirtyValid = false;
     }
 
     const fade = Math.max(0.0, 1.0 - scrollDim * 1.4);
     if (fade <= 0.02 || document.body.classList.contains('cinema-mode')) return;
 
+    let nMinX = w, nMinY = h, nMaxX = 0, nMaxY = 0;
+    const markBox = (x, y, pad) => {
+      if (x - pad < nMinX) nMinX = x - pad;
+      if (y - pad < nMinY) nMinY = y - pad;
+      if (x + pad > nMaxX) nMaxX = x + pad;
+      if (y + pad > nMaxY) nMaxY = y + pad;
+    };
+
+    const dpr = hudDpr;
     hudCtx.save();
     hudCtx.globalAlpha = fade;
 
-    // Approximate shadow occlusion radius in screen pixels for background trajectory segments
     const camR = current.camDist;
-    const bCrit = 2.6 + 2.6 * Math.sqrt(Math.max(0.05, 1.0 - 0.55 * metric.a));
-    const shadowPx = (Math.min(w, h) / (2.0 * TAN_HALF_FOV)) * (bCrit / camR);
+    const bCritMean = 2.6 + 2.6 * Math.sqrt(Math.max(0.05, 1.0 - 0.55 * metric.a));
+    const shadowPx = (Math.min(w, h) / (2.0 * TAN_HALF_FOV)) * (bCritMean / camR);
     const cx = 0.5 * w, cy = 0.5 * h;
 
-    // Draw RK4 Geodesic & Penrose Split Trajectories in 3D projected coordinates
+    // 1. Draw RK4 Geodesic & Penrose Split Trajectories in 3D projected coordinates
     for (let idx = 0; idx < 3; idx++) {
       const count = trailCount[idx];
       if (count < 2) continue;
@@ -2568,28 +2589,27 @@
       for (let k = 0; k < count; k++) {
         const slot = (oldest + k) % TRAIL_LEN;
         const base = (idx * TRAIL_LEN + slot) * 3;
-        const wx = trailXYZ[base], wy = trailXYZ[base + 1], wz = trailXYZ[base + 2];
-        if (!projectWorldToScreen(wx, wy, wz, w, h)) {
+        if (!projectWorldToScreen(trailXYZ[base], trailXYZ[base + 1], trailXYZ[base + 2], w, h)) {
           started = false;
           continue;
         }
-        // Occlude segments physically behind the black hole shadow
-        const behindHole = projOut[2] > camR && Math.hypot(projOut[0] - cx, projOut[1] - cy) < shadowPx * 0.92;
+        const sx = projOut[0], sy = projOut[1];
+        const behindHole = projOut[2] > camR && Math.hypot(sx - cx, sy - cy) < shadowPx * 0.92;
         if (behindHole) {
           started = false;
           continue;
         }
+        markBox(sx, sy, 6 * dpr);
         if (!started) {
-          hudCtx.moveTo(projOut[0], projOut[1]);
+          hudCtx.moveTo(sx, sy);
           started = true;
         } else {
-          hudCtx.lineTo(projOut[0], projOut[1]);
+          hudCtx.lineTo(sx, sy);
         }
       }
       hudCtx.strokeStyle = `rgba(${color}, ${idx === 0 ? 0.58 : 0.88})`;
       hudCtx.stroke();
 
-      // Live astrometric vector marker & energy callout on active head
       const b = bodies[idx];
       if (b.active) {
         bodyWorldPos(b, tmpPos);
@@ -2608,15 +2628,18 @@
                                       `ESCAPING E₂=+${b.E.toFixed(2)} mc²`;
             hudCtx.fillStyle = `rgba(${color}, 0.95)`;
             hudCtx.fillText(tag, sx + 8 * dpr, sy - 6 * dpr);
+            markBox(sx + 80 * dpr, sy - 6 * dpr, 95 * dpr);
           }
         }
       }
     }
 
-    // Subtle astrometric shadow-scale reticle ticks around singularity center
+    // 2. Singularity astrometric shadow-scale fiducial ticks
     hudCtx.strokeStyle = 'rgba(244, 240, 232, 0.14)';
     hudCtx.lineWidth = 1 * dpr;
     const tickR = shadowPx * 1.18;
+    const padTick = tickR + 12 * dpr;
+    markBox(cx, cy, padTick);
     for (let q = 0; q < 4; q++) {
       const ang = q * Math.PI * 0.5 + Math.PI * 0.25;
       const c = Math.cos(ang), s = Math.sin(ang);
@@ -2626,7 +2649,85 @@
       hudCtx.stroke();
     }
 
+    // 3. Live Zero-GPU-Cost Boyer-Lindquist Relativistic Ray Probe at Cursor
+    if (probeActive && !orbitDragging) {
+      const px = probeClientX * dpr;
+      const py = probeClientY * dpr;
+      const minDim = Math.min(w, h);
+      const uvX = (px - 0.5 * w) / minDim;
+      const uvY = (0.5 * h - py) / minDim;
+
+      let rdx = camFwd[0] + TAN_HALF_FOV * (uvX * camRight[0] + uvY * camUp[0]);
+      let rdy = camFwd[1] + TAN_HALF_FOV * (uvX * camRight[1] + uvY * camUp[1]);
+      let rdz = camFwd[2] + TAN_HALF_FOV * (uvX * camRight[2] + uvY * camUp[2]);
+      const invRd = 1.0 / Math.max(1e-6, Math.hypot(rdx, rdy, rdz));
+      rdx *= invRd; rdy *= invRd; rdz *= invRd;
+
+      // Conserved photon impact vector h = camPos × rd; physical Ly = -h.y
+      const hx = camPos[1] * rdz - camPos[2] * rdy;
+      const hy = camPos[2] * rdx - camPos[0] * rdz;
+      const hz = camPos[0] * rdy - camPos[1] * rdx;
+      const bImp = Math.hypot(hx, hy, hz);
+      const lyPhys = -hy;
+      const a = metric.a;
+      const bCritDir = 5.196 - 1.92 * a * (lyPhys / Math.max(0.5, bImp)) - 0.34 * a * a;
+
+      let probeCol = 'rgba(244, 240, 232, 0.72)';
+      let probeTxt = '';
+
+      if (bImp < bCritDir * 0.96) {
+        probeCol = 'rgba(255, 77, 56, 0.92)';
+        probeTxt = `HORIZON CAPTURE · b=${bImp.toFixed(2)}M`;
+      } else if (Math.abs(bImp - bCritDir) < 0.42) {
+        probeCol = 'rgba(255, 208, 123, 0.96)';
+        probeTxt = `LYAPUNOV PHOTON RING · b=${bImp.toFixed(2)}M`;
+      } else if (Math.abs(rdy) > 0.015 && (-camPos[1] / rdy) > 0.0) {
+        const tEq = -camPos[1] / rdy;
+        const hxEq = camPos[0] + rdx * tEq;
+        const hzEq = camPos[2] + rdz * tEq;
+        const rhoEq = Math.hypot(hxEq, hzEq);
+        if (rhoEq >= metric.rIsco && rhoEq <= 21.5) {
+          const beta = Math.min(0.90, Math.sqrt(1.0 / Math.max(0.35, rhoEq - 1.2 * (1.0 - 0.5 * a))) * 0.88);
+          const tPhiX = hzEq / rhoEq, tPhiZ = -hxEq / rhoEq;
+          const grav = Math.sqrt(Math.max(0.05, 1.0 - (0.925 * metric.rPlus) / rhoEq));
+          const lor = Math.sqrt(Math.max(0.04, 1.0 - beta * beta));
+          const gDop = (grav * lor) / Math.max(0.16, 1.0 - beta * (-tPhiX * rdx - tPhiZ * rdz));
+          probeCol = gDop >= 1.0 ? 'rgba(154, 216, 255, 0.94)' : 'rgba(245, 166, 35, 0.92)';
+          probeTxt = `DISK r=${rhoEq.toFixed(1)}M · β=${beta.toFixed(2)}c · g=${gDop.toFixed(2)}`;
+        }
+      }
+
+      if (!probeTxt) {
+        const deflDeg = ((4.0 / Math.max(bImp, 2.0)) * 57.2958) * flagsSmooth.lensing;
+        probeTxt = `b=${bImp.toFixed(1)}M · Δθ=${deflDeg.toFixed(1)}°`;
+      }
+
+      const arm = 7 * dpr;
+      hudCtx.strokeStyle = probeCol;
+      hudCtx.lineWidth = 1 * dpr;
+      hudCtx.beginPath();
+      hudCtx.moveTo(px - arm, py); hudCtx.lineTo(px - 2 * dpr, py);
+      hudCtx.moveTo(px + 2 * dpr, py); hudCtx.lineTo(px + arm, py);
+      hudCtx.moveTo(px, py - arm); hudCtx.lineTo(px, py - 2 * dpr);
+      hudCtx.moveTo(px, py + 2 * dpr); hudCtx.lineTo(px, py + arm);
+      hudCtx.stroke();
+
+      hudCtx.font = `${Math.round(9.5 * dpr)}px "JetBrains Mono", monospace`;
+      hudCtx.fillStyle = probeCol;
+      const labelX = (px + 185 * dpr > w) ? (px - 175 * dpr) : (px + 11 * dpr);
+      hudCtx.fillText(probeTxt, labelX, py - 7 * dpr);
+      markBox(px, py, 205 * dpr);
+    }
+
     hudCtx.restore();
+
+    if (nMaxX > nMinX && nMaxY > nMinY) {
+      dirtyMinX = Math.max(0, Math.floor(nMinX) - 2);
+      dirtyMinY = Math.max(0, Math.floor(nMinY) - 2);
+      dirtyMaxX = Math.min(w, Math.ceil(nMaxX) + 2);
+      dirtyMaxY = Math.min(h, Math.ceil(nMaxY) + 2);
+      dirtyValid = true;
+    }
   }
 
   // Real-time Kerr Radial Effective Potential V_eff(r) & Phase-Space Oscilloscope
