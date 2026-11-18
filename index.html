@@ -2959,16 +2959,26 @@
   };
 
   const scrubberDefs = {};
+  const prevScrubVal = { spin: -1, massLog: -1, mdot: -1, inclination: -1, camDist: -1 };
+
+  function measureScrubberWidths() {
+    for (const key in scrubberDefs) {
+      scrubberDefs[key].width = Math.max(1, scrubberDefs[key].track.clientWidth);
+      prevScrubVal[key] = -999;
+    }
+  }
+
   document.querySelectorAll('.scrubber').forEach((el) => {
     const param = el.dataset.param;
     const min = parseFloat(el.dataset.min);
     const max = parseFloat(el.dataset.max);
-    scrubberDefs[param] = { min, max };
-
     const track = el.querySelector('.scrubber-track');
+    scrubberDefs[param] = { min, max, track, width: Math.max(1, track.clientWidth) };
+
     const setFromClientX = (clientX) => {
       const rect = track.getBoundingClientRect();
-      const pct = clampNum((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+      scrubberDefs[param].width = Math.max(1, rect.width);
+      const pct = clampNum((clientX - rect.left) / scrubberDefs[param].width, 0, 1);
       target[param] = min + pct * (max - min);
       clearPresetActive();
     };
@@ -2993,16 +3003,22 @@
 
   function syncScrubberVisuals() {
     for (const key in scrubberDefs) {
-      const { min, max } = scrubberDefs[key];
-      const pct = clampNum(((current[key] - min) / (max - min)) * 100.0, 0, 100).toFixed(2) + '%';
-      dom.fill[key].style.width = pct;
-      dom.thumb[key].style.left = pct;
+      const val = current[key];
+      if (Math.abs(val - prevScrubVal[key]) < 1e-4) continue;
+      prevScrubVal[key] = val;
+
+      const { min, max, width } = scrubberDefs[key];
+      const norm = clampNum((val - min) / (max - min), 0, 1);
+      const thumbX = norm * width - 4.0;
+      dom.fill[key].style.transform = `scaleX(${norm.toFixed(4)})`;
+      dom.thumb[key].style.transform = `translate3d(${thumbX.toFixed(1)}px, -50%, 0)`;
+
+      if (key === 'spin') dom.val.spin.textContent = val.toFixed(3);
+      else if (key === 'massLog') dom.val.massLog.textContent = `10^${val.toFixed(2)} M☉`;
+      else if (key === 'mdot') dom.val.mdot.textContent = val.toFixed(2);
+      else if (key === 'inclination') dom.val.inclination.textContent = `${val.toFixed(1)}°`;
+      else if (key === 'camDist') dom.val.camDist.textContent = `${val.toFixed(1)} M`;
     }
-    dom.val.spin.textContent = current.spin.toFixed(3);
-    dom.val.massLog.textContent = `10^${current.massLog.toFixed(2)} M☉`;
-    dom.val.mdot.textContent = current.mdot.toFixed(2);
-    dom.val.inclination.textContent = `${current.inclination.toFixed(1)}°`;
-    dom.val.camDist.textContent = `${current.camDist.toFixed(1)} M`;
   }
 
   // Presets
@@ -3036,7 +3052,7 @@
     });
   });
 
-  // Orbit drag + Shift+Wheel zoom on Observatory stage
+  // Orbit drag + Live Relativistic Cursor Probe + Shift+Wheel zoom on Observatory stage
   const orbitSurface = document.getElementById('orbit-surface');
   let orbitDragging = false;
   let lastPtrX = 0, lastPtrY = 0;
@@ -3050,6 +3066,9 @@
   });
 
   orbitSurface.addEventListener('pointermove', (e) => {
+    probeClientX = e.clientX;
+    probeClientY = e.clientY;
+    probeActive = (e.pointerType !== 'touch');
     if (!orbitDragging) return;
     const dx = e.clientX - lastPtrX;
     const dy = e.clientY - lastPtrY;
@@ -3057,6 +3076,10 @@
     lastPtrY = e.clientY;
     target.azimuth -= dx * 0.0065;
     target.inclination = clampNum(target.inclination - dy * 0.22, 3.0, 88.0);
+  });
+
+  orbitSurface.addEventListener('pointerleave', () => {
+    probeActive = false;
   });
 
   const stopOrbit = (e) => {
@@ -3077,6 +3100,7 @@
   // Penrose Launch Trigger
   function handlePenroseAction() {
     const ok = launchPenrosePacket();
+    scopeDirty = true;
     if (!ok) {
       dom.statusLine.textContent = 'PENROSE LOCKED: SPIN a* < 0.08 → ZERO USABLE ERGOSPHERE VOLUME (r_E ≈ r₊)';
     } else {
@@ -3085,13 +3109,15 @@
   }
   dom.penroseBtn.addEventListener('click', handlePenroseAction);
 
-  // Quality, Audio, Cinema, Mobile Rack Controls
-  const scales = [1.0, 0.72, 1.25];
-  const scaleLabels = ['RES: 1.0X', 'RES: 0.72X', 'RES: ULTRA'];
+  // Quality Governor Modes: 0 = AUTO (closed-loop 60fps PID), 1 = 1.0X, 2 = ULTRA, 3 = 0.60X
+  const scaleModes = ['AUTO', 1.0, 1.25, 0.60];
+  const scaleLabels = ['RES: AUTO', 'RES: 1.0X', 'RES: ULTRA', 'RES: 0.60X'];
   let scaleIdx = 0;
+  let autoScale = 0.80;
+  let highFpsStreak = 0;
+
   document.getElementById('quality-btn').addEventListener('click', (e) => {
-    scaleIdx = (scaleIdx + 1) % scales.length;
-    renderScale = scales[scaleIdx];
+    scaleIdx = (scaleIdx + 1) % scaleModes.length;
     e.currentTarget.textContent = scaleLabels[scaleIdx];
     resizeViewport(true);
   });
@@ -3100,6 +3126,8 @@
 
   function toggleCinema() {
     document.body.classList.toggle('cinema-mode');
+    hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+    dirtyValid = false;
   }
   document.getElementById('cinema-btn').addEventListener('click', toggleCinema);
   document.getElementById('cinema-restore').addEventListener('click', toggleCinema);
@@ -3109,6 +3137,7 @@
   mobileRackBtn.addEventListener('click', () => {
     const open = metricRack.classList.toggle('open');
     mobileRackBtn.classList.toggle('is-on', open);
+    measureScrubberWidths();
   });
 
   window.addEventListener('keydown', (e) => {
@@ -3123,40 +3152,62 @@
     }
   });
 
+  window.addEventListener('scroll', () => {
+    cachedScrollY = window.scrollY || 0;
+  }, { passive: true });
+
   // ============================================================================
-  // 8. RESIZE MANAGEMENT & TELEMETRY FORMATTERS
+  // 8. RESIZE MANAGEMENT, AUTO-GOVERNOR & TELEMETRY FORMATTERS
   // ============================================================================
+  let scopeDirty = true;
+  let teleDirty = true;
+
+  function computeEffectiveScale(w, h, dpr) {
+    const mode = scaleModes[scaleIdx];
+    if (mode !== 'AUTO') return mode * Math.min(dpr, 1.5);
+    // Cap AUTO internal raymarch pixel budget at ~1.38M pixels (CAS-upsampled to native 4K!)
+    const maxBudgetScale = Math.sqrt(1380000.0 / Math.max(1, w * h));
+    return clampNum(Math.min(autoScale * Math.min(dpr, 1.35), maxBudgetScale), 0.45, 1.15);
+  }
+
   function resizeViewport(forceFbo) {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    cachedWinW = window.innerWidth;
+    cachedWinH = window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    const glW = Math.max(64, Math.round(w * Math.min(dpr, 1.65) * renderScale));
-    const glH = Math.max(64, Math.round(h * Math.min(dpr, 1.65) * renderScale));
+    const effScale = computeEffectiveScale(cachedWinW, cachedWinH, dpr);
+    const glW = Math.max(64, Math.round(cachedWinW * effScale));
+    const glH = Math.max(64, Math.round(cachedWinH * effScale));
 
-    if (forceFbo || glCanvas.width !== glW || glCanvas.height !== glH) {
+    if (forceFbo || Math.abs(glCanvas.width - glW) > 4 || Math.abs(glCanvas.height - glH) > 4) {
       glCanvas.width = glW;
       glCanvas.height = glH;
       if (glReady) rebuildFramebuffers(glW, glH);
     }
 
-    const hudW = Math.round(w * dpr);
-    const hudH = Math.round(h * dpr);
+    hudDpr = Math.min(dpr, 1.25);
+    const hudW = Math.round(cachedWinW * hudDpr);
+    const hudH = Math.round(cachedWinH * hudDpr);
     if (hudCanvas.width !== hudW || hudCanvas.height !== hudH) {
       hudCanvas.width = hudW;
       hudCanvas.height = hudH;
+      dirtyValid = false;
     }
 
     const scopeRect = scopeCanvas.parentElement.getBoundingClientRect();
-    const sw = Math.max(64, Math.round(scopeRect.width * dpr));
-    const sh = Math.max(48, Math.round(scopeRect.height * dpr));
+    const sw = Math.max(64, Math.round(scopeRect.width * hudDpr));
+    const sh = Math.max(48, Math.round(scopeRect.height * hudDpr));
     if (scopeCanvas.width !== sw || scopeCanvas.height !== sh) {
       scopeCanvas.width = sw;
       scopeCanvas.height = sh;
     }
+
+    measureScrubberWidths();
+    scopeDirty = true;
+    teleDirty = true;
   }
 
-  window.addEventListener('resize', () => resizeViewport(false));
+  window.addEventListener('resize', () => resizeViewport(false), { passive: true });
 
   function fmtSci(val) {
     if (!Number.isFinite(val) || val === 0) return '0.00';
@@ -3185,7 +3236,6 @@
       ? `+${lastPenroseGainPct.toFixed(1)}% SUPER-RADIANT`
       : 'LOCKED (a* → 0)';
 
-    // Coupled Mass-Energy Matrix in Chronicle section
     const ntPct = (metric.etaNT * 100).toFixed(2);
     const penPct = (metric.etaPenrose * 100).toFixed(2);
     dom.matrixSpin.textContent = `ACTIVE METRIC: a* = ${metric.a.toFixed(3)} · r_ISCO = ${metric.rIsco.toFixed(3)} M`;
@@ -3206,22 +3256,33 @@
   let fpsAccum = 0, fpsFrames = 0;
   let uiTick = 0;
 
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) prevTime = performance.now();
+  });
+
   function frame(nowMs) {
+    requestAnimationFrame(frame);
+    if (document.hidden) return;
+
     const dt = Math.min(0.05, Math.max(0.001, (nowMs - prevTime) * 0.001));
     prevTime = nowMs;
     const tSec = nowMs * 0.001;
 
-    // Subtle slow orbital drift when user isn't actively dragging
     if (!orbitDragging) {
       target.azimuth += dt * 0.032;
     }
 
-    // Critically damped spring integration (stiffness k = 110, damping c = 21)
+    // Critically damped spring integration with dirty detection for DOM/Scope sleep
     const kSpring = 110.0, cDamp = 21.0;
+    let paramsMoving = false;
     for (const key in current) {
-      const force = (target[key] - current[key]) * kSpring - velocity[key] * cDamp;
+      const diff = target[key] - current[key];
+      const force = diff * kSpring - velocity[key] * cDamp;
       velocity[key] += force * dt;
       current[key] += velocity[key] * dt;
+      if ( key !== 'azimuth' && (Math.abs(diff) > 2e-4 || Math.abs(velocity[key]) > 2e-4) ) {
+        paramsMoving = true;
+      }
     }
 
     const flagRate = 1.0 - Math.exp(-dt * 10.0);
@@ -3229,22 +3290,29 @@
       flagsSmooth[fk] += (flags[fk] - flagsSmooth[fk]) * flagRate;
     }
 
+    if (paramsMoving) {
+      metric = solveKerrMetric(current.spin, current.massLog, current.mdot);
+      teleDirty = true;
+      scopeDirty = true;
+      updateAudioHarmonics();
+    }
+
     penrosePulse = Math.max(0.0, penrosePulse - dt * 0.55);
 
-    metric = solveKerrMetric(current.spin, current.massLog, current.mdot);
     computeCameraFrame();
     updateDysonBases(tSec);
     updateGeodesicSystem(dt);
-    updateAudioHarmonics();
 
-    const scrollDim = clampNum(window.scrollY / Math.max(400, window.innerHeight * 0.85), 0.0, 1.0);
+    const penroseInFlight = bodies[0].active || bodies[1].active || bodies[2].active;
+    if (penroseInFlight) scopeDirty = true;
 
-    // WebGL2 Two-Pass + Bloom HDR Pipeline
+    const scrollDim = clampNum(cachedScrollY / Math.max(400, cachedWinH * 0.85), 0.0, 1.0);
+
     if (glReady) {
       const hdrPackVal = useFloatFbo ? 0.0 : 1.0;
       gl.bindVertexArray(vao);
 
-      // Pass 1: Kerr Geodesic Raymarcher -> sceneFbo
+      // Pass 1: Kerr Geodesic Raymarcher -> sceneFbo (LUTs stay bound on TEXTURE2 & TEXTURE3)
       gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
       gl.viewport(0, 0, fboW, fboH);
       gl.useProgram(sceneProg);
@@ -3279,7 +3347,7 @@
       gl.uniform1f(bloomLoc.u_hdrPack, hdrPackVal);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      // Pass 3: ACES Filmic Composite + Chromatic Dispersion -> Screen
+      // Pass 3: Contrast-Adaptive Sharpening (CAS) + ACES Filmic Composite -> Screen
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, glCanvas.width, glCanvas.height);
       gl.useProgram(compProg);
@@ -3289,6 +3357,7 @@
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, bloomTex);
       gl.uniform1i(compLoc.u_bloom, 1);
+      gl.uniform2f(compLoc.u_sceneTexel, 1.0 / fboW, 1.0 / fboH);
       gl.uniform2f(compLoc.u_bloomTexel, 1.0 / bloomW, 1.0 / bloomH);
       gl.uniform1f(compLoc.u_hdrPack, hdrPackVal);
       gl.uniform1f(compLoc.u_scrollDim, scrollDim);
@@ -3296,25 +3365,46 @@
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    renderHudOverlay(tSec, scrollDim);
-
-    // Scrubber tracks + Phase Scope + Tabular Telemetry
+    renderHudOverlay(scrollDim);
     syncScrubberVisuals();
-    if ((uiTick++ & 1) === 0) {
-      renderPotentialScope();
-      updateTelemetryDOM();
+
+    // Throttled 20Hz updates ONLY when dirty — 0% DOM/Canvas2D overhead when springs settle
+    if ((uiTick++ % 3) === 0) {
+      if (scopeDirty) {
+        renderPotentialScope();
+        scopeDirty = false;
+      }
+      if (teleDirty) {
+        updateTelemetryDOM();
+        teleDirty = false;
+      }
     }
 
+    // Closed-Loop Frame-Time PID Resolution Governor (AUTO mode)
     fpsAccum += dt;
     fpsFrames++;
-    if (fpsAccum >= 0.5) {
+    if (fpsAccum >= 0.75) {
       const fps = Math.round(fpsFrames / fpsAccum);
-      dom.fps.textContent = `${fps} FPS · ${glReady ? (useFloatFbo ? 'FP16 HDR' : 'GL2 PACK') : '2D FALLBACK'}`;
+      if (scaleModes[scaleIdx] === 'AUTO' && glReady) {
+        if (fps < 50 && autoScale > 0.50) {
+          autoScale = Math.max(0.48, autoScale * 0.86);
+          highFpsStreak = 0;
+          resizeViewport(false);
+        } else if (fps >= 58 && autoScale < 0.96) {
+          highFpsStreak++;
+          if (highFpsStreak >= 3) {
+            autoScale = Math.min(0.96, autoScale + 0.06);
+            highFpsStreak = 0;
+            resizeViewport(false);
+          }
+        } else {
+          highFpsStreak = 0;
+        }
+      }
+      dom.fps.textContent = `${fps} FPS · ${fboW}×${fboH}`;
       fpsAccum = 0;
       fpsFrames = 0;
     }
-
-    requestAnimationFrame(frame);
   }
 
   requestAnimationFrame(frame);
